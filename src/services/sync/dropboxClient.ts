@@ -90,6 +90,9 @@ export function getSyncErrorReasonKey(error: unknown): SyncErrorReasonKey {
     lower.includes('dropbox not connected') ||
     lower.includes('token exchange failed') ||
     lower.includes('pkce verification failed') ||
+    lower.includes('pkce_verifier_missing') ||
+    lower.includes('oauth_state_mismatch') ||
+    lower.includes('oauth state') ||
     lower.includes('unauthorized')
   ) {
     return 'auth';

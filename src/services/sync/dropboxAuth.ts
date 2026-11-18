@@ -2,9 +2,18 @@
  * Dropbox OAuth 2.0 with PKCE (Proof Key for Code Exchange)
  * Client-side authentication without exposing client secret.
  */
+import { APP_ROUTES } from '@/utils/navigation';
 
 const SESSION_VERIFIER_KEY = 'zenfit_dropbox_code_verifier';
+const SESSION_STATE_KEY = 'zenfit_dropbox_oauth_state';
+const OAUTH_STATE_PREFIX = 'dropbox_';
 const STORAGE_TOKENS_KEY = 'zenfit_dropbox_tokens';
+
+export type DropboxOAuthCallbackResult =
+  | { kind: 'code'; code: string }
+  | { kind: 'error'; error: string; errorDescription?: string };
+
+let pendingOAuthCallback: DropboxOAuthCallbackResult | null = null;
 
 const safeSessionStorage = {
   getItem: (key: string): string | null => {
@@ -71,11 +80,11 @@ export function getDropboxAppKey(): string {
 }
 
 /**
- * 取得 OAuth 授權完成後的重定向目標 URI
+ * 取得 OAuth 授權完成後的重定向目標 URI（對齊單一 URL 主應用入口 /app）
  */
 export function getDropboxRedirectUri(): string {
   const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
-  return `${origin}/settings`;
+  return `${origin}${APP_ROUTES.home}`;
 }
 
 /**
@@ -92,6 +101,22 @@ export function generateCodeVerifier(): string {
     }
   }
   return base64UrlEncode(array);
+}
+
+/**
+ * 生成防 CSRF 且具備供應商前綴的隨機 OAuth state 參數
+ */
+export function generateOAuthState(): string {
+  const array = new Uint8Array(32);
+  const cryptoObj = typeof window !== 'undefined' ? window.crypto : globalThis.crypto;
+  if (cryptoObj?.getRandomValues) {
+    cryptoObj.getRandomValues(array);
+  } else {
+    for (let i = 0; i < array.length; i++) {
+      array[i] = Math.floor(Math.random() * 256);
+    }
+  }
+  return `${OAUTH_STATE_PREFIX}${base64UrlEncode(array)}`;
 }
 
 /**
@@ -161,7 +186,9 @@ export function commitStagingTokens(): void {
 
 export function clearStagingTokens(): void {
   stagingTokens = null;
+  pendingOAuthCallback = null;
   safeSessionStorage.removeItem(SESSION_VERIFIER_KEY);
+  safeSessionStorage.removeItem(SESSION_STATE_KEY);
 }
 
 /**
@@ -170,7 +197,9 @@ export function clearStagingTokens(): void {
 export function clearDropboxTokens(): void {
   safeLocalStorage.removeItem(STORAGE_TOKENS_KEY);
   safeSessionStorage.removeItem(SESSION_VERIFIER_KEY);
+  safeSessionStorage.removeItem(SESSION_STATE_KEY);
   stagingTokens = null;
+  pendingOAuthCallback = null;
 }
 
 /**
@@ -179,6 +208,94 @@ export function clearDropboxTokens(): void {
 export function isDropboxConnected(): boolean {
   const tokens = getStoredTokens();
   return Boolean(tokens?.access_token || tokens?.refresh_token);
+}
+
+/**
+ * 在應用啟動第 0 幀（早於單一 URL 路由器覆寫網址列前）同步捕獲並驗證 Dropbox OAuth 回調參數
+ */
+export function captureDropboxOAuthCallback(
+  search?: string,
+  pathname?: string
+): DropboxOAuthCallbackResult | null {
+  const rawSearch =
+    search !== undefined ? search : typeof window !== 'undefined' ? window.location.search : '';
+  const rawPathname =
+    pathname !== undefined
+      ? pathname
+      : typeof window !== 'undefined'
+        ? window.location.pathname
+        : '';
+
+  if (!rawSearch) return null;
+
+  const expectedPathname = new URL(getDropboxRedirectUri()).pathname.replace(/\/+$/, '') || '/';
+  const normalizedPathname = rawPathname.replace(/\/+$/, '') || '/';
+  if (normalizedPathname !== expectedPathname) {
+    return null;
+  }
+
+  const urlParams = new URLSearchParams(rawSearch);
+  const error = urlParams.get('error');
+  const errorDescription = urlParams.get('error_description') || undefined;
+  const code = urlParams.get('code');
+  const returnedState = urlParams.get('state');
+
+  if (error) {
+    safeSessionStorage.removeItem(SESSION_VERIFIER_KEY);
+    safeSessionStorage.removeItem(SESSION_STATE_KEY);
+    pendingOAuthCallback = { kind: 'error', error, errorDescription };
+    return pendingOAuthCallback;
+  }
+
+  if (!code) return null;
+
+  const expectedState = safeSessionStorage.getItem(SESSION_STATE_KEY);
+  const verifier = safeSessionStorage.getItem(SESSION_VERIFIER_KEY);
+
+  if (expectedState) {
+    if (!returnedState || returnedState !== expectedState) {
+      safeSessionStorage.removeItem(SESSION_VERIFIER_KEY);
+      safeSessionStorage.removeItem(SESSION_STATE_KEY);
+      pendingOAuthCallback = {
+        kind: 'error',
+        error: 'oauth_state_mismatch',
+        errorDescription: 'OAuth state verification failed',
+      };
+      return pendingOAuthCallback;
+    }
+
+    safeSessionStorage.removeItem(SESSION_STATE_KEY);
+    pendingOAuthCallback = { kind: 'code', code };
+    return pendingOAuthCallback;
+  }
+
+  // 若帶有非 Dropbox 供應商前綴的 state，屬於其他服務回調，避免誤捕獲
+  if (returnedState && !returnedState.startsWith(OAUTH_STATE_PREFIX)) {
+    return null;
+  }
+
+  // 向下相容尚未帶 state 的授權過渡期；若連 verifier 都遺失，回報明確錯誤而非靜默忽略
+  if (!verifier) {
+    safeSessionStorage.removeItem(SESSION_STATE_KEY);
+    pendingOAuthCallback = {
+      kind: 'error',
+      error: 'pkce_verifier_missing',
+      errorDescription: 'PKCE verification failed: Code verifier missing from session.',
+    };
+    return pendingOAuthCallback;
+  }
+
+  pendingOAuthCallback = { kind: 'code', code };
+  return pendingOAuthCallback;
+}
+
+/**
+ * 模組級一次性消費已捕獲的 Dropbox OAuth 回調結果（取出即清空，免疫 StrictMode 與多實例競態）
+ */
+export function consumePendingDropboxOAuthCallback(): DropboxOAuthCallbackResult | null {
+  const result = pendingOAuthCallback;
+  pendingOAuthCallback = null;
+  return result;
 }
 
 /**
@@ -191,7 +308,9 @@ export async function initiateDropboxAuth(): Promise<void> {
   }
 
   const verifier = generateCodeVerifier();
+  const state = generateOAuthState();
   safeSessionStorage.setItem(SESSION_VERIFIER_KEY, verifier);
+  safeSessionStorage.setItem(SESSION_STATE_KEY, state);
 
   const challenge = await generateCodeChallenge(verifier);
   const redirectUri = getDropboxRedirectUri();
@@ -203,6 +322,7 @@ export async function initiateDropboxAuth(): Promise<void> {
   authUrl.searchParams.set('code_challenge_method', 'S256');
   authUrl.searchParams.set('redirect_uri', redirectUri);
   authUrl.searchParams.set('token_access_type', 'offline');
+  authUrl.searchParams.set('state', state);
 
   if (typeof window !== 'undefined') {
     window.location.href = authUrl.toString();
@@ -264,6 +384,7 @@ export async function exchangeCodeForTokens(code: string): Promise<DropboxTokens
 
   setStoredTokens(tokens);
   safeSessionStorage.removeItem(SESSION_VERIFIER_KEY);
+  safeSessionStorage.removeItem(SESSION_STATE_KEY);
 
   return tokens;
 }
@@ -322,6 +443,7 @@ export async function exchangeCodeForTokensOnly(code: string): Promise<DropboxTo
   };
 
   safeSessionStorage.removeItem(SESSION_VERIFIER_KEY);
+  safeSessionStorage.removeItem(SESSION_STATE_KEY);
   return tokens;
 }
 

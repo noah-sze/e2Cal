@@ -5,6 +5,7 @@ import {
   initiateDropboxAuth,
   clearDropboxTokens,
   getDropboxAppKey,
+  consumePendingDropboxOAuthCallback,
 } from '@/services/sync/dropboxAuth';
 import {
   executeSync,
@@ -34,7 +35,6 @@ export function useDropboxSync() {
   const [syncState, setSyncState] = useState<SyncEngineStatus>(getSyncEngineStatus);
   const isOnline = useNetworkStatus();
   const prevIsOnlineRef = useRef(isOnline);
-  const hasHandledAuthRef = useRef(false);
 
   useEffect(() => {
     return onSyncEngineStatusChange(setSyncState);
@@ -102,24 +102,26 @@ export function useDropboxSync() {
     prevIsOnlineRef.current = isOnline;
   }, [isOnline]);
 
-  // 首次載入偵測 OAuth 回調代碼 (?code=...)
+  // 消費應用啟動第 0 幀捕獲的 OAuth 回調結果（模組級一次性消費，不破壞 AppRouter 的 history.state）
   useEffect(() => {
-    if (hasHandledAuthRef.current) return;
+    const callback = consumePendingDropboxOAuthCallback();
+    if (!callback) return;
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-
-    if (code) {
-      hasHandledAuthRef.current = true;
-      // 乾淨移除網址上的授權碼參數
-      window.history.replaceState({}, document.title, window.location.pathname);
-
-      // 啟動事務性首次同步狀態機
-      startInitialSync(code).catch((err) => {
-        console.error('Failed to start initial sync:', err);
-      });
+    if (callback.kind === 'error') {
+      if (callback.error === 'access_denied') {
+        toast.show(t('initialSync.cancelToast', '已取消同步'));
+      } else {
+        const reason = formatSyncErrorMessage(callback.errorDescription || callback.error, t);
+        toast.show(t('syncStatus.authFailedToast', { reason }));
+      }
+      return;
     }
-  }, []);
+
+    // 啟動事務性首次同步狀態機
+    startInitialSync(callback.code).catch((err) => {
+      console.error('Failed to start initial sync:', err);
+    });
+  }, [t]);
 
   // 發起連線
   const connectDropbox = useCallback(async () => {

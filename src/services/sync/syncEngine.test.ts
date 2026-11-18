@@ -11,7 +11,11 @@ import {
 } from './syncEngine';
 import {
   getDropboxAppKey,
+  getDropboxRedirectUri,
   generateCodeVerifier,
+  generateOAuthState,
+  captureDropboxOAuthCallback,
+  consumePendingDropboxOAuthCallback,
   getStagingTokens,
   setStagingTokens,
   commitStagingTokens,
@@ -341,8 +345,14 @@ describe('syncEngine', () => {
 describe('dropboxAuth', () => {
   beforeEach(() => {
     const mockStorage = new LocalStorageMock();
+    const mockSessionStorage = new LocalStorageMock();
     Object.defineProperty(globalThis, 'localStorage', {
       value: mockStorage,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(globalThis, 'sessionStorage', {
+      value: mockSessionStorage,
       writable: true,
       configurable: true,
     });
@@ -357,6 +367,97 @@ describe('dropboxAuth', () => {
     expect(verifier).not.toContain('+');
     expect(verifier).not.toContain('/');
     expect(verifier).not.toContain('=');
+  });
+
+  it('generates dropbox-prefixed random OAuth state with base64url characters', () => {
+    const state = generateOAuthState();
+    expect(state.startsWith('dropbox_')).toBe(true);
+    expect(state.length).toBeGreaterThan(20);
+    expect(state).not.toContain('+');
+    expect(state).not.toContain('/');
+    expect(state).not.toContain('=');
+  });
+
+  it('uses single-URL /app as Dropbox OAuth redirect URI', () => {
+    expect(new URL(getDropboxRedirectUri()).pathname).toBe('/app');
+  });
+
+  it('captures valid OAuth callback before router rewrites URL and consumes it only once', () => {
+    const state = generateOAuthState();
+    sessionStorage.setItem('zenfit_dropbox_code_verifier', 'test_verifier');
+    sessionStorage.setItem('zenfit_dropbox_oauth_state', state);
+
+    const captured = captureDropboxOAuthCallback(`?code=auth_code_123&state=${state}`, '/app');
+    expect(captured).toEqual({ kind: 'code', code: 'auth_code_123' });
+    // state 驗證通過後立即移除，防止重放
+    expect(sessionStorage.getItem('zenfit_dropbox_oauth_state')).toBeNull();
+    // verifier 留待 exchangeCodeForTokensOnly 消費
+    expect(sessionStorage.getItem('zenfit_dropbox_code_verifier')).toBe('test_verifier');
+
+    // 即使 AppRouter 隨後清理網址列，Hook 仍能一次性消費已捕獲的 code
+    expect(consumePendingDropboxOAuthCallback()).toEqual({ kind: 'code', code: 'auth_code_123' });
+    // 第二次消費（模擬 StrictMode 或雙 Hook 實例）必須回傳 null
+    expect(consumePendingDropboxOAuthCallback()).toBeNull();
+  });
+
+  it('rejects OAuth callback with mismatched state and cleans up session artifacts', () => {
+    sessionStorage.setItem('zenfit_dropbox_code_verifier', 'test_verifier');
+    sessionStorage.setItem('zenfit_dropbox_oauth_state', 'dropbox_expected_state');
+
+    const captured = captureDropboxOAuthCallback(
+      '?code=auth_code_123&state=dropbox_tampered_state',
+      '/app'
+    );
+    expect(captured).toEqual({
+      kind: 'error',
+      error: 'oauth_state_mismatch',
+      errorDescription: 'OAuth state verification failed',
+    });
+    expect(sessionStorage.getItem('zenfit_dropbox_code_verifier')).toBeNull();
+    expect(sessionStorage.getItem('zenfit_dropbox_oauth_state')).toBeNull();
+    expect(consumePendingDropboxOAuthCallback()).toEqual(captured);
+    expect(consumePendingDropboxOAuthCallback()).toBeNull();
+  });
+
+  it('captures OAuth error callback (e.g. access_denied) and cleans up verifier/state', () => {
+    sessionStorage.setItem('zenfit_dropbox_code_verifier', 'test_verifier');
+    sessionStorage.setItem('zenfit_dropbox_oauth_state', 'dropbox_state_1');
+
+    const captured = captureDropboxOAuthCallback(
+      '?error=access_denied&error_description=The+user+chose+not+to+give+your+app+access',
+      '/app'
+    );
+    expect(captured).toEqual({
+      kind: 'error',
+      error: 'access_denied',
+      errorDescription: 'The user chose not to give your app access',
+    });
+    expect(sessionStorage.getItem('zenfit_dropbox_code_verifier')).toBeNull();
+    expect(sessionStorage.getItem('zenfit_dropbox_oauth_state')).toBeNull();
+    expect(consumePendingDropboxOAuthCallback()).toEqual(captured);
+  });
+
+  it('ignores non-callback paths and foreign provider states', () => {
+    sessionStorage.setItem('zenfit_dropbox_code_verifier', 'test_verifier');
+    sessionStorage.setItem('zenfit_dropbox_oauth_state', 'dropbox_state_1');
+
+    expect(captureDropboxOAuthCallback('?code=abc&state=dropbox_state_1', '/')).toBeNull();
+    expect(captureDropboxOAuthCallback('?code=abc&state=dropbox_state_1', '/settings')).toBeNull();
+    expect(consumePendingDropboxOAuthCallback()).toBeNull();
+
+    sessionStorage.removeItem('zenfit_dropbox_oauth_state');
+    expect(captureDropboxOAuthCallback('?code=abc&state=gdrive_other', '/app')).toBeNull();
+    expect(consumePendingDropboxOAuthCallback()).toBeNull();
+  });
+
+  it('reports explicit pkce_verifier_missing error when session verifier is lost', () => {
+    const captured = captureDropboxOAuthCallback('?code=auth_code_456', '/app');
+    expect(captured).toEqual({
+      kind: 'error',
+      error: 'pkce_verifier_missing',
+      errorDescription: 'PKCE verification failed: Code verifier missing from session.',
+    });
+    expect(consumePendingDropboxOAuthCallback()).toEqual(captured);
   });
 
   it('reads app key from environment variable and disallows user customization', () => {
@@ -432,6 +533,9 @@ describe('syncErrorReason & Toast handling', () => {
     expect(
       getSyncErrorReasonKey('PKCE verification failed: Code verifier missing from session.')
     ).toBe('auth');
+    expect(getSyncErrorReasonKey('oauth_state_mismatch')).toBe('auth');
+    expect(getSyncErrorReasonKey('OAuth state verification failed')).toBe('auth');
+    expect(getSyncErrorReasonKey('pkce_verifier_missing')).toBe('auth');
     expect(getSyncErrorReasonKey('Dropbox token exchange failed (400): invalid_grant')).toBe(
       'auth'
     );
