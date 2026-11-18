@@ -6,6 +6,7 @@ import {
   clearDropboxTokens,
   getDropboxAppKey,
   consumePendingDropboxOAuthCallback,
+  type DropboxOAuthMode,
 } from '@/services/sync/dropboxAuth';
 import {
   executeSync,
@@ -118,13 +119,13 @@ export function useDropboxSync() {
     }
 
     // 啟動事務性首次同步狀態機
-    startInitialSync(callback.code).catch((err) => {
+    startInitialSync(callback.code, { mode: callback.mode }).catch((err) => {
       console.error('Failed to start initial sync:', err);
     });
   }, [t]);
 
   // 發起連線
-  const connectDropbox = useCallback(async () => {
+  const connectDropbox = useCallback(async (mode: DropboxOAuthMode = 'sync') => {
     const appKey = getDropboxAppKey();
     if (!appKey) {
       toast.show(t('settings.missingAppKey', '未配置 Dropbox App Key'));
@@ -132,7 +133,7 @@ export function useDropboxSync() {
     }
 
     try {
-      await initiateDropboxAuth();
+      await initiateDropboxAuth(mode);
     } catch (err: unknown) {
       console.error('Failed to initiate Dropbox auth:', err);
       const reason = formatSyncErrorMessage(err, t);

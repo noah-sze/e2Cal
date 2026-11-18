@@ -7,11 +7,7 @@ import { useNetworkStatus, checkConnectivity } from '@/hooks/useNetworkStatus';
 import { useDropboxSync } from '@/hooks/useDropboxSync';
 import { formatSyncErrorMessage } from '@/services/sync/syncEngine';
 import { toast } from '@/components/ui/toast';
-import {
-  Dialog,
-  PrecisionDialogContent,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { DropboxConnectDialog } from '@/components/sync/DropboxConnectDialog';
 
 export function SyncStatusPill() {
   const { t } = useTranslation();
@@ -154,55 +150,14 @@ export function SyncStatusPill() {
         <span className="truncate">{getLabel()}</span>
       </button>
 
-      {/* 連接 Dropbox 彈窗 */}
-      <Dialog open={isConnectOpen} onOpenChange={setIsConnectOpen}>
-        <PrecisionDialogContent
-          title={t('syncStatus.connectDialogTitle')}
-          onClose={() => setIsConnectOpen(false)}
-          onSubmit={() => {
-            setIsConnectOpen(false);
-            connectDropbox();
-          }}
-          submitAriaLabel={t('syncStatus.connectAction')}
-          cancelAriaLabel={t('common.cancel')}
-          overlayClassName="z-[70]"
-          className="z-[70]"
-        >
-          <div className="pt-3.5 space-y-3 font-mono text-xs select-none">
-            {/* Vercel Usage List 條目 */}
-            <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
-              <div className="h-10 px-3.5 flex items-center justify-between">
-                <span className="text-muted-foreground font-sans">{t('syncStatus.service', '服務')}</span>
-                <span className="text-foreground font-medium font-mono">Dropbox</span>
-              </div>
-              <div className="h-10 px-3.5 flex items-center justify-between">
-                <span className="text-muted-foreground font-sans">{t('syncStatus.status', '狀態')}</span>
-                <div className="flex items-center gap-1.5 font-mono">
-                  <span className="size-1.5 rounded-full bg-muted-foreground/60 shrink-0" />
-                  <span className="text-muted-foreground">{t('syncStatus.disconnected', '未連線')}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 客觀說明文本 */}
-            <p className="text-[11px] text-muted-foreground leading-relaxed px-0.5 font-sans">
-              {t('syncStatus.connectDialogDesc')}
-            </p>
-
-            {/* 滿寬連線操作按鈕 */}
-            <Button
-              type="button"
-              onClick={() => {
-                setIsConnectOpen(false);
-                connectDropbox();
-              }}
-              className="w-full h-9 rounded-lg bg-foreground text-background font-mono text-xs font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
-            >
-              {t('syncStatus.connectAction')}
-            </Button>
-          </div>
-        </PrecisionDialogContent>
-      </Dialog>
+      {/* 連接 Dropbox 彈窗（全域共用元件） */}
+      <DropboxConnectDialog
+        open={isConnectOpen}
+        onOpenChange={setIsConnectOpen}
+        onConfirm={() => {
+          void connectDropbox();
+        }}
+      />
     </>
   );
 }

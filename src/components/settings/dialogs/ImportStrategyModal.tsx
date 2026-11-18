@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, PrecisionDialogContent } from '@/components/ui/dialog';
+import { HoldToDeleteButton } from '@/components/ui/HoldToDeleteButton';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { GitMerge, RotateCcw } from 'lucide-react';
@@ -109,7 +110,7 @@ export function ImportStrategyModal({
               <div
                 className={cn(
                   'grid grid-cols-7 px-2.5 py-1.5 items-center transition-colors',
-                  isNameMismatch && 'bg-destructive/5'
+                  isNameMismatch && 'bg-destructive-subtle'
                 )}
               >
                 <span className="col-span-2 text-muted-foreground">{t('profile.name', '姓名')}</span>
@@ -212,7 +213,7 @@ export function ImportStrategyModal({
               className={cn(
                 'w-full p-2.5 rounded-lg border text-left flex items-start gap-2.5 transition-all cursor-pointer select-none',
                 strategy === 'overwrite'
-                  ? 'border-destructive bg-destructive/5'
+                  ? 'border-destructive bg-destructive-subtle'
                   : 'border-border hover:bg-hover'
               )}
             >
@@ -248,26 +249,29 @@ export function ImportStrategyModal({
             />
           </div>
 
-          {/* 4. 底部動作確認按鈕 */}
-          <button
-            type="button"
+          {/* 4. 底部長按蓄力確認按鈕（500ms 全背景蓄力防誤觸） */}
+          <HoldToDeleteButton
+            key={strategy}
+            variant={strategy === 'merge' ? 'primary' : 'destructive'}
             disabled={!isMatch || isSubmitting}
-            onClick={handleConfirm}
-            className={cn(
-              'w-full h-9 rounded-md font-mono text-xs font-semibold transition-all select-none flex items-center justify-center',
-              isMatch && !isSubmitting
-                ? strategy === 'merge'
-                  ? 'bg-foreground text-background hover:opacity-90 active:scale-[0.98] cursor-pointer'
-                  : 'bg-destructive text-destructive-foreground hover:opacity-90 active:scale-[0.98] cursor-pointer'
-                : 'bg-muted text-muted-foreground opacity-40 cursor-not-allowed'
-            )}
-          >
-            {isSubmitting
-              ? '...'
-              : strategy === 'merge'
-              ? t('settings.confirmMergeAction', '確認合併')
-              : t('settings.confirmOverwriteAction', '確認覆蓋')}
-          </button>
+            text={
+              isSubmitting
+                ? '...'
+                : strategy === 'merge'
+                  ? t('settings.holdToMergeAction', '長按合併')
+                  : t('settings.holdToOverwriteAction', '長按覆蓋')
+            }
+            icon={
+              strategy === 'merge' ? (
+                <GitMerge className="size-3.5 shrink-0" strokeWidth={1.8} />
+              ) : (
+                <RotateCcw className="size-3.5 shrink-0" strokeWidth={1.8} />
+              )
+            }
+            hintText={t('initialSync.holdHint', '長按 0.5 秒確認')}
+            onConfirm={handleConfirm}
+            className="rounded-lg"
+          />
         </div>
       </PrecisionDialogContent>
     </Dialog>

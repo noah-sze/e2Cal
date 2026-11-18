@@ -29,7 +29,13 @@ import {
   setStagingTokens,
   exchangeCodeForTokensOnly,
   type DropboxTokens,
+  type DropboxOAuthMode,
 } from './dropboxAuth';
+import { PRIMARY_USER_ID } from '@/services/db/defaultData';
+import { clearFoodsCache } from '@/hooks/useFoods';
+import { clearRecipesCache } from '@/hooks/useRecipes';
+import { clearExercisesCache } from '@/hooks/useExercises';
+import { syncUserProfileCache } from '@/hooks/useUserProfile';
 import i18n from '@/i18n/config';
 import { toast } from '@/components/ui/toast';
 import {
@@ -63,6 +69,8 @@ export interface InitialSyncState {
   totalFilesCount: number;
   localCount: number;
   remoteCount: number;
+  localBaseInfo: UserBaseInfo | null;
+  remoteBaseInfo: UserBaseInfo | null;
   error?: string;
   isApplying: boolean;
   summary?: {
@@ -88,6 +96,7 @@ interface StagedData {
 }
 
 interface InitialSyncStaging {
+  mode: DropboxOAuthMode;
   tokens: DropboxTokens | null;
   remoteManifest: SyncManifest | null;
   remoteFiles: DropboxFileMetadata[];
@@ -96,6 +105,7 @@ interface InitialSyncStaging {
 }
 
 let staging: InitialSyncStaging = {
+  mode: 'sync',
   tokens: null,
   remoteManifest: null,
   remoteFiles: [],
@@ -122,6 +132,8 @@ let currentState: InitialSyncState = {
   totalFilesCount: 0,
   localCount: 0,
   remoteCount: 0,
+  localBaseInfo: null,
+  remoteBaseInfo: null,
   isApplying: false,
 };
 
@@ -148,8 +160,12 @@ export function getInitialSyncState(): InitialSyncState {
 /**
  * 啟動首次同步流程
  */
-export async function startInitialSync(code: string): Promise<void> {
+export async function startInitialSync(
+  code: string,
+  options?: { mode?: DropboxOAuthMode }
+): Promise<void> {
   staging = {
+    mode: options?.mode || 'sync',
     tokens: null,
     remoteManifest: null,
     remoteFiles: [],
@@ -176,6 +192,8 @@ export async function startInitialSync(code: string): Promise<void> {
     totalFilesCount: 0,
     localCount: 0,
     remoteCount: 0,
+    localBaseInfo: null,
+    remoteBaseInfo: null,
     error: undefined,
     isApplying: false,
     summary: undefined,
@@ -207,22 +225,38 @@ export async function startInitialSync(code: string): Promise<void> {
  */
 async function inspectRemote(): Promise<void> {
   try {
-    const [localDietLogs, localWorkoutLogs, localMetrics] = await Promise.all([
+    const [localDietLogs, localWorkoutLogs, localMetrics, localBaseInfoRaw] = await Promise.all([
       db.daily_diet_logs.count(),
       db.workout_logs.count(),
       db.body_metrics.count(),
+      db.user_base_info.get(PRIMARY_USER_ID),
     ]);
     const localCount = localDietLogs + localWorkoutLogs + localMetrics;
+    const localBaseInfo = localBaseInfoRaw ?? null;
 
     const remoteFiles = await listRemoteFolder();
     staging.remoteFiles = remoteFiles;
 
     const manifestMeta = remoteFiles.find((f) => f.path_lower === '/manifest.json');
+    const baseInfoMeta = remoteFiles.find((f) => f.path_lower === '/user/base_info.json');
+
     let remoteManifest: SyncManifest | null = null;
     let remoteCount = 0;
+    let remoteBaseInfo: UserBaseInfo | null = null;
 
-    if (manifestMeta) {
-      remoteManifest = await downloadJsonFile<SyncManifest>('/manifest.json');
+    const [downloadedManifest, downloadedBaseInfos] = await Promise.all([
+      manifestMeta ? downloadJsonFile<SyncManifest>('/manifest.json') : Promise.resolve(null),
+      baseInfoMeta
+        ? downloadJsonFile<UserBaseInfo[]>('/user/base_info.json').catch(() => null)
+        : Promise.resolve(null),
+    ]);
+
+    if (downloadedBaseInfos && downloadedBaseInfos.length > 0) {
+      remoteBaseInfo = sanitizeUserBaseInfo(downloadedBaseInfos[0]);
+    }
+
+    if (downloadedManifest) {
+      remoteManifest = downloadedManifest;
       staging.remoteManifest = remoteManifest;
       if (remoteManifest?.stats) {
         remoteCount =
@@ -232,17 +266,45 @@ async function inspectRemote(): Promise<void> {
       }
     } else {
       // 算遠端 json 檔案數量作為簡易粗估
-      remoteCount = remoteFiles.filter((f) => f.name.endsWith('.json')).length;
+      remoteCount = remoteFiles.filter(
+        (f) => f.name.endsWith('.json') && !f.name.endsWith('manifest.json')
+      ).length;
     }
 
     emitState({
       localCount,
       remoteCount,
+      localBaseInfo,
+      remoteBaseInfo,
       progressPercent: 45,
     });
 
-    // 判定衝突策略
-    await determineStrategy(localCount, remoteCount);
+    // 落地頁「雲端導入」模式：若雲端完全無備份檔，中止還原並回滾暫存憑證（絕不覆寫空資料至雲端）
+    if (staging.mode === 'restore') {
+      const hasRemoteDataFiles = remoteFiles.some(
+        (f) => f.name.endsWith('.json') && !f.name.endsWith('manifest.json')
+      );
+      if (!hasRemoteDataFiles) {
+        clearStagingTokens();
+        const emptyReason = i18n.t('initialSync.emptyRemoteError', 'Dropbox 雲端無備份資料');
+        toast.show(emptyReason);
+        emitState({
+          error: emptyReason,
+          progressPercent: 0,
+        });
+        return;
+      }
+
+      await selectStrategy('overwrite_local');
+      return;
+    }
+
+    const localName = localBaseInfo?.name?.trim() || '';
+    const remoteName = remoteBaseInfo?.name?.trim() || '';
+    const isNameMismatch = Boolean(localName && remoteName && localName !== remoteName);
+
+    // 判定衝突策略（雙方皆有資料，或姓名不一致時一律進入策略選擇）
+    await determineStrategy(localCount, remoteCount, isNameMismatch);
   } catch (err: unknown) {
     console.error('Inspect remote failed:', err);
     const reason = formatSyncErrorMessage(err);
@@ -254,10 +316,14 @@ async function inspectRemote(): Promise<void> {
 }
 
 /**
- * 判定資料衝突策略 (若一方為空則自動進入下載/上傳，兩方均有則展示選擇介面)
+ * 判定資料衝突策略 (若一方為空且個人姓名未衝突則自動進入下載/上傳，否則展示選擇介面)
  */
-async function determineStrategy(localCount: number, remoteCount: number): Promise<void> {
-  if (localCount > 0 && remoteCount > 0) {
+async function determineStrategy(
+  localCount: number,
+  remoteCount: number,
+  isNameMismatch: boolean
+): Promise<void> {
+  if ((localCount > 0 && remoteCount > 0) || isNameMismatch) {
     emitState({
       step: 'STRATEGY',
       progressPercent: 50,
@@ -534,6 +600,13 @@ async function executeAtomicCommit(): Promise<void> {
     commitStagingTokens();
     setLastSyncTime(now);
 
+    // 清空預熱快取並同步最新個人基礎資料快取，確保直接導向 /app 時零競態
+    clearFoodsCache();
+    clearRecipesCache();
+    clearExercisesCache();
+    const restoredBaseInfo = (await db.user_base_info.get(PRIMARY_USER_ID)) ?? null;
+    syncUserProfileCache(restoredBaseInfo);
+
     const [foodsCount, exercisesCount, foodLogsCount, workoutLogsCount, bodyMetricsCount] =
       await Promise.all([
         db.foods.count(),
@@ -573,6 +646,7 @@ async function executeAtomicCommit(): Promise<void> {
 export function cancelInitialSync(): void {
   clearStagingTokens();
   staging = {
+    mode: 'sync',
     tokens: null,
     remoteManifest: null,
     remoteFiles: [],
@@ -597,6 +671,8 @@ export function cancelInitialSync(): void {
     progressPercent: 0,
     downloadedFilesCount: 0,
     totalFilesCount: 0,
+    localBaseInfo: null,
+    remoteBaseInfo: null,
     error: undefined,
     isApplying: false,
     summary: undefined,
@@ -611,6 +687,8 @@ export function closeInitialSyncModal(): void {
     isOpen: false,
     step: 'AUTH',
     progressPercent: 0,
+    localBaseInfo: null,
+    remoteBaseInfo: null,
     error: undefined,
     isApplying: false,
     summary: undefined,

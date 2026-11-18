@@ -6,11 +6,14 @@ import { APP_ROUTES } from '@/utils/navigation';
 
 const SESSION_VERIFIER_KEY = 'e2cal_dropbox_code_verifier';
 const SESSION_STATE_KEY = 'e2cal_dropbox_oauth_state';
+const SESSION_OAUTH_MODE_KEY = 'e2cal_dropbox_oauth_mode';
 const OAUTH_STATE_PREFIX = 'dropbox_';
 const STORAGE_TOKENS_KEY = 'e2cal_dropbox_tokens';
 
+export type DropboxOAuthMode = 'sync' | 'restore';
+
 export type DropboxOAuthCallbackResult =
-  | { kind: 'code'; code: string }
+  | { kind: 'code'; code: string; mode: DropboxOAuthMode }
   | { kind: 'error'; error: string; errorDescription?: string };
 
 let pendingOAuthCallback: DropboxOAuthCallbackResult | null = null;
@@ -189,6 +192,7 @@ export function clearStagingTokens(): void {
   pendingOAuthCallback = null;
   safeSessionStorage.removeItem(SESSION_VERIFIER_KEY);
   safeSessionStorage.removeItem(SESSION_STATE_KEY);
+  safeSessionStorage.removeItem(SESSION_OAUTH_MODE_KEY);
 }
 
 /**
@@ -198,6 +202,7 @@ export function clearDropboxTokens(): void {
   safeLocalStorage.removeItem(STORAGE_TOKENS_KEY);
   safeSessionStorage.removeItem(SESSION_VERIFIER_KEY);
   safeSessionStorage.removeItem(SESSION_STATE_KEY);
+  safeSessionStorage.removeItem(SESSION_OAUTH_MODE_KEY);
   stagingTokens = null;
   pendingOAuthCallback = null;
 }
@@ -243,6 +248,7 @@ export function captureDropboxOAuthCallback(
   if (error) {
     safeSessionStorage.removeItem(SESSION_VERIFIER_KEY);
     safeSessionStorage.removeItem(SESSION_STATE_KEY);
+    safeSessionStorage.removeItem(SESSION_OAUTH_MODE_KEY);
     pendingOAuthCallback = { kind: 'error', error, errorDescription };
     return pendingOAuthCallback;
   }
@@ -251,11 +257,14 @@ export function captureDropboxOAuthCallback(
 
   const expectedState = safeSessionStorage.getItem(SESSION_STATE_KEY);
   const verifier = safeSessionStorage.getItem(SESSION_VERIFIER_KEY);
+  const storedMode = safeSessionStorage.getItem(SESSION_OAUTH_MODE_KEY);
+  const mode: DropboxOAuthMode = storedMode === 'restore' ? 'restore' : 'sync';
 
   if (expectedState) {
     if (!returnedState || returnedState !== expectedState) {
       safeSessionStorage.removeItem(SESSION_VERIFIER_KEY);
       safeSessionStorage.removeItem(SESSION_STATE_KEY);
+      safeSessionStorage.removeItem(SESSION_OAUTH_MODE_KEY);
       pendingOAuthCallback = {
         kind: 'error',
         error: 'oauth_state_mismatch',
@@ -265,7 +274,8 @@ export function captureDropboxOAuthCallback(
     }
 
     safeSessionStorage.removeItem(SESSION_STATE_KEY);
-    pendingOAuthCallback = { kind: 'code', code };
+    safeSessionStorage.removeItem(SESSION_OAUTH_MODE_KEY);
+    pendingOAuthCallback = { kind: 'code', code, mode };
     return pendingOAuthCallback;
   }
 
@@ -277,6 +287,7 @@ export function captureDropboxOAuthCallback(
   // 向下相容尚未帶 state 的授權過渡期；若連 verifier 都遺失，回報明確錯誤而非靜默忽略
   if (!verifier) {
     safeSessionStorage.removeItem(SESSION_STATE_KEY);
+    safeSessionStorage.removeItem(SESSION_OAUTH_MODE_KEY);
     pendingOAuthCallback = {
       kind: 'error',
       error: 'pkce_verifier_missing',
@@ -285,7 +296,8 @@ export function captureDropboxOAuthCallback(
     return pendingOAuthCallback;
   }
 
-  pendingOAuthCallback = { kind: 'code', code };
+  safeSessionStorage.removeItem(SESSION_OAUTH_MODE_KEY);
+  pendingOAuthCallback = { kind: 'code', code, mode };
   return pendingOAuthCallback;
 }
 
@@ -301,7 +313,7 @@ export function consumePendingDropboxOAuthCallback(): DropboxOAuthCallbackResult
 /**
  * 發起 Dropbox OAuth 2.0 PKCE 授權跳轉
  */
-export async function initiateDropboxAuth(): Promise<void> {
+export async function initiateDropboxAuth(mode: DropboxOAuthMode = 'sync'): Promise<void> {
   const appKey = getDropboxAppKey();
   if (!appKey) {
     throw new Error('Dropbox App Key is not configured. Please set VITE_DROPBOX_APP_KEY.');
@@ -311,6 +323,7 @@ export async function initiateDropboxAuth(): Promise<void> {
   const state = generateOAuthState();
   safeSessionStorage.setItem(SESSION_VERIFIER_KEY, verifier);
   safeSessionStorage.setItem(SESSION_STATE_KEY, state);
+  safeSessionStorage.setItem(SESSION_OAUTH_MODE_KEY, mode);
 
   const challenge = await generateCodeChallenge(verifier);
   const redirectUri = getDropboxRedirectUri();

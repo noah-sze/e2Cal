@@ -156,6 +156,7 @@ export interface DialogPrecisionHeaderProps {
   title: React.ReactNode
   onTitleClick?: () => void
   onClose?: () => void
+  cancelDisabled?: boolean
   onSubmit?: () => void
   submitDisabled?: boolean
   submitAriaLabel?: string
@@ -175,6 +176,7 @@ function DialogPrecisionHeader({
   title,
   onTitleClick,
   onClose,
+  cancelDisabled = false,
   onSubmit,
   submitDisabled = false,
   submitAriaLabel = 'Save',
@@ -191,7 +193,8 @@ function DialogPrecisionHeader({
           <button
             type="button"
             onClick={onClose}
-            className="size-7 rounded-full flex items-center justify-center bg-muted text-muted-foreground hover:text-foreground hover:bg-border transition-all cursor-pointer shrink-0 active:scale-92"
+            disabled={cancelDisabled}
+            className="size-7 rounded-full flex items-center justify-center bg-muted text-muted-foreground hover:text-foreground hover:bg-border transition-all cursor-pointer shrink-0 active:scale-92 disabled:opacity-30 disabled:pointer-events-none"
             title={cancelAriaLabel}
             aria-label={cancelAriaLabel}
           >
@@ -254,6 +257,7 @@ export interface PrecisionDialogContentProps extends Omit<DialogContentProps, 's
   title?: React.ReactNode
   onTitleClick?: () => void
   onClose?: () => void
+  cancelDisabled?: boolean
   onSubmit?: () => void
   submitDisabled?: boolean
   submitAriaLabel?: string
@@ -271,6 +275,7 @@ function PrecisionDialogContent({
   title,
   onTitleClick,
   onClose,
+  cancelDisabled,
   onSubmit,
   submitDisabled,
   submitAriaLabel,
@@ -292,6 +297,7 @@ function PrecisionDialogContent({
           title={title}
           onTitleClick={onTitleClick}
           onClose={onClose}
+          cancelDisabled={cancelDisabled}
           onSubmit={onSubmit}
           submitDisabled={submitDisabled}
           submitAriaLabel={submitAriaLabel}

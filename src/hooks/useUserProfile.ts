@@ -21,6 +21,30 @@ const DEFAULT_BASE_INFO: UserBaseInfo = {
 let inMemoryBaseInfoCache: UserBaseInfo | null = null;
 let inMemoryLatestWeightCache: number | null = null;
 
+/**
+ * 判斷個人基礎設定是否已完成（單一真理源，供 SetupGuard 與落地頁導入流程共用）
+ */
+export function isBaseInfoComplete(baseInfo?: Partial<UserBaseInfo> | null): boolean {
+  return Boolean(
+    baseInfo?.name &&
+      baseInfo.name.trim().length > 0 &&
+      baseInfo?.birthDate &&
+      baseInfo.birthDate.trim().length > 0 &&
+      baseInfo?.heightCm &&
+      baseInfo.heightCm > 0
+  );
+}
+
+/**
+ * 同步更新模組級使用者快取（於本地／雲端還原寫入後立即呼叫，確保進入 /app 時 SetupGuard 零競態）
+ */
+export function syncUserProfileCache(baseInfo: UserBaseInfo | null, latestWeight?: number): void {
+  inMemoryBaseInfoCache = baseInfo;
+  if (latestWeight !== undefined) {
+    inMemoryLatestWeightCache = latestWeight;
+  }
+}
+
 export function useUserProfile() {
   const { bodyWeightUnit } = useUnitPreferences();
 
@@ -67,14 +91,7 @@ export function useUserProfile() {
         protein: 30,
         fat: 30,
       },
-      isSetupCompleted: Boolean(
-        baseInfo?.name &&
-        baseInfo.name.trim().length > 0 &&
-        baseInfo?.birthDate &&
-        baseInfo.birthDate.trim().length > 0 &&
-        baseInfo?.heightCm &&
-        baseInfo.heightCm > 0
-      ),
+      isSetupCompleted: isBaseInfoComplete(baseInfo),
       updatedAt: baseInfo?.updatedAt || 0,
     };
   }, [baseInfo, computedAge, currentWeightKg, bodyWeightUnit]);

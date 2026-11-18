@@ -5,11 +5,15 @@ import { useTheme } from '@/components/ThemeProvider';
 import {
   Sun,
   Moon,
-  ArrowUpRight,
   Globe,
 } from 'lucide-react';
 import { SetupProfileDialog } from '@/components/welcome/SetupProfileDialog';
 import { WelcomeTransitionOverlay } from '@/components/welcome/WelcomeTransitionOverlay';
+import { LaunchAppMenu } from '@/components/welcome/LaunchAppMenu';
+import { LocalImportDialog } from '@/components/welcome/LocalImportDialog';
+import { DropboxConnectDialog } from '@/components/sync/DropboxConnectDialog';
+import { InitialSyncModal } from '@/components/sync/InitialSyncModal';
+import { Toaster, toast } from '@/components/ui/toast';
 import { BrandWordmark, BrandText } from '@/components/ui/Logo';
 import { getDemoDashboardData, DEMO_DASHBOARD_DATA } from '@/components/dashboard/DashboardView';
 import {
@@ -33,7 +37,20 @@ import { ShareShowcaseCards } from '@/components/common/ShareShowcaseCards';
 import { SyncTopologyDiagram } from '@/components/common/SyncTopologyDiagram';
 import { HeroShowcaseDeck } from '@/components/common/HeroShowcaseDeck';
 import { WireframeGlobe } from '@/components/welcome/WireframeGlobe';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import {
+  useUserProfile,
+  isBaseInfoComplete,
+  syncUserProfileCache,
+} from '@/hooks/useUserProfile';
+import { db } from '@/services/db/db';
+import { PRIMARY_USER_ID } from '@/services/db/defaultData';
+import {
+  getDropboxAppKey,
+  initiateDropboxAuth,
+  consumePendingDropboxOAuthCallback,
+} from '@/services/sync/dropboxAuth';
+import { startInitialSync } from '@/services/sync/initialSyncManager';
+import { formatSyncErrorMessage } from '@/services/sync/syncEngine';
 
 const SHOWCASE_DOT_GRID_STYLE = {
   backgroundImage: 'radial-gradient(var(--canvas-dot) 1px, transparent 1px)',
@@ -76,44 +93,70 @@ function ShowcaseFrameWindow({
   );
 }
 
-function LaunchAppButton({
-  label,
-  onClick,
-  className = '',
-}: {
-  label: string;
-  onClick: () => void;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`px-5 py-3 bg-foreground text-background font-mono text-xs font-semibold rounded hover:opacity-90 transition-colors inline-flex items-center justify-center space-x-2 cursor-pointer ${className}`}
-    >
-      <span>{label}</span>
-      <ArrowUpRight className="w-4 h-4 shrink-0" />
-    </button>
-  );
-}
-
 export default function LandingPage() {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { t, i18n } = useTranslation();
   const { profile, isLoading: isProfileLoading } = useUserProfile();
   const [isSetupDialogOpen, setIsSetupDialogOpen] = useState(false);
+  const [isCloudImportDialogOpen, setIsCloudImportDialogOpen] = useState(false);
+  const [isLocalImportDialogOpen, setIsLocalImportDialogOpen] = useState(false);
   const [isTransitionOpen, setIsTransitionOpen] = useState(false);
   const [welcomeUserName, setWelcomeUserName] = useState('');
 
+  const isSetupReady = !isProfileLoading && profile.isSetupCompleted;
+
   const handleOpenApp = () => {
-    if (!isProfileLoading && profile.isSetupCompleted) {
-      setWelcomeUserName(profile.name || '');
+    setWelcomeUserName(profile.name || '');
+    setIsTransitionOpen(true);
+  };
+
+  const handleConfirmCloudImport = async () => {
+    const appKey = getDropboxAppKey();
+    if (!appKey) {
+      toast.show(t('settings.missingAppKey', '未配置 Dropbox App Key'));
+      return;
+    }
+
+    try {
+      await initiateDropboxAuth('restore');
+    } catch (err: unknown) {
+      console.error('Failed to initiate Dropbox restore auth:', err);
+      const reason = formatSyncErrorMessage(err, t);
+      toast.show(t('syncStatus.authFailedToast', { reason }));
+    }
+  };
+
+  const handleDataRestored = async () => {
+    const restoredBaseInfo = (await db.user_base_info.get(PRIMARY_USER_ID)) ?? null;
+    syncUserProfileCache(restoredBaseInfo);
+    if (isBaseInfoComplete(restoredBaseInfo)) {
+      setWelcomeUserName(restoredBaseInfo?.name || '');
       setIsTransitionOpen(true);
     } else {
       setIsSetupDialogOpen(true);
     }
   };
+
+  // 全新裝置從 Dropbox 授權返回 /app 被 SetupGuard 導回落地頁時，於此無縫接手 OAuth 回調
+  useEffect(() => {
+    const callback = consumePendingDropboxOAuthCallback();
+    if (!callback) return;
+
+    if (callback.kind === 'error') {
+      if (callback.error === 'access_denied') {
+        toast.show(t('initialSync.cancelToast', '已取消同步'));
+      } else {
+        const reason = formatSyncErrorMessage(callback.errorDescription || callback.error, t);
+        toast.show(t('syncStatus.authFailedToast', { reason }));
+      }
+      return;
+    }
+
+    startInitialSync(callback.code, { mode: callback.mode }).catch((err) => {
+      console.error('Failed to start cloud import sync:', err);
+    });
+  }, [t]);
 
   const currentLang = i18n.language?.startsWith('zh-CN')
     ? 'zh-CN'
@@ -266,14 +309,19 @@ export default function LandingPage() {
           <span id="theme-text">{theme === 'dark' ? t('settings.themeDark', '深色') : t('settings.themeLight', '淺色')}</span>
         </button>
 
-        <button
-          type="button"
-          onClick={handleOpenApp}
-          className="relative -my-[1px] h-[calc(100%+2px)] px-4 sm:px-0 sm:w-28 md:w-32 flex items-center justify-center space-x-1.5 bg-foreground text-background hover:opacity-90 font-semibold transition-colors cursor-pointer border border-foreground z-10"
-        >
-          <span>{t('common.openApp', '開啟應用')}</span>
-          <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
-        </button>
+        <LaunchAppMenu
+          label={t('common.openApp', '開啟應用')}
+          isSetupCompleted={isSetupReady}
+          onOpenApp={handleOpenApp}
+          onSelectFirstTime={() => setIsSetupDialogOpen(true)}
+          onSelectCloudImport={() => setIsCloudImportDialogOpen(true)}
+          onSelectLocalImport={() => setIsLocalImportDialogOpen(true)}
+          align="end"
+          side="bottom"
+          sideOffset={6}
+          triggerClassName="relative -my-[1px] h-[calc(100%+2px)] px-4 sm:px-0 sm:w-28 md:w-32 py-0 rounded-none flex items-center justify-center space-x-1.5 bg-foreground text-background hover:opacity-90 font-semibold transition-colors cursor-pointer border border-foreground z-10"
+          iconClassName="w-3.5 h-3.5 shrink-0"
+        />
       </div>
 
     </div>
@@ -329,9 +377,14 @@ export default function LandingPage() {
 
           {/*  CTAs  */}
           <div className="pt-2 flex flex-wrap items-center gap-3 font-mono text-xs">
-            <LaunchAppButton
+            <LaunchAppMenu
               label={t('common.openApp', '開啟應用')}
-              onClick={handleOpenApp}
+              isSetupCompleted={isSetupReady}
+              onOpenApp={handleOpenApp}
+              onSelectFirstTime={() => setIsSetupDialogOpen(true)}
+              onSelectCloudImport={() => setIsCloudImportDialogOpen(true)}
+              onSelectLocalImport={() => setIsLocalImportDialogOpen(true)}
+              align="start"
             />
             <div className="px-4 py-3 bg-muted border border-border text-muted-foreground rounded">
               {t('landing.hero.ctaPwa', 'PWA 離線安裝 · 100% 數據私有化')}
@@ -970,10 +1023,15 @@ export default function LandingPage() {
           </div>
 
           <div className="space-y-3">
-            <LaunchAppButton
+            <LaunchAppMenu
               label={t('common.openApp', '開啟應用')}
-              onClick={handleOpenApp}
-              className="w-full sm:w-auto"
+              isSetupCompleted={isSetupReady}
+              onOpenApp={handleOpenApp}
+              onSelectFirstTime={() => setIsSetupDialogOpen(true)}
+              onSelectCloudImport={() => setIsCloudImportDialogOpen(true)}
+              onSelectLocalImport={() => setIsLocalImportDialogOpen(true)}
+              align="start"
+              triggerClassName="w-full sm:w-auto"
             />
             <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
               <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
@@ -1148,11 +1206,35 @@ export default function LandingPage() {
     }}
   />
 
+  <DropboxConnectDialog
+    open={isCloudImportDialogOpen}
+    onOpenChange={setIsCloudImportDialogOpen}
+    title={t('landing.launchMenu.cloudDialogTitle', '雲端導入')}
+    description={t(
+      'landing.launchMenu.cloudDialogDesc',
+      '連線至個人 Dropbox，將既有飲食、訓練與體態資料還原至此裝置。'
+    )}
+    actionLabel={t('landing.launchMenu.cloudConnectAction', '連線 Dropbox')}
+    onConfirm={() => {
+      void handleConfirmCloudImport();
+    }}
+  />
+
+  <LocalImportDialog
+    open={isLocalImportDialogOpen}
+    onOpenChange={setIsLocalImportDialogOpen}
+    onComplete={handleDataRestored}
+  />
+
+  <InitialSyncModal onCompleted={handleDataRestored} />
+
   <WelcomeTransitionOverlay
     open={isTransitionOpen}
     userName={welcomeUserName}
     onFinish={() => navigate('/app')}
   />
+
+  <Toaster />
 
   {/*  =========================================================================  */}
   {/*  JAVASCRIPT CONTROLLERS (LIGHT / DARK THEME MANAGER)                        */}

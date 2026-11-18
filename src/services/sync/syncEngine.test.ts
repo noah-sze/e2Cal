@@ -388,16 +388,36 @@ describe('dropboxAuth', () => {
     sessionStorage.setItem('e2cal_dropbox_oauth_state', state);
 
     const captured = captureDropboxOAuthCallback(`?code=auth_code_123&state=${state}`, '/app');
-    expect(captured).toEqual({ kind: 'code', code: 'auth_code_123' });
+    expect(captured).toEqual({ kind: 'code', code: 'auth_code_123', mode: 'sync' });
     // state 驗證通過後立即移除，防止重放
     expect(sessionStorage.getItem('e2cal_dropbox_oauth_state')).toBeNull();
     // verifier 留待 exchangeCodeForTokensOnly 消費
     expect(sessionStorage.getItem('e2cal_dropbox_code_verifier')).toBe('test_verifier');
 
     // 即使 AppRouter 隨後清理網址列，Hook 仍能一次性消費已捕獲的 code
-    expect(consumePendingDropboxOAuthCallback()).toEqual({ kind: 'code', code: 'auth_code_123' });
+    expect(consumePendingDropboxOAuthCallback()).toEqual({
+      kind: 'code',
+      code: 'auth_code_123',
+      mode: 'sync',
+    });
     // 第二次消費（模擬 StrictMode 或雙 Hook 實例）必須回傳 null
     expect(consumePendingDropboxOAuthCallback()).toBeNull();
+  });
+
+  it('preserves restore OAuth mode when initiated from landing cloud import', () => {
+    const state = generateOAuthState();
+    sessionStorage.setItem('e2cal_dropbox_code_verifier', 'test_verifier');
+    sessionStorage.setItem('e2cal_dropbox_oauth_state', state);
+    sessionStorage.setItem('e2cal_dropbox_oauth_mode', 'restore');
+
+    const captured = captureDropboxOAuthCallback(`?code=restore_code_99&state=${state}`, '/app');
+    expect(captured).toEqual({ kind: 'code', code: 'restore_code_99', mode: 'restore' });
+    expect(sessionStorage.getItem('e2cal_dropbox_oauth_mode')).toBeNull();
+    expect(consumePendingDropboxOAuthCallback()).toEqual({
+      kind: 'code',
+      code: 'restore_code_99',
+      mode: 'restore',
+    });
   });
 
   it('rejects OAuth callback with mismatched state and cleans up session artifacts', () => {
