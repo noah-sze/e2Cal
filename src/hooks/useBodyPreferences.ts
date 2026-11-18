@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import type { BodyPreferences } from '@/types';
 import { DEFAULT_BODY_PREFERENCES } from '@/types';
 
-export const STORAGE_KEY = 'zenfit_body_preferences';
-export const EVENT_KEY = 'zenfit_body_preferences_change';
+export const STORAGE_KEY = 'e2cal_body_preferences';
+export const EVENT_KEY = 'e2cal_body_preferences_change';
 
 export function readStoredBodyPreferences(): BodyPreferences {
   try {

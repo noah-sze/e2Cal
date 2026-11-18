@@ -5,7 +5,7 @@
 import { format } from 'date-fns';
 
 export const DATE_SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 分鐘
-export const DATE_SESSION_STORAGE_KEY = 'zenfit_date_session';
+export const DATE_SESSION_STORAGE_KEY = 'e2cal_date_session';
 
 export interface DateSessionSnapshot {
   date: string;

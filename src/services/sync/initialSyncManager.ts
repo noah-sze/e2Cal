@@ -2,18 +2,14 @@ import { db } from '@/services/db/db';
 import type {
   FoodItem,
   FoodRecipe,
-  FoodLog,
   DailyDietLog,
-  DietPlan,
   Exercise,
   Equipment,
   WorkoutRoutine,
   WorkoutLog,
   BodyMetric,
   UserBaseInfo,
-  UserProfile,
 } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
 import {
   listRemoteFolder,
   downloadJsonFile,
@@ -22,7 +18,6 @@ import {
 import {
   sanitizeFoodItem,
   sanitizeRecipe,
-  sanitizeFoodLog,
   sanitizeDailyDietLog,
   sanitizeWorkoutLog,
   sanitizeWorkoutRoutine,
@@ -81,7 +76,6 @@ export interface InitialSyncState {
 
 interface StagedData {
   baseInfos: UserBaseInfo[];
-  profiles: UserProfile[];
   foods: FoodItem[];
   recipes: FoodRecipe[];
   dailyDietLogs: DailyDietLog[];
@@ -108,7 +102,6 @@ let staging: InitialSyncStaging = {
   strategy: null,
   downloaded: {
     baseInfos: [],
-    profiles: [],
     foods: [],
     recipes: [],
     dailyDietLogs: [],
@@ -163,7 +156,6 @@ export async function startInitialSync(code: string): Promise<void> {
     strategy: null,
     downloaded: {
       baseInfos: [],
-      profiles: [],
       foods: [],
       recipes: [],
       dailyDietLogs: [],
@@ -234,7 +226,7 @@ async function inspectRemote(): Promise<void> {
       staging.remoteManifest = remoteManifest;
       if (remoteManifest?.stats) {
         remoteCount =
-          (remoteManifest.stats.dailyDietLogsCount ?? remoteManifest.stats.foodLogsCount ?? 0) +
+          (remoteManifest.stats.dailyDietLogsCount || 0) +
           (remoteManifest.stats.workoutLogsCount || 0) +
           (remoteManifest.stats.bodyMetricsCount || 0);
       }
@@ -337,9 +329,6 @@ async function executeDownloadQueue(): Promise<void> {
       if (path === '/user/base_info.json') {
         const data = await downloadJsonFile<UserBaseInfo[]>(path);
         if (data) staged.baseInfos.push(...data.map(sanitizeUserBaseInfo));
-      } else if (path === '/user/profile.json') {
-        const data = await downloadJsonFile<UserProfile[]>(path);
-        if (data) staged.profiles.push(...data);
       } else if (path === '/nutrition/foods.json') {
         const data = await downloadJsonFile<FoodItem[]>(path);
         if (data) staged.foods.push(...data.map(sanitizeFoodItem));
@@ -347,38 +336,14 @@ async function executeDownloadQueue(): Promise<void> {
         const data = await downloadJsonFile<FoodRecipe[]>(path);
         if (data) staged.recipes.push(...data.map(sanitizeRecipe));
       } else if (path.startsWith('/nutrition/logs/')) {
-        const raw = await downloadJsonFile<DailyDietLog | DailyDietLog[] | FoodLog[]>(path);
+        const raw = await downloadJsonFile<DailyDietLog | DailyDietLog[]>(path);
         if (raw) {
           if (Array.isArray(raw)) {
-            if (raw.length > 0 && 'entries' in raw[0]) {
-              staged.dailyDietLogs.push(...raw.map(sanitizeDailyDietLog));
-            } else {
-              // 舊版 FoodLog[] 平鋪結構向下相容
-              const dateStr = path.replace('/nutrition/logs/', '').replace('.json', '');
-              staged.dailyDietLogs.push({
-                id: uuidv4(),
-                date: dateStr,
-                meta: { activityLevel: 1.55, macroSplit: { carbs: 40, protein: 30, fat: 30 } },
-                entries: raw.map(sanitizeFoodLog),
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
-              });
-            }
-          } else if (raw && 'entries' in raw) {
+            staged.dailyDietLogs.push(
+              ...raw.filter((item) => 'entries' in item).map(sanitizeDailyDietLog)
+            );
+          } else if ('entries' in raw) {
             staged.dailyDietLogs.push(sanitizeDailyDietLog(raw));
-          }
-        }
-      } else if (path === '/nutrition/diet_plans.json') {
-        // 舊版遠端 diet_plans 檔案向下相容吸收進日誌頭部
-        const legacyPlans = (await downloadJsonFile<DietPlan[]>(path)) || [];
-        for (const plan of legacyPlans) {
-          if (!plan.date) continue;
-          const target = staged.dailyDietLogs.find((d) => d.date === plan.date);
-          if (target) {
-            target.meta = {
-              activityLevel: plan.activityLevel ?? target.meta.activityLevel,
-              macroSplit: plan.macroSplit ?? target.meta.macroSplit,
-            };
           }
         }
       } else if (path === '/workout/exercises.json') {
@@ -471,7 +436,6 @@ async function executeAtomicCommit(): Promise<void> {
           ]);
 
           if (staged.baseInfos.length) await db.user_base_info.bulkPut(staged.baseInfos);
-          if (staged.profiles.length) await db.user_profile.bulkPut(staged.profiles);
           if (staged.foods.length) await db.foods.bulkPut(staged.foods);
           if (staged.recipes.length) await db.recipes.bulkPut(staged.recipes);
           if (staged.dailyDietLogs.length) {
@@ -504,7 +468,6 @@ async function executeAtomicCommit(): Promise<void> {
         'rw',
         [
           db.user_base_info,
-          db.user_profile,
           db.foods,
           db.recipes,
           db.daily_diet_logs,
@@ -517,7 +480,6 @@ async function executeAtomicCommit(): Promise<void> {
         async () => {
           const [
             localBaseInfos,
-            localProfiles,
             localFoods,
             localRecipes,
             localDietLogs,
@@ -528,7 +490,6 @@ async function executeAtomicCommit(): Promise<void> {
             localMetrics,
           ] = await Promise.all([
             db.user_base_info.toArray(),
-            db.user_profile.toArray(),
             db.foods.toArray(),
             db.recipes.toArray(),
             db.daily_diet_logs.toArray(),
@@ -540,7 +501,6 @@ async function executeAtomicCommit(): Promise<void> {
           ]);
 
           const mBase = mergeEntities(localBaseInfos, staged.baseInfos);
-          const mProf = mergeEntities(localProfiles, staged.profiles);
           const mFood = mergeEntities(localFoods, staged.foods);
           const mRecipe = mergeEntities(localRecipes, staged.recipes);
           const mDiet = mergeDietLogsByDate(localDietLogs, staged.dailyDietLogs);
@@ -551,7 +511,6 @@ async function executeAtomicCommit(): Promise<void> {
           const mMetrics = mergeEntities(localMetrics, staged.bodyMetrics);
 
           if (mBase.merged.length) await db.user_base_info.bulkPut(mBase.merged);
-          if (mProf.merged.length) await db.user_profile.bulkPut(mProf.merged);
           if (mFood.merged.length) await db.foods.bulkPut(mFood.merged);
           if (mRecipe.merged.length) await db.recipes.bulkPut(mRecipe.merged);
           if (mDiet.merged.length) await db.daily_diet_logs.bulkPut(mDiet.merged);
@@ -620,7 +579,6 @@ export function cancelInitialSync(): void {
     strategy: null,
     downloaded: {
       baseInfos: [],
-      profiles: [],
       foods: [],
       recipes: [],
       dailyDietLogs: [],

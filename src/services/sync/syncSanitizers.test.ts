@@ -16,21 +16,21 @@ import {
 
 describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
   describe('sanitizeRecipe', () => {
-    it('徹底剔除食材中的 foodName 快照與菜餚根級別的 description，並將舊 ID 自動對齊為 UUID', () => {
+    it('徹底剔除食材中的 foodName 快照與菜餚根級別的 description', () => {
       const dirtyRecipe = {
-        id: 'recipe_chicken_rice_box',
+        id: DEFAULT_RECIPE_IDS.chicken_rice_box,
         name: '經典低脂雞胸便當',
         description: '標準乾淨減脂主食，可選配微量烹調油',
         ingredients: [
           {
-            foodId: 'food_chicken_breast',
+            foodId: DEFAULT_FOOD_IDS.chicken_breast,
             foodName: '雞胸肉',
             quantity: 150,
             unit: 'g',
             isOptional: false,
           },
           {
-            foodId: 'food_cooking_oil',
+            foodId: DEFAULT_FOOD_IDS.cooking_oil,
             foodName: '食用植物油',
             quantity: 5,
             unit: 'g',
@@ -86,12 +86,12 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
   });
 
   describe('sanitizeFoodLog', () => {
-    it('徹底剔除食物名稱與靜態營養素快照，並將舊食材 ID 自動映射為 UUID', () => {
+    it('徹底剔除食物名稱與靜態營養素快照', () => {
       const dirtyLog = {
         id: 'log-1',
         date: '2026-11-06',
         mealType: 'breakfast',
-        foodId: 'food_chicken_breast',
+        foodId: DEFAULT_FOOD_IDS.chicken_breast,
         foodName: '雞胸肉',
         calories: 165,
         protein: 34.5,
@@ -247,9 +247,9 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
   });
 
   describe('sanitizeUserBaseInfo', () => {
-    it('徹底剔除 weightUnit 與 activityLevel，並將舊使用者 ID 自動映射為 UUID', () => {
+    it('徹底剔除 weightUnit 與 activityLevel', () => {
       const dirtyInfo = {
-        id: 'primary_user',
+        id: PRIMARY_USER_ID,
         name: 'Jason',
         gender: 'male',
         birthDate: '1999-01',
@@ -278,7 +278,7 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
   });
 
   describe('sanitizeDailyDietLog', () => {
-    it('規範化自包含日誌頭部 meta 與內部 entries，並將舊食材 ID 自動映射至 UUID', () => {
+    it('規範化自包含日誌頭部 meta 與內部 entries', () => {
       const dirtyDailyLog = {
         id: 'daily_1',
         date: '2026-11-06',
@@ -291,9 +291,9 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
           {
             id: 'e1',
             mealType: 'breakfast',
-            foodId: 'food_chicken_breast',
+            foodId: DEFAULT_FOOD_IDS.chicken_breast,
             foodName: '雞胸肉',
-            bundleId: 'recipe_chicken_rice_box',
+            bundleId: DEFAULT_RECIPE_IDS.chicken_rice_box,
             bundleName: '經典低脂雞胸便當',
             quantity: 150,
             unit: 'g',

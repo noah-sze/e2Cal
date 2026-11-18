@@ -11,16 +11,11 @@ import type {
   UserBaseInfo,
 } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { LEGACY_ID_TO_UUID_MAP, PRIMARY_USER_ID } from '@/services/db/defaultData';
+import { PRIMARY_USER_ID } from '@/services/db/defaultData';
 import { normalizeServingToMetric } from '@/utils/nutritionMath';
 
 function asRecord(input: unknown): Record<string, unknown> {
   return typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
-}
-
-export function mapLegacyIdToUuid(id?: string): string {
-  if (!id) return '';
-  return LEGACY_ID_TO_UUID_MAP[id] || id;
 }
 
 /**
@@ -39,7 +34,7 @@ export function sanitizeFoodItem(rawInput: unknown): FoodItem {
   );
 
   return {
-    id: mapLegacyIdToUuid(rawId) || rawId,
+    id: rawId,
     name: String(raw.name || '').trim(),
     category,
     ...(raw.brand ? { brand: String(raw.brand).trim() } : {}),
@@ -59,20 +54,20 @@ export function sanitizeFoodItem(rawInput: unknown): FoodItem {
 }
 
 /**
- * 清洗菜餚組合：嚴格踐行純 ID 關聯正規化，剔除任何 foodName 快照與根層級 description，並自動遷移舊 ID 至 UUID
+ * 清洗菜餚組合：嚴格踐行純 ID 關聯正規化，剔除任何 foodName 快照與根層級 description
  */
 export function sanitizeRecipe(recipeInput: unknown): FoodRecipe {
   const recipe = asRecord(recipeInput);
   const rawId = String(recipe.id || '');
   return {
-    id: mapLegacyIdToUuid(rawId),
+    id: rawId,
     name: String(recipe.name || ''),
     ingredients: Array.isArray(recipe.ingredients)
       ? recipe.ingredients.map((ingInput: unknown) => {
           const ing = asRecord(ingInput);
           const rawFoodId = String(ing.foodId || '');
           const item: { foodId: string; quantity: number; unit: string; isOptional?: boolean } = {
-            foodId: mapLegacyIdToUuid(rawFoodId),
+            foodId: rawFoodId,
             quantity: Number(ing.quantity) || 0,
             unit: String(ing.unit || 'g'),
           };
@@ -91,7 +86,7 @@ export function sanitizeRecipe(recipeInput: unknown): FoodRecipe {
 }
 
 /**
- * 清洗飲食日誌：只保留物理事實與系統原型，剔除食物名稱與靜態營養素快照，並自動遷移引用 foodId 至 UUID
+ * 清洗飲食日誌：只保留物理事實與系統原型，剔除食物名稱與靜態營養素快照
  */
 export function sanitizeFoodLog(logInput: unknown): FoodLog {
   const log = asRecord(logInput);
@@ -116,10 +111,10 @@ export function sanitizeFoodLog(logInput: unknown): FoodLog {
   };
 
   if (entryType === 'item') {
-    if (log.foodId) sanitized.foodId = mapLegacyIdToUuid(String(log.foodId));
+    if (log.foodId) sanitized.foodId = String(log.foodId);
     sanitized.quantity = Number(log.quantity) || 0;
     sanitized.unit = String(log.unit || 'g');
-    if (log.bundleId) sanitized.bundleId = mapLegacyIdToUuid(String(log.bundleId));
+    if (log.bundleId) sanitized.bundleId = String(log.bundleId);
   } else if (entryType === 'as_planned') {
     sanitized.isAsPlanned = true;
     const rawCustomTitle = typeof log.customTitle === 'string' ? log.customTitle.trim() : '';
@@ -186,7 +181,7 @@ export function sanitizeDailyDietLog(rawInput: unknown): DailyDietLog {
   const meta = asRecord(raw.meta);
   const rawId = String(raw.id || '');
   return {
-    id: mapLegacyIdToUuid(rawId) || rawId,
+    id: rawId,
     date: String(raw.date || ''),
     meta: {
       activityLevel: Number(meta.activityLevel) || 1.55,
@@ -202,7 +197,7 @@ export function sanitizeDailyDietLog(rawInput: unknown): DailyDietLog {
 }
 
 /**
- * 清洗訓練日誌：只保留動作 ID 與組數，剔除標題、動作名稱與肌群快照，並自動遷移 exerciseId/routineId 至 UUID
+ * 清洗訓練日誌：只保留動作 ID 與組數，剔除標題、動作名稱與肌群快照
  */
 export function sanitizeWorkoutLog(logInput: unknown): WorkoutLog {
   const log = asRecord(logInput);
@@ -213,7 +208,7 @@ export function sanitizeWorkoutLog(logInput: unknown): WorkoutLog {
       ? log.exercises.map((groupInput: unknown) => {
           const group = asRecord(groupInput);
           return {
-            exerciseId: mapLegacyIdToUuid(String(group.exerciseId || '')),
+            exerciseId: String(group.exerciseId || ''),
             sets: Array.isArray(group.sets)
               ? group.sets.map((sInput: unknown, idx: number) => {
                   const s = asRecord(sInput);
@@ -234,20 +229,20 @@ export function sanitizeWorkoutLog(logInput: unknown): WorkoutLog {
     updatedAt: Number(log.updatedAt) || Date.now(),
   };
 
-  if (log.routineId) sanitized.routineId = mapLegacyIdToUuid(String(log.routineId));
+  if (log.routineId) sanitized.routineId = String(log.routineId);
   if (log.rev !== undefined) sanitized.rev = Number(log.rev);
 
   return sanitized;
 }
 
 /**
- * 清洗使用者基礎資料：剔除 weightUnit 與 activityLevel，並自動遷移主鍵至 UUID
+ * 清洗使用者基礎資料：剔除 weightUnit 與 activityLevel
  */
 export function sanitizeUserBaseInfo(infoInput: unknown): UserBaseInfo {
   const info = asRecord(infoInput);
   const rawId = String(info.id || PRIMARY_USER_ID);
   return {
-    id: mapLegacyIdToUuid(rawId) || PRIMARY_USER_ID,
+    id: rawId || PRIMARY_USER_ID,
     name: String(info.name || ''),
     gender: info.gender === 'female' ? 'female' : 'male',
     birthDate: String(info.birthDate || '1999-01'),
@@ -265,14 +260,14 @@ export function sanitizeWorkoutRoutine(routineInput: unknown): WorkoutRoutine {
   const routine = asRecord(routineInput);
   const rawId = String(routine.id || '');
   return {
-    id: mapLegacyIdToUuid(rawId) || rawId,
+    id: rawId,
     name: String(routine.name || ''),
     ...(routine.notes ? { notes: String(routine.notes) } : {}),
     exercises: Array.isArray(routine.exercises)
       ? routine.exercises.map((itemInput: unknown) => {
           const item = asRecord(itemInput);
           return {
-            exerciseId: mapLegacyIdToUuid(String(item.exerciseId || '')),
+            exerciseId: String(item.exerciseId || ''),
           };
         })
       : [],

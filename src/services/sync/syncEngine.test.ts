@@ -384,15 +384,15 @@ describe('dropboxAuth', () => {
 
   it('captures valid OAuth callback before router rewrites URL and consumes it only once', () => {
     const state = generateOAuthState();
-    sessionStorage.setItem('zenfit_dropbox_code_verifier', 'test_verifier');
-    sessionStorage.setItem('zenfit_dropbox_oauth_state', state);
+    sessionStorage.setItem('e2cal_dropbox_code_verifier', 'test_verifier');
+    sessionStorage.setItem('e2cal_dropbox_oauth_state', state);
 
     const captured = captureDropboxOAuthCallback(`?code=auth_code_123&state=${state}`, '/app');
     expect(captured).toEqual({ kind: 'code', code: 'auth_code_123' });
     // state 驗證通過後立即移除，防止重放
-    expect(sessionStorage.getItem('zenfit_dropbox_oauth_state')).toBeNull();
+    expect(sessionStorage.getItem('e2cal_dropbox_oauth_state')).toBeNull();
     // verifier 留待 exchangeCodeForTokensOnly 消費
-    expect(sessionStorage.getItem('zenfit_dropbox_code_verifier')).toBe('test_verifier');
+    expect(sessionStorage.getItem('e2cal_dropbox_code_verifier')).toBe('test_verifier');
 
     // 即使 AppRouter 隨後清理網址列，Hook 仍能一次性消費已捕獲的 code
     expect(consumePendingDropboxOAuthCallback()).toEqual({ kind: 'code', code: 'auth_code_123' });
@@ -401,8 +401,8 @@ describe('dropboxAuth', () => {
   });
 
   it('rejects OAuth callback with mismatched state and cleans up session artifacts', () => {
-    sessionStorage.setItem('zenfit_dropbox_code_verifier', 'test_verifier');
-    sessionStorage.setItem('zenfit_dropbox_oauth_state', 'dropbox_expected_state');
+    sessionStorage.setItem('e2cal_dropbox_code_verifier', 'test_verifier');
+    sessionStorage.setItem('e2cal_dropbox_oauth_state', 'dropbox_expected_state');
 
     const captured = captureDropboxOAuthCallback(
       '?code=auth_code_123&state=dropbox_tampered_state',
@@ -413,15 +413,15 @@ describe('dropboxAuth', () => {
       error: 'oauth_state_mismatch',
       errorDescription: 'OAuth state verification failed',
     });
-    expect(sessionStorage.getItem('zenfit_dropbox_code_verifier')).toBeNull();
-    expect(sessionStorage.getItem('zenfit_dropbox_oauth_state')).toBeNull();
+    expect(sessionStorage.getItem('e2cal_dropbox_code_verifier')).toBeNull();
+    expect(sessionStorage.getItem('e2cal_dropbox_oauth_state')).toBeNull();
     expect(consumePendingDropboxOAuthCallback()).toEqual(captured);
     expect(consumePendingDropboxOAuthCallback()).toBeNull();
   });
 
   it('captures OAuth error callback (e.g. access_denied) and cleans up verifier/state', () => {
-    sessionStorage.setItem('zenfit_dropbox_code_verifier', 'test_verifier');
-    sessionStorage.setItem('zenfit_dropbox_oauth_state', 'dropbox_state_1');
+    sessionStorage.setItem('e2cal_dropbox_code_verifier', 'test_verifier');
+    sessionStorage.setItem('e2cal_dropbox_oauth_state', 'dropbox_state_1');
 
     const captured = captureDropboxOAuthCallback(
       '?error=access_denied&error_description=The+user+chose+not+to+give+your+app+access',
@@ -432,20 +432,20 @@ describe('dropboxAuth', () => {
       error: 'access_denied',
       errorDescription: 'The user chose not to give your app access',
     });
-    expect(sessionStorage.getItem('zenfit_dropbox_code_verifier')).toBeNull();
-    expect(sessionStorage.getItem('zenfit_dropbox_oauth_state')).toBeNull();
+    expect(sessionStorage.getItem('e2cal_dropbox_code_verifier')).toBeNull();
+    expect(sessionStorage.getItem('e2cal_dropbox_oauth_state')).toBeNull();
     expect(consumePendingDropboxOAuthCallback()).toEqual(captured);
   });
 
   it('ignores non-callback paths and foreign provider states', () => {
-    sessionStorage.setItem('zenfit_dropbox_code_verifier', 'test_verifier');
-    sessionStorage.setItem('zenfit_dropbox_oauth_state', 'dropbox_state_1');
+    sessionStorage.setItem('e2cal_dropbox_code_verifier', 'test_verifier');
+    sessionStorage.setItem('e2cal_dropbox_oauth_state', 'dropbox_state_1');
 
     expect(captureDropboxOAuthCallback('?code=abc&state=dropbox_state_1', '/')).toBeNull();
     expect(captureDropboxOAuthCallback('?code=abc&state=dropbox_state_1', '/settings')).toBeNull();
     expect(consumePendingDropboxOAuthCallback()).toBeNull();
 
-    sessionStorage.removeItem('zenfit_dropbox_oauth_state');
+    sessionStorage.removeItem('e2cal_dropbox_oauth_state');
     expect(captureDropboxOAuthCallback('?code=abc&state=gdrive_other', '/app')).toBeNull();
     expect(consumePendingDropboxOAuthCallback()).toBeNull();
   });

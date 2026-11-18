@@ -358,7 +358,7 @@ const LOGO_PATHS = [
   },
 ];
 
-function drawZenfitLogo(
+function drawE2CalLogo(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -430,7 +430,7 @@ function renderHeader(rc: RenderContext, payload: DailyExportPayload, y: number)
     // 品牌 Logo (名稱左側附上官方 Logo 圓角黑底白標，尺寸 30x30，中心對齊 centerY)
     const logoSize = 30;
     const logoY = centerY - Math.round(logoSize / 2); // y + 7
-    drawZenfitLogo(ctx, paddingX, logoY, logoSize, palette.border);
+    drawE2CalLogo(ctx, paddingX, logoY, logoSize, palette.border);
 
     // 品牌文字區塊 (X 軸左對齊，垂直方向與 Logo 嚴格視覺對齊)
     const brandTextX = paddingX + logoSize + 9;

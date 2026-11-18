@@ -2,9 +2,8 @@ import { db } from '@/services/db/db';
 import type {
   FoodItem,
   FoodRecipe,
-  DailyDietLog,
   FoodLog,
-  DietPlan,
+  DailyDietLog,
   Exercise,
   Equipment,
   WorkoutRoutine,
@@ -12,7 +11,6 @@ import type {
   BodyMetric,
   UserBaseInfo,
 } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
 import i18n from '@/i18n/config';
 import { toast } from '@/components/ui/toast';
 import {
@@ -27,7 +25,6 @@ import {
 import {
   sanitizeFoodItem,
   sanitizeRecipe,
-  sanitizeFoodLog,
   sanitizeDailyDietLog,
   sanitizeWorkoutLog,
   sanitizeWorkoutRoutine,
@@ -37,9 +34,9 @@ import { isDropboxConnected } from './dropboxAuth';
 
 export { getSyncErrorReasonKey, formatSyncErrorMessage, type SyncErrorReasonKey };
 
-const LAST_SYNC_KEY = 'zenfit_dropbox_last_sync';
-const CACHED_REVS_KEY = 'zenfit_dropbox_cached_revs';
-const TABLE_PUSH_TIME_KEY = 'zenfit_dropbox_pushed_times';
+const LAST_SYNC_KEY = 'e2cal_dropbox_last_sync';
+const CACHED_REVS_KEY = 'e2cal_dropbox_cached_revs';
+const TABLE_PUSH_TIME_KEY = 'e2cal_dropbox_pushed_times';
 
 export interface SyncResult {
   success: boolean;
@@ -95,8 +92,6 @@ export interface SyncManifestStats {
   foodsCount: number;
   recipesCount: number;
   dailyDietLogsCount: number;
-  foodLogsCount?: number;
-  dietPlansCount?: number;
   exercisesCount: number;
   equipmentsCount: number;
   routinesCount: number;
@@ -665,27 +660,13 @@ export async function executeSync(
           !f.name.endsWith('manifest.json')
       );
       const foodChunks = await Promise.all(
-        foodFiles.map((f) => downloadJsonFile<DailyDietLog | DailyDietLog[] | FoodLog[]>(f.path_lower))
+        foodFiles.map((f) => downloadJsonFile<DailyDietLog | DailyDietLog[]>(f.path_lower))
       );
       const allDailyDietLogs: DailyDietLog[] = [];
-      for (let i = 0; i < foodFiles.length; i++) {
-        const chunk = foodChunks[i];
-        const f = foodFiles[i];
+      for (const chunk of foodChunks) {
         if (!chunk) continue;
         if (Array.isArray(chunk)) {
-          if (chunk.length > 0 && 'entries' in chunk[0]) {
-            allDailyDietLogs.push(...chunk.map(sanitizeDailyDietLog));
-          } else {
-            const dateStr = f.name.replace('.json', '');
-            allDailyDietLogs.push({
-              id: uuidv4(),
-              date: dateStr,
-              meta: { activityLevel: 1.55, macroSplit: { carbs: 40, protein: 30, fat: 30 } },
-              entries: chunk.map(sanitizeFoodLog),
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-            });
-          }
+          allDailyDietLogs.push(...chunk.filter((item) => 'entries' in item).map(sanitizeDailyDietLog));
         } else if ('entries' in chunk) {
           allDailyDietLogs.push(sanitizeDailyDietLog(chunk));
         }
@@ -849,44 +830,7 @@ export async function executeSync(
       cachedRevs['/nutrition/recipes.json'] = recipesMeta.rev;
     }
 
-    // 5. 檢查舊版 diet_plans (向下相容吸收進日誌頭部)
-    const plansMeta = remoteFileMap.get('/nutrition/diet_plans.json');
-    if (plansMeta && cachedRevs['/nutrition/diet_plans.json'] !== plansMeta.rev) {
-      const remoteList = (await downloadJsonFile<DietPlan[]>('/nutrition/diet_plans.json')) || [];
-      for (const p of remoteList) {
-        if (!p.date) continue;
-        const existing = await db.daily_diet_logs.where('date').equals(p.date).first();
-        if (existing) {
-          const remoteUpdated = getNormalizedTimestamp(p.updatedAt);
-          const localUpdated = getNormalizedTimestamp(existing.updatedAt);
-          if (remoteUpdated > localUpdated) {
-            existing.meta = {
-              activityLevel: p.activityLevel ?? existing.meta.activityLevel,
-              macroSplit: p.macroSplit ?? existing.meta.macroSplit,
-            };
-            existing.updatedAt = Math.max(existing.updatedAt, remoteUpdated);
-            await db.daily_diet_logs.put(existing);
-            hasLocalModified = true;
-          }
-        } else {
-          await db.daily_diet_logs.put({
-            id: uuidv4(),
-            date: p.date,
-            meta: {
-              activityLevel: p.activityLevel ?? 1.55,
-              macroSplit: p.macroSplit ?? { carbs: 40, protein: 30, fat: 30 },
-            },
-            entries: [],
-            createdAt: p.createdAt || Date.now(),
-            updatedAt: p.updatedAt || Date.now(),
-          });
-          hasLocalModified = true;
-        }
-      }
-      cachedRevs['/nutrition/diet_plans.json'] = plansMeta.rev;
-    }
-
-    // 6. 檢查 exercises
+    // 5. 檢查 exercises
     const exMeta = remoteFileMap.get('/workout/exercises.json');
     if (exMeta && cachedRevs['/workout/exercises.json'] !== exMeta.rev) {
       const remoteList = (await downloadJsonFile<Exercise[]>('/workout/exercises.json')) || [];
@@ -900,7 +844,7 @@ export async function executeSync(
       cachedRevs['/workout/exercises.json'] = exMeta.rev;
     }
 
-    // 7. 檢查 equipments
+    // 6. 檢查 equipments
     const eqMeta = remoteFileMap.get('/workout/equipments.json');
     if (eqMeta && cachedRevs['/workout/equipments.json'] !== eqMeta.rev) {
       const remoteList = (await downloadJsonFile<Equipment[]>('/workout/equipments.json')) || [];
@@ -914,7 +858,7 @@ export async function executeSync(
       cachedRevs['/workout/equipments.json'] = eqMeta.rev;
     }
 
-    // 8. 檢查 routines
+    // 7. 檢查 routines
     const routinesMeta = remoteFileMap.get('/workout/routines.json');
     if (routinesMeta && cachedRevs['/workout/routines.json'] !== routinesMeta.rev) {
       const remoteList = (await downloadJsonFile<WorkoutRoutine[]>('/workout/routines.json')) || [];
@@ -928,7 +872,7 @@ export async function executeSync(
       cachedRevs['/workout/routines.json'] = routinesMeta.rev;
     }
 
-    // 9. 檢查 daily_diet_logs 各日分卷 (/nutrition/logs/YYYY-MM-DD.json)
+    // 8. 檢查 daily_diet_logs 各日分卷 (/nutrition/logs/YYYY-MM-DD.json)
     const remoteFoodBuckets = remoteFiles.filter(
       (f) =>
         f.path_lower.startsWith('/nutrition/logs/') &&
@@ -939,25 +883,20 @@ export async function executeSync(
       const path = bMeta.path_lower;
       if (cachedRevs[path] !== bMeta.rev) {
         const bucket = bMeta.name.replace('.json', '');
-        const rawRemote = await downloadJsonFile<DailyDietLog | DailyDietLog[] | FoodLog[]>(path);
+        const rawRemote = await downloadJsonFile<DailyDietLog | DailyDietLog[]>(path);
         if (rawRemote) {
-          let remoteLog: DailyDietLog;
+          let remoteLog: DailyDietLog | null = null;
           if (Array.isArray(rawRemote)) {
             if (rawRemote.length > 0 && 'entries' in rawRemote[0]) {
               remoteLog = sanitizeDailyDietLog(rawRemote[0]);
-            } else {
-              // 舊版 FoodLog[] 平鋪結構向下相容
-              remoteLog = {
-                id: uuidv4(),
-                date: bucket,
-                meta: { activityLevel: 1.55, macroSplit: { carbs: 40, protein: 30, fat: 30 } },
-                entries: rawRemote.map(sanitizeFoodLog),
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
-              };
             }
-          } else {
+          } else if ('entries' in rawRemote) {
             remoteLog = sanitizeDailyDietLog(rawRemote);
+          }
+
+          if (!remoteLog) {
+            cachedRevs[path] = bMeta.rev;
+            continue;
           }
 
           const localLog = await db.daily_diet_logs.where('date').equals(bucket).first();

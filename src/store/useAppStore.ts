@@ -48,7 +48,7 @@ export const useAppStore = create<AppState>()(
       setHidePwaInstallPrompt: (hidePwaInstallPrompt) => set({ hidePwaInstallPrompt }),
     }),
     {
-      name: 'zenfit-app-storage',
+      name: 'e2cal-app-storage',
       // selectedDate 永遠作為純內存會話狀態，絕不持久化至 localStorage，保證重開應用必定位至今天
       partialize: (state) => ({
         lastSyncTime: state.lastSyncTime,

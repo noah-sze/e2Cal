@@ -3,7 +3,7 @@
  * Protects distributed sync from out-of-order writes caused by incorrect device clocks.
  */
 
-const MAX_OBSERVED_TIME_KEY = 'zenance_max_observed_time';
+const MAX_OBSERVED_TIME_KEY = 'e2cal_max_observed_time';
 
 /**
  * 取得當前本地或遠端觀察到的最高物理時間戳 (ms)

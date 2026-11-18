@@ -261,7 +261,7 @@ export function FoodFormDialog({
   // 記錄開啟鍵盤時的初始狀態，供取消時安全回滾 (Revert)
   const initialKeypadValueRef = useRef<{ value: string; unit: string } | null>(null);
 
-  // 打開移植自 Zenance 的懸浮/吸附數字鍵盤
+  // 打開懸浮/吸附精密數字鍵盤
   const openKeypad = (field: KeypadField, targetEl?: HTMLElement | null) => {
     triggerHaptic('selection');
     switch (field) {

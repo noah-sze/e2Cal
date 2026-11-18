@@ -1,5 +1,5 @@
 import type { FoodItem, FoodRecipe } from '@/types';
-import type { ZenfitDatabase } from './db';
+import type { E2CalDatabase } from './db';
 import { clearDropboxTokens } from '@/services/sync/dropboxAuth';
 import { clearFoodsCache } from '@/hooks/useFoods';
 import { clearRecipesCache } from '@/hooks/useRecipes';
@@ -134,7 +134,7 @@ export const DEFAULT_RECIPES: Omit<FoodRecipe, 'createdAt' | 'updatedAt'>[] = []
 /**
  * 恢復預設數據 (無害補齊缺失項目，不覆蓋用戶已修改內容與自訂項目)
  */
-export async function restoreMissingDefaultData(db: ZenfitDatabase): Promise<{
+export async function restoreMissingDefaultData(db: E2CalDatabase): Promise<{
   totalRestored: number;
   details: { foods: number; exercises: number; equipments: number; recipes: number };
 }> {
@@ -208,7 +208,7 @@ export async function restoreMissingDefaultData(db: ZenfitDatabase): Promise<{
  * 5. 徹底中斷 Dropbox 雲端同步並清除本地授權 Token 與中繼資料
  * 6. 清理記憶體快取與本地偏好存儲
  */
-export async function resetDatabaseToFactory(db: ZenfitDatabase): Promise<void> {
+export async function resetDatabaseToFactory(db: E2CalDatabase): Promise<void> {
   const now = Date.now();
 
   // 1. 清空所有業務日誌與課表
@@ -270,12 +270,14 @@ export async function resetDatabaseToFactory(db: ZenfitDatabase): Promise<void> 
   // 6. 清理 Dropbox 憑證與同步中繼鍵
   clearDropboxTokens();
   if (typeof localStorage !== 'undefined') {
-    localStorage.removeItem('zenfit_dropbox_last_sync');
-    localStorage.removeItem('zenfit_dropbox_cached_revs');
-    localStorage.removeItem('zenfit_dropbox_pushed_times');
-    localStorage.removeItem('zenfit-app-storage');
-    localStorage.removeItem('zenfit-ui-theme');
-    localStorage.removeItem('zenfit_app_locked');
+    localStorage.removeItem('e2cal_dropbox_last_sync');
+    localStorage.removeItem('e2cal_dropbox_cached_revs');
+    localStorage.removeItem('e2cal_dropbox_pushed_times');
+    localStorage.removeItem('e2cal-app-storage');
+    localStorage.removeItem('e2cal-in-app-nav-storage');
+    localStorage.removeItem('e2cal-ui-theme');
+    localStorage.removeItem('e2cal_date_session');
+    localStorage.removeItem('e2cal_max_observed_time');
   }
 
   // 7. 清空執行時期記憶體注水快取

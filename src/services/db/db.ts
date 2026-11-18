@@ -134,7 +134,7 @@ export function migrateDailyDietLogEntriesToArchetype(log: DailyDietLog): boolea
   return changed;
 }
 
-export class ZenfitDatabase extends Dexie {
+export class E2CalDatabase extends Dexie {
   foods!: Table<FoodItem>;
   recipes!: Table<FoodRecipe>;
   daily_diet_logs!: Table<DailyDietLog>;
@@ -149,7 +149,7 @@ export class ZenfitDatabase extends Dexie {
   diet_plans!: Table<DietPlan>;
 
   constructor() {
-    super('ZenfitDB');
+    super('e2CalDB');
 
     this.version(2).stores({
       foods: 'id, name, updatedAt',
@@ -1303,7 +1303,7 @@ export class ZenfitDatabase extends Dexie {
   }
 
   async seedDefaultData() {
-    const SEED_STORAGE_KEY = 'zenfit_seed_initialized';
+    const SEED_STORAGE_KEY = 'e2cal_seed_initialized';
     const isSeeded = typeof window !== 'undefined' && localStorage.getItem(SEED_STORAGE_KEY);
     if (isSeeded) {
       return;
@@ -1412,12 +1412,12 @@ export class ZenfitDatabase extends Dexie {
   }
 }
 
-export const db = new ZenfitDatabase();
+export const db = new E2CalDatabase();
 
 // 自動檢查初始化種子資料
 db.seedDefaultData().catch(console.error);
 
 // 僅於開發環境掛載至 window 便於 Console 即時檢視
 if (import.meta.env.DEV && typeof window !== 'undefined') {
-  (window as Window & { db?: ZenfitDatabase }).db = db;
+  (window as Window & { db?: E2CalDatabase }).db = db;
 }

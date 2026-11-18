@@ -54,7 +54,7 @@ if (typeof window !== 'undefined') {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider defaultTheme="system" storageKey="zenfit-ui-theme">
+    <ThemeProvider defaultTheme="system" storageKey="e2cal-ui-theme">
       <App />
     </ThemeProvider>
   </StrictMode>,

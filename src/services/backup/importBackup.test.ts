@@ -290,7 +290,7 @@ describe('importBackup', () => {
     const zip = new JSZip();
 
     zip.file(
-      'zenfit-backup-2026-11-08/nutrition/foods.json',
+      'e2cal-backup-2026-11-08/nutrition/foods.json',
       JSON.stringify([
         {
           id: 'nested-food-1',
@@ -359,66 +359,13 @@ describe('importBackup', () => {
     );
   });
 
-  it('應支援舊版 JSON 備份檔匯入（向後相容）', async () => {
-    const legacyJson = JSON.stringify({
-      version: 3,
-      appName: 'Zenfit',
-      exportedAt: '2026-11-08T00:00:00.000Z',
-      profile: {
-        userBaseInfo: {
-          id: PRIMARY_USER_ID,
-          name: 'Legacy User',
-          gender: 'female',
-          birthDate: '1998-05-12',
-          heightCm: 168,
-        },
-      },
-      diet: {
-        foods: [
-          {
-            id: 'legacy-food-1',
-            name: '水煮蛋',
-            calories: 78,
-            protein: 6.3,
-            carbs: 0.6,
-            fat: 5.3,
-            servingSize: 50,
-            servingUnit: 'g',
-            isCustom: false,
-          },
-        ],
-        recipes: [],
-        dailyDietLogs: [],
-      },
-      workout: {
-        exercises: [],
-        routines: [],
-        equipments: [],
-        workoutLogs: [],
-      },
-      body: {
-        bodyMetrics: [],
-      },
+  it('若傳入非 ZIP 格式（含舊版單檔 JSON），應拋出 INVALID_BACKUP_FILE 錯誤', async () => {
+    const legacyJsonBlob = new Blob([JSON.stringify({ version: 3, foods: [] })], {
+      type: 'application/json',
     });
+    await expect(importBackup(legacyJsonBlob)).rejects.toThrow('INVALID_BACKUP_FILE');
 
-    const blob = new Blob([legacyJson], { type: 'application/json' });
-    const result = await importBackup(blob);
-
-    expect(result.success).toBe(true);
-    expect(result.stats.baseInfo).toBe(1);
-    expect(result.stats.foods).toBe(1);
-    expect(db.foods.bulkPut).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: 'legacy-food-1',
-          name: '水煮蛋',
-        }),
-      ])
-    );
-  });
-
-  it('若傳入空白或無效格式檔案，應拋出 INVALID_BACKUP_FILE 錯誤', async () => {
-    const emptyBlob = new Blob(['not a zip or json'], { type: 'text/plain' });
+    const emptyBlob = new Blob(['not a zip'], { type: 'text/plain' });
     await expect(importBackup(emptyBlob)).rejects.toThrow('INVALID_BACKUP_FILE');
   });
 });

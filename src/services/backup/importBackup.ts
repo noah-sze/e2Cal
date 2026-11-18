@@ -8,7 +8,6 @@ import {
   sanitizeDailyDietLog,
   sanitizeWorkoutLog,
   sanitizeWorkoutRoutine,
-  mapLegacyIdToUuid,
 } from '@/services/sync/syncSanitizers';
 
 export { sanitizeFoodItem };
@@ -66,10 +65,10 @@ export function sanitizeExercise(rawInput: unknown): Exercise {
   const rawId = String(raw.id || uuidv4());
   const rawEq = String(raw.equipment || 'bodyweight');
   return {
-    id: mapLegacyIdToUuid(rawId) || rawId,
+    id: rawId,
     name: String(raw.name || '').trim(),
     ...(raw.category ? { category: raw.category as Exercise['category'] } : {}),
-    equipment: mapLegacyIdToUuid(rawEq) || rawEq,
+    equipment: rawEq,
     targetMuscles: (raw.targetMuscles as Exercise['targetMuscles']) || {},
     ...(raw.notes ? { notes: String(raw.notes) } : {}),
     isCustom: Boolean(raw.isCustom),
@@ -84,7 +83,7 @@ export function sanitizeEquipment(rawInput: unknown): Equipment {
   const raw = asRecord(rawInput);
   const rawId = String(raw.id || uuidv4());
   return {
-    id: mapLegacyIdToUuid(rawId) || rawId,
+    id: rawId,
     name: String(raw.name || '').trim(),
     isCustom: Boolean(raw.isCustom),
     isArchived: Boolean(raw.isArchived),
@@ -132,10 +131,10 @@ function dedupeById<T extends { id: string }>(items: T[]): T[] {
 }
 
 /**
- * 解析備份檔案內容至記憶體（支援 ZIP 壓縮包與舊版 JSON 備份檔）
+ * 解析備份檔案內容至記憶體（僅支援標準 e2Cal ZIP 備份包）
  * 不修改資料庫，供前置檢查與對比展示使用
  */
-export async function parseBackupFile(file: File | Blob | string): Promise<ParsedBackupData> {
+export async function parseBackupFile(file: File | Blob): Promise<ParsedBackupData> {
   const baseInfos: UserBaseInfo[] = [];
   const foods: FoodItem[] = [];
   const recipes: FoodRecipe[] = [];
@@ -149,16 +148,14 @@ export async function parseBackupFile(file: File | Blob | string): Promise<Parse
   let zip: JSZip | null = null;
   let isZipLoaded = false;
 
-  // 1. 嘗試以 JSZip 解開
-  if (typeof file !== 'string') {
-    try {
-      const { default: JSZip } = await import('jszip');
-      zip = await JSZip.loadAsync(file);
-      isZipLoaded = Object.keys(zip.files).length > 0;
-    } catch {
-      zip = null;
-      isZipLoaded = false;
-    }
+  // 1. 以 JSZip 解開備份壓縮包
+  try {
+    const { default: JSZip } = await import('jszip');
+    zip = await JSZip.loadAsync(file);
+    isZipLoaded = Object.keys(zip.files).length > 0;
+  } catch {
+    zip = null;
+    isZipLoaded = false;
   }
 
   // 2. 若為 ZIP 壓縮包，遍歷檔案讀取
@@ -234,62 +231,7 @@ export async function parseBackupFile(file: File | Blob | string): Promise<Parse
     }
   }
 
-  // 3. 若非 ZIP 或 ZIP 中未解析出任何資料，嘗試作為 JSON 備份檔解析（向後相容）
-  const hasExtractedFromZip =
-    baseInfos.length > 0 ||
-    foods.length > 0 ||
-    recipes.length > 0 ||
-    dailyDietLogs.length > 0 ||
-    exercises.length > 0 ||
-    equipments.length > 0 ||
-    routines.length > 0 ||
-    workoutLogs.length > 0 ||
-    bodyMetrics.length > 0;
-
-  if (!hasExtractedFromZip) {
-    let jsonText: string | null = null;
-    if (typeof file === 'string') {
-      jsonText = file;
-    } else if (file instanceof Blob) {
-      try {
-        jsonText = await file.text();
-      } catch {
-        jsonText = null;
-      }
-    }
-
-    if (jsonText) {
-      try {
-        const data = JSON.parse(jsonText);
-
-        const rawBase = data.profile?.userBaseInfo
-          ? [data.profile.userBaseInfo]
-          : data.userBaseInfo || data.user_base_info || [];
-        const rawFoods = data.diet?.foods || data.foods || [];
-        const rawRecipes = data.diet?.recipes || data.recipes || [];
-        const rawDietLogs = data.diet?.dailyDietLogs || data.dailyDietLogs || data.daily_diet_logs || [];
-        const rawExercises = data.workout?.exercises || data.exercises || [];
-        const rawEquipments = data.workout?.equipments || data.equipments || [];
-        const rawRoutines = data.workout?.routines || data.routines || [];
-        const rawWorkoutLogs = data.workout?.workoutLogs || data.workoutLogs || data.workout_logs || [];
-        const rawBodyMetrics = data.body?.bodyMetrics || data.bodyMetrics || data.body_metrics || [];
-
-        if (Array.isArray(rawBase)) baseInfos.push(...rawBase.map(sanitizeUserBaseInfo));
-        if (Array.isArray(rawFoods)) foods.push(...rawFoods.map(sanitizeFoodItem));
-        if (Array.isArray(rawRecipes)) recipes.push(...rawRecipes.map(sanitizeRecipe));
-        if (Array.isArray(rawDietLogs)) dailyDietLogs.push(...rawDietLogs.map(sanitizeDailyDietLog));
-        if (Array.isArray(rawExercises)) exercises.push(...rawExercises.map(sanitizeExercise));
-        if (Array.isArray(rawEquipments)) equipments.push(...rawEquipments.map(sanitizeEquipment));
-        if (Array.isArray(rawRoutines)) routines.push(...rawRoutines.map(sanitizeWorkoutRoutine));
-        if (Array.isArray(rawWorkoutLogs)) workoutLogs.push(...rawWorkoutLogs.map(sanitizeWorkoutLog));
-        if (Array.isArray(rawBodyMetrics)) bodyMetrics.push(...rawBodyMetrics.map(sanitizeBodyMetric));
-      } catch {
-        // 非法 JSON
-      }
-    }
-  }
-
-  // 4. 去重與標準化
+  // 3. 去重與標準化
   const dedupedBaseInfos = dedupeById(baseInfos);
   const dedupedFoods = dedupeById(foods);
   const dedupedRecipes = dedupeById(recipes);
@@ -444,7 +386,7 @@ export async function executeImport(
  * 一鍵解析並匯入備份（支援合併或完全覆蓋）
  */
 export async function importBackup(
-  file: File | Blob | string,
+  file: File | Blob,
   strategy: ImportStrategy = 'merge'
 ): Promise<ImportBackupResult> {
   const parsed = await parseBackupFile(file);

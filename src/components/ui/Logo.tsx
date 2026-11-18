@@ -11,7 +11,7 @@ export interface LogoProps extends React.SVGProps<SVGSVGElement> {
 /**
  * e2Cal 官方向量核心標誌圖元
  */
-export function ZenfitLogoGlyph({ fill = 'currentColor' }: { fill?: string }) {
+export function E2CalLogoGlyph({ fill = 'currentColor' }: { fill?: string }) {
   return (
     <g transform="translate(187 187)">
       <g transform="translate(132.031 91.406)">
@@ -100,7 +100,7 @@ export function Logo({
         className={cn('shrink-0 select-none overflow-visible text-foreground', className)}
         {...props}
       >
-        <ZenfitLogoGlyph fill="currentColor" />
+        <E2CalLogoGlyph fill="currentColor" />
       </svg>
     );
   }
@@ -121,13 +121,13 @@ export function Logo({
     >
       {/* 黑色背景基底 */}
       <rect width="1024" height="1024" rx="240" fill="#000000" />
-      <ZenfitLogoGlyph fill="#FFFFFF" />
+      <E2CalLogoGlyph fill="#FFFFFF" />
     </svg>
   );
 }
 
-// 別名導出，便於以語意化 E2CalLogo / ZenfitLogo 引用
-export { Logo as E2CalLogo, Logo as ZenfitLogo };
+// 別名導出，便於以語意化 E2CalLogo 引用
+export { Logo as E2CalLogo };
 
 export interface BrandWordmarkProps extends React.HTMLAttributes<HTMLSpanElement> {
   /** 品牌文字內容，預設為 e2Cal */

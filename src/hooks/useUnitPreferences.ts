@@ -5,8 +5,8 @@ import type {
 } from '@/types';
 import { DEFAULT_UNIT_PREFERENCES } from '@/types';
 
-const STORAGE_KEY = 'zenfit_unit_preferences';
-const EVENT_KEY = 'zenfit_unit_preferences_change';
+const STORAGE_KEY = 'e2cal_unit_preferences';
+const EVENT_KEY = 'e2cal_unit_preferences_change';
 
 const METRIC_PRESETS: Omit<UnitPreferences, 'preset'> = {
   bodyWeight: 'kg',

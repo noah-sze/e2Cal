@@ -19,7 +19,7 @@ export const useInAppNavigation = create<InAppNavigationState>()(
       setActiveTab: (activeTab) => set({ activeTab }),
     }),
     {
-      name: 'zenfit-in-app-nav-storage',
+      name: 'e2cal-in-app-nav-storage',
       partialize: (state) => ({ activeTab: state.activeTab }),
     }
   )

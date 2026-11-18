@@ -4,10 +4,10 @@
  */
 import { APP_ROUTES } from '@/utils/navigation';
 
-const SESSION_VERIFIER_KEY = 'zenfit_dropbox_code_verifier';
-const SESSION_STATE_KEY = 'zenfit_dropbox_oauth_state';
+const SESSION_VERIFIER_KEY = 'e2cal_dropbox_code_verifier';
+const SESSION_STATE_KEY = 'e2cal_dropbox_oauth_state';
 const OAUTH_STATE_PREFIX = 'dropbox_';
-const STORAGE_TOKENS_KEY = 'zenfit_dropbox_tokens';
+const STORAGE_TOKENS_KEY = 'e2cal_dropbox_tokens';
 
 export type DropboxOAuthCallbackResult =
   | { kind: 'code'; code: string }

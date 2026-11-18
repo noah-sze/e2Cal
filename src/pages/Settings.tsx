@@ -713,7 +713,7 @@ export default function Settings() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".zip,.json,application/zip,application/json"
+            accept=".zip,application/zip"
             className="hidden"
             onChange={handleFileChange}
           />
