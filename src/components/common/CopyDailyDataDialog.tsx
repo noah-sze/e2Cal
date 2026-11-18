@@ -59,12 +59,8 @@ export function CopyDailyDataDialog({
   const [imageCopied, setImageCopied] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
 
-  const { theme } = useTheme();
-  const isDark =
-    theme === 'dark' ||
-    (theme === 'system' &&
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   const { preferences } = useUnitPreferences();
   const { logs: foodLogs } = useFoodLogs(date);

@@ -8,7 +8,6 @@ import './index.css'
 import './i18n/config'
 import App from './App.tsx'
 
-import { ThemeProvider } from './components/ThemeProvider'
 import { requestStoragePersistence } from '@/services/storage/storageManager'
 import { prewarmFoodsCache } from '@/hooks/useFoods'
 import { prewarmRecipesCache } from '@/hooks/useRecipes'
@@ -54,9 +53,7 @@ if (typeof window !== 'undefined') {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider defaultTheme="system" storageKey="e2cal-ui-theme">
-      <App />
-    </ThemeProvider>
+    <App />
   </StrictMode>,
 );
 

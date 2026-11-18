@@ -281,12 +281,8 @@ export function ShareShowcaseCards({
   const { t } = useTranslation();
   const tr = (k: string, fb?: string) => (fb !== undefined ? t(k, fb) : t(k));
   const activePayload = useMemo(() => payload || getDemoDailyExportPayload(tr), [payload, t]);
-  const { theme } = useTheme();
-  const isDark =
-    theme === 'dark' ||
-    (theme === 'system' &&
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   const [activeFormat, setActiveFormat] = useState<ShareFormatId>('image');
   const [previewImageUrl, setPreviewImageUrl] = useState<string>('');

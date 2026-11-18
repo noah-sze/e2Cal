@@ -366,15 +366,15 @@ function drawE2CalLogo(
   stroke?: string
 ) {
   ctx.save();
-  const radius = size * 0.234;
+  const radius = size * 0.225;
   drawRoundedBox(ctx, x, y, size, size, radius, '#000000', stroke, 1);
 
   if (typeof Path2D !== 'undefined') {
-    const scale = size / 1024;
+    const scale = (size / 1024) * 1.227;
     ctx.save();
-    ctx.translate(x + 187 * scale, y + 187 * scale);
-    ctx.translate(132.031 * scale, 91.406 * scale);
+    ctx.translate(x + size / 2, y + size / 2);
     ctx.scale(scale, scale);
+    ctx.translate(-192.9685, -233.594);
     ctx.fillStyle = '#ffffff';
 
     for (const item of LOGO_PATHS) {

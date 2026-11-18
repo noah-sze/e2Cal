@@ -17,28 +17,53 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet" />
     <script>
       (function() {
+        var root = document.documentElement;
         var ua = navigator.userAgent;
         var isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
         if (isIOS) {
-          document.documentElement.classList.add('is-ios');
+          root.classList.add('is-ios');
           var match = ua.match(/OS (\d+)[._]/);
           var iosMajorVersion = match ? parseInt(match[1], 10) : 0;
           if (iosMajorVersion >= 26) {
-            document.documentElement.classList.add('ios-has-status-blur');
+            root.classList.add('ios-has-status-blur');
           }
+        }
+
+        // 首屏主題同步初始化（防閃屏）：落地頁預設淺色且僅讀 sessionStorage；主應用讀 localStorage 預設跟隨系統
+        var rawPath = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
+        var isLanding = rawPath === '/' || rawPath === '/landing';
+        var prefersDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var resolvedTheme = isLanding ? 'light' : (prefersDark ? 'dark' : 'light');
+        try {
+          if (isLanding) {
+            resolvedTheme = window.sessionStorage.getItem('e2cal-landing-theme') === 'dark' ? 'dark' : 'light';
+          } else {
+            var storedAppTheme = window.localStorage.getItem('e2cal-ui-theme');
+            if (storedAppTheme === 'dark' || storedAppTheme === 'light') {
+              resolvedTheme = storedAppTheme;
+            }
+          }
+        } catch (e) {
+          // Ignore storage read errors in restricted environments
+        }
+        root.classList.remove('light', 'dark');
+        root.classList.add(resolvedTheme);
+        var themeColor = resolvedTheme === 'dark' ? '#000000' : '#ffffff';
+        var themeColorMetas = document.querySelectorAll('meta[name="theme-color"]');
+        for (var i = 0; i < themeColorMetas.length; i++) {
+          themeColorMetas[i].setAttribute('content', themeColor);
         }
       })();
     </script>
     <style>
-      :root {
+      :root,
+      html.light {
+        --app-bg: #ffffff;
+        --app-fg: #000000;
+      }
+      html.dark {
         --app-bg: #000000;
         --app-fg: #ffffff;
-      }
-      @media (prefers-color-scheme: light) {
-        :root {
-          --app-bg: #ffffff;
-          --app-fg: #000000;
-        }
       }
       html, body {
         height: 100%;

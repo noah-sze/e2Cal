@@ -9,6 +9,7 @@ import {
 } from 'react-router-dom';
 import { AppLayout } from './components/layout/AppLayout';
 import { SetupGuard } from './components/security/SetupGuard';
+import { ThemeProvider } from './components/ThemeProvider';
 import {
   APP_ROUTES,
   resolveInitialLogicalPath,
@@ -173,16 +174,18 @@ export function AppRouter() {
   const isLanding = location.pathname === '/';
 
   return (
-    <Router location={location} navigationType={navState.action} navigator={navigator}>
-      {isLanding ? (
-        <Suspense fallback={<div className="min-h-full bg-background" />}>
-          <LandingPage />
-        </Suspense>
-      ) : (
-        <SetupGuard>
-          <AppLayout />
-        </SetupGuard>
-      )}
-    </Router>
+    <ThemeProvider scope={isLanding ? 'landing' : 'app'}>
+      <Router location={location} navigationType={navState.action} navigator={navigator}>
+        {isLanding ? (
+          <Suspense fallback={<div className="min-h-full bg-background" />}>
+            <LandingPage />
+          </Suspense>
+        ) : (
+          <SetupGuard>
+            <AppLayout />
+          </SetupGuard>
+        )}
+      </Router>
+    </ThemeProvider>
   );
 }

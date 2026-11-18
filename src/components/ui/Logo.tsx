@@ -9,12 +9,17 @@ export interface LogoProps extends React.SVGProps<SVGSVGElement> {
 }
 
 /**
- * e2Cal 官方向量核心標誌圖元
+ * e2Cal 官方向量核心標誌圖元（方案 A 標準：56% 黃金視覺高度，精確居中於 1024×1024）
  */
-export function E2CalLogoGlyph({ fill = 'currentColor' }: { fill?: string }) {
+export function E2CalLogoGlyph({
+  fill = 'currentColor',
+  scale = 1.227,
+}: {
+  fill?: string;
+  scale?: number;
+}) {
   return (
-    <g transform="translate(187 187)">
-      <g transform="translate(132.031 91.406)">
+    <g transform={`translate(512 512) scale(${scale}) translate(-192.9685 -233.594)`}>
         <path
           d="M0 15.2344L0 7.61719C0 5.51376 0.743674 3.71837 2.23102 2.23102C3.71837 0.743674 5.51376 0 7.61719 0L12.6953 0C14.7987 0 16.5941 0.743674 18.0815 2.23102C19.5688 3.71837 20.3125 5.51376 20.3125 7.61719L20.3125 124.414C20.3125 126.517 19.5688 128.313 18.0815 129.8C16.5941 131.288 14.7987 132.031 12.6953 132.031L7.61719 132.031C5.51376 132.031 3.71837 131.288 2.23102 129.8C0.743674 128.313 0 126.517 0 124.414L0 15.2344Z"
           fill={fill}
@@ -74,13 +79,12 @@ export function E2CalLogoGlyph({ fill = 'currentColor' }: { fill?: string }) {
           fillRule="evenodd"
           transform="matrix(1 0 0 1 248.828 401.172)"
         />
-      </g>
     </g>
   );
 }
 
 /**
- * e2Cal 全域單一真理源標誌元件
+ * e2Cal 全域單一真理源標誌元件（方案 A 標準：rx=230 22.5% 圓角 + 56% 黃金標誌高度）
  */
 export function Logo({
   size = 48,
@@ -92,7 +96,7 @@ export function Logo({
   if (variant === 'monogram') {
     return (
       <svg
-        viewBox="256 256 512 512"
+        viewBox="200 200 624 624"
         width={size}
         height={size}
         fill="none"
@@ -100,7 +104,7 @@ export function Logo({
         className={cn('shrink-0 select-none overflow-visible text-foreground', className)}
         {...props}
       >
-        <E2CalLogoGlyph fill="currentColor" />
+        <E2CalLogoGlyph fill="currentColor" scale={1.227} />
       </svg>
     );
   }
@@ -113,15 +117,25 @@ export function Logo({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={cn(
-        'rounded-[23%] shrink-0 select-none overflow-hidden',
+        'rounded-[22.5%] shrink-0 select-none overflow-hidden',
         showBorder && 'border border-border/60',
         className
       )}
       {...props}
     >
-      {/* 黑色背景基底 */}
-      <rect width="1024" height="1024" rx="240" fill="#000000" />
-      <E2CalLogoGlyph fill="#FFFFFF" />
+      {/* 黑色背景基底（22.5% 連續圓角 + 深色環境防融細邊） */}
+      <rect width="1024" height="1024" rx="230" fill="#000000" />
+      <rect
+        x="4"
+        y="4"
+        width="1016"
+        height="1016"
+        rx="226"
+        fill="none"
+        stroke="rgba(255,255,255,0.14)"
+        strokeWidth="8"
+      />
+      <E2CalLogoGlyph fill="#FFFFFF" scale={1.227} />
     </svg>
   );
 }
