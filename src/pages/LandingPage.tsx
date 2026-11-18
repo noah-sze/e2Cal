@@ -252,7 +252,7 @@ export default function LandingPage() {
           e.preventDefault();
           scrollToSection("hero");
         }}
-        className="h-full px-5 sm:px-8 md:px-12 flex-1 min-w-0 md:flex-initial md:min-w-[240px] flex items-center space-x-2.5 shrink-0 hover:bg-hover transition-colors group cursor-pointer"
+        className="h-full px-4 sm:px-6 lg:px-12 flex-1 min-w-0 md:flex-initial lg:min-w-[240px] flex items-center space-x-2.5 shrink-0 hover:bg-hover transition-colors group cursor-pointer"
       >
         <Logo
           size={28}
@@ -263,14 +263,14 @@ export default function LandingPage() {
       </a>
 
       {/*  Navigation Links: Full-width Edge-to-Edge Grid  */}
-      <nav className="hidden md:flex items-center h-full flex-1 divide-x divide-border font-mono text-xs text-muted-foreground">
-        <a onClick={(e) => { e.preventDefault(); scrollToSection("diet"); }} href="#diet" className="h-full flex-1 flex items-center justify-center hover:text-foreground hover:bg-hover transition-colors">{t('landing.nav.diet', '飲食')}</a>
-        <a onClick={(e) => { e.preventDefault(); scrollToSection("workout"); }} href="#workout" className="h-full flex-1 flex items-center justify-center hover:text-foreground hover:bg-hover transition-colors">{t('landing.nav.workout', '訓練')}</a>
-        <a onClick={(e) => { e.preventDefault(); scrollToSection("body"); }} href="#body" className="h-full flex-1 flex items-center justify-center hover:text-foreground hover:bg-hover transition-colors">{t('landing.nav.body', '體態')}</a>
-        <a onClick={(e) => { e.preventDefault(); scrollToSection("analytics"); }} href="#analytics" className="h-full flex-1 flex items-center justify-center hover:text-foreground hover:bg-hover transition-colors">{t('landing.nav.analytics', '分析')}</a>
-        <a onClick={(e) => { e.preventDefault(); scrollToSection("sync"); }} href="#sync" className="h-full flex-1 flex items-center justify-center hover:text-foreground hover:bg-hover transition-colors">{t('landing.nav.sync', '同步')}</a>
-        <a onClick={(e) => { e.preventDefault(); scrollToSection("non-goals"); }} href="#non-goals" className="h-full flex-1 flex items-center justify-center hover:text-foreground hover:bg-hover transition-colors">{t('landing.nav.principles', '原則')}</a>
-        <a onClick={(e) => { e.preventDefault(); scrollToSection("tech"); }} href="#tech" className="h-full flex-1 flex items-center justify-center hover:text-foreground hover:bg-hover transition-colors">{t('landing.nav.tech', '技術')}</a>
+      <nav className="hidden md:flex items-center h-full flex-1 min-w-0 divide-x divide-border font-mono text-2xs lg:text-xs text-muted-foreground">
+        <a onClick={(e) => { e.preventDefault(); scrollToSection("diet"); }} href="#diet" className="h-full flex-1 px-1.5 whitespace-nowrap flex items-center justify-center hover:text-foreground hover:bg-hover transition-colors">{t('landing.nav.diet', '飲食')}</a>
+        <a onClick={(e) => { e.preventDefault(); scrollToSection("workout"); }} href="#workout" className="h-full flex-1 px-1.5 whitespace-nowrap flex items-center justify-center hover:text-foreground hover:bg-hover transition-colors">{t('landing.nav.workout', '訓練')}</a>
+        <a onClick={(e) => { e.preventDefault(); scrollToSection("body"); }} href="#body" className="h-full flex-1 px-1.5 whitespace-nowrap flex items-center justify-center hover:text-foreground hover:bg-hover transition-colors">{t('landing.nav.body', '體態')}</a>
+        <a onClick={(e) => { e.preventDefault(); scrollToSection("analytics"); }} href="#analytics" className="h-full flex-1 px-1.5 whitespace-nowrap flex items-center justify-center hover:text-foreground hover:bg-hover transition-colors">{t('landing.nav.analytics', '分析')}</a>
+        <a onClick={(e) => { e.preventDefault(); scrollToSection("sync"); }} href="#sync" className="h-full flex-1 px-1.5 whitespace-nowrap flex items-center justify-center hover:text-foreground hover:bg-hover transition-colors">{t('landing.nav.sync', '同步')}</a>
+        <a onClick={(e) => { e.preventDefault(); scrollToSection("non-goals"); }} href="#non-goals" className="h-full flex-1 px-1.5 whitespace-nowrap flex items-center justify-center hover:text-foreground hover:bg-hover transition-colors">{t('landing.nav.principles', '原則')}</a>
+        <a onClick={(e) => { e.preventDefault(); scrollToSection("tech"); }} href="#tech" className="h-full flex-1 px-1.5 whitespace-nowrap flex items-center justify-center hover:text-foreground hover:bg-hover transition-colors">{t('landing.nav.tech', '技術')}</a>
       </nav>
 
       {/*  Action Area: Full-bleed Right Cells (Symmetrical Equal-width Twin Cells)  */}
@@ -279,7 +279,7 @@ export default function LandingPage() {
           type="button"
           onClick={toggleLanguage}
           id="language-toggle-btn"
-          className="h-full px-3 sm:px-0 sm:w-28 md:w-32 flex items-center justify-center space-x-1.5 hover:bg-hover text-muted-foreground transition-colors cursor-pointer"
+          className="h-full px-3 lg:px-0 lg:w-32 flex items-center justify-center space-x-1.5 hover:bg-hover text-muted-foreground transition-colors cursor-pointer whitespace-nowrap"
           title={t('settings.language', '語言設定')}
         >
           <Globe className="w-3.5 h-3.5 shrink-0" />
@@ -290,7 +290,7 @@ export default function LandingPage() {
           type="button"
           onClick={toggleTheme}
           id="theme-toggle-btn"
-          className="h-full px-3 sm:px-0 sm:w-28 md:w-32 flex items-center justify-center space-x-1.5 hover:bg-hover text-muted-foreground transition-colors cursor-pointer"
+          className="h-full px-3 lg:px-0 lg:w-32 flex items-center justify-center space-x-1.5 hover:bg-hover text-muted-foreground transition-colors cursor-pointer whitespace-nowrap"
           title={t('landing.themeToggle', '切換淺色/深色模式')}
         >
           <span id="theme-icon" className="flex items-center justify-center">
@@ -309,7 +309,7 @@ export default function LandingPage() {
           align="end"
           side="bottom"
           sideOffset={6}
-          triggerClassName="relative -my-[1px] h-[calc(100%+2px)] px-4 sm:px-0 sm:w-28 md:w-32 py-0 rounded-none flex items-center justify-center space-x-1.5 bg-foreground text-background hover:opacity-90 font-semibold transition-colors cursor-pointer border border-foreground z-10"
+          triggerClassName="relative -my-[1px] h-[calc(100%+2px)] px-3.5 lg:px-0 lg:w-32 py-0 rounded-none flex items-center justify-center space-x-1.5 bg-foreground text-background hover:opacity-90 font-semibold transition-colors cursor-pointer border border-foreground z-10 whitespace-nowrap"
           iconClassName="w-3.5 h-3.5 shrink-0"
         />
       </div>
@@ -322,10 +322,10 @@ export default function LandingPage() {
   {/*  =========================================================================  */}
   <section id="hero" className="relative border-b border-border bg-grid-theme overflow-hidden transition-colors duration-200">
 
-    <div className="w-full grid grid-cols-1 lg:grid-cols-12 min-h-0 lg:min-h-[calc(100vh-56px)]">
+    <div className="w-full grid grid-cols-1 md:grid-cols-12 min-h-0 md:min-h-[calc(100vh-56px)]">
       
       {/*  Left Column: Manifesto & Value Proposition  */}
-      <div className="relative overflow-hidden lg:col-span-5 pt-36 pb-8 px-6 sm:p-12 lg:p-16 xl:p-20 border-b-0 lg:border-r border-border flex flex-col justify-center space-y-8 bg-background transition-colors duration-200">
+      <div className="relative overflow-hidden md:col-span-5 pt-36 pb-8 px-6 sm:p-12 md:p-8 lg:p-16 xl:p-20 border-b-0 md:border-r border-border flex flex-col justify-center space-y-8 bg-background transition-colors duration-200">
         <WireframeGlobe
           centerXRatio={0.68}
           centerYRatio={0.42}
@@ -343,7 +343,7 @@ export default function LandingPage() {
               />
             </div>
 
-            <h1 className="text-4xl sm:text-6xl font-semibold tracking-tight font-sans text-foreground leading-[1.12]">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight font-sans text-foreground leading-[1.12]">
               {t('landing.hero.titleLine1', '只記數據，')}<br />
               <span className="text-muted-foreground font-sans font-normal">{t('landing.hero.titleLine2', '絕不對你指手畫腳')}</span>
             </h1>
@@ -398,7 +398,7 @@ export default function LandingPage() {
 
       
       {/* Right Column: 100% Live Real Component of App Dashboard (Single Source of Truth) */}
-      <div className="hidden lg:flex lg:col-span-7 p-4 sm:p-6 lg:p-8 xl:p-12 bg-muted flex-col justify-center items-center transition-colors duration-200 overflow-hidden">
+      <div className="hidden md:flex md:col-span-7 p-4 md:p-6 lg:p-8 xl:p-12 bg-muted flex-col justify-center items-center transition-colors duration-200 overflow-hidden">
         <HeroShowcaseDeck />
       </div>
 
@@ -406,7 +406,7 @@ export default function LandingPage() {
   </section>
 
   <section id="diet" className="py-14 sm:py-20 px-4 sm:px-8 border-b border-border bg-background transition-colors duration-200">
-    <div className="max-w-6xl mx-auto space-y-5 lg:space-y-10">
+    <div className="max-w-6xl mx-auto space-y-5 md:space-y-10">
       
       {/*  標題區塊 (單獨成行，居於上方)  */}
       <div className="space-y-3 max-w-3xl">
@@ -422,11 +422,11 @@ export default function LandingPage() {
         </p>
       </div>
 
-      {/*  數據指標看板、四大記錄類型介紹與真實飲食展示視窗 (手機版橫向滑動查看，桌面版並列排版)  */}
-      <div className="flex flex-row overflow-x-auto snap-x snap-mandatory scroll-smooth items-start gap-4 sm:gap-6 lg:gap-10 font-mono pb-1 -mr-4 pr-4 sm:-mr-8 sm:pr-8 lg:mr-0 lg:pr-0 lg:pb-0 lg:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/*  數據指標看板、四大記錄類型介紹與真實飲食展示視窗 (手機版橫向滑動查看，平板／桌面版並列排版)  */}
+      <div className="flex flex-row overflow-x-auto snap-x snap-mandatory scroll-smooth items-start gap-4 sm:gap-6 font-mono pb-1 -mr-4 pr-4 sm:-mr-8 sm:pr-8 md:mr-0 md:pr-0 md:pb-0 md:overflow-visible md:grid md:grid-cols-12 md:gap-6 lg:gap-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         
-        {/*  左側欄：四大記錄模式介紹 + 底部三大核心指標 (手機端橫向吸附，桌面端緊湊精緻)  */}
-        <div className="w-[85vw] max-w-[360px] sm:max-w-[400px] lg:w-[400px] shrink-0 snap-start space-y-4">
+        {/*  左側欄：四大記錄模式介紹 + 底部三大核心指標 (手機端橫向吸附，平板／桌面端自適應雙欄)  */}
+        <div className="w-[85vw] max-w-[360px] sm:max-w-[400px] md:w-auto md:max-w-none md:col-span-6 lg:col-span-5 shrink-0 snap-start space-y-4">
           
           {/*  四大記錄類型介紹單元格 (食材、複製、估算、平均)  */}
           <div className="border border-border divide-y divide-border rounded-lg bg-background overflow-hidden shadow-none">
@@ -535,8 +535,8 @@ export default function LandingPage() {
 
         </div>
 
-        {/*  右側欄：飲食頁面展示 (手機端橫向吸附，桌面端保持原有寬度)  */}
-        <div className="w-[85vw] max-w-[360px] sm:max-w-[400px] lg:w-[440px] lg:max-w-[440px] shrink-0 snap-start">
+        {/*  右側欄：飲食頁面展示 (手機端橫向吸附，平板／桌面端自適應雙欄)  */}
+        <div className="w-[85vw] max-w-[360px] sm:max-w-[400px] md:w-auto md:max-w-none md:col-span-6 lg:col-span-7 lg:max-w-[460px] shrink-0 snap-start">
           <div className="w-full rounded-xl border border-border bg-background overflow-hidden shadow-none transition-colors duration-200">
             
             {/* 模擬視窗狀態列 (Window Chrome Bar) */}
@@ -574,7 +574,7 @@ export default function LandingPage() {
   {/*  03. STRENGTH & BIOMECHANICS (訓練記錄)                                     */}
   {/*  =========================================================================  */}
   <section id="workout" className="py-14 sm:py-20 px-4 sm:px-8 border-b border-border bg-muted transition-colors duration-200">
-    <div className="max-w-6xl mx-auto space-y-5 lg:space-y-10">
+    <div className="max-w-6xl mx-auto space-y-5 md:space-y-10">
       
       <div className="space-y-3 max-w-3xl">
         <div className="font-mono text-xs text-telemetry-accent uppercase tracking-widest">
@@ -589,8 +589,8 @@ export default function LandingPage() {
         </p>
       </div>
 
-      {/* 方案 3：三欄等高點陣畫布視窗（桌面版三欄齊底；手機版左右橫向滑動，左側與其他區塊嚴格對齊） */}
-      <div className="-mr-4 pr-4 sm:-mr-8 sm:pr-8 lg:mr-0 lg:pr-0 flex flex-row items-stretch gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-1 lg:pb-0 lg:overflow-visible lg:grid lg:grid-cols-3 lg:gap-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* 方案 3：三欄等高點陣畫布視窗（桌面版三欄齊底；手機版左右橫向滑動） */}
+      <div className="-mr-4 pr-4 sm:-mr-8 sm:pr-8 md:mr-0 md:pr-0 flex flex-row items-stretch gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-1 md:pb-0 md:overflow-visible md:grid md:grid-cols-3 md:gap-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {[
           {
             key: 'anatomy',
@@ -642,9 +642,12 @@ export default function LandingPage() {
         ].map((win) => (
           <ShowcaseFrameWindow
             key={win.key}
-            className="w-[85vw] max-w-[360px] sm:max-w-[400px] lg:w-full lg:max-w-none shrink-0 snap-start"
+            className="w-[85vw] max-w-[360px] sm:max-w-[400px] md:w-full md:max-w-none md:min-w-0 shrink-0 snap-start"
+            bodyClassName="p-3 lg:p-4"
           >
-            {win.content}
+            <div className="w-full md:max-[900px]:[zoom:0.72] min-[900px]:max-lg:[zoom:0.84]">
+              {win.content}
+            </div>
           </ShowcaseFrameWindow>
         ))}
       </div>
@@ -656,7 +659,7 @@ export default function LandingPage() {
   {/*  04. BODY & PHYSIOLOGICAL EMA FILTER (體態記錄)                             */}
   {/*  =========================================================================  */}
   <section id="body" className="py-14 sm:py-20 px-4 sm:px-8 border-b border-border bg-background transition-colors duration-200">
-    <div className="max-w-6xl mx-auto space-y-5 lg:space-y-10">
+    <div className="max-w-6xl mx-auto space-y-5 md:space-y-10">
       
       <div className="space-y-3 max-w-3xl">
         <div className="font-mono text-xs text-telemetry-accent uppercase tracking-widest">
@@ -672,11 +675,11 @@ export default function LandingPage() {
       </div>
 
       {/* 桌面版：7:5 非對稱雙欄（三張實物元件均以統一點陣畫布視窗包裹，左右頂底等高齊平） */}
-      <div className="hidden lg:grid lg:grid-cols-12 gap-4 items-stretch">
+      <div className="hidden md:grid md:grid-cols-12 gap-4 items-stretch">
         <ShowcaseFrameWindow
           footerLeft={t('landing.body.chartFooter', '實線為 7 天抗噪平滑體重 · 空心點為每日原始稱重')}
           footerRight={`Δ ${demoBodyTrendSummary.deltaText}`}
-          className="lg:col-span-7"
+          className="md:col-span-7"
           bodyClassName="p-5"
         >
           <WeightTrendChart
@@ -686,7 +689,7 @@ export default function LandingPage() {
           />
         </ShowcaseFrameWindow>
 
-        <div className="lg:col-span-5 flex flex-col gap-4">
+        <div className="md:col-span-5 flex flex-col gap-4">
           <ShowcaseFrameWindow bodyClassName="p-4">
             <BodyTodayDataCard
               {...DEMO_BODY_TODAY_DATA}
@@ -703,8 +706,8 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* 手機／平板版：左右橫向滑動三張等高點陣畫布視窗（左側與其他區塊嚴格對齊） */}
-      <div className="lg:hidden -mr-4 pr-4 sm:-mr-8 sm:pr-8 flex flex-row items-stretch gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* 手機版：左右橫向滑動三張等高點陣畫布視窗（左側與其他區塊嚴格對齊） */}
+      <div className="md:hidden -mr-4 pr-4 sm:-mr-8 sm:pr-8 flex flex-row items-stretch gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <ShowcaseFrameWindow
           footerLeft={t('landing.body.chartFooter', '實線為 7 天抗噪平滑體重 · 空心點為每日原始稱重')}
           footerRight={`Δ ${demoBodyTrendSummary.deltaText}`}
@@ -775,9 +778,9 @@ export default function LandingPage() {
   <section id="sync" className="py-14 sm:py-20 px-4 sm:px-8 border-b border-border bg-background transition-colors duration-200">
     <div className="max-w-6xl mx-auto">
       {/* 方案 1：左文右圖 5:7 非對稱分欄（與下方 06 / 原則 12 欄結構同頻） */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-12 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 md:gap-8 lg:gap-12 items-start">
         {/* 左欄：標題、說明與 3 行核心規格卡 */}
-        <div className="lg:col-span-5 space-y-5">
+        <div className="md:col-span-5 space-y-5">
           <div className="space-y-3">
             <div className="font-mono text-xs text-telemetry-accent uppercase tracking-widest">
               {t('landing.sync.tag', '[ 05 / 同步 ]')}
@@ -817,7 +820,7 @@ export default function LandingPage() {
         </div>
 
         {/* 右欄：滿格同步拓撲圖 */}
-        <div className="lg:col-span-7">
+        <div className="md:col-span-7">
           <SyncTopologyDiagram />
         </div>
       </div>
@@ -830,9 +833,9 @@ export default function LandingPage() {
   <section id="non-goals" className="py-14 sm:py-20 px-4 sm:px-8 border-b border-border bg-muted transition-colors duration-200">
     <div className="max-w-6xl mx-auto">
       {/* 方案 3：Editorial Manifesto Split（左宣言 + 四項 0 規格卡，右 Diff 帳本；手機端右側支援橫向 snap 滾動） */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-12 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 md:gap-8 lg:gap-12 items-start">
         {/* 左欄：宣言與 4 項「0」邊界計數卡 */}
-        <div className="lg:col-span-4 lg:sticky lg:top-24 space-y-5">
+        <div className="md:col-span-4 md:sticky md:top-24 space-y-5">
           <div className="space-y-3">
             <div className="font-mono text-xs text-telemetry-accent uppercase tracking-widest">
               {t('landing.principles.tag', '[ 06 / 原則 ]')}
@@ -869,7 +872,7 @@ export default function LandingPage() {
         </div>
 
         {/* 右欄：桌面端為垂直 Diff 帳本，手機端支援左右滑動切換卡片 */}
-        <div className="lg:col-span-8 flex flex-row overflow-x-auto snap-x snap-mandatory scroll-smooth gap-3 sm:gap-4 pb-1 -mr-4 pr-4 sm:-mr-8 sm:pr-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:mr-0 lg:pr-0 lg:pb-0 lg:block lg:overflow-visible lg:divide-y lg:divide-border">
+        <div className="md:col-span-8 flex flex-row overflow-x-auto snap-x snap-mandatory scroll-smooth gap-3 sm:gap-4 pb-1 -mr-4 pr-4 sm:-mr-8 sm:pr-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mr-0 md:pr-0 md:pb-0 md:block md:overflow-visible md:divide-y md:divide-border">
           {[
             {
               index: '01',
@@ -941,7 +944,7 @@ export default function LandingPage() {
           ].map((item) => (
             <article
               key={item.index}
-              className="w-[85vw] max-w-[360px] sm:max-w-[400px] shrink-0 snap-start rounded-lg border border-border bg-background p-4 flex flex-col justify-between gap-4 lg:w-auto lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0 lg:py-6 lg:first:pt-0"
+              className="w-[85vw] max-w-[360px] sm:max-w-[400px] shrink-0 snap-start rounded-lg border border-border bg-background p-4 flex flex-col justify-between gap-4 md:w-auto md:max-w-none md:rounded-none md:border-0 md:bg-transparent md:px-0 md:py-6 md:first:pt-0"
             >
               <div className="space-y-3">
                 <div className="flex items-baseline gap-3">
@@ -952,12 +955,12 @@ export default function LandingPage() {
                     {item.title}
                   </h3>
                 </div>
-                <p className="lg:pl-7 text-xs sm:text-sm text-muted-foreground font-sans leading-relaxed">
+                <p className="md:pl-7 text-xs sm:text-sm text-muted-foreground font-sans leading-relaxed">
                   <BrandText text={item.desc} />
                 </p>
               </div>
 
-              <div className="lg:ml-7 rounded-lg border border-border overflow-hidden font-mono text-xs">
+              <div className="md:ml-7 rounded-lg border border-border overflow-hidden font-mono text-xs">
                 <div className="px-3 py-2 bg-destructive-subtle border-b border-border flex items-start gap-2 text-muted-foreground">
                   <span className="text-destructive font-semibold shrink-0 select-none">-</span>
                   <span className="line-through leading-relaxed">{item.legacyBad}</span>
@@ -980,9 +983,9 @@ export default function LandingPage() {
   <section id="tech" className="py-14 sm:py-20 px-4 sm:px-8 border-b border-border bg-background transition-colors duration-200">
     <div className="max-w-6xl mx-auto">
       {/* 方案 1：12 欄左宣言＋開啟應用 CTA · 右 5 列精簡技術棧表 */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-12 lg:items-stretch">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 md:gap-8 lg:gap-12 md:items-stretch">
         {/* 左欄：精簡技術宣言與最終啟動按鈕 */}
-        <div className="lg:col-span-5 flex flex-col justify-between gap-6">
+        <div className="md:col-span-5 flex flex-col justify-between gap-6">
           <div className="space-y-3">
             <div className="font-mono text-xs text-telemetry-accent uppercase tracking-widest">
               {t('landing.tech.tag', '[ 07 / 技術 ]')}
@@ -1019,7 +1022,7 @@ export default function LandingPage() {
         </div>
 
         {/* 右欄：桌面版 5 列技術棧表 · 手機版 2 列橫向滑動卡片 */}
-        <div className="lg:col-span-7">
+        <div className="md:col-span-7">
           {(() => {
             const techStackRows = [
               {
@@ -1056,8 +1059,8 @@ export default function LandingPage() {
 
             return (
               <>
-                {/* 桌面版：單一 5 列垂直規格表 */}
-                <div className="hidden lg:flex h-full rounded-lg border border-border bg-card overflow-hidden divide-y divide-border flex-col">
+                {/* 平板／桌面版：單一 5 列垂直規格表 */}
+                <div className="hidden md:flex h-full rounded-lg border border-border bg-card overflow-hidden divide-y divide-border flex-col">
                   {techStackRows.map((row) => (
                     <div
                       key={row.key}
@@ -1085,8 +1088,8 @@ export default function LandingPage() {
                   ))}
                 </div>
 
-                {/* 手機／平板版：兩列橫向滑動卡片（左側與其他區塊嚴格對齊） */}
-                <div className="lg:hidden -mr-4 sm:-mr-8 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {/* 手機版：兩列橫向滑動卡片（左側與其他區塊嚴格對齊） */}
+                <div className="md:hidden -mr-4 sm:-mr-8 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   <div className="grid grid-flow-col grid-rows-2 auto-cols-[78vw] sm:auto-cols-[310px] gap-3 w-max pr-4 sm:pr-8">
                     {techStackRows.map((row) => (
                       <div

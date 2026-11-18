@@ -488,16 +488,16 @@ export function ShareShowcaseCards({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-12 lg:items-stretch">
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-5 md:gap-8 lg:gap-12 md:items-stretch">
       {/* 左欄：標題說明 + 桌面版三列格式切換器 */}
-      <div className="lg:col-span-5 flex flex-col gap-5">
+      <div className="md:col-span-5 flex flex-col gap-5">
         {header}
 
         {/* 桌面版互動式格式切換器（手機版改由下方橫向滑動卡承載） */}
         <div
           role="tablist"
           aria-label={useCaseLabel}
-          className="hidden lg:block rounded-lg border border-border bg-card overflow-hidden divide-y divide-border"
+          className="hidden md:block rounded-lg border border-border bg-card overflow-hidden divide-y divide-border"
         >
           {formats.map((item) => {
             const isActive = item.id === activeFormat;
@@ -554,8 +554,8 @@ export function ShareShowcaseCards({
       </div>
 
       {/* 右欄（桌面版）：與左欄頂部與底部完全齊平的寬幅預覽視窗 */}
-      <div className="hidden lg:block lg:col-span-7 lg:relative">
-        <div className="lg:absolute lg:inset-0 rounded-lg border border-border bg-card text-card-foreground flex flex-col overflow-hidden shadow-none">
+      <div className="hidden md:block md:col-span-7 md:relative">
+        <div className="md:absolute md:inset-0 rounded-lg border border-border bg-card text-card-foreground flex flex-col overflow-hidden shadow-none">
           {/* 表頭：與全站 SectionCard h-10 規格一致 */}
           <div className="h-10 px-4 bg-muted/40 border-b border-border flex items-center justify-between gap-3 shrink-0">
             <span className="font-mono text-xs font-normal tracking-wider text-neutral-500 dark:text-neutral-400 uppercase truncate">
@@ -592,8 +592,8 @@ export function ShareShowcaseCards({
         </div>
       </div>
 
-      {/* 手機／平板版：左右橫向滑動三張格式預覽卡（左側與其他區塊嚴格對齊） */}
-      <div className="lg:hidden -mr-4 pr-4 sm:-mr-8 sm:pr-8 flex flex-row items-stretch gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* 手機版：左右橫向滑動三張格式預覽卡（左側與其他區塊嚴格對齊） */}
+      <div className="md:hidden -mr-4 pr-4 sm:-mr-8 sm:pr-8 flex flex-row items-stretch gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {formats.map((item) => {
           const isFocused = focusedPreview === item.id;
           return (

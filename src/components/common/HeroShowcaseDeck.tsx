@@ -73,7 +73,7 @@ export function HeroShowcaseDeck() {
   };
 
   return (
-    <div className="relative w-full max-w-[500px] xl:max-w-[540px] h-[610px] select-none pointer-events-none translate-x-8 xl:translate-x-12 -translate-y-8 xl:-translate-y-12">
+    <div className="relative w-[450px] lg:w-full max-w-[500px] xl:max-w-[540px] h-[610px] select-none pointer-events-none origin-center md:scale-[0.82] lg:scale-100 lg:translate-x-8 xl:translate-x-12 lg:-translate-y-8 xl:-translate-y-12">
       
       {/* ========================================================================= */}
       {/* 3. 最底層 / 最背後 (Card 3, Z-index: 10): 食物詳情頁面                    */}

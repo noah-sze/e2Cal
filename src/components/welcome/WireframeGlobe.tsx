@@ -103,7 +103,7 @@ export function WireframeGlobe({
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
 
-      const isDesktop = window.innerWidth >= 1024;
+      const isDesktop = window.innerWidth >= 768;
       const effectiveRadiusRatio = isDesktop && desktopRadiusRatio !== undefined ? desktopRadiusRatio : radiusRatio;
       const radius = Math.min(width, height) * effectiveRadiusRatio;
       buildGeometry(radius);
@@ -120,7 +120,7 @@ export function WireframeGlobe({
     let currentMouseY = 0;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const isDesktop = window.innerWidth >= 1024;
+      const isDesktop = window.innerWidth >= 768;
       const effectiveCenterXRatio = isDesktop && desktopCenterXRatio !== undefined ? desktopCenterXRatio : centerXRatio;
       const effectiveCenterYRatio = isDesktop && desktopCenterYRatio !== undefined ? desktopCenterYRatio : centerYRatio;
       const cx = width * effectiveCenterXRatio;
@@ -155,7 +155,7 @@ export function WireframeGlobe({
       const cosY = Math.cos(angleY);
       const sinY = Math.sin(angleY);
 
-      const isDesktop = window.innerWidth >= 1024;
+      const isDesktop = window.innerWidth >= 768;
       const effectiveCenterXRatio = isDesktop && desktopCenterXRatio !== undefined ? desktopCenterXRatio : centerXRatio;
       const effectiveCenterYRatio = isDesktop && desktopCenterYRatio !== undefined ? desktopCenterYRatio : centerYRatio;
 
