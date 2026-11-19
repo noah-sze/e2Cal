@@ -121,6 +121,16 @@ let isSyncInProgress = false;
 let hasPendingSyncRequest = false;
 let pendingSyncMode: 'auto' | 'overwrite_local' | 'overwrite_remote' = 'auto';
 let autoSyncTimeout: ReturnType<typeof setTimeout> | null = null;
+let conflictRetryCount = 0;
+const MAX_CONFLICT_RETRIES = 2;
+
+export function _resetConflictRetryCount(): void {
+  conflictRetryCount = 0;
+}
+
+export function _getConflictRetryCount(): number {
+  return conflictRetryCount;
+}
 
 export function getLastSyncTime(): string | null {
   return localStorage.getItem(LAST_SYNC_KEY);
@@ -600,11 +610,14 @@ export async function executeSync(
   }
 
   isSyncInProgress = true;
+  let remoteFileMap: Map<string, DropboxFileMetadata> | null = null;
+  let cachedRevs = getCachedRevs();
+  let pushedTimes = getPushedTimes();
 
   try {
     const now = new Date().toISOString();
-    const cachedRevs = getCachedRevs();
-    const pushedTimes = getPushedTimes();
+    cachedRevs = getCachedRevs();
+    pushedTimes = getPushedTimes();
 
     // 呼叫一次 listRemoteFolder，單次請求掌握所有遠端檔案及其 rev
     const remoteFiles = await listRemoteFolder();
@@ -615,6 +628,7 @@ export async function executeSync(
       setCachedRevs(cachedRevs);
       setPushedTimes(pushedTimes);
       setLastSyncTime(now);
+      conflictRetryCount = 0;
 
       if (justSyncedTimer) clearTimeout(justSyncedTimer);
       updateSyncEngineStatus({
@@ -630,7 +644,7 @@ export async function executeSync(
       return { success: true, timestamp: now, actionTaken: 'uploaded_initial' };
     }
 
-    const remoteFileMap = new Map<string, DropboxFileMetadata>(
+    remoteFileMap = new Map<string, DropboxFileMetadata>(
       remoteFiles.map((f) => [f.path_lower, f])
     );
 
@@ -798,6 +812,9 @@ export async function executeSync(
       }
       if (m.hasRemoteChanges) hasRemoteModified = true;
       cachedRevs['/user/base_info.json'] = baseInfoMeta.rev;
+      if (!m.hasRemoteChanges) {
+        pushedTimes['user_base_info'] = now;
+      }
     }
 
     // 2. 檢查 foods
@@ -813,6 +830,9 @@ export async function executeSync(
       }
       if (m.hasRemoteChanges) hasRemoteModified = true;
       cachedRevs['/nutrition/foods.json'] = foodsMeta.rev;
+      if (!m.hasRemoteChanges) {
+        pushedTimes['foods'] = now;
+      }
     }
 
     // 4. 檢查 recipes
@@ -828,6 +848,9 @@ export async function executeSync(
       }
       if (m.hasRemoteChanges) hasRemoteModified = true;
       cachedRevs['/nutrition/recipes.json'] = recipesMeta.rev;
+      if (!m.hasRemoteChanges) {
+        pushedTimes['recipes'] = now;
+      }
     }
 
     // 5. 檢查 exercises
@@ -842,6 +865,9 @@ export async function executeSync(
       }
       if (m.hasRemoteChanges) hasRemoteModified = true;
       cachedRevs['/workout/exercises.json'] = exMeta.rev;
+      if (!m.hasRemoteChanges) {
+        pushedTimes['exercises'] = now;
+      }
     }
 
     // 6. 檢查 equipments
@@ -856,6 +882,9 @@ export async function executeSync(
       }
       if (m.hasRemoteChanges) hasRemoteModified = true;
       cachedRevs['/workout/equipments.json'] = eqMeta.rev;
+      if (!m.hasRemoteChanges) {
+        pushedTimes['equipments'] = now;
+      }
     }
 
     // 7. 檢查 routines
@@ -870,6 +899,9 @@ export async function executeSync(
       }
       if (m.hasRemoteChanges) hasRemoteModified = true;
       cachedRevs['/workout/routines.json'] = routinesMeta.rev;
+      if (!m.hasRemoteChanges) {
+        pushedTimes['routines'] = now;
+      }
     }
 
     // 8. 檢查 daily_diet_logs 各日分卷 (/nutrition/logs/YYYY-MM-DD.json)
@@ -903,6 +935,8 @@ export async function executeSync(
           if (!localLog) {
             await db.daily_diet_logs.put(remoteLog);
             hasLocalModified = true;
+            pushedTimes[`diet_log_${bucket}`] = now;
+            pushedTimes[`diet_log_${bucket}_count`] = String(remoteLog.entries.length);
           } else {
             const remoteUpdated = getNormalizedTimestamp(remoteLog.updatedAt);
             const localUpdated = getNormalizedTimestamp(localLog.updatedAt);
@@ -913,8 +947,13 @@ export async function executeSync(
                 id: localLog.id,
               });
               hasLocalModified = true;
+              pushedTimes[`diet_log_${bucket}`] = now;
+              pushedTimes[`diet_log_${bucket}_count`] = String(remoteLog.entries.length);
             } else if (localUpdated > remoteUpdated) {
               hasRemoteModified = true;
+            } else {
+              pushedTimes[`diet_log_${bucket}`] = now;
+              pushedTimes[`diet_log_${bucket}_count`] = String(localLog.entries.length);
             }
           }
         }
@@ -943,6 +982,10 @@ export async function executeSync(
         }
         if (m.hasRemoteChanges) hasRemoteModified = true;
         cachedRevs[path] = bMeta.rev;
+        if (!m.hasRemoteChanges) {
+          pushedTimes[`workout_log_${bucket}`] = now;
+          pushedTimes[`workout_log_${bucket}_count`] = String(m.merged.length);
+        }
       }
     }
 
@@ -966,6 +1009,10 @@ export async function executeSync(
         }
         if (m.hasRemoteChanges) hasRemoteModified = true;
         cachedRevs[path] = bMeta.rev;
+        if (!m.hasRemoteChanges) {
+          pushedTimes[`body_metric_${bucket}`] = now;
+          pushedTimes[`body_metric_${bucket}_count`] = String(m.merged.length);
+        }
       }
     }
 
@@ -1114,8 +1161,7 @@ export async function executeSync(
       };
       cachedRevs['/nutrition/logs/manifest.json'] = await uploadJsonFile(
         '/nutrition/logs/manifest.json',
-        foodManifest,
-        cachedRevs['/nutrition/logs/manifest.json']
+        foodManifest
       );
     }
 
@@ -1161,8 +1207,7 @@ export async function executeSync(
       };
       cachedRevs['/workout/logs/manifest.json'] = await uploadJsonFile(
         '/workout/logs/manifest.json',
-        workoutManifest,
-        cachedRevs['/workout/logs/manifest.json']
+        workoutManifest
       );
     }
 
@@ -1208,8 +1253,7 @@ export async function executeSync(
       };
       cachedRevs['/body/metrics/manifest.json'] = await uploadJsonFile(
         '/body/metrics/manifest.json',
-        bodyManifest,
-        cachedRevs['/body/metrics/manifest.json']
+        bodyManifest
       );
     }
 
@@ -1221,6 +1265,7 @@ export async function executeSync(
     setCachedRevs(cachedRevs);
     setPushedTimes(pushedTimes);
     setLastSyncTime(now);
+    conflictRetryCount = 0;
 
     if (justSyncedTimer) clearTimeout(justSyncedTimer);
     updateSyncEngineStatus({
@@ -1242,9 +1287,40 @@ export async function executeSync(
     console.error('Folder sync execution error:', error);
     const errMsg = error instanceof Error ? error.message : 'Unknown sync error';
     if (errMsg.includes('DROPBOX_CONFLICT')) {
-      console.warn('Dropbox concurrency conflict detected! Queuing automatic re-merge...');
-      hasPendingSyncRequest = true;
-      pendingSyncMode = 'auto';
+      if (remoteFileMap) {
+        for (const [pathLower, fileMeta] of remoteFileMap) {
+          cachedRevs[pathLower] = fileMeta.rev;
+        }
+      }
+      setCachedRevs(cachedRevs);
+      setPushedTimes(pushedTimes);
+
+      if (conflictRetryCount < MAX_CONFLICT_RETRIES) {
+        conflictRetryCount++;
+        console.warn(
+          `Dropbox concurrency conflict detected! Queuing automatic re-merge attempt ${conflictRetryCount}/${MAX_CONFLICT_RETRIES}...`
+        );
+        hasPendingSyncRequest = true;
+        pendingSyncMode = 'auto';
+        updateSyncEngineStatus({
+          isSyncing: false,
+          lastSyncError: errMsg,
+          justSynced: false,
+        });
+        toast.show(i18n.t('syncStatus.errors.conflict'));
+        return {
+          success: false,
+          timestamp: new Date().toISOString(),
+          error: errMsg,
+          actionTaken: 'up_to_date',
+        };
+      }
+
+      console.error(
+        `Dropbox concurrency conflict exceeded max retries (${MAX_CONFLICT_RETRIES}). Aborting auto-retry loop.`
+      );
+      conflictRetryCount = 0;
+      hasPendingSyncRequest = false;
       updateSyncEngineStatus({
         isSyncing: false,
         lastSyncError: errMsg,
@@ -1284,7 +1360,7 @@ function drainPendingQueue(): void {
     hasPendingSyncRequest = false;
     const nextMode = pendingSyncMode;
     pendingSyncMode = 'auto';
-    const jitterDelay = Math.floor(300 + Math.random() * 300);
+    const jitterDelay = Math.floor(800 + Math.random() * 700);
     setTimeout(() => {
       executeSync(nextMode).catch((err) => {
         console.warn('Pending sync execution error:', err);

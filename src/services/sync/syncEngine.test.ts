@@ -8,6 +8,9 @@ import {
   getSyncErrorReasonKey,
   formatSyncErrorMessage,
   executeSync,
+  _resetConflictRetryCount,
+  _getConflictRetryCount,
+  getCachedRevs,
 } from './syncEngine';
 import {
   getDropboxAppKey,
@@ -27,6 +30,7 @@ import {
 } from './dropboxAuth';
 import i18n from '@/i18n/config';
 import { toast } from '@/components/ui/toast';
+import { db } from '@/services/db/db';
 import type { FoodLog, WorkoutLog, BodyMetric, DailyDietLog } from '@/types';
 
 class LocalStorageMock {
@@ -630,6 +634,80 @@ describe('syncErrorReason & Toast handling', () => {
     const res = await executeSync('auto');
     expect(res.success).toBe(false);
     expect(toastSpy).toHaveBeenCalledWith('Dropbox 同步失敗：網路連線不穩定，無法連接伺服器');
+  });
+
+  it('handles DROPBOX_CONFLICT with retry limit, circuit breaker, and rev caching', async () => {
+    await i18n.changeLanguage('zh-TW');
+    _resetConflictRetryCount();
+    const toastSpy = vi.spyOn(toast, 'show');
+
+    // Mock db tables
+    vi.spyOn(db.user_base_info, 'toArray').mockResolvedValue([] as never);
+    vi.spyOn(db.foods, 'toArray').mockResolvedValue([] as never);
+    vi.spyOn(db.foods, 'bulkPut').mockResolvedValue([] as never);
+    vi.spyOn(db.recipes, 'toArray').mockResolvedValue([] as never);
+    vi.spyOn(db.exercises, 'toArray').mockResolvedValue([] as never);
+    vi.spyOn(db.equipments, 'toArray').mockResolvedValue([] as never);
+    vi.spyOn(db.routines, 'toArray').mockResolvedValue([] as never);
+    vi.spyOn(db.daily_diet_logs, 'toArray').mockResolvedValue([] as never);
+    vi.spyOn(db.workout_logs, 'toArray').mockResolvedValue([] as never);
+    vi.spyOn(db.body_metrics, 'toArray').mockResolvedValue([] as never);
+
+    setStoredTokens({
+      access_token: 'valid_token',
+      expires_in: 14400,
+      expires_at: Date.now() + 14400 * 1000,
+    });
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const u = String(url);
+      if (u.includes('files/list_folder')) {
+        return new Response(
+          JSON.stringify({
+            entries: [
+              {
+                '.tag': 'file',
+                name: 'foods.json',
+                path_lower: '/nutrition/foods.json',
+                rev: 'rev_remote_999',
+              },
+            ],
+            has_more: false,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      if (u.includes('files/download')) {
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { 'Dropbox-API-Result': JSON.stringify({ rev: 'rev_remote_999' }) },
+        });
+      }
+      if (u.includes('files/upload')) {
+        return new Response('{"error_summary":"path/conflict/file"}', {
+          status: 409,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response('{}', { status: 200 });
+    });
+
+    // 第一次衝突
+    const res1 = await executeSync('auto');
+    expect(res1.success).toBe(false);
+    expect(_getConflictRetryCount()).toBe(1);
+    expect(toastSpy).toHaveBeenCalledWith('資料版本衝突，正在重新合併');
+    expect(getCachedRevs()['/nutrition/foods.json']).toBe('rev_remote_999');
+
+    // 第二次衝突
+    const res2 = await executeSync('auto');
+    expect(res2.success).toBe(false);
+    expect(_getConflictRetryCount()).toBe(2);
+
+    // 第三次衝突，達到熔斷上限，自動終止並重置計數
+    const res3 = await executeSync('auto');
+    expect(res3.success).toBe(false);
+    expect(_getConflictRetryCount()).toBe(0);
   });
 });
 
