@@ -43,12 +43,12 @@ function DialogOverlay({
 
 const dialogSizeClasses = {
   default: "max-w-[calc(100%-2rem)] max-h-[min(88vh,calc(100%-2rem))] max-h-[min(88dvh,calc(100%-2rem))] p-5 sm:p-6 text-sm sm:max-w-[400px]",
-  compact: "w-[300px] max-w-[calc(100vw-24px)] sm:w-[300px] sm:max-w-[300px] p-4 sm:p-4 font-mono text-xs select-none shadow-none",
-  standard: "w-[300px] max-w-[calc(100vw-24px)] sm:w-[300px] sm:max-w-[300px] p-4 sm:p-4 font-mono text-xs select-none shadow-none",
+  compact: "w-[320px] max-w-[calc(100vw-24px)] sm:w-[320px] sm:max-w-[320px] p-4 sm:p-4 font-mono text-xs select-none shadow-none",
+  standard: "w-[320px] max-w-[calc(100vw-24px)] sm:w-[320px] sm:max-w-[320px] p-4 sm:p-4 font-mono text-xs select-none shadow-none",
 }
 
 export interface DialogContentProps extends DialogPrimitive.Popup.Props {
-  /** 彈窗標準規格尺寸 (預設 'default'；表單與管理彈窗強烈建議採用 'standard' 確保恆定 300px 寬度與 16px 緊湊 Padding) */
+  /** 彈窗標準規格尺寸 (預設 'default'；表單與管理彈窗強烈建議採用 'standard' 確保恆定 320px 寬度與 16px 緊湊 Padding) */
   size?: 'default' | 'compact' | 'standard'
   showCloseButton?: boolean
   overlayClassName?: string
@@ -268,7 +268,7 @@ export interface PrecisionDialogContentProps extends Omit<DialogContentProps, 's
 
 /**
  * e2Cal 標準精密彈窗容器 (Precision Dialog Content)
- * 唯一真理源：鎖死 300px 寬度、16px 緊湊邊距（p-4 sm:p-4 防洩漏）、font-mono、0 陰影
+ * 唯一真理源：鎖死 320px 寬度、16px 緊湊邊距（p-4 sm:p-4 防洩漏）、font-mono、0 陰影
  * 若提供 title，自動內建標準 Precision Header (Variant D)
  */
 function PrecisionDialogContent({

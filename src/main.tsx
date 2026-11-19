@@ -14,7 +14,9 @@ import { prewarmRecipesCache } from '@/hooks/useRecipes'
 import { prewarmExercisesCache } from '@/hooks/useExercises'
 import { initPwaInstallListener } from '@/hooks/usePwaInstall'
 import { captureDropboxOAuthCallback } from '@/services/sync/dropboxAuth'
+import { initUiScale } from '@/utils/uiScale'
 
+initUiScale()
 initPwaInstallListener()
 captureDropboxOAuthCallback()
 

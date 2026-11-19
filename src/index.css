@@ -101,12 +101,12 @@
   --radius-3xl: var(--radius);
   --radius-4xl: var(--radius);
 
-  /* 文字階層微型字體 Token (以基準 1rem = 14px 精密調校) */
-  --text-xs: 0.8rem; /* 11.2px - 輔助標籤與微單位 */
+  /* 文字階層微型字體 Token (Apple HIG 標準：17px 基準下映射 13pt / 12pt / 11pt) */
+  --text-xs: 0.765rem; /* 13.0px - Footnote (Apple 標準) */
   --text-xs--line-height: 1.15rem;
-  --text-2xs: 0.72rem; /* 10.1px - 極小微標籤 */
+  --text-2xs: 0.706rem; /* 12.0px - Caption 1 (Apple 標準) */
   --text-2xs--line-height: 1rem;
-  --text-3xs: 0.65rem; /* 9.1px */
+  --text-3xs: 0.647rem; /* 11.0px - Caption 2 (Apple 官方最低可讀極限) */
   --text-3xs--line-height: 0.85rem;
 
   --font-brand: 'Geist Variable', 'Geist', 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -352,9 +352,14 @@
     text-rendering: optimizeLegibility;
   }
   html {
-    font-size: 14px;
+    font-size: var(--ui-base-font-size, 17px);
     scrollbar-width: none;
     -ms-overflow-style: none;
+  }
+  @media (min-width: 768px) {
+    html {
+      font-size: var(--ui-desktop-font-size, 14px);
+    }
   }
   html, body {
     position: relative;

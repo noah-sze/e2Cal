@@ -29,6 +29,21 @@
           }
         }
 
+        // 首屏字級縮放同步初始化（Apple 跨端標準：手機 17px / 桌面 14px）
+        try {
+          var storedScale = window.localStorage.getItem('e2cal-ui-scale');
+          var mobileMap = { compact: '15px', default: '17px', large: '19px' };
+          var desktopMap = { compact: '13px', default: '14px', large: '15px' };
+          var validScale = mobileMap[storedScale] ? storedScale : 'default';
+          if (root.style.fontSize) root.style.fontSize = '';
+          root.style.setProperty('--ui-base-font-size', mobileMap[validScale]);
+          root.style.setProperty('--ui-desktop-font-size', desktopMap[validScale]);
+        } catch (e) {
+          if (root.style.fontSize) root.style.fontSize = '';
+          root.style.setProperty('--ui-base-font-size', '17px');
+          root.style.setProperty('--ui-desktop-font-size', '14px');
+        }
+
         // 首屏主題同步初始化（防閃屏）：落地頁預設淺色且僅讀 sessionStorage；主應用讀 localStorage 預設跟隨系統
         var rawPath = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
         var isLanding = rawPath === '/' || rawPath === '/landing';

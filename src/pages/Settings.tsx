@@ -11,6 +11,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTheme } from '@/components/ThemeProvider';
+import { useUiScale } from '@/hooks/useUiScale';
+import type { UiScale } from '@/utils/uiScale';
 import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
 import { db } from '@/services/db/db';
@@ -44,6 +46,7 @@ import type {
 export default function Settings() {
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
+  const { scale, setScale } = useUiScale();
   const navigate = useNavigate();
   const { preferences, updatePreset, updatePreference } = useUnitPreferences();
   const { bodyPreferences, updateBodyPreference } = useBodyPreferences();
@@ -77,6 +80,12 @@ export default function Settings() {
     if (tVal === 'light') return t('settings.themeLight');
     if (tVal === 'dark') return t('settings.themeDark');
     return t('settings.themeSystem');
+  };
+
+  const getScaleLabel = (s: UiScale) => {
+    if (s === 'compact') return t('settings.uiScaleCompact');
+    if (s === 'large') return t('settings.uiScaleLarge');
+    return t('settings.uiScaleDefault');
   };
 
   const getPresetLabel = (p: UnitSystemPreset) => {
@@ -284,6 +293,26 @@ export default function Settings() {
                 <SelectItem value="system">{t('settings.themeSystem')}</SelectItem>
                 <SelectItem value="light">{t('settings.themeLight')}</SelectItem>
                 <SelectItem value="dark">{t('settings.themeDark')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 介面縮放 (Apple HIG Dynamic Type) */}
+          <div className="usage-row">
+            <span className="text-sm font-normal text-foreground">{t('settings.uiScale')}</span>
+            <Select value={scale} onValueChange={(v) => { if (v === 'compact' || v === 'default' || v === 'large') setScale(v); }}>
+              <SelectTrigger
+                size="custom"
+                className="flex items-center gap-1 text-sm font-mono text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+              >
+                <SelectValue className="flex-none text-right">
+                  {getScaleLabel(scale)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectItem value="compact">{t('settings.uiScaleCompact')}</SelectItem>
+                <SelectItem value="default">{t('settings.uiScaleDefault')}</SelectItem>
+                <SelectItem value="large">{t('settings.uiScaleLarge')}</SelectItem>
               </SelectContent>
             </Select>
           </div>

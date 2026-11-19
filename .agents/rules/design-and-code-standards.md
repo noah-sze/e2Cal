@@ -28,6 +28,15 @@ trigger: always_on
 - **純粹的對比**：嚴格使用純黑 (`#000`) 與純白 (`#fff`) 作為主要背景與文本對比。捨棄傳統的柔和灰色背景。
 - **扁平化設計 (Flat Design)**：**絕對禁止**在卡片 (Cards) 或容器上使用任何陰影 (`shadow-sm`, `shadow-md` 等)。層級的區分完全依賴細而精緻的邊框 (`border border-border`)。
 - **字體運用 (Typography)**：
+  - **跨端雙軌排版標準 (Cross-Platform Typography Standard: iOS HIG Mobile + macOS HIG Desktop)**：
+    - **手機端 (`< 768px`) 嚴格遵循 Apple iOS HIG**：
+      - 視距約 25～35 cm，手指觸控操作。根字級預設為 **`17px`**（iOS 標準 Body 17pt），解決行動端易讀性並徹底防止 iOS Safari 輸入框聚焦時觸發自動放大跑版（Auto-Zoom）。
+      - 微排版階層：Footnote 13px (`--text-xs: 0.765rem`)、Caption 1 12px (`--text-2xs: 0.706rem`)、Caption 2 11px (`--text-3xs: 0.647rem`，官方最低可辨識極限)。
+      - 動態縮放階梯 (Dynamic Type)：緊湊 `15px` / 標準 `17px` / 較大 `19px`。
+    - **桌面端 (`>= 768px`) 嚴格遵循 Apple macOS HIG & Vercel 高密度標準**：
+      - 視距約 50～70 cm，精確游標操作。根字級自動切換為 **`14px`**（macOS 系統正文與 Vercel Dashboard 核心基準），維持高資訊密度（High Information Density）與緊湊工程師儀表板質感，嚴禁桌面端介面粗笨鬆散。
+      - 動態縮放階梯 (Dynamic Type)：緊湊 `13px` / 標準 `14px` / 較大 `15px`。
+    - **原生硬體響應式架構真理源**：由 [src/index.css](file:///d:/GitHub/e2Cal/src/index.css) 之 `@media (min-width: 768px)` 搭配 CSS 變數 `--ui-base-font-size` 與 `--ui-desktop-font-size` 原生驅動，全站組件尺寸與間距嚴格採用 `rem` 單位，實現雙端「零 JS Resize 監聽、硬體級瞬時自適應等比縮放」。
   - **官方品牌字標字體規範 (Brand Wordmark Standard — Option 1: Geist Sans)**：
     - 產品名 **`e2Cal`** 在全應用程式（包含頁首、頁尾、版本號、歡迎引導、展示窗格、正文文案與 Canvas 匯出長圖）**嚴格唯一採用 `Geist Sans`（本地離線套件 `@fontsource-variable/geist`）**。
     - **唯一真理源 Token 與元件**：CSS Token 固定為 `--font-brand`（`font-brand`）與 `--tracking-brand: -0.03em`（`tracking-brand`）。JSX 介面呈現一律透過 `src/components/ui/Logo.tsx` 導出之 `<BrandWordmark />` 或 `<BrandText />` 渲染，嚴禁在各業務頁面散落手寫品牌字體樣式。
@@ -74,6 +83,10 @@ trigger: always_on
 
 ## 4. 跨端通用設計契約與交互標準 (Cross-Platform Architecture Contract)
 - **拒絕平台特化補丁 (No Platform Hacks)**：嚴禁為特定作業系統、特定瀏覽器或舊款晶片編寫特殊條件判斷或臨時修補；所有 UI 與交互必須以標準 Web 規範達到全平台通用。
+- **跨端組件尺寸與觸控尺度標準 (Component Sizing & Touch Target: iOS vs macOS HIG)**：
+  - **手機端 (`< 768px`)**：嚴格遵循 Apple iOS HIG 觸控人機工學，主要操作按鈕與表單行高度維持在 `38px` ～ `44px`（適配手指粗度與單手操作熱區），確保點擊命中率並消除誤觸。
+  - **桌面端 (`>= 768px`)**：嚴格遵循 Apple macOS HIG 與 Vercel 標準，按鈕與輸入框基準高度維持在 `31.5px` ～ `36px`（`h-8` / `h-9`），適配滑鼠精確游標，提供高密度操作視野。
+  - **Rem 等比縮放真理源**：所有共用組件（`Button`、`Input`、`Select` 等）尺寸嚴禁在各業務頁面重複手寫 `sm:h-8 h-11` 等斷點樣式；統一使用 `rem` 單位（如 `h-9` = 2.25rem），當根字體在手機端為 17px 時天然渲染為 38.25px，在桌面端為 14px 時天然渲染為 31.5px，實現組件尺度的單一真理源自動映射。
 - **高度管理規範**：全面採用「樹狀 100% 高度（`height: 100%`）」，禁止在根容器或主佈局使用 `100vh` 避免移動端工具列遮擋溢出。內部滾動由 `<main className="flex-1 overflow-y-auto">` 自適應接管。
 - **彈窗與居中規範**：
   - 嚴禁在彈窗本體上使用 `inset-0 m-auto` 或 `transform: translate(-50%, -50%)` 做幾何定位。
@@ -97,7 +110,7 @@ trigger: always_on
   - 二次確認與破壞性高危操作的 `destructive` 按鈕統一採用「實色紅底 + 純白文字（`bg-destructive text-destructive-foreground hover:opacity-90 active:opacity-80`）」，嚴禁使用淡底弱化樣式。
 - **標準精密彈窗規範 (Standard Precision Modal Architecture & Zero-Drift Contract)**：
   - **底層唯一真理源 (`<PrecisionDialogContent>` / `size="standard"`)**：所有食材、食譜、飲食記錄、測量微調等表單與管理 Dialog，必須一律使用 `@/components/ui/dialog` 導出的 `<PrecisionDialogContent>`（或 `DialogContent size="standard"`），禁止在業務層複製貼上長串重複的幾何類名。底層自動封裝並強制落實防呆約束：
-    1. **寬度唯一真理源**：`w-[300px] max-w-[calc(100vw-24px)] sm:w-[300px] sm:max-w-[300px]`。
+    1. **寬度唯一真理源**：`w-[320px] max-w-[calc(100vw-24px)] sm:w-[320px] sm:max-w-[320px]`。
     2. **內邊距防洩漏真理源**：全端恆定 `16px`（底層固定綁定 `p-4 sm:p-4`，徹底杜絕桌面端因未帶 `sm:` 斷點而洩漏預設 `sm:p-6` 變成 24px 大邊距）。
     3. **字體與邊框**：`font-mono text-xs select-none shadow-none bg-card border border-border`。
     4. **關閉按鈕防呆**：底層自動隱藏預設的右上方懸浮關閉鈕，改由標頭圓鈕專職負責。
