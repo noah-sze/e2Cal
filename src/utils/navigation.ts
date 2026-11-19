@@ -5,6 +5,7 @@
 
 export const APP_ROUTES = {
   home: '/app',
+  dev: '/dev',
   settings: '/app/settings',
   profile: '/app/profile',
   foods: '/app/foods',
@@ -148,6 +149,9 @@ export function resolveInitialLogicalPath(rawPathname: string): string {
   if (normalized === '/' || normalized === '/landing') {
     return '/';
   }
+  if (normalized === '/dev' || normalized === APP_ROUTES.dev) {
+    return import.meta.env.DEV ? '/dev' : APP_ROUTES.home;
+  }
   if (normalized === APP_ROUTES.home || parseAppSubRoute(normalized)) {
     return normalized;
   }
@@ -167,5 +171,7 @@ export function resolveInitialLogicalPath(rawPathname: string): string {
  */
 export function toSingleBrowserUrl(logicalPathname: string): string {
   const normalized = logicalPathname.replace(/\/+$/, '') || '/';
-  return normalized === '/' ? '/' : APP_ROUTES.home;
+  if (normalized === '/') return '/';
+  if (normalized === '/dev') return import.meta.env.DEV ? '/dev' : APP_ROUTES.home;
+  return APP_ROUTES.home;
 }

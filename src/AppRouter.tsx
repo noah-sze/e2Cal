@@ -17,6 +17,7 @@ import {
 } from '@/utils/navigation';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
+const DevShowcasePage = lazy(() => import('./pages/dev/DevShowcasePage'));
 
 interface SingleUrlHistoryState {
   __e2cal: true;
@@ -172,6 +173,7 @@ export function AppRouter() {
   );
 
   const isLanding = location.pathname === '/';
+  const isDev = Boolean(import.meta.env.DEV) && location.pathname === '/dev';
 
   return (
     <ThemeProvider scope={isLanding ? 'landing' : 'app'}>
@@ -179,6 +181,10 @@ export function AppRouter() {
         {isLanding ? (
           <Suspense fallback={<div className="min-h-full bg-background" />}>
             <LandingPage />
+          </Suspense>
+        ) : isDev ? (
+          <Suspense fallback={<div className="min-h-full bg-background" />}>
+            <DevShowcasePage />
           </Suspense>
         ) : (
           <SetupGuard>

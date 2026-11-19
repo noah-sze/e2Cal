@@ -102,6 +102,7 @@ describe('navigation (標準 React Router 路由單一真理源)', () => {
     it('應正確映射落地頁與 App 內部路徑', () => {
       expect(resolveInitialLogicalPath('/')).toBe('/');
       expect(resolveInitialLogicalPath('/landing')).toBe('/');
+      expect(resolveInitialLogicalPath('/dev')).toBe('/dev');
       expect(resolveInitialLogicalPath('/app')).toBe('/app');
       expect(resolveInitialLogicalPath('/app/foods/123')).toBe('/app/foods/123');
       expect(resolveInitialLogicalPath('/settings')).toBe('/app/settings');
@@ -112,6 +113,7 @@ describe('navigation (標準 React Router 路由單一真理源)', () => {
 
     it('除落地頁外，所有 App 內部路徑在瀏覽器網址列一律映射為 /app', () => {
       expect(toSingleBrowserUrl('/')).toBe('/');
+      expect(toSingleBrowserUrl('/dev')).toBe('/dev');
       expect(toSingleBrowserUrl('/app')).toBe('/app');
       expect(toSingleBrowserUrl('/app/settings')).toBe('/app');
       expect(toSingleBrowserUrl('/app/foods')).toBe('/app');
