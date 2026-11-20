@@ -13,7 +13,7 @@ import {
   type FoodSelectMode,
 } from '@/components/food/FoodRecipeBrowser';
 import { FoodFormDialog, type FoodFormData } from '@/components/food/FoodFormDialog';
-import { RecipeFormDialog, type RecipeFormData } from '@/components/food/RecipeFormDialog';
+import { RecipeDialog, type RecipeFormData } from '@/components/food/RecipeDialog';
 import { useFoods } from '@/hooks/useFoods';
 import { useRecipes } from '@/hooks/useRecipes';
 import { toast } from '@/components/ui/toast';
@@ -194,7 +194,8 @@ export function FoodRecipeSelectDialog({
         />
       )}
       {allowAdd && isAddRecipeOpen && (
-        <RecipeFormDialog
+        <RecipeDialog
+          variant="recipe"
           open={isAddRecipeOpen}
           onOpenChange={setIsAddRecipeOpen}
           onSubmit={handleAddRecipeSubmit}

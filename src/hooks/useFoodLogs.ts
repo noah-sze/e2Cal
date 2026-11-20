@@ -84,6 +84,11 @@ export function useFoodLogs(date: string) {
               protein: log.protein || 0,
               carbs: log.carbs || 0,
               fat: log.fat || 0,
+              sugar: log.sugar,
+              fiber: log.fiber,
+              saturatedFat: log.saturatedFat,
+              transFat: log.transFat,
+              sodium: log.sodium,
             };
 
         const displayName = food
@@ -215,6 +220,11 @@ export function useFoodLogs(date: string) {
     carbs?: number;
     protein?: number;
     fat?: number;
+    sugar?: number;
+    fiber?: number;
+    saturatedFat?: number;
+    transFat?: number;
+    sodium?: number;
     date?: string;
   }) => {
     const targetDate = data.date || date;
@@ -238,6 +248,12 @@ export function useFoodLogs(date: string) {
       carbs: data.carbs !== undefined ? Math.round(data.carbs * 10) / 10 : undefined,
       protein: data.protein !== undefined ? Math.round(data.protein * 10) / 10 : undefined,
       fat: data.fat !== undefined ? Math.round(data.fat * 10) / 10 : undefined,
+      sugar: data.sugar !== undefined ? Math.round(data.sugar * 10) / 10 : undefined,
+      fiber: data.fiber !== undefined ? Math.round(data.fiber * 10) / 10 : undefined,
+      saturatedFat:
+        data.saturatedFat !== undefined ? Math.round(data.saturatedFat * 10) / 10 : undefined,
+      transFat: data.transFat !== undefined ? Math.round(data.transFat * 10) / 10 : undefined,
+      sodium: data.sodium !== undefined ? Math.round(data.sodium) : undefined,
       isPlaceholder: true,
       createdAt: now,
       updatedAt: now,

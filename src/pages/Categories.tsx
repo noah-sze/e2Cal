@@ -11,7 +11,7 @@ import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { FoodFormDialog, type FoodFormData } from '@/components/food/FoodFormDialog';
-import { RecipeFormDialog, type RecipeFormData } from '@/components/food/RecipeFormDialog';
+import { RecipeDialog, type RecipeFormData } from '@/components/food/RecipeDialog';
 import { FoodRecipeBrowser } from '@/components/food/FoodRecipeBrowser';
 import { formatFoodDisplayName } from '@/utils/foodNaming';
 import { useBrowserStateStore } from '@/store/useBrowserStateStore';
@@ -198,7 +198,8 @@ export default function Categories({ isDetailOpen = false }: CategoriesProps) {
       />
 
       {/* 新增食譜 Dialog */}
-      <RecipeFormDialog
+      <RecipeDialog
+        variant="recipe"
         open={isRecipeDialogOpen}
         onOpenChange={setIsRecipeDialogOpen}
         onSubmit={handleAddRecipeSubmit}

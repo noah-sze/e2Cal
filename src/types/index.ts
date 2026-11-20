@@ -68,11 +68,16 @@ export interface FoodLog {
   scenario?: string; // e.g. 'balanced', 'hotpot', 'bento' 等 DiningScenarioId
   customTitle?: string; // 僅當使用者手動修改自訂名稱時存在
 
-  // 宏量營養素
+  // 宏量與微量營養素
   calories?: number;
   carbs?: number;
   protein?: number;
   fat?: number;
+  sugar?: number;
+  fiber?: number;
+  saturatedFat?: number;
+  transFat?: number;
+  sodium?: number;
 
   // 向下相容過渡標記 (可選)
   isPlaceholder?: boolean;

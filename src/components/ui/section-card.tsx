@@ -6,6 +6,8 @@ export interface SectionCardProps {
   title: ReactNode;
   /** 表頭右側操作區（例如切換膠囊、新增按鈕） */
   action?: ReactNode;
+  /** 是否顯示頂部表頭列，預設為 true */
+  showHeader?: boolean;
   /** 卡片內容列（預設以 divide-y divide-border 分隔） */
   children: ReactNode;
   className?: string;
@@ -19,6 +21,7 @@ export interface SectionCardProps {
 export function SectionCard({
   title,
   action,
+  showHeader = true,
   children,
   className,
   bodyClassName,
@@ -30,12 +33,14 @@ export function SectionCard({
         className
       )}
     >
-      <div className="h-10 px-4 bg-muted/40 border-b border-border flex items-center justify-between gap-2 text-xs font-mono text-muted-foreground shrink-0">
-        <span className="text-xs uppercase tracking-wider font-medium text-foreground truncate">
-          {title}
-        </span>
-        {action && <div className="flex items-center shrink-0">{action}</div>}
-      </div>
+      {showHeader && (
+        <div className="h-10 px-4 bg-muted/40 border-b border-border flex items-center justify-between gap-2 text-xs font-mono text-muted-foreground shrink-0">
+          <span className="text-xs uppercase tracking-wider font-medium text-foreground truncate">
+            {title}
+          </span>
+          {action && <div className="flex items-center shrink-0">{action}</div>}
+        </div>
+      )}
       <div className={cn('divide-y divide-border', bodyClassName)}>
         {children}
       </div>

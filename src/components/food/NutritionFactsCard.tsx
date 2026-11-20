@@ -7,6 +7,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { MetricValue } from '@/components/ui/metric-value';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { formatEnergy, formatFoodServing } from '@/utils/unitMath';
+import { evaluateNutritionalHighlight } from '@/utils/nutritionEvaluation';
 import { cn } from '@/lib/utils';
 
 export type NutritionField =
@@ -54,8 +55,14 @@ export interface NutritionFactsCardProps {
   } | null;
   /** 首行基準標籤，預設為 t('diet.perLabelBasis', '每') */
   perLabel?: string;
+  /** 是否顯示頂部表頭列，預設為 true */
+  showHeader?: boolean;
   /** 是否顯示首行基準份量行（例如「每 100 g」），預設為 true */
   showServingRow?: boolean;
+  /** 是否顯示熱量行，預設為 true */
+  showCaloriesRow?: boolean;
+  /** 是否顯示鈉指標行，預設為 true */
+  showSodiumRow?: boolean;
   /** 碳水化合物次級指標初始展開狀態 */
   defaultCarbsExpanded?: boolean;
   /** 脂肪次級指標初始展開狀態 */
@@ -88,7 +95,10 @@ export function NutritionFactsCard({
   fallbackData,
   highlights,
   perLabel,
+  showHeader = true,
   showServingRow = true,
+  showCaloriesRow = true,
+  showSodiumRow = true,
   editable,
   className,
 }: NutritionFactsCardProps) {
@@ -119,12 +129,30 @@ export function NutritionFactsCard({
     typeof transFatVal === 'number'
   );
 
+  // 智慧保底高亮狀態：若外部未顯式傳入 highlights，自動根據當前營養素推算客觀點亮狀態
+  const effectiveHighlights: NutritionFactsCardProps['highlights'] = React.useMemo(() => {
+    if (highlights !== undefined) return highlights;
+    const res = evaluateNutritionalHighlight({
+      calories,
+      carbs,
+      protein,
+      fat,
+      servingSize,
+      servingUnit,
+    });
+    return {
+      ...res.highlights,
+      sodium: false,
+    };
+  }, [highlights, calories, carbs, protein, fat, servingSize, servingUnit]);
+
   const defaultAction = action !== undefined ? action : <NutritionBasisToggle />;
 
   return (
     <SectionCard
       title={title ?? t('diet.servingNutrients', '基準營養素')}
       action={defaultAction}
+      showHeader={showHeader}
       bodyClassName="text-sm"
       className={className}
     >
@@ -150,28 +178,30 @@ export function NutritionFactsCard({
       )}
 
       {/* 2. 熱量行 (h-10) */}
-      <div
-        className={cn(
-          "h-10 px-4 flex items-center justify-between transition-colors",
-          highlights?.calories && "bg-calories-subtle-bg"
-        )}
-      >
-        <span className="text-calories text-xs font-medium">{t('diet.calories')}</span>
-        <div onClick={(e) => e.stopPropagation()}>
-          {(() => {
-            const e = formatEnergy(calories, energyUnit);
-            const node = (
-              <MetricValue
-                value={e.value.toLocaleString()}
-                unit={e.unit}
-                valueClassName="font-medium text-calories text-xs"
-                unitClassName="text-xs"
-              />
-            );
-            return editable ? editable.renderValue('calories', node) : node;
-          })()}
+      {showCaloriesRow && (
+        <div
+          className={cn(
+            "h-10 px-4 flex items-center justify-between transition-colors",
+            effectiveHighlights?.calories && "bg-calories-subtle-bg"
+          )}
+        >
+          <span className="text-calories text-xs font-medium">{t('diet.calories')}</span>
+          <div onClick={(e) => e.stopPropagation()}>
+            {(() => {
+              const e = formatEnergy(calories, energyUnit);
+              const node = (
+                <MetricValue
+                  value={e.value.toLocaleString()}
+                  unit={e.unit}
+                  valueClassName="font-medium text-calories text-xs"
+                  unitClassName="text-xs"
+                />
+              );
+              return editable ? editable.renderValue('calories', node) : node;
+            })()}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 3. 碳水化合物行 (h-10) */}
       {hasCarbSub ? (
@@ -185,7 +215,7 @@ export function NutritionFactsCard({
                 tabIndex={0}
                 className={cn(
                   "h-10 px-4 flex items-center justify-between transition-colors select-none cursor-pointer hover:bg-hover",
-                  highlights?.carbs && "bg-carbs-subtle-bg"
+                  effectiveHighlights?.carbs && "bg-carbs-subtle-bg"
                 )}
               >
                 <div className="flex items-center gap-1">
@@ -225,12 +255,9 @@ export function NutritionFactsCard({
             align="start"
             alignOffset={16}
             sideOffset={4}
-            className="w-48 p-0 gap-0 bg-popover text-popover-foreground border border-border shadow-none rounded-lg select-none font-mono"
+            className="w-44 p-1 gap-0 bg-popover text-popover-foreground border border-border shadow-none rounded-lg select-none font-mono"
           >
-            <div className="px-3 py-2 border-b border-border text-xs font-sans">
-              <span className="font-medium text-foreground">{t('diet.carbs')}</span>
-            </div>
-            <div className="p-1 space-y-0.5 text-xs">
+            <div className="space-y-0.5 text-xs">
               {/* 糖 */}
               <div className="h-8 flex items-center justify-between px-2 rounded hover:bg-hover transition-colors">
                 <span className="text-muted-foreground font-sans text-xs">{t('diet.sugar')}</span>
@@ -277,7 +304,7 @@ export function NutritionFactsCard({
         <div
           className={cn(
             "h-10 px-4 flex items-center justify-between transition-colors select-none",
-            highlights?.carbs && "bg-carbs-subtle-bg"
+            effectiveHighlights?.carbs && "bg-carbs-subtle-bg"
           )}
         >
           <span className="text-carbs text-xs font-medium">{t('diet.carbs')}</span>
@@ -301,7 +328,7 @@ export function NutritionFactsCard({
       <div
         className={cn(
           "h-10 px-4 flex items-center justify-between transition-colors",
-          highlights?.protein && "bg-protein-subtle-bg"
+          effectiveHighlights?.protein && "bg-protein-subtle-bg"
         )}
       >
         <span className="text-protein text-xs font-medium">{t('diet.protein')}</span>
@@ -332,7 +359,7 @@ export function NutritionFactsCard({
                 tabIndex={0}
                 className={cn(
                   "h-10 px-4 flex items-center justify-between transition-colors select-none cursor-pointer hover:bg-hover",
-                  highlights?.fat && "bg-fat-subtle-bg"
+                  effectiveHighlights?.fat && "bg-fat-subtle-bg"
                 )}
               >
                 <div className="flex items-center gap-1">
@@ -372,12 +399,9 @@ export function NutritionFactsCard({
             align="start"
             alignOffset={16}
             sideOffset={4}
-            className="w-48 p-0 gap-0 bg-popover text-popover-foreground border border-border shadow-none rounded-lg select-none font-mono"
+            className="w-44 p-1 gap-0 bg-popover text-popover-foreground border border-border shadow-none rounded-lg select-none font-mono"
           >
-            <div className="px-3 py-2 border-b border-border text-xs font-sans">
-              <span className="font-medium text-foreground">{t('diet.fat')}</span>
-            </div>
-            <div className="p-1 space-y-0.5 text-xs">
+            <div className="space-y-0.5 text-xs">
               {/* 飽和脂肪 */}
               <div className="h-8 flex items-center justify-between px-2 rounded hover:bg-hover transition-colors">
                 <span className="text-muted-foreground font-sans text-xs">{t('diet.saturatedFat')}</span>
@@ -424,7 +448,7 @@ export function NutritionFactsCard({
         <div
           className={cn(
             "h-10 px-4 flex items-center justify-between transition-colors select-none",
-            highlights?.fat && "bg-fat-subtle-bg"
+            effectiveHighlights?.fat && "bg-fat-subtle-bg"
           )}
         >
           <span className="text-fat text-xs font-medium">{t('diet.fat')}</span>
@@ -445,29 +469,31 @@ export function NutritionFactsCard({
       )}
 
       {/* 6. 鈉獨立指標行 (h-10) */}
-      <div
-        className={cn(
-          "h-10 px-4 flex items-center justify-between transition-colors",
-          highlights?.sodium && "bg-sodium-subtle-bg"
-        )}
-      >
-        <span className="text-sodium text-xs font-medium">{t('diet.sodium')}</span>
-        <div onClick={(e) => e.stopPropagation()}>
-          {(() => {
-            const node = typeof sodiumVal === 'number' ? (
-              <MetricValue
-                value={sodiumVal}
-                unit="mg"
-                valueClassName="font-medium text-sodium text-xs"
-                unitClassName="text-xs"
-              />
-            ) : (
-              <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
-            );
-            return editable ? editable.renderValue('sodium', node) : node;
-          })()}
+      {showSodiumRow && (
+        <div
+          className={cn(
+            "h-10 px-4 flex items-center justify-between transition-colors",
+            effectiveHighlights?.sodium && "bg-sodium-subtle-bg"
+          )}
+        >
+          <span className="text-sodium text-xs font-medium">{t('diet.sodium')}</span>
+          <div onClick={(e) => e.stopPropagation()}>
+            {(() => {
+              const node = typeof sodiumVal === 'number' ? (
+                <MetricValue
+                  value={sodiumVal}
+                  unit="mg"
+                  valueClassName="font-medium text-sodium text-xs"
+                  unitClassName="text-xs"
+                />
+              ) : (
+                <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
+              );
+              return editable ? editable.renderValue('sodium', node) : node;
+            })()}
+          </div>
         </div>
-      </div>
+      )}
     </SectionCard>
   );
 }

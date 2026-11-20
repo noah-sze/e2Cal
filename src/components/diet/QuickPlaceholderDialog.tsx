@@ -10,6 +10,8 @@ import { Popover, PopoverContent } from '@/components/ui/popover';
 import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
 import { MetricValue } from '@/components/ui/metric-value';
 import { HoldToDeleteButton } from '@/components/ui/HoldToDeleteButton';
+import { NutritionFactsCard, type NutritionField } from '@/components/food/NutritionFactsCard';
+import { evaluateNutritionalHighlight } from '@/utils/nutritionEvaluation';
 import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
 import { cn, formatDisplayAmount } from '@/lib/utils';
@@ -50,6 +52,11 @@ export interface QuickPlaceholderDialogProps {
     carbs?: number;
     protein?: number;
     fat?: number;
+    sugar?: number;
+    fiber?: number;
+    saturatedFat?: number;
+    transFat?: number;
+    sodium?: number;
     foodName?: string;
   }) => Promise<void>;
   initialData?: {
@@ -61,16 +68,35 @@ export interface QuickPlaceholderDialogProps {
     carbs?: number;
     protein?: number;
     fat?: number;
+    sugar?: number;
+    fiber?: number;
+    saturatedFat?: number;
+    transFat?: number;
+    sodium?: number;
   } | null;
   onDelete?: (id: string) => Promise<void>;
 }
 
-type EstimateKeypadField = 'calories' | 'carbs' | 'protein' | 'fat';
+type EstimateKeypadField =
+  | 'calories'
+  | 'carbs'
+  | 'protein'
+  | 'fat'
+  | 'sugar'
+  | 'fiber'
+  | 'saturatedFat'
+  | 'transFat'
+  | 'sodium';
 
 interface MacroSnapshot {
   carbs: number | null;
   protein: number | null;
   fat: number | null;
+  sugar: number | null;
+  fiber: number | null;
+  saturatedFat: number | null;
+  transFat: number | null;
+  sodium: number | null;
   calories: number;
 }
 
@@ -86,6 +112,11 @@ interface HistoricalEstimateItem {
   carbs: number | null;
   protein: number | null;
   fat: number | null;
+  sugar: number | null;
+  fiber: number | null;
+  saturatedFat: number | null;
+  transFat: number | null;
+  sodium: number | null;
   updatedAt: number;
 }
 
@@ -101,6 +132,11 @@ function calcCaloriesFromMacros(
   return Math.round((carbs || 0) * 4 + (protein || 0) * 4 + (fat || 0) * 9);
 }
 
+function scaleNullable(val: number | null, ratio: number, decimals: 0 | 1 = 1): number | null {
+  if (val === null || val <= 0) return val;
+  return decimals === 0 ? Math.round(val * ratio) : round1(val * ratio);
+}
+
 function scaleMacrosByCalories(snapshot: MacroSnapshot, targetCalories: number): MacroSnapshot {
   const safeCalories = Math.max(0, Math.round(targetCalories));
   const baseCalories = calcCaloriesFromMacros(snapshot.carbs, snapshot.protein, snapshot.fat);
@@ -109,12 +145,14 @@ function scaleMacrosByCalories(snapshot: MacroSnapshot, targetCalories: number):
   }
   const ratio = safeCalories / baseCalories;
   return {
-    carbs: snapshot.carbs !== null && snapshot.carbs > 0 ? round1(snapshot.carbs * ratio) : snapshot.carbs,
-    protein:
-      snapshot.protein !== null && snapshot.protein > 0
-        ? round1(snapshot.protein * ratio)
-        : snapshot.protein,
-    fat: snapshot.fat !== null && snapshot.fat > 0 ? round1(snapshot.fat * ratio) : snapshot.fat,
+    carbs: scaleNullable(snapshot.carbs, ratio, 1),
+    protein: scaleNullable(snapshot.protein, ratio, 1),
+    fat: scaleNullable(snapshot.fat, ratio, 1),
+    sugar: scaleNullable(snapshot.sugar, ratio, 1),
+    fiber: scaleNullable(snapshot.fiber, ratio, 1),
+    saturatedFat: scaleNullable(snapshot.saturatedFat, ratio, 1),
+    transFat: scaleNullable(snapshot.transFat, ratio, 1),
+    sodium: scaleNullable(snapshot.sodium, ratio, 0),
     calories: safeCalories,
   };
 }
@@ -134,6 +172,11 @@ export function QuickPlaceholderDialog({
   const [carbs, setCarbs] = useState<number | null>(null);
   const [protein, setProtein] = useState<number | null>(null);
   const [fat, setFat] = useState<number | null>(null);
+  const [sugar, setSugar] = useState<number | null>(null);
+  const [fiber, setFiber] = useState<number | null>(null);
+  const [saturatedFat, setSaturatedFat] = useState<number | null>(null);
+  const [transFat, setTransFat] = useState<number | null>(null);
+  const [sodium, setSodium] = useState<number | null>(null);
   const [calories, setCalories] = useState<number>(0);
   const [customTitle, setCustomTitle] = useState('');
   const [isNoteFocused, setIsNoteFocused] = useState(false);
@@ -164,6 +207,18 @@ export function QuickPlaceholderDialog({
         const p =
           typeof entry.protein === 'number' && entry.protein > 0 ? round1(entry.protein) : null;
         const f = typeof entry.fat === 'number' && entry.fat > 0 ? round1(entry.fat) : null;
+        const sg = typeof entry.sugar === 'number' && entry.sugar > 0 ? round1(entry.sugar) : null;
+        const fb = typeof entry.fiber === 'number' && entry.fiber > 0 ? round1(entry.fiber) : null;
+        const sf =
+          typeof entry.saturatedFat === 'number' && entry.saturatedFat > 0
+            ? round1(entry.saturatedFat)
+            : null;
+        const tf =
+          typeof entry.transFat === 'number' && entry.transFat > 0
+            ? round1(entry.transFat)
+            : null;
+        const na =
+          typeof entry.sodium === 'number' && entry.sodium > 0 ? Math.round(entry.sodium) : null;
         const cal =
           typeof entry.calories === 'number' && entry.calories > 0
             ? Math.round(entry.calories)
@@ -180,6 +235,11 @@ export function QuickPlaceholderDialog({
             carbs: c,
             protein: p,
             fat: f,
+            sugar: sg,
+            fiber: fb,
+            saturatedFat: sf,
+            transFat: tf,
+            sodium: na,
             updatedAt: ts,
           });
         }
@@ -209,6 +269,11 @@ export function QuickPlaceholderDialog({
     setCarbs(item.carbs);
     setProtein(item.protein);
     setFat(item.fat);
+    setSugar(item.sugar);
+    setFiber(item.fiber);
+    setSaturatedFat(item.saturatedFat);
+    setTransFat(item.transFat);
+    setSodium(item.sodium);
     setCalories(item.calories);
     setIsNoteFocused(false);
     setNoteHighlightIdx(-1);
@@ -218,6 +283,21 @@ export function QuickPlaceholderDialog({
     (carbs !== null && carbs > 0) ||
     (protein !== null && protein > 0) ||
     (fat !== null && fat > 0);
+
+  const evalHighlights = useMemo(() => {
+    if (!hasAnyMacro) {
+      return { calories: false, carbs: false, protein: false, fat: false, sodium: false };
+    }
+    return {
+      ...evaluateNutritionalHighlight({
+        calories,
+        carbs: carbs ?? 0,
+        protein: protein ?? 0,
+        fat: fat ?? 0,
+      }).highlights,
+      sodium: false,
+    };
+  }, [hasAnyMacro, calories, carbs, protein, fat]);
 
   // 供能比例條計算
   const cKcal = (carbs || 0) * 4;
@@ -245,6 +325,25 @@ export function QuickPlaceholderDialog({
       setCarbs(initCarbs);
       setProtein(initProtein);
       setFat(initFat);
+      setSugar(
+        typeof initialData.sugar === 'number' && initialData.sugar > 0 ? initialData.sugar : null
+      );
+      setFiber(
+        typeof initialData.fiber === 'number' && initialData.fiber > 0 ? initialData.fiber : null
+      );
+      setSaturatedFat(
+        typeof initialData.saturatedFat === 'number' && initialData.saturatedFat > 0
+          ? initialData.saturatedFat
+          : null
+      );
+      setTransFat(
+        typeof initialData.transFat === 'number' && initialData.transFat > 0
+          ? initialData.transFat
+          : null
+      );
+      setSodium(
+        typeof initialData.sodium === 'number' && initialData.sodium > 0 ? initialData.sodium : null
+      );
 
       const hasInitMacro = initCarbs !== null || initProtein !== null || initFat !== null;
       setCalories(
@@ -272,22 +371,49 @@ export function QuickPlaceholderDialog({
       setCarbs(null);
       setProtein(null);
       setFat(null);
+      setSugar(null);
+      setFiber(null);
+      setSaturatedFat(null);
+      setTransFat(null);
+      setSodium(null);
       setCalories(0);
       setCustomTitle('');
     }
     setActiveKeypad(null);
   }, [open, initialData, t]);
 
-  const applyMacroField = (field: 'carbs' | 'protein' | 'fat', rawValue: number) => {
-    const safe = rawValue > 0 ? round1(rawValue) : null;
-    const nextCarbs = field === 'carbs' ? safe : carbs;
-    const nextProtein = field === 'protein' ? safe : protein;
-    const nextFat = field === 'fat' ? safe : fat;
+  const applyNutrientField = (field: Exclude<EstimateKeypadField, 'calories'>, rawValue: number) => {
+    const safe1 = rawValue > 0 ? round1(rawValue) : null;
+    const safeInt = rawValue > 0 ? Math.round(rawValue) : null;
 
-    setCarbs(nextCarbs);
-    setProtein(nextProtein);
-    setFat(nextFat);
-    setCalories(calcCaloriesFromMacros(nextCarbs, nextProtein, nextFat));
+    if (field === 'carbs' || field === 'protein' || field === 'fat') {
+      const nextCarbs = field === 'carbs' ? safe1 : carbs;
+      const nextProtein = field === 'protein' ? safe1 : protein;
+      const nextFat = field === 'fat' ? safe1 : fat;
+      setCarbs(nextCarbs);
+      setProtein(nextProtein);
+      setFat(nextFat);
+      setCalories(calcCaloriesFromMacros(nextCarbs, nextProtein, nextFat));
+      return;
+    }
+
+    switch (field) {
+      case 'sugar':
+        setSugar(safe1);
+        break;
+      case 'fiber':
+        setFiber(safe1);
+        break;
+      case 'saturatedFat':
+        setSaturatedFat(safe1);
+        break;
+      case 'transFat':
+        setTransFat(safe1);
+        break;
+      case 'sodium':
+        setSodium(safeInt);
+        break;
+    }
   };
 
   const applyScaledCalories = (snapshot: MacroSnapshot, targetCalories: number) => {
@@ -295,13 +421,21 @@ export function QuickPlaceholderDialog({
     setCarbs(scaled.carbs);
     setProtein(scaled.protein);
     setFat(scaled.fat);
+    setSugar(scaled.sugar);
+    setFiber(scaled.fiber);
+    setSaturatedFat(scaled.saturatedFat);
+    setTransFat(scaled.transFat);
+    setSodium(scaled.sodium);
     setCalories(scaled.calories);
   };
 
   const handleStepCalories = (delta: number) => {
     if (!hasAnyMacro) return;
     triggerHaptic('light');
-    applyScaledCalories({ carbs, protein, fat, calories }, Math.max(0, calories + delta));
+    applyScaledCalories(
+      { carbs, protein, fat, sugar, fiber, saturatedFat, transFat, sodium, calories },
+      Math.max(0, calories + delta)
+    );
   };
 
   const openKeypad = (field: EstimateKeypadField, anchorEl: HTMLElement) => {
@@ -310,7 +444,7 @@ export function QuickPlaceholderDialog({
     setActiveKeypad({
       field,
       anchorEl,
-      snapshot: { carbs, protein, fat, calories },
+      snapshot: { carbs, protein, fat, sugar, fiber, saturatedFat, transFat, sodium, calories },
     });
   };
 
@@ -320,7 +454,7 @@ export function QuickPlaceholderDialog({
     if (activeKeypad.field === 'calories') {
       applyScaledCalories(activeKeypad.snapshot, safeVal);
     } else {
-      applyMacroField(activeKeypad.field, safeVal);
+      applyNutrientField(activeKeypad.field, safeVal);
     }
   };
 
@@ -330,7 +464,7 @@ export function QuickPlaceholderDialog({
     if (activeKeypad.field === 'calories') {
       applyScaledCalories(activeKeypad.snapshot, safeVal);
     } else {
-      applyMacroField(activeKeypad.field, safeVal);
+      applyNutrientField(activeKeypad.field, safeVal);
     }
     setActiveKeypad(null);
   };
@@ -341,6 +475,11 @@ export function QuickPlaceholderDialog({
       setCarbs(snapshot.carbs);
       setProtein(snapshot.protein);
       setFat(snapshot.fat);
+      setSugar(snapshot.sugar);
+      setFiber(snapshot.fiber);
+      setSaturatedFat(snapshot.saturatedFat);
+      setTransFat(snapshot.transFat);
+      setSodium(snapshot.sodium);
       setCalories(snapshot.calories);
     }
     setActiveKeypad(null);
@@ -370,6 +509,13 @@ export function QuickPlaceholderDialog({
         carbs: finalCarbs,
         protein: finalProtein,
         fat: finalFat,
+        ...(sugar !== null && sugar > 0 ? { sugar: round1(sugar) } : {}),
+        ...(fiber !== null && fiber > 0 ? { fiber: round1(fiber) } : {}),
+        ...(saturatedFat !== null && saturatedFat > 0
+          ? { saturatedFat: round1(saturatedFat) }
+          : {}),
+        ...(transFat !== null && transFat > 0 ? { transFat: round1(transFat) } : {}),
+        ...(sodium !== null && sodium > 0 ? { sodium: Math.round(sodium) } : {}),
       });
       triggerHaptic('success');
       toast.show(t('diet.placeholder.successToast', '已記錄估算'));
@@ -429,14 +575,64 @@ export function QuickPlaceholderDialog({
           maxDecimals: 1,
           colorClass: 'text-fat',
         };
+      case 'sugar':
+        return {
+          title: t('diet.sugar', '糖'),
+          value: sugar ?? 0,
+          unit: 'g',
+          allowDecimals: true,
+          maxDecimals: 1,
+          colorClass: 'text-foreground',
+        };
+      case 'fiber':
+        return {
+          title: t('diet.fiber', '膳食纖維'),
+          value: fiber ?? 0,
+          unit: 'g',
+          allowDecimals: true,
+          maxDecimals: 1,
+          colorClass: 'text-foreground',
+        };
+      case 'saturatedFat':
+        return {
+          title: t('diet.saturatedFat', '飽和脂肪'),
+          value: saturatedFat ?? 0,
+          unit: 'g',
+          allowDecimals: true,
+          maxDecimals: 1,
+          colorClass: 'text-foreground',
+        };
+      case 'transFat':
+        return {
+          title: t('diet.transFat', '反式脂肪'),
+          value: transFat ?? 0,
+          unit: 'g',
+          allowDecimals: true,
+          maxDecimals: 1,
+          colorClass: 'text-foreground',
+        };
+      case 'sodium':
+        return {
+          title: t('diet.sodium', '鈉'),
+          value: sodium ?? 0,
+          unit: 'mg',
+          allowDecimals: false,
+          maxDecimals: 0,
+          colorClass: 'text-sodium',
+        };
     }
+  };
+
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && activeKeypad) return;
+    onOpenChange(nextOpen);
   };
 
   const keypadMeta = activeKeypad ? getKeypadMeta(activeKeypad.field) : null;
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <PrecisionDialogContent
           title={t('diet.placeholder.title', '快速估算')}
           onSubmit={handleSubmit}
@@ -512,77 +708,77 @@ export function QuickPlaceholderDialog({
               ))}
             </div>
 
-            {/* 3. 三大元素標準數字輸入膠囊列表（嚴格固定順序：碳 / 蛋 / 脂） */}
-            <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border text-sm font-sans">
-              {/* 碳水化合物 */}
-              <div className="h-10 px-4 flex items-center justify-between">
-                <span className="text-carbs text-xs font-medium">
-                  {t('diet.carbs', '碳水化合物')}
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => openKeypad('carbs', e.currentTarget)}
-                  className={cn(
-                    'h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none',
-                    carbs !== null && carbs > 0 ? 'text-carbs' : 'text-muted-foreground'
-                  )}
-                >
-                  <MetricValue
-                    value={carbs !== null && carbs > 0 ? formatDisplayAmount(String(carbs)) : '-'}
-                    unit="g"
-                    valueClassName={carbs !== null && carbs > 0 ? 'text-carbs font-normal' : 'text-muted-foreground font-normal'}
-                    unitClassName="text-xs text-muted-foreground"
-                  />
-                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                </button>
-              </div>
+            {/* 3. 營養成分表（共用通用規格卡片，無表頭，支援 C/P/F、次要元素與鈉輸入） */}
+            <NutritionFactsCard
+              showHeader={false}
+              action={null}
+              showServingRow={false}
+              showCaloriesRow={false}
+              showSodiumRow={true}
+              highlights={evalHighlights}
+              data={{
+                calories,
+                carbs: carbs ?? 0,
+                protein: protein ?? 0,
+                fat: fat ?? 0,
+                sugar,
+                fiber,
+                saturatedFat,
+                transFat,
+                sodium,
+              }}
+              editable={{
+                alwaysShowSubChevrons: true,
+                renderValue: (field: NutritionField) => {
+                  if (field === 'serving' || field === 'calories') {
+                    return null;
+                  }
+                  const valueMap: Record<Exclude<NutritionField, 'serving' | 'calories'>, number | null> = {
+                    carbs,
+                    protein,
+                    fat,
+                    sugar,
+                    fiber,
+                    saturatedFat,
+                    transFat,
+                    sodium,
+                  };
+                  const colorMap: Record<Exclude<NutritionField, 'serving' | 'calories'>, string> = {
+                    carbs: 'text-carbs',
+                    protein: 'text-protein',
+                    fat: 'text-fat',
+                    sugar: 'text-foreground',
+                    fiber: 'text-foreground',
+                    saturatedFat: 'text-foreground',
+                    transFat: 'text-foreground',
+                    sodium: 'text-sodium',
+                  };
+                  const val = valueMap[field];
+                  const hasVal = val !== null && val > 0;
+                  const unit = field === 'sodium' ? 'mg' : 'g';
+                  const colorClass = colorMap[field];
 
-              {/* 蛋白質 */}
-              <div className="h-10 px-4 flex items-center justify-between">
-                <span className="text-protein text-xs font-medium">
-                  {t('diet.protein', '蛋白質')}
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => openKeypad('protein', e.currentTarget)}
-                  className={cn(
-                    'h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none',
-                    protein !== null && protein > 0 ? 'text-protein' : 'text-muted-foreground'
-                  )}
-                >
-                  <MetricValue
-                    value={protein !== null && protein > 0 ? formatDisplayAmount(String(protein)) : '-'}
-                    unit="g"
-                    valueClassName={protein !== null && protein > 0 ? 'text-protein font-normal' : 'text-muted-foreground font-normal'}
-                    unitClassName="text-xs text-muted-foreground"
-                  />
-                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                </button>
-              </div>
-
-              {/* 脂肪 */}
-              <div className="h-10 px-4 flex items-center justify-between">
-                <span className="text-fat text-xs font-medium">
-                  {t('diet.fat', '脂肪')}
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => openKeypad('fat', e.currentTarget)}
-                  className={cn(
-                    'h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none',
-                    fat !== null && fat > 0 ? 'text-fat' : 'text-muted-foreground'
-                  )}
-                >
-                  <MetricValue
-                    value={fat !== null && fat > 0 ? formatDisplayAmount(String(fat)) : '-'}
-                    unit="g"
-                    valueClassName={fat !== null && fat > 0 ? 'text-fat font-normal' : 'text-muted-foreground font-normal'}
-                    unitClassName="text-xs text-muted-foreground"
-                  />
-                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                </button>
-              </div>
-            </div>
+                  return (
+                    <button
+                      type="button"
+                      onClick={(e) => openKeypad(field, e.currentTarget)}
+                      className={cn(
+                        'h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none',
+                        hasVal ? colorClass : 'text-muted-foreground'
+                      )}
+                    >
+                      <MetricValue
+                        value={hasVal ? formatDisplayAmount(String(val)) : '-'}
+                        unit={unit}
+                        valueClassName={hasVal ? `${colorClass} font-normal` : 'text-muted-foreground font-normal'}
+                        unitClassName="text-xs text-muted-foreground"
+                      />
+                      <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                    </button>
+                  );
+                },
+              }}
+            />
 
             {/* 4. 備註輸入框（支援歷史估算聯想搜索與快速帶入） */}
             <input

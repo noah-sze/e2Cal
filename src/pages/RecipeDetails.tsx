@@ -7,7 +7,6 @@ import {
   Archive,
   RefreshCcw,
   Trash2,
-  Plus,
 } from 'lucide-react';
 import { useFoods } from '@/hooks/useFoods';
 import { useRecipes } from '@/hooks/useRecipes';
@@ -18,7 +17,6 @@ import {
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/services/db/db';
 import { Button } from '@/components/ui/button';
-import { SectionCard } from '@/components/ui/section-card';
 import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
 import { useConfirm } from '@/components/ui/confirm-dialog';
@@ -27,7 +25,7 @@ import { calculateIngredientMacros, calculateRecipeTotals } from '@/utils/recipe
 import { useAppStore } from '@/store/useAppStore';
 import { calculateScaledNutrition } from '@/utils/nutritionMath';
 import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
-import { RecipeFormDialog, type RecipeFormData } from '@/components/food/RecipeFormDialog';
+import { RecipeDialog, type RecipeFormData } from '@/components/food/RecipeDialog';
 import { FoodRecipeSelectDialog } from '@/components/food/FoodRecipeSelectDialog';
 import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
@@ -42,7 +40,10 @@ import {
 import { formatFoodDisplayName } from '@/utils/foodNaming';
 import type { FoodItem, FoodRecipe, RecipeIngredient, NutritionTag, FoodLog } from '@/types';
 import { evaluateNutritionalHighlight } from '@/utils/nutritionEvaluation';
-import { MacroSquares } from '@/components/food/MacroSquares';
+import {
+  RecipeIngredientsCard,
+  type RecipeIngredientItem,
+} from '@/components/food/RecipeIngredientsCard';
 import {
   type OverviewPeriod,
   calculateTotalWeeks,
@@ -578,91 +579,45 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
         highlights={evalRes?.highlights}
       />
 
-      {/* 食材解構清單 (Ingredient Breakdown List) */}
-      <SectionCard
+      {/* 食材解構清單 (共用 RecipeIngredientsCard 元件) */}
+      <RecipeIngredientsCard
+        mode="detail"
         title={t('diet.recipeIngredients')}
-        action={
-          <button
-            type="button"
-            onClick={handleOpenAddIngredient}
-            className="h-6 px-2.5 rounded-full border border-border/80 bg-card hover:bg-hover font-mono text-xs flex items-center gap-1 transition-colors cursor-pointer text-muted-foreground hover:text-foreground active:scale-95 select-none"
-          >
-            <Plus className="size-3 text-muted-foreground" />
-            <span>{t('diet.addIngredient')}</span>
-          </button>
-        }
-        bodyClassName="text-sm"
-      >
-          {recipe.ingredients.map((ing, idx) => {
-            const food = foodMap.get(ing.foodId);
-            const macros = calculateIngredientMacros(food, ing.quantity);
-            const ingEvalRes = evaluateNutritionalHighlight({
-              calories: macros.calories,
-              protein: macros.protein,
-              carbs: macros.carbs,
-              fat: macros.fat,
-              servingSize: ing.quantity,
-              servingUnit: ing.unit || 'g',
-              category: food?.category,
-            });
-            const isLowCalorie = ingEvalRes.labels.includes('low-calorie');
-            const isHighCalorie = ingEvalRes.labels.includes('high-calorie');
-
-            return (
-              <div
-                key={idx}
-                onClick={() => {
-                  if (food) {
-                    triggerHaptic('selection');
-                    navigate(APP_ROUTES.foodDetail(food.id));
-                  }
-                }}
-                className="min-h-16 py-2.5 px-4 flex items-center justify-between hover:bg-hover transition-colors cursor-pointer group"
-              >
-                <div className="flex-1 min-w-0 pr-3 select-none">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <span className="truncate text-foreground font-medium text-sm">
-                      {food ? formatFoodDisplayName(food) : t('common.unknown')}
-                    </span>
-                    {ing.isOptional && (
-                      <span className="text-[10px] font-mono border border-dashed border-border px-1.5 py-0.5 rounded text-muted-foreground shrink-0">
-                        {t('diet.optionalBadge')}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[11px] font-mono text-muted-foreground truncate mt-0.5 flex items-center gap-1.5">
-                    <span>
-                      {formatFoodServing(ing.quantity, ing.unit, foodWeightUnit, foodVolumeUnit).formatted}
-                    </span>
-                    <span className="opacity-40">·</span>
-                    <span
-                      className={cn(
-                        isLowCalorie &&
-                          'text-emerald-500 px-1 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20',
-                        isHighCalorie &&
-                          'text-rose-500 px-1 py-0.5 rounded bg-rose-500/10 border border-rose-500/20'
-                      )}
-                    >
-                      {formatEnergy(macros.calories, energyUnit).formatted}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center shrink-0">
-                  <MacroSquares
-                    protein={macros.protein}
-                    carbs={macros.carbs}
-                    fat={macros.fat}
-                    highlights={ingEvalRes?.highlights}
-                  />
-                </div>
-              </div>
-            );
-          })}
-      </SectionCard>
+        onAddIngredient={handleOpenAddIngredient}
+        onItemClick={(item) => {
+          if (item.foodId && foodMap.has(item.foodId)) {
+            triggerHaptic('selection');
+            navigate(APP_ROUTES.foodDetail(item.foodId));
+          }
+        }}
+        items={recipe.ingredients.map((ing, idx): RecipeIngredientItem => {
+          const food = foodMap.get(ing.foodId);
+          const macros = calculateIngredientMacros(food, ing.quantity);
+          const ingEvalRes = evaluateNutritionalHighlight({
+            calories: macros.calories,
+            protein: macros.protein,
+            carbs: macros.carbs,
+            fat: macros.fat,
+            servingSize: ing.quantity,
+            servingUnit: ing.unit || 'g',
+            category: food?.category,
+          });
+          return {
+            id: `${ing.foodId}-${idx}`,
+            foodId: ing.foodId,
+            foodName: food ? formatFoodDisplayName(food) : t('common.unknown'),
+            quantity: ing.quantity,
+            unit: ing.unit || 'g',
+            isOptional: ing.isOptional,
+            macros,
+            evalResult: ingEvalRes,
+          };
+        })}
+      />
 
       {/* 編輯菜餚 Dialog */}
-      <RecipeFormDialog
+      <RecipeDialog
+        variant="recipe"
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         initialData={recipe}

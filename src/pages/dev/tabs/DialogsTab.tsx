@@ -8,9 +8,8 @@ import { cn } from '@/lib/utils';
 
 // 飲食模組 Dialogs
 import { FoodFormDialog } from '@/components/food/FoodFormDialog';
-import { RecipeFormDialog } from '@/components/food/RecipeFormDialog';
+import { RecipeDialog } from '@/components/food/RecipeDialog';
 import { FoodRecipeSelectDialog } from '@/components/food/FoodRecipeSelectDialog';
-import { RecipeLogDialog } from '@/components/diet/RecipeLogDialog';
 import { EditFoodLogDialog } from '@/components/diet/EditFoodLogDialog';
 import { CopyMealDialog } from '@/components/diet/CopyMealDialog';
 import { CopyMealDatePickerDialog } from '@/components/diet/CopyMealDatePickerDialog';
@@ -220,15 +219,14 @@ const DialogRowItem: React.FC<DialogRowItemProps> = ({
 export const DialogsTab: React.FC = () => {
   const confirm = useConfirm();
 
-  // 飲食模組 State (10 項獨立組件)
+  // 飲食模組 State (9 項獨立組件)
   const [foodFormOpen, setFoodFormOpen] = useState(false);
   const [foodFormEditMode, setFoodFormEditMode] = useState(false);
 
-  const [recipeFormOpen, setRecipeFormOpen] = useState(false);
-  const [recipeFormEditMode, setRecipeFormEditMode] = useState(false);
-
-  const [recipeLogOpen, setRecipeLogOpen] = useState(false);
-  const [recipeLogEditMode, setRecipeLogEditMode] = useState(false);
+  const [recipeDialogOpen, setRecipeDialogOpen] = useState(false);
+  const [recipeDialogMode, setRecipeDialogMode] = useState<
+    'recipe-create' | 'recipe-edit' | 'log-create' | 'log-edit'
+  >('recipe-create');
 
   const [foodRecipeSelectOpen, setFoodRecipeSelectOpen] = useState(false);
   const [editFoodLogOpen, setEditFoodLogOpen] = useState(false);
@@ -287,11 +285,11 @@ export const DialogsTab: React.FC = () => {
             彈窗型錄
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5 font-sans">
-            全應用程式 26 個業務 Dialog 統一驗收矩陣，支援同組件多形態（新增/編輯）整合檢視。
+            全應用程式 25 個業務 Dialog 統一驗收矩陣，支援同組件多形態（新增/編輯）整合檢視。
           </p>
         </div>
         <div className="text-2xs font-mono text-muted-foreground tabular-nums">
-          26 項元件
+          25 項元件
         </div>
       </div>
 
@@ -299,7 +297,7 @@ export const DialogsTab: React.FC = () => {
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-mono text-muted-foreground">
-            飲食與營養 (10)
+            飲食與營養 (9)
           </h3>
         </div>
         <div className="divide-y divide-border rounded-lg border border-border bg-card overflow-hidden shadow-none">
@@ -326,45 +324,37 @@ export const DialogsTab: React.FC = () => {
             ]}
           />
           <DialogRowItem
-            name="菜餚配方"
-            component="RecipeFormDialog"
-            desc="食材聚合、調味品與烹調油複合計算 (支援空白與既有數據)"
+            name="菜餚／食譜"
+            component="RecipeDialog"
+            desc="統一元件：食譜原型定義（新增／編輯）與飲食日誌複合菜餚（秤重暫存／組合編輯）"
             badge="Recipe"
             actions={[
               {
-                label: '新增',
+                label: '新增食譜',
                 onOpen: () => {
-                  setRecipeFormEditMode(false);
-                  setRecipeFormOpen(true);
+                  setRecipeDialogMode('recipe-create');
+                  setRecipeDialogOpen(true);
                 },
               },
               {
-                label: '編輯',
+                label: '編輯食譜',
                 onOpen: () => {
-                  setRecipeFormEditMode(true);
-                  setRecipeFormOpen(true);
+                  setRecipeDialogMode('recipe-edit');
+                  setRecipeDialogOpen(true);
                 },
               },
-            ]}
-          />
-          <DialogRowItem
-            name="菜餚日誌"
-            component="RecipeLogDialog"
-            desc="複合菜餚拆解秤重暫存與已記錄組合成分編輯"
-            badge="Bundle"
-            actions={[
               {
                 label: '新增秤重',
                 onOpen: () => {
-                  setRecipeLogEditMode(false);
-                  setRecipeLogOpen(true);
+                  setRecipeDialogMode('log-create');
+                  setRecipeDialogOpen(true);
                 },
               },
               {
                 label: '編輯組合',
                 onOpen: () => {
-                  setRecipeLogEditMode(true);
-                  setRecipeLogOpen(true);
+                  setRecipeDialogMode('log-edit');
+                  setRecipeDialogOpen(true);
                 },
               },
             ]}
@@ -614,7 +604,7 @@ export const DialogsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* ==================== 實際掛載 26 個 Dialog 實體 ==================== */}
+      {/* ==================== 實際掛載 25 個 Dialog 實體 ==================== */}
 
       {/* 飲食 1: 食材表單 */}
       <FoodFormDialog
@@ -627,39 +617,38 @@ export const DialogsTab: React.FC = () => {
         }}
       />
 
-      {/* 飲食 2: 食譜表單 */}
-      <RecipeFormDialog
-        open={recipeFormOpen}
-        onOpenChange={setRecipeFormOpen}
-        initialData={recipeFormEditMode ? MOCK_RECIPE : null}
-        onSubmit={async () => {
-          toast.show('已儲存');
-          setRecipeFormOpen(false);
-        }}
-      />
-
-      {/* 飲食 3: 菜餚日誌（整合秤重暫存與複合編輯） */}
-      <RecipeLogDialog
-        open={recipeLogOpen}
-        onOpenChange={setRecipeLogOpen}
-        mode={recipeLogEditMode ? 'edit' : 'create'}
-        recipe={recipeLogEditMode ? null : MOCK_RECIPE}
+      {/* 飲食 2: 菜餚／食譜統一彈窗（涵蓋原型定義與日誌秤重編輯 4 種形態） */}
+      <RecipeDialog
+        variant={recipeDialogMode.startsWith('recipe') ? 'recipe' : 'log'}
+        open={recipeDialogOpen}
+        onOpenChange={setRecipeDialogOpen}
+        initialData={recipeDialogMode === 'recipe-edit' ? MOCK_RECIPE : null}
+        onSubmit={
+          recipeDialogMode.startsWith('recipe')
+            ? async () => {
+                toast.show('已儲存');
+                setRecipeDialogOpen(false);
+              }
+            : undefined
+        }
+        mode={recipeDialogMode === 'log-edit' ? 'edit' : 'create'}
+        recipe={recipeDialogMode === 'log-create' ? MOCK_RECIPE : null}
         mealType="lunch"
         date={new Date().toISOString().slice(0, 10)}
-        bundleId={recipeLogEditMode ? 'bundle-1' : undefined}
-        bundleTitle={recipeLogEditMode ? '雞胸肉義大利麵' : undefined}
-        logs={recipeLogEditMode ? [MOCK_HYDRATED_FOOD_LOG] : undefined}
+        bundleId={recipeDialogMode === 'log-edit' ? 'bundle-1' : undefined}
+        bundleTitle={recipeDialogMode === 'log-edit' ? '雞胸肉義大利麵' : undefined}
+        logs={recipeDialogMode === 'log-edit' ? [MOCK_HYDRATED_FOOD_LOG] : undefined}
         onSuccess={() => {
           toast.show('已記錄');
-          setRecipeLogOpen(false);
+          setRecipeDialogOpen(false);
         }}
         onSave={async () => {
           toast.show('已更新');
-          setRecipeLogOpen(false);
+          setRecipeDialogOpen(false);
         }}
         onDeleteBundle={async () => {
           toast.show('已刪除');
-          setRecipeLogOpen(false);
+          setRecipeDialogOpen(false);
         }}
       />
 

@@ -14,6 +14,7 @@ import type { HydratedFoodLog, FoodItem } from '@/types';
 import { formatDisplayAmount } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
 import { calculateIngredientMacros } from '@/utils/recipeMath';
+import { evaluateNutritionalHighlight } from '@/utils/nutritionEvaluation';
 import { resolveFoodLogTitle } from '@/utils/foodNaming';
 import { NutritionFactsCard, type NutritionFactsData } from '@/components/food/NutritionFactsCard';
 import { MetricValue } from '@/components/ui/metric-value';
@@ -150,6 +151,20 @@ export function EditFoodLogDialog({
     };
   }, [log, isSystemEntry, baseFood, quantity]);
 
+  // 營養素高亮狀態推算 (依據當前份量動態推算)
+  const evalHighlights = useMemo(() => {
+    if (!nutritionFactsData) return undefined;
+    return evaluateNutritionalHighlight({
+      calories: nutritionFactsData.calories,
+      carbs: nutritionFactsData.carbs,
+      protein: nutritionFactsData.protein,
+      fat: nutritionFactsData.fat,
+      servingSize: nutritionFactsData.servingSize,
+      servingUnit: nutritionFactsData.servingUnit,
+      category: baseFood?.category,
+    }).highlights;
+  }, [nutritionFactsData, baseFood?.category]);
+
   // 打開數字鍵盤
   const handleOpenKeypad = (el: HTMLElement) => {
     triggerHaptic('selection');
@@ -247,6 +262,15 @@ export function EditFoodLogDialog({
         >
           {/* 表單主體 (支援滑動檢視完整營養素) */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 pt-3.5 pr-0.5">
+            {/* 即時營養成分卡片 (共用通用規格卡片，下方已有份量調整故隱藏基準行) */}
+            <NutritionFactsCard
+              title={t('diet.servingNutrients', '營養成分')}
+              data={nutritionFactsData}
+              highlights={evalHighlights}
+              action={null}
+              showServingRow={false}
+            />
+
             {/* 食用份量調節卡片 (實體食材條目) */}
             {!isSystemEntry && (
               <div className="h-11 px-3.5 flex items-center justify-between border border-border rounded-lg bg-card text-sm shrink-0">
@@ -271,14 +295,6 @@ export function EditFoodLogDialog({
                 </button>
               </div>
             )}
-
-            {/* 即時營養成分卡片 (共用通用規格卡片，單品編輯上方已有份量調整故隱藏基準行) */}
-            <NutritionFactsCard
-              title={t('diet.servingNutrients', '營養成分')}
-              data={nutritionFactsData}
-              action={null}
-              showServingRow={false}
-            />
 
             {/* 底部破壞性按鈕 (長按 0.5s 防誤觸刪除) */}
             <HoldToDeleteButton

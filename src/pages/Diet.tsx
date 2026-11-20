@@ -14,7 +14,7 @@ import {
 } from '@/constants/dietTemplates';
 import { DietPlanModal } from '@/components/diet/DietPlanModal';
 import { EditFoodLogDialog } from '@/components/diet/EditFoodLogDialog';
-import { RecipeLogDialog } from '@/components/diet/RecipeLogDialog';
+import { RecipeDialog } from '@/components/food/RecipeDialog';
 import { CopyMealDialog } from '@/components/diet/CopyMealDialog';
 import { RawWeightGuideDialog } from '@/components/diet/RawWeightGuideDialog';
 import {
@@ -180,6 +180,11 @@ export default function Diet() {
     carbs?: number;
     protein?: number;
     fat?: number;
+    sugar?: number;
+    fiber?: number;
+    saturatedFat?: number;
+    transFat?: number;
+    sodium?: number;
     foodName?: string;
   }) => {
     if (editingPlaceholderLog) {
@@ -192,6 +197,11 @@ export default function Diet() {
         carbs: data.carbs,
         protein: data.protein,
         fat: data.fat,
+        sugar: data.sugar,
+        fiber: data.fiber,
+        saturatedFat: data.saturatedFat,
+        transFat: data.transFat,
+        sodium: data.sodium,
       });
       setEditingPlaceholderLog(null);
     } else if (placeholderMealType) {
@@ -204,6 +214,11 @@ export default function Diet() {
         carbs: data.carbs,
         protein: data.protein,
         fat: data.fat,
+        sugar: data.sugar,
+        fiber: data.fiber,
+        saturatedFat: data.saturatedFat,
+        transFat: data.transFat,
+        sodium: data.sodium,
       });
     }
     setPlaceholderMealType(null);
@@ -366,6 +381,11 @@ export default function Diet() {
                 carbs: editingPlaceholderLog.carbs,
                 protein: editingPlaceholderLog.protein,
                 fat: editingPlaceholderLog.fat,
+                sugar: editingPlaceholderLog.sugar,
+                fiber: editingPlaceholderLog.fiber,
+                saturatedFat: editingPlaceholderLog.saturatedFat,
+                transFat: editingPlaceholderLog.transFat,
+                sodium: editingPlaceholderLog.sodium,
               }
             : null
         }
@@ -373,8 +393,9 @@ export default function Diet() {
         onDelete={editingPlaceholderLog ? handleDeletePlaceholder : undefined}
       />
 
-      {/* 菜餚組合記錄編輯管理 Dialog (共用通用 RecipeLogDialog) */}
-      <RecipeLogDialog
+      {/* 菜餚組合記錄編輯管理 Dialog (共用通用 RecipeDialog) */}
+      <RecipeDialog
+        variant="log"
         open={!!editingBundle}
         onOpenChange={(open) => !open && setEditingBundle(null)}
         bundleId={editingBundle?.bundleId || null}
@@ -437,9 +458,10 @@ export default function Diet() {
         />
       )}
 
-      {/* 選擇食譜後的構成食材與重量調整 Dialog (共用通用 RecipeLogDialog，第二層彈窗 zIndex={70}) */}
+      {/* 選擇食譜後的構成食材與重量調整 Dialog (共用通用 RecipeDialog，第二層彈窗 zIndex={70}) */}
       {selectedRecipeForStaging && (
-        <RecipeLogDialog
+        <RecipeDialog
+          variant="log"
           open={!!selectedRecipeForStaging}
           onOpenChange={(open) => {
             if (!open) setSelectedRecipeForStaging(null);
