@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight } from 'lucide-react';
 import { SectionCard } from '@/components/ui/section-card';
 import { NutritionBasisToggle } from '@/components/food/NutritionBasisToggle';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { MetricValue } from '@/components/ui/metric-value';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { formatEnergy, formatFoodServing } from '@/utils/unitMath';
@@ -88,16 +89,11 @@ export function NutritionFactsCard({
   highlights,
   perLabel,
   showServingRow = true,
-  defaultCarbsExpanded,
-  defaultFatExpanded,
   editable,
   className,
 }: NutritionFactsCardProps) {
   const { t } = useTranslation();
   const { foodWeightUnit, foodVolumeUnit, energyUnit } = useUnitPreferences();
-
-  const [isCarbsExpanded, setIsCarbsExpanded] = useState(defaultCarbsExpanded ?? false);
-  const [isFatExpanded, setIsFatExpanded] = useState(defaultFatExpanded ?? false);
 
   const servingSize = data?.servingSize ?? fallbackData?.servingSize ?? 100;
   const servingUnit = data?.servingUnit ?? fallbackData?.servingUnit ?? 'g';
@@ -177,32 +173,115 @@ export function NutritionFactsCard({
         </div>
       </div>
 
-      {/* 3. 碳水化合物複合區塊 (折疊 h-10，展開後帶實體導軌樹) */}
-      <div
-        className={cn(
-          "transition-colors",
-          highlights?.carbs && "bg-carbs-subtle-bg"
-        )}
-      >
+      {/* 3. 碳水化合物行 (h-10) */}
+      {hasCarbSub ? (
+        <Popover>
+          <PopoverTrigger
+            nativeButton={false}
+            render={(props, state) => (
+              <div
+                {...props}
+                role="button"
+                tabIndex={0}
+                className={cn(
+                  "h-10 px-4 flex items-center justify-between transition-colors select-none cursor-pointer hover:bg-hover",
+                  highlights?.carbs && "bg-carbs-subtle-bg"
+                )}
+              >
+                <div className="flex items-center gap-1">
+                  <span className="text-carbs text-xs font-medium">{t('diet.carbs')}</span>
+                  <ChevronRight
+                    className={cn(
+                      "size-3 text-carbs/60 transition-transform duration-150",
+                      state.open && "rotate-90 text-carbs"
+                    )}
+                  />
+                </div>
+
+                <div
+                  onClick={(e) => {
+                    if (editable) {
+                      e.stopPropagation();
+                    }
+                  }}
+                >
+                  {(() => {
+                    const node = (
+                      <MetricValue
+                        value={carbs}
+                        unit="g"
+                        valueClassName="font-medium text-carbs text-xs"
+                        unitClassName="text-xs"
+                      />
+                    );
+                    return editable ? editable.renderValue('carbs', node) : node;
+                  })()}
+                </div>
+              </div>
+            )}
+          />
+          <PopoverContent
+            side="bottom"
+            align="start"
+            alignOffset={16}
+            sideOffset={4}
+            className="w-48 p-0 gap-0 bg-popover text-popover-foreground border border-border shadow-none rounded-lg select-none font-mono"
+          >
+            <div className="px-3 py-2 border-b border-border text-xs font-sans">
+              <span className="font-medium text-foreground">{t('diet.carbs')}</span>
+            </div>
+            <div className="p-1 space-y-0.5 text-xs">
+              {/* 糖 */}
+              <div className="h-8 flex items-center justify-between px-2 rounded hover:bg-hover transition-colors">
+                <span className="text-muted-foreground font-sans text-xs">{t('diet.sugar')}</span>
+                <div onClick={(e) => e.stopPropagation()}>
+                  {(() => {
+                    const node = typeof sugarVal === 'number' ? (
+                      <MetricValue
+                        value={sugarVal}
+                        unit="g"
+                        valueClassName="text-foreground/80 text-xs"
+                        unitClassName="text-xs"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
+                    );
+                    return editable ? editable.renderValue('sugar', node) : node;
+                  })()}
+                </div>
+              </div>
+
+              {/* 膳食纖維 */}
+              <div className="h-8 flex items-center justify-between px-2 rounded hover:bg-hover transition-colors">
+                <span className="text-muted-foreground font-sans text-xs">{t('diet.fiber')}</span>
+                <div onClick={(e) => e.stopPropagation()}>
+                  {(() => {
+                    const node = typeof fiberVal === 'number' ? (
+                      <MetricValue
+                        value={fiberVal}
+                        unit="g"
+                        valueClassName="text-foreground/80 text-xs"
+                        unitClassName="text-xs"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
+                    );
+                    return editable ? editable.renderValue('fiber', node) : node;
+                  })()}
+                </div>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      ) : (
         <div
           className={cn(
-            "h-10 px-4 flex items-center justify-between transition-colors",
-            hasCarbSub && "cursor-pointer select-none hover:bg-hover"
+            "h-10 px-4 flex items-center justify-between transition-colors select-none",
+            highlights?.carbs && "bg-carbs-subtle-bg"
           )}
-          onClick={hasCarbSub ? () => setIsCarbsExpanded((prev) => !prev) : undefined}
         >
-          <div className="flex items-center gap-1.5">
-            <span className="text-carbs text-xs font-medium">{t('diet.carbs')}</span>
-            {hasCarbSub && (
-              <ChevronRight
-                className={cn(
-                  "size-3 text-muted-foreground/50 transition-transform duration-200",
-                  isCarbsExpanded && "rotate-90"
-                )}
-              />
-            )}
-          </div>
-          <div onClick={(e) => e.stopPropagation()}>
+          <span className="text-carbs text-xs font-medium">{t('diet.carbs')}</span>
+          <div>
             {(() => {
               const node = (
                 <MetricValue
@@ -216,54 +295,7 @@ export function NutritionFactsCard({
             })()}
           </div>
         </div>
-
-        {hasCarbSub && isCarbsExpanded && (
-          <div className="px-4 pb-2.5 pt-0.5 space-y-1 text-xs font-mono text-muted-foreground">
-            {/* 糖 */}
-            <div className="relative pl-6 py-0.5 min-h-8 flex items-center justify-between">
-              <div className="absolute left-2.5 top-0 bottom-0 w-px bg-border" />
-              <div className="absolute left-2.5 top-1/2 w-2.5 h-px bg-border" />
-              <span className="font-sans text-muted-foreground text-xs">{t('diet.sugar')}</span>
-              <div onClick={(e) => e.stopPropagation()}>
-                {(() => {
-                  const node = typeof sugarVal === 'number' ? (
-                    <MetricValue
-                      value={sugarVal}
-                      unit="g"
-                      valueClassName="text-foreground/80 text-xs"
-                      unitClassName="text-xs"
-                    />
-                  ) : (
-                    <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
-                  );
-                  return editable ? editable.renderValue('sugar', node) : node;
-                })()}
-              </div>
-            </div>
-
-            {/* 膳食纖維 */}
-            <div className="relative pl-6 py-0.5 min-h-8 flex items-center justify-between">
-              <div className="absolute left-2.5 top-0 h-1/2 w-2.5 border-l border-b border-border rounded-bl-[3px]" />
-              <span className="font-sans text-muted-foreground text-xs">{t('diet.fiber')}</span>
-              <div onClick={(e) => e.stopPropagation()}>
-                {(() => {
-                  const node = typeof fiberVal === 'number' ? (
-                    <MetricValue
-                      value={fiberVal}
-                      unit="g"
-                      valueClassName="text-foreground/80 text-xs"
-                      unitClassName="text-xs"
-                    />
-                  ) : (
-                    <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
-                  );
-                  return editable ? editable.renderValue('fiber', node) : node;
-                })()}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* 4. 蛋白質行 (h-10) */}
       <div
@@ -288,32 +320,115 @@ export function NutritionFactsCard({
         </div>
       </div>
 
-      {/* 5. 脂肪複合區塊 (折疊 h-10，展開後帶實體導軌樹) */}
-      <div
-        className={cn(
-          "transition-colors",
-          highlights?.fat && "bg-fat-subtle-bg"
-        )}
-      >
+      {/* 5. 脂肪行 (h-10) */}
+      {hasFatSub ? (
+        <Popover>
+          <PopoverTrigger
+            nativeButton={false}
+            render={(props, state) => (
+              <div
+                {...props}
+                role="button"
+                tabIndex={0}
+                className={cn(
+                  "h-10 px-4 flex items-center justify-between transition-colors select-none cursor-pointer hover:bg-hover",
+                  highlights?.fat && "bg-fat-subtle-bg"
+                )}
+              >
+                <div className="flex items-center gap-1">
+                  <span className="text-fat text-xs font-medium">{t('diet.fat')}</span>
+                  <ChevronRight
+                    className={cn(
+                      "size-3 text-fat/60 transition-transform duration-150",
+                      state.open && "rotate-90 text-fat"
+                    )}
+                  />
+                </div>
+
+                <div
+                  onClick={(e) => {
+                    if (editable) {
+                      e.stopPropagation();
+                    }
+                  }}
+                >
+                  {(() => {
+                    const node = (
+                      <MetricValue
+                        value={fat}
+                        unit="g"
+                        valueClassName="font-medium text-fat text-xs"
+                        unitClassName="text-xs"
+                      />
+                    );
+                    return editable ? editable.renderValue('fat', node) : node;
+                  })()}
+                </div>
+              </div>
+            )}
+          />
+          <PopoverContent
+            side="bottom"
+            align="start"
+            alignOffset={16}
+            sideOffset={4}
+            className="w-48 p-0 gap-0 bg-popover text-popover-foreground border border-border shadow-none rounded-lg select-none font-mono"
+          >
+            <div className="px-3 py-2 border-b border-border text-xs font-sans">
+              <span className="font-medium text-foreground">{t('diet.fat')}</span>
+            </div>
+            <div className="p-1 space-y-0.5 text-xs">
+              {/* 飽和脂肪 */}
+              <div className="h-8 flex items-center justify-between px-2 rounded hover:bg-hover transition-colors">
+                <span className="text-muted-foreground font-sans text-xs">{t('diet.saturatedFat')}</span>
+                <div onClick={(e) => e.stopPropagation()}>
+                  {(() => {
+                    const node = typeof satFatVal === 'number' ? (
+                      <MetricValue
+                        value={satFatVal}
+                        unit="g"
+                        valueClassName="text-foreground/80 text-xs"
+                        unitClassName="text-xs"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
+                    );
+                    return editable ? editable.renderValue('saturatedFat', node) : node;
+                  })()}
+                </div>
+              </div>
+
+              {/* 反式脂肪 */}
+              <div className="h-8 flex items-center justify-between px-2 rounded hover:bg-hover transition-colors">
+                <span className="text-muted-foreground font-sans text-xs">{t('diet.transFat')}</span>
+                <div onClick={(e) => e.stopPropagation()}>
+                  {(() => {
+                    const node = typeof transFatVal === 'number' ? (
+                      <MetricValue
+                        value={transFatVal}
+                        unit="g"
+                        valueClassName="text-foreground/80 text-xs"
+                        unitClassName="text-xs"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
+                    );
+                    return editable ? editable.renderValue('transFat', node) : node;
+                  })()}
+                </div>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      ) : (
         <div
           className={cn(
-            "h-10 px-4 flex items-center justify-between transition-colors",
-            hasFatSub && "cursor-pointer select-none hover:bg-hover"
+            "h-10 px-4 flex items-center justify-between transition-colors select-none",
+            highlights?.fat && "bg-fat-subtle-bg"
           )}
-          onClick={hasFatSub ? () => setIsFatExpanded((prev) => !prev) : undefined}
         >
-          <div className="flex items-center gap-1.5">
-            <span className="text-fat text-xs font-medium">{t('diet.fat')}</span>
-            {hasFatSub && (
-              <ChevronRight
-                className={cn(
-                  "size-3 text-muted-foreground/50 transition-transform duration-200",
-                  isFatExpanded && "rotate-90"
-                )}
-              />
-            )}
-          </div>
-          <div onClick={(e) => e.stopPropagation()}>
+          <span className="text-fat text-xs font-medium">{t('diet.fat')}</span>
+          <div>
             {(() => {
               const node = (
                 <MetricValue
@@ -327,54 +442,7 @@ export function NutritionFactsCard({
             })()}
           </div>
         </div>
-
-        {hasFatSub && isFatExpanded && (
-          <div className="px-4 pb-2.5 pt-0.5 space-y-1 text-xs font-mono text-muted-foreground">
-            {/* 飽和脂肪 */}
-            <div className="relative pl-6 py-0.5 min-h-8 flex items-center justify-between">
-              <div className="absolute left-2.5 top-0 bottom-0 w-px bg-border" />
-              <div className="absolute left-2.5 top-1/2 w-2.5 h-px bg-border" />
-              <span className="font-sans text-muted-foreground text-xs">{t('diet.saturatedFat')}</span>
-              <div onClick={(e) => e.stopPropagation()}>
-                {(() => {
-                  const node = typeof satFatVal === 'number' ? (
-                    <MetricValue
-                      value={satFatVal}
-                      unit="g"
-                      valueClassName="text-foreground/80 text-xs"
-                      unitClassName="text-xs"
-                    />
-                  ) : (
-                    <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
-                  );
-                  return editable ? editable.renderValue('saturatedFat', node) : node;
-                })()}
-              </div>
-            </div>
-
-            {/* 反式脂肪 */}
-            <div className="relative pl-6 py-0.5 min-h-8 flex items-center justify-between">
-              <div className="absolute left-2.5 top-0 h-1/2 w-2.5 border-l border-b border-border rounded-bl-[3px]" />
-              <span className="font-sans text-muted-foreground text-xs">{t('diet.transFat')}</span>
-              <div onClick={(e) => e.stopPropagation()}>
-                {(() => {
-                  const node = typeof transFatVal === 'number' ? (
-                    <MetricValue
-                      value={transFatVal}
-                      unit="g"
-                      valueClassName="text-foreground/80 text-xs"
-                      unitClassName="text-xs"
-                    />
-                  ) : (
-                    <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
-                  );
-                  return editable ? editable.renderValue('transFat', node) : node;
-                })()}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* 6. 鈉獨立指標行 (h-10) */}
       <div

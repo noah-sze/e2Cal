@@ -34,12 +34,12 @@ function PopoverContent({
         side={side}
         sideOffset={sideOffset}
         anchor={anchor}
-        className={cn("isolate z-50", positionerClassName)}
+        className={cn("isolate z-[70]", positionerClassName)}
       >
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
-            "z-50 flex w-72 origin-(--transform-origin) flex-col gap-2.5 rounded-lg bg-popover p-2.5 text-sm text-popover-foreground border border-border shadow-none outline-hidden data-closed:hidden",
+            "z-[70] flex w-72 origin-(--transform-origin) flex-col gap-2.5 rounded-lg bg-popover p-2.5 text-sm text-popover-foreground border border-border shadow-none outline-hidden data-closed:hidden",
             className
           )}
           {...props}
