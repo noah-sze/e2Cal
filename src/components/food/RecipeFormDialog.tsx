@@ -11,9 +11,8 @@ import { useFoods } from '@/hooks/useFoods';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { calculateRecipeTotals } from '@/utils/recipeMath';
 import { formatFoodDisplayName } from '@/utils/foodNaming';
+import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
 import {
-  formatEnergy,
-  formatFoodServing,
   ozToG,
   gToOz,
   flOzToMl,
@@ -68,7 +67,7 @@ export function RecipeFormDialog({
 }: RecipeFormDialogProps) {
   const { t } = useTranslation();
   const { allFoods } = useFoods();
-  const { foodWeightUnit, foodVolumeUnit, energyUnit } = useUnitPreferences();
+  const { foodWeightUnit, foodVolumeUnit } = useUnitPreferences();
   const isEdit = !!initialData;
 
   // 構建快速查詢 Map
@@ -394,74 +393,24 @@ export function RecipeFormDialog({
                 </div>
               </div>
 
-              {/* 表格段落 2: 計算預估橫向看板 (HUD Banner) */}
-              <div className="space-y-1.5 shrink-0">
-                <div className="flex items-center justify-between px-0">
-                  <div className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">
-                    {t('diet.totalEstimated')}
-                  </div>
-                  <div className="text-xs font-mono text-muted-foreground flex items-center gap-1.5">
-                    <span className="text-[11px] text-muted-foreground/80">{t('diet.totalWeight', '總重量')}</span>
-                    <span className="font-normal text-foreground">
-                      {
-                        formatFoodServing(
-                          totals.totalWeightGrams,
-                          'g',
-                          foodWeightUnit,
-                          foodVolumeUnit
-                        ).formatted
-                      }
-                    </span>
-                  </div>
-                </div>
-
-                {/* 4 欄巨量素橫向網格卡片 (高度僅約 48px，節省 150px+ 縱向空間) */}
-                <div className="border border-border rounded-lg overflow-hidden bg-card grid grid-cols-4 divide-x divide-border select-none text-center shrink-0">
-                  {/* 熱量 */}
-                  <div className="py-2 px-1 flex flex-col items-center justify-center min-w-0">
-                    <span className="text-[10px] font-medium text-calories uppercase tracking-wider truncate">
-                      {t('diet.calories')}
-                    </span>
-                    <div className="font-mono text-xs font-normal text-calories mt-0.5 truncate flex items-baseline gap-0.5">
-                      <span>{formatEnergy(totals.calories, energyUnit).value}</span>
-                      <span className="font-sans text-[9px] font-normal opacity-75">{formatEnergy(totals.calories, energyUnit).unit}</span>
-                    </div>
-                  </div>
-
-                  {/* 碳水 */}
-                  <div className="py-2 px-1 flex flex-col items-center justify-center min-w-0">
-                    <span className="text-[10px] font-medium text-carbs uppercase tracking-wider truncate">
-                      {t('diet.macroMicro.carbs', '碳')}
-                    </span>
-                    <div className="font-mono text-xs font-normal text-carbs mt-0.5 truncate flex items-baseline gap-0.5">
-                      <span>{totals.carbs}</span>
-                      <span className="font-sans text-[9px] font-normal opacity-75">g</span>
-                    </div>
-                  </div>
-
-                  {/* 蛋白質 */}
-                  <div className="py-2 px-1 flex flex-col items-center justify-center min-w-0">
-                    <span className="text-[10px] font-medium text-protein uppercase tracking-wider truncate">
-                      {t('diet.macroMicro.protein', '蛋')}
-                    </span>
-                    <div className="font-mono text-xs font-normal text-protein mt-0.5 truncate flex items-baseline gap-0.5">
-                      <span>{totals.protein}</span>
-                      <span className="font-sans text-[9px] font-normal opacity-75">g</span>
-                    </div>
-                  </div>
-
-                  {/* 脂肪 */}
-                  <div className="py-2 px-1 flex flex-col items-center justify-center min-w-0">
-                    <span className="text-[10px] font-medium text-fat uppercase tracking-wider truncate">
-                      {t('diet.macroMicro.fat', '脂')}
-                    </span>
-                    <div className="font-mono text-xs font-normal text-fat mt-0.5 truncate flex items-baseline gap-0.5">
-                      <span>{totals.fat}</span>
-                      <span className="font-sans text-[9px] font-normal opacity-75">g</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {/* 表格段落 2: 配方總計指標規格卡片 (共用通用規格卡片) */}
+              <NutritionFactsCard
+                title={t('diet.totalEstimated')}
+                action={null}
+                data={{
+                  servingSize: totals.totalWeightGrams,
+                  servingUnit: 'g',
+                  calories: totals.calories,
+                  carbs: totals.carbs,
+                  protein: totals.protein,
+                  fat: totals.fat,
+                  sugar: totals.sugar,
+                  fiber: totals.fiber,
+                  saturatedFat: totals.saturatedFat,
+                  transFat: totals.transFat,
+                  sodium: totals.sodium,
+                }}
+              />
 
               {/* 表格段落 3: 構成食材清單 */}
               <div className="space-y-1.5 shrink-0">

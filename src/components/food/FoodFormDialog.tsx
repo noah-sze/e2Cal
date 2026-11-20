@@ -22,6 +22,7 @@ import { normalizeFoodInputToMetric } from '@/utils/nutritionMath';
 import { convertFoodWeight, convertFoodVolume, kcalToKj } from '@/utils/unitMath';
 import { matchesAutocomplete } from '@/utils/multilingualSearch';
 import { ChevronRight } from 'lucide-react';
+import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
 
 type KeypadField =
   | 'serving'
@@ -852,14 +853,10 @@ export function FoodFormDialog({
             </div>
           </div>
 
-          {/* 表格段落 3: 基準營養素 (純營養素輸入) */}
-          <div className="space-y-1.5 pt-0.5">
-            <div className="flex items-center justify-between gap-2 px-0">
-              <div className="min-w-0 truncate text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">
-                {t('diet.servingNutrients')}
-              </div>
-
-              {/* 28px 微型切換膠囊 (份量 vs 自定義) */}
+          {/* 表格段落 3: 基準營養素 (共用通用規格卡片) */}
+          <NutritionFactsCard
+            title={t('diet.servingNutrients')}
+            action={
               <div className="h-7 p-0.5 rounded-full border border-border bg-background inline-flex items-center text-xs font-mono select-none shrink-0">
                 <button
                   type="button"
@@ -897,203 +894,172 @@ export function FoodFormDialog({
                   {t('diet.customBasis')}
                 </button>
               </div>
-            </div>
-
-            {/* Usage List 營養數據輸入卡 (純營養素) */}
-            <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border text-sm">
-
-              {/* 基準數值行 (固定顯示：選「份量」時不可編輯，選「自定義」時可自訂) */}
-              <div className="h-10 px-4 flex items-center justify-between bg-muted/20">
-                <span className="text-xs text-muted-foreground">
-                  {t('diet.perLabelBasis')}
-                </span>
-                {basisMode === 'serving' ? (
-                  <div className="h-7 px-3 rounded-full border border-border/50 bg-hover font-mono text-xs flex items-center gap-1.5 text-muted-foreground select-none">
-                    {renderAmountValue(servingSize, "text-foreground/75")}
-                    <span className="text-xs text-muted-foreground">{servingUnit}</span>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={(e) => openKeypad('basis', e.currentTarget)}
-                    className={cn(
-                      "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
-                      basisSize ? "text-foreground" : "text-muted-foreground"
-                    )}
-                  >
-                    {renderAmountValue(basisSize, "text-foreground")}
-                    <span className="text-muted-foreground">{basisUnit}</span>
-                    <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                  </button>
-                )}
-              </div>
-
-              {/* 熱量 */}
-              <div className="h-10 px-4 flex items-center justify-between">
-                <span className="text-calories text-xs font-medium">{t('diet.calories')}</span>
-                <button
-                  type="button"
-                  onClick={(e) => openKeypad('calories', e.currentTarget)}
-                  className={cn(
-                    "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
-                    calories !== '' ? "text-calories" : "text-muted-foreground"
-                  )}
-                >
-                  {renderAmountValue(calories, "text-calories")}
-                  <span className="text-xs text-muted-foreground">{calorieUnit}</span>
-                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                </button>
-              </div>
-
-              {/* 碳水化合物 */}
-              <div className="h-10 px-4 flex items-center justify-between">
-                <span className="text-carbs text-xs font-medium">{t('diet.carbs')}</span>
-                <button
-                  type="button"
-                  onClick={(e) => openKeypad('carbs', e.currentTarget)}
-                  className={cn(
-                    "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
-                    carbs !== '' ? "text-carbs" : "text-muted-foreground"
-                  )}
-                >
-                  {renderAmountValue(carbs, "text-carbs")}
-                  <span className="text-xs text-muted-foreground">g</span>
-                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                </button>
-              </div>
-
-              {/* 糖 (次級) */}
-              <div className="h-10 pl-7 pr-4 flex items-center justify-between bg-muted/10">
-                <span className="text-xs text-muted-foreground flex items-center">
-                  <span className="text-muted-foreground/60 mr-1.5 select-none">└</span>
-                  {t('diet.sugar')}
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => openKeypad('sugar', e.currentTarget)}
-                  className={cn(
-                    "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
-                    sugar !== '' ? "text-foreground" : "text-muted-foreground"
-                  )}
-                >
-                  {renderAmountValue(sugar, "text-foreground")}
-                  <span className="text-xs text-muted-foreground">g</span>
-                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                </button>
-              </div>
-
-              {/* 膳食纖維 (次級) */}
-              <div className="h-10 pl-7 pr-4 flex items-center justify-between bg-muted/10">
-                <span className="text-xs text-muted-foreground flex items-center">
-                  <span className="text-muted-foreground/60 mr-1.5 select-none">└</span>
-                  {t('diet.fiber')}
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => openKeypad('fiber', e.currentTarget)}
-                  className={cn(
-                    "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
-                    fiber !== '' ? "text-foreground" : "text-muted-foreground"
-                  )}
-                >
-                  {renderAmountValue(fiber, "text-foreground")}
-                  <span className="text-xs text-muted-foreground">g</span>
-                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                </button>
-              </div>
-
-              {/* 蛋白質 */}
-              <div className="h-10 px-4 flex items-center justify-between">
-                <span className="text-protein text-xs font-medium">{t('diet.protein')}</span>
-                <button
-                  type="button"
-                  onClick={(e) => openKeypad('protein', e.currentTarget)}
-                  className={cn(
-                    "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
-                    protein !== '' ? "text-protein" : "text-muted-foreground"
-                  )}
-                >
-                  {renderAmountValue(protein, "text-protein")}
-                  <span className="text-xs text-muted-foreground">g</span>
-                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                </button>
-              </div>
-
-              {/* 脂肪 */}
-              <div className="h-10 px-4 flex items-center justify-between">
-                <span className="text-fat text-xs font-medium">{t('diet.fat')}</span>
-                <button
-                  type="button"
-                  onClick={(e) => openKeypad('fat', e.currentTarget)}
-                  className={cn(
-                    "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
-                    fat !== '' ? "text-fat" : "text-muted-foreground"
-                  )}
-                >
-                  {renderAmountValue(fat, "text-fat")}
-                  <span className="text-xs text-muted-foreground">g</span>
-                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                </button>
-              </div>
-
-              {/* 飽和脂肪 (次級) */}
-              <div className="h-10 pl-7 pr-4 flex items-center justify-between bg-muted/10">
-                <span className="text-xs text-muted-foreground flex items-center">
-                  <span className="text-muted-foreground/60 mr-1.5 select-none">└</span>
-                  {t('diet.saturatedFat')}
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => openKeypad('saturatedFat', e.currentTarget)}
-                  className={cn(
-                    "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
-                    saturatedFat !== '' ? "text-foreground" : "text-muted-foreground"
-                  )}
-                >
-                  {renderAmountValue(saturatedFat, "text-foreground")}
-                  <span className="text-xs text-muted-foreground">g</span>
-                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                </button>
-              </div>
-
-              {/* 反式脂肪 (次級) */}
-              <div className="h-10 pl-7 pr-4 flex items-center justify-between bg-muted/10">
-                <span className="text-xs text-muted-foreground flex items-center">
-                  <span className="text-muted-foreground/60 mr-1.5 select-none">└</span>
-                  {t('diet.transFat')}
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => openKeypad('transFat', e.currentTarget)}
-                  className={cn(
-                    "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
-                    transFat !== '' ? "text-foreground" : "text-muted-foreground"
-                  )}
-                >
-                  {renderAmountValue(transFat, "text-foreground")}
-                  <span className="text-xs text-muted-foreground">g</span>
-                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                </button>
-              </div>
-
-              {/* 鈉 */}
-              <div className="h-10 px-4 flex items-center justify-between">
-                <span className="text-xs font-medium text-foreground">{t('diet.sodium')}</span>
-                <button
-                  type="button"
-                  onClick={(e) => openKeypad('sodium', e.currentTarget)}
-                  className={cn(
-                    "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
-                    sodium !== '' ? "text-foreground" : "text-muted-foreground"
-                  )}
-                >
-                  {renderAmountValue(sodium, "text-foreground")}
-                  <span className="text-xs text-muted-foreground">mg</span>
-                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                </button>
-              </div>
-            </div>
-          </div>
+            }
+            defaultCarbsExpanded={Boolean(sugar !== '' || fiber !== '')}
+            defaultFatExpanded={Boolean(saturatedFat !== '' || transFat !== '')}
+            editable={{
+              alwaysShowSubChevrons: true,
+              renderValue: (field) => {
+                switch (field) {
+                  case 'serving':
+                    return basisMode === 'serving' ? (
+                      <div className="h-7 px-3 rounded-full border border-border/50 bg-hover font-mono text-xs flex items-center gap-1.5 text-muted-foreground select-none">
+                        {renderAmountValue(servingSize, "text-foreground/75")}
+                        <span className="text-xs text-muted-foreground">{servingUnit}</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => openKeypad('basis', e.currentTarget)}
+                        className={cn(
+                          "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
+                          basisSize ? "text-foreground" : "text-muted-foreground"
+                        )}
+                      >
+                        {renderAmountValue(basisSize, "text-foreground")}
+                        <span className="text-muted-foreground">{basisUnit}</span>
+                        <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                      </button>
+                    );
+                  case 'calories':
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => openKeypad('calories', e.currentTarget)}
+                        className={cn(
+                          "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
+                          calories !== '' ? "text-calories" : "text-muted-foreground"
+                        )}
+                      >
+                        {renderAmountValue(calories, "text-calories")}
+                        <span className="text-xs text-muted-foreground">{calorieUnit}</span>
+                        <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                      </button>
+                    );
+                  case 'carbs':
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => openKeypad('carbs', e.currentTarget)}
+                        className={cn(
+                          "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
+                          carbs !== '' ? "text-carbs" : "text-muted-foreground"
+                        )}
+                      >
+                        {renderAmountValue(carbs, "text-carbs")}
+                        <span className="text-xs text-muted-foreground">g</span>
+                        <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                      </button>
+                    );
+                  case 'sugar':
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => openKeypad('sugar', e.currentTarget)}
+                        className={cn(
+                          "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
+                          sugar !== '' ? "text-foreground" : "text-muted-foreground"
+                        )}
+                      >
+                        {renderAmountValue(sugar, "text-foreground")}
+                        <span className="text-xs text-muted-foreground">g</span>
+                        <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                      </button>
+                    );
+                  case 'fiber':
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => openKeypad('fiber', e.currentTarget)}
+                        className={cn(
+                          "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
+                          fiber !== '' ? "text-foreground" : "text-muted-foreground"
+                        )}
+                      >
+                        {renderAmountValue(fiber, "text-foreground")}
+                        <span className="text-xs text-muted-foreground">g</span>
+                        <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                      </button>
+                    );
+                  case 'protein':
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => openKeypad('protein', e.currentTarget)}
+                        className={cn(
+                          "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
+                          protein !== '' ? "text-protein" : "text-muted-foreground"
+                        )}
+                      >
+                        {renderAmountValue(protein, "text-protein")}
+                        <span className="text-xs text-muted-foreground">g</span>
+                        <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                      </button>
+                    );
+                  case 'fat':
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => openKeypad('fat', e.currentTarget)}
+                        className={cn(
+                          "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
+                          fat !== '' ? "text-fat" : "text-muted-foreground"
+                        )}
+                      >
+                        {renderAmountValue(fat, "text-fat")}
+                        <span className="text-xs text-muted-foreground">g</span>
+                        <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                      </button>
+                    );
+                  case 'saturatedFat':
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => openKeypad('saturatedFat', e.currentTarget)}
+                        className={cn(
+                          "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
+                          saturatedFat !== '' ? "text-foreground" : "text-muted-foreground"
+                        )}
+                      >
+                        {renderAmountValue(saturatedFat, "text-foreground")}
+                        <span className="text-xs text-muted-foreground">g</span>
+                        <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                      </button>
+                    );
+                  case 'transFat':
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => openKeypad('transFat', e.currentTarget)}
+                        className={cn(
+                          "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
+                          transFat !== '' ? "text-foreground" : "text-muted-foreground"
+                        )}
+                      >
+                        {renderAmountValue(transFat, "text-foreground")}
+                        <span className="text-xs text-muted-foreground">g</span>
+                        <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                      </button>
+                    );
+                  case 'sodium':
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => openKeypad('sodium', e.currentTarget)}
+                        className={cn(
+                          "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
+                          sodium !== '' ? "text-foreground" : "text-muted-foreground"
+                        )}
+                      >
+                        {renderAmountValue(sodium, "text-foreground")}
+                        <span className="text-xs text-muted-foreground">mg</span>
+                        <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                      </button>
+                    );
+                }
+              },
+            }}
+          />
 
           {/* 方案 D 徹底無底欄，表單內容直達底部 */}
         </form>

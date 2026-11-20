@@ -7,6 +7,18 @@ import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { formatEnergy, formatFoodServing } from '@/utils/unitMath';
 import { cn } from '@/lib/utils';
 
+export type NutritionField =
+  | 'serving'
+  | 'calories'
+  | 'carbs'
+  | 'sugar'
+  | 'fiber'
+  | 'protein'
+  | 'fat'
+  | 'saturatedFat'
+  | 'transFat'
+  | 'sodium';
+
 export interface NutritionFactsData {
   servingSize?: number;
   servingUnit?: string;
@@ -24,10 +36,10 @@ export interface NutritionFactsData {
 export interface NutritionFactsCardProps {
   /** 卡片標題，預設為「基準營養素」 */
   title?: string;
-  /** 卡片右側自訂動作元件，預設為 NutritionBasisToggle */
+  /** 卡片右側自訂動作元件，預設為 NutritionBasisToggle；傳入 null 則不渲染任何動作按鈕 */
   action?: React.ReactNode;
   /** 當前等比換算後的營養素數據 */
-  data: NutritionFactsData | null | undefined;
+  data?: NutritionFactsData | null;
   /** 備用或基礎數據（當換算數據為空時自動 fallback） */
   fallbackData?: Partial<NutritionFactsData> | null;
   /** 核心宏量客觀標籤亮點高亮 */
@@ -37,11 +49,27 @@ export interface NutritionFactsCardProps {
     carbs?: boolean;
     fat?: boolean;
   } | null;
+  /** 首行基準標籤，預設為 t('diet.perLabelBasis', '每') */
+  perLabel?: string;
+  /** 碳水化合物次級指標初始展開狀態 */
+  defaultCarbsExpanded?: boolean;
+  /** 脂肪次級指標初始展開狀態 */
+  defaultFatExpanded?: boolean;
+  /**
+   * 編輯/表單模式支援 (Editable Mode):
+   * 傳入此物件後，各列右側數值將由 renderValue 接管渲染（例如渲染點擊開啟鍵盤的微型按鈕）
+   */
+  editable?: {
+    renderValue: (field: NutritionField, defaultContent: React.ReactNode) => React.ReactNode;
+    /** 在表單中即使次級指標為空也始終顯示 > 圖標以供展開填寫 */
+    alwaysShowSubChevrons?: boolean;
+  };
   className?: string;
 }
 
 /**
  * 全域基準營養素規格卡片（單一真理源通用元件）
+ * 適用於：食材詳情頁、食譜詳情頁、新增/編輯食材彈窗、食譜編輯彈窗。
  * 嚴格遵循 e2Cal 視覺與排版標準：
  * 1. 嚴格三大營養素 C -> P -> F 排序
  * 2. 份量標籤統一為「每」
@@ -54,13 +82,17 @@ export function NutritionFactsCard({
   data,
   fallbackData,
   highlights,
+  perLabel,
+  defaultCarbsExpanded,
+  defaultFatExpanded,
+  editable,
   className,
 }: NutritionFactsCardProps) {
   const { t } = useTranslation();
   const { foodWeightUnit, foodVolumeUnit, energyUnit } = useUnitPreferences();
 
-  const [isCarbsExpanded, setIsCarbsExpanded] = useState(false);
-  const [isFatExpanded, setIsFatExpanded] = useState(false);
+  const [isCarbsExpanded, setIsCarbsExpanded] = useState(defaultCarbsExpanded ?? false);
+  const [isFatExpanded, setIsFatExpanded] = useState(defaultFatExpanded ?? false);
 
   const servingSize = data?.servingSize ?? fallbackData?.servingSize ?? 100;
   const servingUnit = data?.servingUnit ?? fallbackData?.servingUnit ?? 'g';
@@ -75,22 +107,43 @@ export function NutritionFactsCard({
   const transFatVal = data?.transFat ?? fallbackData?.transFat;
   const sodiumVal = data?.sodium ?? fallbackData?.sodium;
 
-  const hasCarbSub = typeof sugarVal === 'number' || typeof fiberVal === 'number';
-  const hasFatSub = typeof satFatVal === 'number' || typeof transFatVal === 'number';
+  const hasCarbSub = Boolean(
+    editable?.alwaysShowSubChevrons ||
+    typeof sugarVal === 'number' ||
+    typeof fiberVal === 'number'
+  );
+  const hasFatSub = Boolean(
+    editable?.alwaysShowSubChevrons ||
+    typeof satFatVal === 'number' ||
+    typeof transFatVal === 'number'
+  );
+
+  const defaultAction = action !== undefined ? action : <NutritionBasisToggle />;
 
   return (
     <SectionCard
       title={title ?? t('diet.servingNutrients', '基準營養素')}
-      action={action ?? <NutritionBasisToggle />}
+      action={defaultAction}
       bodyClassName="text-sm"
       className={className}
     >
       {/* 1. 每基準份量行 (h-10) */}
       <div className="h-10 px-4 flex items-center justify-between">
-        <span className="text-muted-foreground">{t('diet.perLabelBasis', '每')}</span>
-        <span className="font-mono text-foreground font-medium tabular-nums whitespace-nowrap">
-          {formatFoodServing(servingSize, servingUnit, foodWeightUnit, foodVolumeUnit).formatted}
-        </span>
+        <span className="text-muted-foreground text-xs">{perLabel ?? t('diet.perLabelBasis', '每')}</span>
+        <div onClick={(e) => e.stopPropagation()}>
+          {editable ? (
+            editable.renderValue(
+              'serving',
+              <span className="font-mono text-foreground font-medium text-xs tabular-nums whitespace-nowrap">
+                {formatFoodServing(servingSize, servingUnit, foodWeightUnit, foodVolumeUnit).formatted}
+              </span>
+            )
+          ) : (
+            <span className="font-mono text-foreground font-medium text-xs tabular-nums whitespace-nowrap">
+              {formatFoodServing(servingSize, servingUnit, foodWeightUnit, foodVolumeUnit).formatted}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* 2. 熱量行 (h-10) */}
@@ -100,10 +153,21 @@ export function NutritionFactsCard({
           highlights?.calories && "bg-calories-subtle-bg"
         )}
       >
-        <span className="text-calories font-medium">{t('diet.calories')}</span>
-        <span className="font-mono text-calories font-medium tabular-nums whitespace-nowrap">
-          {formatEnergy(calories, energyUnit).formatted}
-        </span>
+        <span className="text-calories text-xs font-medium">{t('diet.calories')}</span>
+        <div onClick={(e) => e.stopPropagation()}>
+          {editable ? (
+            editable.renderValue(
+              'calories',
+              <span className="font-mono text-calories font-medium text-xs tabular-nums whitespace-nowrap">
+                {formatEnergy(calories, energyUnit).formatted}
+              </span>
+            )
+          ) : (
+            <span className="font-mono text-calories font-medium text-xs tabular-nums whitespace-nowrap">
+              {formatEnergy(calories, energyUnit).formatted}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* 3. 碳水化合物複合區塊 (折疊 h-10，展開後帶實體導軌樹) */}
@@ -121,7 +185,7 @@ export function NutritionFactsCard({
           onClick={hasCarbSub ? () => setIsCarbsExpanded((prev) => !prev) : undefined}
         >
           <div className="flex items-center gap-1.5">
-            <span className="text-carbs font-medium">{t('diet.carbs')}</span>
+            <span className="text-carbs text-xs font-medium">{t('diet.carbs')}</span>
             {hasCarbSub && (
               <ChevronRight
                 className={cn(
@@ -131,38 +195,79 @@ export function NutritionFactsCard({
               />
             )}
           </div>
-          <span className="font-mono text-carbs font-medium tabular-nums whitespace-nowrap">
-            {carbs} g
-          </span>
+          <div onClick={(e) => e.stopPropagation()}>
+            {editable ? (
+              editable.renderValue(
+                'carbs',
+                <span className="font-mono text-carbs font-medium text-xs tabular-nums whitespace-nowrap">
+                  {carbs} g
+                </span>
+              )
+            ) : (
+              <span className="font-mono text-carbs font-medium text-xs tabular-nums whitespace-nowrap">
+                {carbs} g
+              </span>
+            )}
+          </div>
         </div>
 
         {hasCarbSub && isCarbsExpanded && (
           <div className="px-4 pb-2.5 pt-0.5 space-y-1 text-xs font-mono text-muted-foreground">
             {/* 糖 */}
-            <div className="relative pl-6 py-0.5 flex items-center justify-between">
+            <div className="relative pl-6 py-0.5 min-h-8 flex items-center justify-between">
               <div className="absolute left-2.5 top-0 bottom-0 w-px bg-border" />
               <div className="absolute left-2.5 top-1/2 w-2.5 h-px bg-border" />
               <span className="font-sans text-muted-foreground text-xs">{t('diet.sugar')}</span>
-              <span className="tabular-nums whitespace-nowrap text-foreground/80">
-                {typeof sugarVal === 'number' ? (
-                  `${sugarVal} g`
+              <div onClick={(e) => e.stopPropagation()}>
+                {editable ? (
+                  editable.renderValue(
+                    'sugar',
+                    <span className="tabular-nums whitespace-nowrap text-foreground/80">
+                      {typeof sugarVal === 'number' ? (
+                        `${sugarVal} g`
+                      ) : (
+                        <span className="text-muted-foreground/40 select-none font-mono">-</span>
+                      )}
+                    </span>
+                  )
                 ) : (
-                  <span className="text-muted-foreground/40 select-none font-mono">-</span>
+                  <span className="tabular-nums whitespace-nowrap text-foreground/80">
+                    {typeof sugarVal === 'number' ? (
+                      `${sugarVal} g`
+                    ) : (
+                      <span className="text-muted-foreground/40 select-none font-mono">-</span>
+                    )}
+                  </span>
                 )}
-              </span>
+              </div>
             </div>
 
             {/* 膳食纖維 */}
-            <div className="relative pl-6 py-0.5 flex items-center justify-between">
+            <div className="relative pl-6 py-0.5 min-h-8 flex items-center justify-between">
               <div className="absolute left-2.5 top-0 h-1/2 w-2.5 border-l border-b border-border rounded-bl-[3px]" />
               <span className="font-sans text-muted-foreground text-xs">{t('diet.fiber')}</span>
-              <span className="tabular-nums whitespace-nowrap text-foreground/80">
-                {typeof fiberVal === 'number' ? (
-                  `${fiberVal} g`
+              <div onClick={(e) => e.stopPropagation()}>
+                {editable ? (
+                  editable.renderValue(
+                    'fiber',
+                    <span className="tabular-nums whitespace-nowrap text-foreground/80">
+                      {typeof fiberVal === 'number' ? (
+                        `${fiberVal} g`
+                      ) : (
+                        <span className="text-muted-foreground/40 select-none font-mono">-</span>
+                      )}
+                    </span>
+                  )
                 ) : (
-                  <span className="text-muted-foreground/40 select-none font-mono">-</span>
+                  <span className="tabular-nums whitespace-nowrap text-foreground/80">
+                    {typeof fiberVal === 'number' ? (
+                      `${fiberVal} g`
+                    ) : (
+                      <span className="text-muted-foreground/40 select-none font-mono">-</span>
+                    )}
+                  </span>
                 )}
-              </span>
+              </div>
             </div>
           </div>
         )}
@@ -175,10 +280,21 @@ export function NutritionFactsCard({
           highlights?.protein && "bg-protein-subtle-bg"
         )}
       >
-        <span className="text-protein font-medium">{t('diet.protein')}</span>
-        <span className="font-mono text-protein font-medium tabular-nums whitespace-nowrap">
-          {protein} g
-        </span>
+        <span className="text-protein text-xs font-medium">{t('diet.protein')}</span>
+        <div onClick={(e) => e.stopPropagation()}>
+          {editable ? (
+            editable.renderValue(
+              'protein',
+              <span className="font-mono text-protein font-medium text-xs tabular-nums whitespace-nowrap">
+                {protein} g
+              </span>
+            )
+          ) : (
+            <span className="font-mono text-protein font-medium text-xs tabular-nums whitespace-nowrap">
+              {protein} g
+            </span>
+          )}
+        </div>
       </div>
 
       {/* 5. 脂肪複合區塊 (折疊 h-10，展開後帶實體導軌樹) */}
@@ -196,7 +312,7 @@ export function NutritionFactsCard({
           onClick={hasFatSub ? () => setIsFatExpanded((prev) => !prev) : undefined}
         >
           <div className="flex items-center gap-1.5">
-            <span className="text-fat font-medium">{t('diet.fat')}</span>
+            <span className="text-fat text-xs font-medium">{t('diet.fat')}</span>
             {hasFatSub && (
               <ChevronRight
                 className={cn(
@@ -206,38 +322,79 @@ export function NutritionFactsCard({
               />
             )}
           </div>
-          <span className="font-mono text-fat font-medium tabular-nums whitespace-nowrap">
-            {fat} g
-          </span>
+          <div onClick={(e) => e.stopPropagation()}>
+            {editable ? (
+              editable.renderValue(
+                'fat',
+                <span className="font-mono text-fat font-medium text-xs tabular-nums whitespace-nowrap">
+                  {fat} g
+                </span>
+              )
+            ) : (
+              <span className="font-mono text-fat font-medium text-xs tabular-nums whitespace-nowrap">
+                {fat} g
+              </span>
+            )}
+          </div>
         </div>
 
         {hasFatSub && isFatExpanded && (
           <div className="px-4 pb-2.5 pt-0.5 space-y-1 text-xs font-mono text-muted-foreground">
             {/* 飽和脂肪 */}
-            <div className="relative pl-6 py-0.5 flex items-center justify-between">
+            <div className="relative pl-6 py-0.5 min-h-8 flex items-center justify-between">
               <div className="absolute left-2.5 top-0 bottom-0 w-px bg-border" />
               <div className="absolute left-2.5 top-1/2 w-2.5 h-px bg-border" />
               <span className="font-sans text-muted-foreground text-xs">{t('diet.saturatedFat')}</span>
-              <span className="tabular-nums whitespace-nowrap text-foreground/80">
-                {typeof satFatVal === 'number' ? (
-                  `${satFatVal} g`
+              <div onClick={(e) => e.stopPropagation()}>
+                {editable ? (
+                  editable.renderValue(
+                    'saturatedFat',
+                    <span className="tabular-nums whitespace-nowrap text-foreground/80">
+                      {typeof satFatVal === 'number' ? (
+                        `${satFatVal} g`
+                      ) : (
+                        <span className="text-muted-foreground/40 select-none font-mono">-</span>
+                      )}
+                    </span>
+                  )
                 ) : (
-                  <span className="text-muted-foreground/40 select-none font-mono">-</span>
+                  <span className="tabular-nums whitespace-nowrap text-foreground/80">
+                    {typeof satFatVal === 'number' ? (
+                      `${satFatVal} g`
+                    ) : (
+                      <span className="text-muted-foreground/40 select-none font-mono">-</span>
+                    )}
+                  </span>
                 )}
-              </span>
+              </div>
             </div>
 
             {/* 反式脂肪 */}
-            <div className="relative pl-6 py-0.5 flex items-center justify-between">
+            <div className="relative pl-6 py-0.5 min-h-8 flex items-center justify-between">
               <div className="absolute left-2.5 top-0 h-1/2 w-2.5 border-l border-b border-border rounded-bl-[3px]" />
               <span className="font-sans text-muted-foreground text-xs">{t('diet.transFat')}</span>
-              <span className="tabular-nums whitespace-nowrap text-foreground/80">
-                {typeof transFatVal === 'number' ? (
-                  `${transFatVal} g`
+              <div onClick={(e) => e.stopPropagation()}>
+                {editable ? (
+                  editable.renderValue(
+                    'transFat',
+                    <span className="tabular-nums whitespace-nowrap text-foreground/80">
+                      {typeof transFatVal === 'number' ? (
+                        `${transFatVal} g`
+                      ) : (
+                        <span className="text-muted-foreground/40 select-none font-mono">-</span>
+                      )}
+                    </span>
+                  )
                 ) : (
-                  <span className="text-muted-foreground/40 select-none font-mono">-</span>
+                  <span className="tabular-nums whitespace-nowrap text-foreground/80">
+                    {typeof transFatVal === 'number' ? (
+                      `${transFatVal} g`
+                    ) : (
+                      <span className="text-muted-foreground/40 select-none font-mono">-</span>
+                    )}
+                  </span>
                 )}
-              </span>
+              </div>
             </div>
           </div>
         )}
@@ -245,14 +402,29 @@ export function NutritionFactsCard({
 
       {/* 6. 鈉獨立指標行 (h-10) */}
       <div className="h-10 px-4 flex items-center justify-between">
-        <span className="text-foreground font-medium">{t('diet.sodium')}</span>
-        <span className="font-mono text-foreground font-medium tabular-nums whitespace-nowrap">
-          {typeof sodiumVal === 'number' ? (
-            `${sodiumVal} mg`
+        <span className="text-foreground text-xs font-medium">{t('diet.sodium')}</span>
+        <div onClick={(e) => e.stopPropagation()}>
+          {editable ? (
+            editable.renderValue(
+              'sodium',
+              <span className="font-mono text-foreground font-medium text-xs tabular-nums whitespace-nowrap">
+                {typeof sodiumVal === 'number' ? (
+                  `${sodiumVal} mg`
+                ) : (
+                  <span className="text-muted-foreground/40 select-none font-mono">-</span>
+                )}
+              </span>
+            )
           ) : (
-            <span className="text-muted-foreground/40 select-none font-mono">-</span>
+            <span className="font-mono text-foreground font-medium text-xs tabular-nums whitespace-nowrap">
+              {typeof sodiumVal === 'number' ? (
+                `${sodiumVal} mg`
+              ) : (
+                <span className="text-muted-foreground/40 select-none font-mono">-</span>
+              )}
+            </span>
           )}
-        </span>
+        </div>
       </div>
     </SectionCard>
   );
