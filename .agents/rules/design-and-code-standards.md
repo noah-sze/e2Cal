@@ -4,201 +4,142 @@ trigger: always_on
 
 # UI/UX 設計標準與工程代碼規範 (Design & Code Standards)
 
-## 0. 最高架構總綱：單一真理源與全域可複用性 (Single Source of Truth & Maximum Reusability)
-- **最高優先級標準 (Supreme Standard)**：
-  UI 與 UX 的設計與實現必須最大限度地追求**代碼與視覺的高度可複用性**。全應用程式必須維持「**一處修改，全域變動，始終統一**」的架構紀律。所有後續章節、元件封裝與業務頁面開發，均受本章節之最高約束。
+## 0. 最高架構總綱：單一真理源與三層複用架構 (SSOT & Reusability Architecture)
+- **最高紀律 (Supreme Standard)**：全應用程式嚴格維持「**一處修改，全域變動，始終統一**」。只要有 2 處或以上出現相同或相似結構，絕對嚴禁複製貼上代碼，必須立即收斂為通用元件。
 - **三層複用架構 (Three-Tier Reusability Architecture)**：
-  - **L1. 視覺與 Design Tokens (Tokens as Single Source of Truth)**：
-    - 顏色、字級、行距、邊框粗細、圓角、間距、遮罩等所有視覺屬性，嚴格統一引用全域 Design Tokens（CSS 變數與 Tailwind 語意化類名，如 `bg-background`、`text-foreground`、`border-border` 等）。
-    - 任何全局視覺風格調整（如邊框色調、圓角半徑、字距），必須且僅能透過修改底層 Token 設定即時映射至所有畫面，嚴禁各模組私自維護獨立樣式。
-  - **L2. 原子元件與基礎控件 (Primitive & Base Components)**：
-    - 所有基礎互動控件（按鈕、輸入框、彈窗、選單、下拉框、開關等）統一由 `src/components/ui/`（Shadcn UI / Radix 等）作為唯一真理源進行封裝。
-    - 業務層絕對嚴禁繞過共用元件自行以原生 HTML 標籤（如 `<button>`、`<input>`）或自寫重複樣式拼湊控件。
-  - **L3. 領域模式與複合元件 (Domain Patterns & Layout Blocks)**：
-    - 跨模組或頁面出現 2 次及以上（或預期跨頁面複用）的 UI 結構（例如：列表條目 `UsageListItem`、數據指標卡片 `MetricCard`、數值輸入組合、營養素膠囊標籤等），嚴禁在各業務頁面複製貼上 JSX，必須立即收斂並封裝為共用 Pattern 元件。
-- **零容忍重複原則 (Zero Duplication & Single Source of Truth)**：
-  - 凡具備共通視覺語意或操作邏輯的區塊，第 1 次實現時即應依據設計系統規範進行抽象封裝。
-  - 只要有 2 處或以上出現相同或高度相似的結構與樣式組合，絕對嚴禁複製貼上代碼，必須立即重構為通用元件或共用 Pattern。
-- **擴展合約與防污染規範 (Extension Contract & Anti-Corruption)**：
-  - **語意化擴展**：共用元件若需支援不同場景、狀態或尺寸，必須透過標準的 Variant（如 `cva` 配置）、Props 參數或 Slot/Children 進行正規擴展。
-  - **嚴禁特例覆蓋與 Hack**：絕對嚴禁在業務層透過外部 `!important` 或粗暴傳入破壞性 class 強制覆蓋共用元件核心樣式；絕對嚴禁為了單一頁面的特殊偏好而篡改共用元件的預設行為，造成其他引用頁面非預期跑版。
+  - **L1. 視覺與 Design Tokens (Tokens as SSOT)**：顏色、字級、間距、圓角、遮罩等一律引用全域 CSS 變數與 Tailwind 語意類名（`bg-background`, `text-foreground`, `border-border` 等），嚴禁模組私自維護或使用魔術數值。
+  - **L2. 原子元件 (Primitive & Base Components)**：所有基礎控件（按鈕、輸入框、彈窗、選單、下拉框等）統一由 `src/components/ui/`（Shadcn UI / Radix）作為唯一真理源封裝，嚴禁業務層繞過共用元件手寫原生標籤。
+  - **L3. 領域模式與複合元件 (Domain Patterns & Layout Blocks)**：列表條目（`UsageListItem`）、指標卡片（`MetricCard`）、數值輸入組等複合結構統一抽象為 Pattern 元件，嚴禁在業務頁面複製貼上 JSX。
+- **擴展合約與防污染規範 (Extension Contract & Anti-Corruption)**：元件擴展必須透過標準 Variant（`cva`）或 Props 參數正規擴展；嚴禁業務層透過 `!important` 強制覆蓋核心樣式。
 
-## 1. 核心視覺風格 (Core Visual Style)
-- **Vercel / Next.js 風格**：追求極簡、高對比、具備工程師質感的現代設計。
-- **純粹的對比**：嚴格使用純黑 (`#000`) 與純白 (`#fff`) 作為主要背景與文本對比。捨棄傳統的柔和灰色背景。
-- **扁平化設計 (Flat Design)**：**絕對禁止**在卡片 (Cards) 或容器上使用任何陰影 (`shadow-sm`, `shadow-md` 等)。層級的區分完全依賴細而精緻的邊框 (`border border-border`)。
-- **字體運用 (Typography)**：
-  - **跨端雙軌排版標準 (Cross-Platform Typography Standard: iOS HIG Mobile + macOS HIG Desktop)**：
-    - **手機端 (`< 768px`) 嚴格遵循 Apple iOS HIG**：
-      - 視距約 25～35 cm，手指觸控操作。根字級預設為 **`17px`**（iOS 標準 Body 17pt），解決行動端易讀性並徹底防止 iOS Safari 輸入框聚焦時觸發自動放大跑版（Auto-Zoom）。
-      - 微排版階層：Footnote 13px (`--text-xs: 0.765rem`)、Caption 1 12px (`--text-2xs: 0.706rem`)、Caption 2 11px (`--text-3xs: 0.647rem`，官方最低可辨識極限)。
-      - 動態縮放階梯 (Dynamic Type)：緊湊 `15px` / 標準 `17px` / 較大 `19px`。
-    - **桌面端 (`>= 768px`) 嚴格遵循 Apple macOS HIG & Vercel 高密度標準**：
-      - 視距約 50～70 cm，精確游標操作。根字級自動切換為 **`14px`**（macOS 系統正文與 Vercel Dashboard 核心基準），維持高資訊密度（High Information Density）與緊湊工程師儀表板質感，嚴禁桌面端介面粗笨鬆散。
-      - 動態縮放階梯 (Dynamic Type)：緊湊 `13px` / 標準 `14px` / 較大 `15px`。
-    - **原生硬體響應式架構真理源**：由 [src/index.css](file:///d:/GitHub/e2Cal/src/index.css) 之 `@media (min-width: 768px)` 搭配 CSS 變數 `--ui-base-font-size` 與 `--ui-desktop-font-size` 原生驅動，全站組件尺寸與間距嚴格採用 `rem` 單位，實現雙端「零 JS Resize 監聽、硬體級瞬時自適應等比縮放」。
-  - **官方品牌字標字體規範 (Brand Wordmark Standard — Option 1: Geist Sans)**：
-    - 產品名 **`e2Cal`** 在全應用程式（包含頁首、頁尾、版本號、歡迎引導、展示窗格、正文文案與 Canvas 匯出長圖）**嚴格唯一採用 `Geist Sans`（本地離線套件 `@fontsource-variable/geist`）**。
-    - **唯一真理源 Token 與元件**：CSS Token 固定為 `--font-brand`（`font-brand`）與 `--tracking-brand: -0.03em`（`tracking-brand`）。JSX 介面呈現一律透過 `src/components/ui/Logo.tsx` 導出之 `<BrandWordmark />` 或 `<BrandText />` 渲染，嚴禁在各業務頁面散落手寫品牌字體樣式。
-    - **字重隨語境自適應原則 (Context-Dependent Weight)**：
-      - **獨立品牌鎖定 (`variant="lockup"`)**：用於頁首導覽列、頁尾標誌、視窗標題列等獨立品牌識別處，標準字重為 `font-semibold`（600）。
-      - **正文與行內文案 (`<BrandText />` / `variant="inline"`)**：**嚴禁在正文段落中固定強制使用粗體**；字重與行高必須視上下文語境而定（預設自然繼承所在段落、標題或按鈕之字重，僅保留 `font-brand` 與 `tracking-brand`），避免在正常閱讀流中產生突兀的視覺跳躍。
-    - **Canvas 長圖繪製規格**：`aiDataExportImage.ts` 等畫布輸出必須使用 `BRAND_FONT`（`Geist Variable`）、字重 `600`、對應字距 `-0.03em`（16px 下為 `-0.48px`）。
-  - 數字、重量、次數與統計數據嚴格使用等寬字體 (`font-mono`)，確保對齊與精確感。
-  - 大標題使用緊湊的字距 (`tracking-tight`)，小標籤（如 Category, Date, Macros 等提示）使用大寫寬字距 (`uppercase tracking-widest text-xs`)。
-  - **中英數排版規則**：所有中文文案（包含 i18n 翻譯檔）都必須嚴格遵循「在中文與英文/數字之間插入一個半形空格」的排版規範（Pangu Spacing），例如「使用 Vite 開發」而不是「使用Vite開發」。
-- **無數據佔位符規範 (Empty Value Dash)**：全站所有無數據、尚未記錄或空值佔位符，**嚴格統一使用半形單破折號「`-`」**，絕對禁止使用雙破折號「`--`」或全形破折號「`—`」。
-- **全域統一懸停回饋規範 (Global Unified Hover Standard)**：卡片槽位、表單清單條目（Usage List）、可點擊交互區塊的懸停背景色，**嚴格統一採用全域 Token `hover:bg-hover`（`--hover: rgba(0, 0, 0, 0.025)` / 暗色 `rgba(255, 255, 255, 0.038)`）**。**絕對禁止**在卡片或列表中使用 `hover:bg-muted/40` 等微弱至不可見的隨意透明度（在白底上會產生近乎 100% 白色的 `#fdfdfd`，失去交互回饋感知）。
+---
 
-## 2. 佈局與元件標準 (Layout & Components)
-- **網格卡片 (Grid Cards)**：數據模組採用獨立的並列卡片設計，無陰影，僅靠邊框與內部留白界定範圍。
-- **Usage Dashboard 佈局**：設定頁或表單區塊，採用 Vercel Usage 儀表板的表格式 List 佈局，使用 `divide-y divide-border` 進行行間分隔。
-- **嚴禁在列表行中使用多個橫向分段按鈕 (No Multi-Button Segmented Controls in List Items)**：
-  - **行動端寬度防擠壓契約**：在表格式列表（Usage List / 表單 `divide-y` 行）中，**絕對嚴禁**在行內右側堆疊多個水平並列的按鈕、膠囊或分段切換器（如 `[ A | B | C ]`）。手機螢幕寬度（360px～390px）不足以容納左側標籤與多個長文字按鈕，會導致嚴重的文字折行、溢出或擠壓。
-  - **統一使用 Select 下拉選單**：凡涉及 2 個以上的選項切換（如外觀主題、語言、性別、度量單位、供能比模板等），右側一律採用標準的 `Select` 下拉選單（點擊呼出浮層選單），以「單一選中文字 + 下拉箭頭」的極簡形式呈現，確保在任何行動端尺寸下均維持恆定的單行對齊與極簡質感。
-- **毛玻璃效果 (Glassmorphism)**：底部導覽列 (Bottom Nav) 或懸浮標頭使用半透明毛玻璃背景 (`bg-background/80 backdrop-blur-md`)。
+## 1. 核心視覺風格與排版體系 (Visual Style & Typography System)
+- **Vercel 極簡工程師美學**：純黑白高對比（`#000` / `#fff`）、扁平無陰影（**絕對禁止卡片或容器使用任何陰影**，層級全靠 `border-border` 界定）、全域統一懸停回饋 `hover:bg-hover`、無數據佔位符唯一採用單破折號「`-`」。
+- **跨端雙軌排版標準 (iOS HIG Mobile + macOS HIG Desktop)**：
+  - **手機端 (`< 768px`)**：根字級預設為 **`17px`**（iOS 標準 Body 17pt，解決易讀性並徹底防止 iOS Safari 輸入框聚焦自動放大跑版）。微排版階層：Footnote 13px (`--text-xs: 0.765rem`)、Caption 1 12px (`--text-2xs: 0.706rem`)、Caption 2 11px (`--text-3xs: 0.647rem`，最低辨識極限)。動態縮放：緊湊 15px / 標準 17px / 較大 19px。
+  - **桌面端 (`>= 768px`)**：根字級自動切換為 **`14px`**（macOS 系統正文與 Vercel 核心基準），維持高資訊密度儀表板質感。動態縮放：緊湊 13px / 標準 14px / 較大 15px。
+  - **真理源**：由 `src/index.css` 之 `@media (min-width: 768px)` 驅動 CSS 變數 `--ui-base-font-size` 與 `--ui-desktop-font-size`，全站間距尺寸嚴格採 `rem` 單位，實現硬體級瞬時自適應等比縮放。
+- **字級與行距雙軸綁定矩陣 (Scale & Leading Binding)**：
+  - 文字尺寸必須與行距（Leading）強制成對鎖定，嚴禁依賴預設行高：
+    - `Large Title`（34px / 28px）：綁定 `leading-[1.2]`。
+    - `Title 1 / 2`（28px～22px / 20px）：綁定 `leading-[1.25]`。
+    - `Headline`（17px / 14px）：綁定 `leading-[1.29]`（22px），字重 `font-semibold`。
+    - `Body`（17px / 14px）：綁定 `leading-[1.29]`（22px），字重 `font-normal`（全站核心正文基準）。
+    - `Subheadline`（15px / 13px）：綁定 `leading-[1.33]`（20px）。
+    - `Footnote`（13px / 12px）：綁定 `leading-[1.38]`（18px）。
+    - `Caption 1 / 2`（12px～11px / 11px）：綁定 `leading-[1.33]`（15px）。
+- **粗體邊界與微字重契約 (Font Weight Disciplines)**：
+  - **結構專屬**：粗體僅用於定義佈局骨架（標題、獨立數據數值），**嚴禁在正文段落中隨機挑詞加粗**，維護均勻排版灰度。
+  - **自然繼承**：產品名（`e2Cal`）與專有名詞出現在正文中時，嚴格繼承所在段落字重，嚴禁強制加粗。
+  - **Vercel 微字重與代碼優先**：介面以 **Medium (500) / Semibold (600)** 為強調上限；技術參數、鍵值、路徑與指令**一律以行內代碼（`code` / `font-mono`）標記，嚴禁加粗**。
+- **Apple 四級語意文字灰度 (Hierarchical Label System)**：
+  - **Primary** (`text-foreground`，100%)：核心標題、輸入文字、關鍵物理數據。
+  - **Secondary** (`text-muted-foreground`，約 60%～65%)：副標題、次要描述、欄位名。
+  - **Tertiary** (`text-muted-foreground/60`，約 35%～40%)：輸入框佔位符（Placeholder）、空數據破折號、輔助單位。
+  - **Quaternary** (`text-muted-foreground/30`，約 15%～20%)：極淡輔助圖標、分割元素。
+- **數值與圖文基線微排版 (Metrics & Precision Alignment)**：
+  - **基線平齊**：數值與單位（如 `100` 與 `kg`）必須嚴格使用 `items-baseline`，底部平齊，嚴禁居中懸浮。
+  - **絕對防折行**：所有「數字 + 物理單位」強制成組 `whitespace-nowrap`，嚴禁數字與單位拆散折行。
+  - **等寬防抖**：動態變動數值、計時器強制啟用 `tabular-nums`，消除數字跳動抖動。
+  - **防截斷紅線**：重量、次數、熱量、體重、日期等物理客觀事實，**絕對禁止使用 `truncate` 省略號截斷**。
+- **官方品牌字標規範 (Brand Wordmark: Geist Sans)**：
+  - 產品名 **`e2Cal`** 在全站嚴格採用 `Geist Sans`（`@fontsource-variable/geist`），Token 為 `--font-brand` 與 `--tracking-brand: -0.03em`。JSX 一律由 `<BrandWordmark />`（獨立標誌鎖定 `variant="lockup"` 600）或 `<BrandText />`（行內自然繼承字重）輸出；Canvas 繪製採用 `BRAND_FONT`。
+- **排版細節**：統計數據採用 `font-mono`；大標題緊湊字距（`tracking-tight`），小標籤大寫寬字距（`uppercase tracking-widest text-xs`）；中文與英數之間嚴格插入半形空格（Pangu Spacing）。
 
-## 3. 代碼與型別規範 (Code & TypeScript Standards)
-- **架構分層與關注點分離**：
-  - 業務邏輯、非同步請求、資料庫查詢與計算必須完整收斂於自定義 Hooks 與 Services 中，UI 元件僅作為純粹的狀態呈現與事件派發器。
-  - 嚴禁在 JSX 模板內部撰寫複雜的多行資料推算或非同步副作用。
-- **TypeScript 靜態型別約束**：
-  - 嚴格啟用靜態型別檢查，**絕對禁止**使用 `any` 型別。所有資料結構、介面、函數回傳值均需明確定義型別。
-- **國際化與多語系 (i18n)**：
-  - 專案已全面導入 `react-i18next`。新增或修改任何 UI 文字時，**必須**使用 `t('key')` 函數，並同步更新 `src/i18n/locales/` 下的 `en.json`, `zh-TW.json`, `zh-CN.json` 三份語系檔。
-  - **絕對禁止**在 Component 程式碼中寫死 (hardcode) 任何中文或英文文案。表單驗證錯誤訊息亦必須透過 i18n 輸出。
-  - **嚴禁使用「xx/xx」模糊並列翻譯格式**：所有 UI 文案與 i18n 鍵值，**絕對嚴禁**使用「xx/xx」或「xx / xx」等模糊兼顧的斜線並列格式（如嚴禁「稱呼 / 姓名」、「點心 / 加餐」）。必須提煉出單一精確詞彙（如「姓名」、「加餐」）。
-- **精密測量儀測試守則 (Precision Metric Testing & Pure Math Functions)**：
-  - 作為客觀測量儀，數學計算結果必須 100% 精準無誤、絕無歧義。
-  - 所有核心指標推算（如 e1RM 力量極限估算公式、EMA 體重抗噪平滑算法、宏量營養素供能比計算、能量缺口/盈餘推算等）必須嚴格封裝於 `src/utils/` 下的無副作用純函數（Pure Functions）。
-  - 純數學計算函數必須維持 100% 單元測試（Unit Test）覆蓋率，且必須覆蓋所有異常邊界情境（例如次數或重量為 0、負數輸入、除以零防護、小數浮點數精度誤差等）。
-- **全局極簡文本契約 (Global Ultra-Concise UI Copy Contract)**：
-  - **最高文案哲學：客觀測量儀的極致克制 (Zero Noise, High Signal)**：e2Cal 是一把冷靜、精密、高對比的測量儀，介面中的每一個字元都應具備不可替代的資訊價值。全應用程式（包含按鈕、標籤、表單、標題、空狀態、Toast 通知等所有介面文字）**嚴格執行「文字極簡主義」，嚴禁任何冗長贅字、客套廢話與重複修飾**。
-  - **五大極簡提煉法則 (The 5 Rules of Ultra-Concise Copy)**：
-    1. **去上下文冗餘（去所屬對象綴詞）**：在已有明確頁面語境的模組中，**絕對嚴禁重複提及當前對象名詞**（嚴禁「新增自定義食物」、「編輯食材」、「已歸檔食物」、「已歸檔動作」、「菜餚列表」；統一使用「新增」、「編輯」、「已歸檔」、「使用中」、「菜餚」）。
-    2. **去口語與客套廢話（零修飾、零說教）**：嚴禁「請您…」、「您可以…」、「點擊此處以…」、「溫馨提示…」、「成功完成…」。只陳述客觀事實與動作結果。
-    3. **動作動詞純粹化（強動詞、最短字數）**：按鈕與操作統一使用最短有力的動詞（「新增」、「儲存」、「匯出」、「刪除」、「恢復」；英文統一使用 "Add", "Save", "Export", "Delete", "Restore"）。
-    4. **通知與 Toast 極限精簡（對象 + 結果）**：彈出通知嚴禁長篇陳述，必須在 2～4 個字內結束（「已儲存」、「已歸檔」、「已刪除」、「已備份」）。
-    5. **空狀態客觀陳述（去情緒、零指引說教）**：空狀態僅說明客觀現狀，嚴禁製造焦慮或過度說教（「無食材」、「無已歸檔項目」、「無飲食記錄」）。
+---
 
-## 4. 跨端通用設計契約與交互標準 (Cross-Platform Architecture Contract)
-- **拒絕平台特化補丁 (No Platform Hacks)**：嚴禁為特定作業系統、特定瀏覽器或舊款晶片編寫特殊條件判斷或臨時修補；所有 UI 與交互必須以標準 Web 規範達到全平台通用。
-- **跨端組件尺寸與觸控尺度標準 (Component Sizing & Touch Target: iOS vs macOS HIG)**：
-  - **手機端 (`< 768px`)**：嚴格遵循 Apple iOS HIG 觸控人機工學，主要操作按鈕與表單行高度維持在 `38px` ～ `44px`（適配手指粗度與單手操作熱區），確保點擊命中率並消除誤觸。
-  - **桌面端 (`>= 768px`)**：嚴格遵循 Apple macOS HIG 與 Vercel 標準，按鈕與輸入框基準高度維持在 `31.5px` ～ `36px`（`h-8` / `h-9`），適配滑鼠精確游標，提供高密度操作視野。
-  - **Rem 等比縮放真理源**：所有共用組件（`Button`、`Input`、`Select` 等）尺寸嚴禁在各業務頁面重複手寫 `sm:h-8 h-11` 等斷點樣式；統一使用 `rem` 單位（如 `h-9` = 2.25rem），當根字體在手機端為 17px 時天然渲染為 38.25px，在桌面端為 14px 時天然渲染為 31.5px，實現組件尺度的單一真理源自動映射。
-- **高度管理規範**：全面採用「樹狀 100% 高度（`height: 100%`）」，禁止在根容器或主佈局使用 `100vh` 避免移動端工具列遮擋溢出。內部滾動由 `<main className="flex-1 overflow-y-auto">` 自適應接管。
-- **彈窗與居中規範**：
-  - 嚴禁在彈窗本體上使用 `inset-0 m-auto` 或 `transform: translate(-50%, -50%)` 做幾何定位。
-  - 所有浮層與 Modal 必須使用外層「全螢幕 Flex 容器居中（`fixed inset-0 flex items-center justify-center p-4 pointer-events-none`）」架構，彈窗本體為普通 block（`pointer-events-auto`），高度嚴格由內容自然撐開。
-  - **禁止彈窗巢狀聲明 (No Nested Dialogs in DialogContent / Flat Sibling Portals)**：所有 Dialog / Modal 元件在 JSX 結構中必須以平級兄弟節點（Sibling Node，使用 `<> ... </>` Fragment 平鋪）聲明，**絕對禁止**將次級 `<Dialog>` 寫在另一個 `<DialogContent>` 的 DOM 樹或 JSX 內部。底層 `DialogContent` 必須將 Portal container 預設指定為 `document.body`，實現全域獨立渲染防護。
-  - **多層彈窗遮罩棧規範 (Multi-layer Dialog Stacking)**：當主彈窗層級為 `z-[60]` 時，於其上疊加呼出的次級彈窗（Secondary Dialog，如新增食物、選擇動作、二次確認等）其遮罩層與彈窗本體必須指定更高層級（如 `overlayClassName="z-[70]"` 與 `className="z-[70] ..."`），確保第二層彈窗能清晰、高對比地遮蓋在第一層彈窗之上。
-  - **焦點管理與禁止自動聚焦 (Dialog Focus & No Auto-Focus)**：彈窗掛載時禁止第 0 幀同步強奪焦點（`initialFocus={false}`）。所有 Dialog 彈窗掛載出現時，**絕對禁止**在任何輸入框上設置 `autoFocus` 屬性或透過 JS 強行 `.focus()`，避免鍵盤自動彈出遮擋彈窗內容。
-- **動畫與彈窗彈出規範 (Instant Pop)**：
-  - Dialog / Modal 彈窗本體全面採用**「原生級瞬時彈出 (Instant Pop)」**，嚴禁在卡片上附加慢速 `animate-in fade-in` 動畫，徹底避免在舊款設備（如 A9/A10 晶片、iOS 15）上因底層光柵化搶佔時間片導致動畫殘缺與掉幀。
-- **毛玻璃與遮罩規範 (Frosted Glassmorphism)**：
-  - 遮罩層全面使用專屬語意化變數：`bg-overlay backdrop-blur-[2px] data-closed:hidden`。在淺色模式下呈現純淨白霜牛奶玻璃（`rgba(255, 255, 255, 0.8)`），深色模式下呈現深邃黑曜石毛玻璃（`rgba(0, 0, 0, 0.8)`）。
-  - **嚴禁在動態 CSS 變數上直接使用 Tailwind 透明度修飾符（如 `bg-background/80`）**：Tailwind CSS v4 會將帶動態變數的透明度編譯為 CSS `color-mix()` 函式；而 iOS <= 15 的舊版 WebKit 完全不支援 `color-mix()`，會觸發其 Fallback 回退機制變成 100% 完全不透明實色。所有遮罩一律使用 `--color-overlay: var(--overlay)`（內嵌 RGBA Alpha 通道），確保全平台 WebKit 均能原生解析。
-  - 遮罩層嚴禁使用 `isolate`，模糊半徑嚴格限制在 `2px`（`backdrop-blur-[2px]`），嚴禁使用動態 Alpha 漸變動畫（`data-closed:hidden`）。
-- **彈窗動作按鈕佈局 (Dialog Footer Actions)**：
-  - 手機端與全平台 DialogFooter 按鈕嚴格採用**單行水平並排 (`flex flex-row items-center justify-between`)**。
-  - **嚴禁在移動端退化為垂直倒序堆疊 (`flex-col-reverse`)**。遵循「**取消在最左側 (Cancel on Left)、確認/新增在最右側 (Confirm/Add on Right)**」，單一按鈕時自動靠右對齊 (`[&>*:only-child]:ml-auto`)。
-- **彈窗高度穩定性與防抖規範 (Dialog Height Stability & Anti-Jitter)**：
-  - **嚴禁動態插入新元素撐大彈窗容器**：彈窗本體高度必須保持絕對穩定。嚴禁在交互過程中動態在彈窗內部插入或移除額外的文字行或區塊從而導致彈窗高度突增（Layout Shift / Jitter）。
-  - **狀態提示規範**：錯誤與警告應優先透過元件本身的視覺狀態切換（如輸入框文字變紅 `text-destructive`、邊框變色、確認按鈕動態禁用 `disabled`）或透過全域 Toast 提示呈現。
-- **破壞性動作按鈕規範 (Destructive Buttons)**：
-  - 二次確認與破壞性高危操作的 `destructive` 按鈕統一採用「實色紅底 + 純白文字（`bg-destructive text-destructive-foreground hover:opacity-90 active:opacity-80`）」，嚴禁使用淡底弱化樣式。
-- **標準精密彈窗規範 (Standard Precision Modal Architecture & Zero-Drift Contract)**：
-  - **底層唯一真理源 (`<PrecisionDialogContent>` / `size="standard"`)**：所有食材、食譜、飲食記錄、測量微調等表單與管理 Dialog，必須一律使用 `@/components/ui/dialog` 導出的 `<PrecisionDialogContent>`（或 `DialogContent size="standard"`），禁止在業務層複製貼上長串重複的幾何類名。底層自動封裝並強制落實防呆約束：
-    1. **寬度唯一真理源**：`w-[320px] max-w-[calc(100vw-24px)] sm:w-[320px] sm:max-w-[320px]`。
-    2. **內邊距防洩漏真理源**：全端恆定 `16px`（底層固定綁定 `p-4 sm:p-4`，徹底杜絕桌面端因未帶 `sm:` 斷點而洩漏預設 `sm:p-6` 變成 24px 大邊距）。
-    3. **字體與邊框**：`font-mono text-xs select-none shadow-none bg-card border border-border`。
-    4. **關閉按鈕防呆**：底層自動隱藏預設的右上方懸浮關閉鈕，改由標頭圓鈕專職負責。
-  - **標準標頭唯一真理源 (`DialogPrecisionHeader` / `PrecisionDialogContent`)**：
-    - 凡採用頂部雙純圖標欄（Variant D）之彈窗，統一由 `<PrecisionDialogContent title="..." onSubmit={...} onClose={...} form={formId} />` 宣告或引用 `<DialogPrecisionHeader />` 渲染，絕對嚴禁在各業務層複製貼上 30 餘行重複的標頭 JSX。
-    - 佈局標準：左側取消圖標圓鈕 (✕)、中間客觀純名詞（去餐別綴詞、中英數空格）、右側提交圖標圓鈕 (✓，支援 `onSubmit` 點擊或 `form` 外部表單觸發）。容器高度恆定為 `h-7`。
-  - **內部區塊縱向律動契約**：
-    - 主體頂部留白：一律採用 `pt-3.5`。
-    - 垂直區塊間距：一律採用 `space-y-3`（表單內部欄位可使用 `space-y-3.5`）。
-    - 緊密微型組件成組（如 4 欄 HUD Banner 與供能比標尺）：以 `space-y-1.5` 成組。
-    - Usage List 行高：每列食材項目嚴格與新增/編輯食譜 Dialog 統一為 `min-h-12 py-2 px-3 sm:px-4`（48px），右側配置標準圓角數字膠囊 `[ 100 g › ]`，保證充足點擊熱區與舒適留白。
-  - **底部破壞性高危按鈕規範**：
-    - 統一採用「實色紅底 + 純白文字（`w-full h-9 rounded-md bg-destructive text-destructive-foreground font-mono text-xs font-semibold`）」，緊隨主容器 `space-y-3` 節奏，嚴禁在外層包裹多餘 `pt-1` 破壞間距均勻度。
-- **頁面內部視圖切換與瀏覽器導航歷史規範 (Page Tab State & History Stack Standards)**：
-  - **視圖狀態純本地化 (Tabs as Pure Local State)**：頁面內部的同級視圖、分頁或過濾切換（例如管理清單的「使用中 / 已歸檔」Tab），預設必須使用元件內部純本地狀態（`useState<'active' | 'archived'>`）進行管理，嚴禁濫用 URL Query 參數（如 `?tab=archived`）。
-  - **純淨 URL 契約 (Clean Path Contract)**：管理清單與子頁面 URL 必須維持恆定的乾淨純路徑（例如 `/settings/foods`），切換內部 Tab 時不得污染瀏覽器網址列。
-  - **瀏覽器返回直達上一層原則 (Deterministic Browser Back Navigation)**：無論使用者在當前頁面的內部 Tab 之間切換多少次，皆不得向瀏覽器歷史堆疊（History Stack）推入新紀錄；使用者點擊瀏覽器「返回」按鈕或頁面返回鍵時，必須確定且直接地返回「上一層頁面」（例如返回「設定」`/settings`），絕對嚴禁退回上一個切換的 Tab。
+## 2. 佈局、組件與跨端通用契約 (Layout, Components & Cross-Platform)
+- **跨端架構契約**：拒絕平台特化補丁；全面採用樹狀 100% 高度（`height: 100%`），主滾動由 `<main className="flex-1 overflow-y-auto">` 自適應接管，禁止在根容器使用 `100vh`。
+- **組件尺度與容器自適應契約 (No Hardcoded Height & Flex Degradation)**：
+  - **觸控尺度**：手機端按鈕/表單行基準維持 `38px` ～ `44px`；桌面端基準維持 `31.5px` ～ `36px`（`h-8` / `h-9`），由 `rem` 單位自動自適應映射。
+  - **`min-h` 優先原則**：承載文字之條目、按鈕、卡片**嚴禁寫死固定高度（如 `h-11`）**，一律採用 `min-h-*` 搭配 `py-*`（如 `min-h-11 py-2`），高度由「行高 + 內邊距」自然撐開。
+  - **彈性降級與長度緩衝**：列表橫向排列需具備在窄螢幕或大字級下的自動折行（`flex-wrap` / `flex-col`）容錯能力；文字容器禁濫用 `overflow-hidden` 避免文字被削切；預留 30%～50% 多語系（i18n）文字膨脹緩衝。
+- **列表與表單佈局 (Usage Dashboard)**：
+  - 表格式列表採用 `divide-y divide-border`。
+  - **嚴禁列表橫向堆疊多按鈕**：凡涉 2 個以上選項切換，右側一律採用標準 `Select` 下拉選單，嚴禁橫向排列多個按鈕擠壓排版。
+- **精密彈窗標準規範 (Standard Precision Modal Architecture)**：
+  - **底層真理源**：所有表單與管理 Dialog 一律採用 `@/components/ui/dialog` 之 `<PrecisionDialogContent>`（或 `DialogContent size="standard"`）。
+    - 寬度：`w-[320px] max-w-[calc(100vw-24px)] sm:w-[320px] sm:max-w-[320px]`。
+    - 內邊距：全端恆定 `16px`（`p-4 sm:p-4`，杜絕桌面端洩漏 24px 大邊距）。
+    - 外觀：`font-mono text-xs select-none shadow-none bg-card border border-border`，原生級瞬時彈出（Instant Pop，禁慢速漸入動畫）。
+  - **外層 Flex 居中**：外層 `fixed inset-0 flex items-center justify-center p-4 pointer-events-none`，彈窗本體為普通 block。
+  - **平鋪兄弟節點**：**絕對禁止彈窗巢狀聲明**（Dialog 內部寫 Dialog），次級彈窗遮罩與本體必須指定更高層級（如 `z-[70]` 對 `z-[60]`）。
+  - **焦點管理**：彈窗掛載**嚴禁輸入框 `autoFocus` 或 JS 主動 `.focus()`**，避免鍵盤自動彈出遮擋。
+  - **毛玻璃與遮罩**：遮罩採用語意化變數 `bg-overlay backdrop-blur-[2px]`，**嚴禁在動態 CSS 變數使用 Tailwind 透明度修飾符**（防舊版 WebKit 不支援 `color-mix()` 導致實色 Bug）。
+  - **標準標頭與內部律動**：
+    - 標頭：統一由 `<PrecisionDialogContent>` 宣告或 `<DialogPrecisionHeader />` 渲染（左取消 ✕、中客觀名詞、右確認 ✓，高度恆定 `h-7`）。
+    - 內部間距：頂部留白 `pt-3.5`、主區塊間距 `space-y-3`（表單 `space-y-3.5`）、微型組件成組 `space-y-1.5`、Usage List 行高 `min-h-12 py-2 px-3 sm:px-4`。
+  - **動作按鈕佈局**：DialogFooter 嚴格單行水平並排（左取消、右確認，禁移動端垂直倒序）；破壞性高危按鈕一律採用實色紅底純白文字（`bg-destructive text-destructive-foreground`）。
+- **視圖導航與歷史堆疊契約**：
+  - 頁面內部 Tab 切換（如使用中 / 已歸檔）純本地狀態管理（`useState`），**嚴禁以 Query 參數（`?tab=...`）污染 URL 與瀏覽器歷史**；點擊瀏覽器返回必須直達上一層頁面。
 
-## 5. 負面清單（絕對禁止與不得 XXX 清單，Strict Prohibitions & "Do Not" List）
-為確保代碼簡潔與介面純粹，以下行為在專案中被**絕對禁止**：
-1. **不得進行主觀批判與行為干涉**：嚴禁在 UI、文案、Toast 或通知中指示使用者「該吃什麼」、「少吃了」、「超標了」、「該做幾組」或「退步了」；嚴禁設置紅色超標警告卡片或批判性標籤。
-2. **不得 Copy-Paste JSX**：嚴禁在不同頁面或組件間複製整段 DOM 結構與 Tailwind 類名串，凡重複 2 次以上必須抽離共用元件。
-3. **不得使用 Arbitrary 任意數值與魔術色碼**：嚴禁使用未經 Design Tokens 定義的臨時數值（如 `text-[#1a1a1a]`、`w-[342px]` 等）。
-4. **不得在容器或卡片上使用陰影**：絕對禁止 `shadow-sm`、`shadow-md` 等陰影，層級僅靠邊框界定。
-5. **不得在列表行右側堆疊多個水平按鈕**：嚴禁多個並列按鈕導致行動端排版折行，多選項切換一律使用 `Select` 下拉選單。
-6. **不得在 Component 中 Hardcode 文案**：所有介面文本必須由 `t('key')` 輸出，且嚴禁在翻譯文案中使用「xx/xx」斜線二等詞彙。
-7. **不得使用 `any` 型別**：所有 TypeScript 代碼必須具備嚴格且明確的型別定義。
-8. **不得在 JSX 內部處理複雜業務計算**：計算與副作用必須收斂於 Hooks 或 Services，UI 只專注於渲染。
-9. **不得巢狀聲明 Dialog**：絕對禁止將次級 `<Dialog>` 寫在另一個 `<DialogContent>` 內部，必須作為平級兄弟節點聲明。
-10. **不得在彈窗掛載時自動聚焦輸入框**：嚴禁在 Dialog 的輸入框加上 `autoFocus` 或主動 `.focus()`，避免鍵盤自動彈出遮擋彈窗。
-11. **不得在動態 CSS 變數上附加 Tailwind 透明度修飾符**：嚴禁如 `bg-background/80`、`bg-destructive/10`，避免舊版 WebKit 不支援 `color-mix()` 導致遮罩變為實色。
-12. **不得在彈窗卡片上使用慢速漸入動畫**：彈窗必須瞬時彈出（Instant Pop），徹底避免動畫掉幀。
-13. **不得動態插入元素撐大彈窗**：彈窗幾何高度必須恆定，嚴禁因驗證錯誤訊息突增造成視覺跳動抖動。
-14. **不得裸奔核心數學計算公式**：嚴禁在缺乏 100% 單元測試覆蓋與邊界測試的情況下，變更或新增 `src/utils/` 中的核心度量公式（如 e1RM、EMA、供能比計算）。
-15. **不得執行未備份的毀滅性資料庫操作**：嚴禁在 IndexedDB 升級時跳過版本號管理、未寫 `upgrade` 腳本即變更表結構，或在生產環境執行未經防護的資料庫清空。
-16. **不得在單品食物名稱中包含烹調手法與修飾形容詞**：嚴禁「香煎」、「水煮」、「清炒」等前綴，單品食材一律使用客觀原型名詞。
-17. **不得在食物名稱或計量單位中使用模糊非客觀量詞**：嚴禁在食物名稱或單位中混入「1 勺」、「1 匙」、「1 碗」、「中顆」等主觀模糊詞，一律回歸克數 (`g`) 與毫升 (`ml`)。
-18. **不得將頁面內部 Tab 綁定至污染瀏覽器歷史的 Query 參數**：嚴禁在管理列表切換「使用中 / 已歸檔」等頁面內部視圖時產生 `?tab=archived` 等查詢參數，導致使用者點擊瀏覽器返回時無法直接回到上一層頁面。
-19. **不得在全局介面中使用冗長、客套、囉唆或重複上下文的贅贅文案**：全域嚴禁使用帶所屬對象綴詞的冗長詞彙（如嚴禁「已歸檔食物」、「新增菜餚」、「自定義動作列表」）；嚴禁在提示與按鈕中出現「請…」、「您可以…」、「成功完成…」等客套廢話；全局文案必須一律提煉為純粹的狀態詞（如「已歸檔」）、原子動作動詞（如「新增」）與客觀名詞。
-20. **不得任意顛倒三大營養素（三大元素）順序**：全應用程式（包含輸入框、清單方塊矩陣、標籤選單、表頭統計、預覽看板與副標文本等所有介面呈現）嚴格固定三大元素順序為「碳水化合物、蛋白質、脂肪（Carbs, Protein, Fat / C, P, F）」，嚴禁任何顛倒為 P/C/F、P/F/C 或混亂無序的排版。
-21. **不得在標準數據彈窗上私自手寫覆蓋幾何尺寸與邊距類名**：嚴禁私寫 `sm:max-w-md`、`p-6`、`w-full` 等破壞 300px 與 16px 緊湊規格的類名，所有資料與管理彈窗必須透過 `<PrecisionDialogContent>` 或 `size="standard"` 自動繼承單一真理源。
-22. **不得在標準精密彈窗中手寫重複的標頭 JSX**：一律透過 `<PrecisionDialogContent>` 的 `title/onSubmit/onClose/form` props 或 `<DialogPrecisionHeader>` 統一輸出，杜絕在各業務頁面複製貼上 30 餘行標頭 JSX。
-23. **不得使用雙破折號「`--`」作為無數據佔位符**：全站無數據、未記錄或空值佔位符，一律嚴格使用半形單破折號「`-`」，嚴禁任何「`--`」或「`—`」。
-24. **不得在關聯引用或聚合實體中快照被引用對象的名稱、分類或衍生數值**：凡引用外部實體（如菜餚配方 `RecipeIngredient`、訓練日誌 `WorkoutExerciseGroup`、課表 `RoutineExerciseItem` 以及飲食日誌中的菜餚組合引用 `FoodLog` 等），資料持久化與同步檔案必須嚴格踐行純 ID 關聯正規化（僅儲存 `foodId`, `exerciseId`, `bundleId` 以及該引用的物理事實如 `quantity`, `sets`），**絕對嚴禁儲存 `foodName`、`bundleName`、`exerciseName`、`category`、`calories`、`protein` 等反正規化快照欄位**。視圖展示所需之名稱與衍生數值，一律在前端記憶體中透過維度表（`db.foods`, `db.recipes`, `db.exercises`）即時 Join 動態解析，徹底杜絕快照漂移與雙真理源衝突。
-25. **不得使用語意化 Slug ID 區分預設與自定義實體（全域實體平權與 UUID 唯一標識契約）**：全系統所有領域實體（食材、菜餚、器械、動作、使用者設定等）主鍵一律統一採用標準 RFC 4122 UUID 格式。為杜絕多端同步時不同客戶端在運行時動態生成不同 UUID 導致重複膨脹，系統預設種子資料（Default Seed Data）必須統一採用全域固定、確定性的靜態 UUID；所有關聯外鍵嚴禁使用 `food_chicken_breast`、`barbell` 等舊式語意化 slug 字串，徹底消除系統資料與自訂資料的二元分化。
-26. **不得在飲食模型與日誌頭部中儲存主觀計劃名稱（全域嚴禁 `planName`）**：e2Cal 為冷靜、客觀之精密測量儀，每日飲食環境背景（`DailyDietMeta`）僅記錄當日客觀生理參數與事實（活動係數 `activityLevel` 與供能比 `macroSplit`），**全應用程式與資料庫中絕對嚴禁存在 `planName` 欄位**（如「標準目標」、「高碳日」等主觀命名）；全域嚴禁以任何形式聲明、儲存或在同步檔案中包含 `planName`。
-27. **不得在訓練日誌中儲存標題或動作/課表快照（全域嚴禁 `WorkoutLog.title`）**：訓練日誌（`WorkoutLog`）實體僅記錄客觀物理事實（`id`、`date`、`routineId`（可選）、`exercises` 動作組、`createdAt`、`updatedAt`），**絕對嚴禁儲存 `title` 欄位**。介面渲染所需的標題一律由前端記憶體在即時 Join 時依關聯之 `routineId -> db.routines.name` 或首個動作 `exercises[0].exerciseId -> db.exercises.name` 動態解析為 `HydratedWorkoutLog`，徹底杜絕日誌標題與課表/動作更名時的快照漂移。
-28. **不得在動作組合中配置組數（動作組合純粹化契約，全域嚴禁 `RoutineExerciseItem.defaultSets`）**：動作組合/課表（`WorkoutRoutine`）僅作為動作的有序集合（`exercises: [{ exerciseId }]`），代表訓練項目的編排結構，**絕對嚴禁設定或儲存 `defaultSets` 等組數設定**。組合詳情與表單介面中嚴禁展示「計劃總組數」或組數配置膠囊，相關統計指標統一採用「覆蓋肌群數」；實際訓練組數一律於開始訓練時依動作歷史記錄智能繼承或由使用者即時記錄。
-29. **不得在食物名稱中冠以「生」字前綴強調生重，不得附加「乾重」或「生重」等贅餘後綴，不得冠以「純」等模糊前綴，且嚴禁模糊泛稱（全食材生重基準契約）**：所有天然食材營養常數一律嚴格以未經烹調之「生重 (Raw Weight)」為唯一客觀物理真理源；嚴禁在名稱中使用「生白米」、「生糙米」、「生義大利麵」等前綴；嚴禁附加「乾重」後綴（嚴禁「純米粉乾重」、「冬粉乾重」；一律使用「米粉」、「冬粉」）；嚴禁使用「純麵條」等無明確指代的模糊泛稱，麵條品項繁多必須精確具體化為客觀品類（如「白細麵」、「蕎麥麵」、「烏龍麵」、「寬麵條」、「義大利麵」）；嚴禁在單品食材庫中收錄隨烹調吸水率浮動的熟重副本（如嚴禁「熟義大利麵」、「糙米飯」）。
-30. **不得在介面或匯出畫布中以非官方字體或零散手寫樣式渲染品牌名 `e2Cal`，亦不得在正文段落中強制將 `e2Cal` 固定加粗**：全站所有呈現產品名稱 `e2Cal` 之介面元素必須嚴格採用方案 1 官方品牌字體 `Geist Sans`（`font-brand tracking-brand`，字距 `-0.03em`），並一律經由單一真理源元件 `<BrandWordmark />`（獨立標誌鎖定使用 `variant="lockup"` 字重 600；正文與行內文案使用 `<BrandText />` 或 `variant="inline"` 依上下文決定字重，嚴禁強制粗體）或 Canvas `BRAND_FONT` 輸出。
+---
 
-## 6. 食物數據與原子計量規範 (Food Data & Atomic Metric Standards)
-- **全食材生重基準合約 (Raw Weight as Single Truth Standard)**：
-  - **唯一客觀物理基準**：所有天然食材與單品食物之營養素常數（熱量、蛋白質、碳水化合物、脂肪、膳食纖維），**一律嚴格以「未經烹調之生重 (Raw Weight)」為唯一客觀物理基準**。
-  - **去生熟修飾與嚴禁「生」字前綴／「乾重」後綴 (Zero "Raw" Prefixes & Zero "Dry Weight" Suffixes in Food Names)**：
-    - **絕對嚴禁在食物名稱中冠以「生」字前綴做多餘強調**（例如**嚴禁**「生白米」、「生糙米」、「生義大利麵」、「生燕麥」等；一律直接使用純粹客觀原型名詞「白米」、「糙米」、「義大利麵」、「大燕麥片」）。
-    - **絕對嚴禁在食物名稱中附加「乾重」或「生重」後綴，亦嚴禁附加「純」等模糊前綴**（例如**嚴禁**「純麵條乾重」、「純米粉乾重」、「冬粉乾重」等；一律直接使用「米粉」、「冬粉」）。
-    - **杜絕模糊泛稱與精準具體化 (Specific Names Over Generic Broad Terms)**：嚴禁使用「純麵條」等無明確指代的模糊名稱。日常食用之麵條種類繁多（如白細麵、蕎麥麵、烏龍麵、寬麵條、義大利麵等），必須精確指定具體品類，絕不使用粗糙泛稱。
-    - **哲學依據**：在客觀測量儀哲學下，水分蒸發與吸水膨脹率因人、因水米比例、因烹調時間與器具而劇烈浮動（如熟米飯吸水率可自 1.8 至 2.5 倍浮動），熟重本質上屬於不可複製、充滿誤差的漂移變數。「生重」與「乾重原型」是全應用程式的預設前提與唯一物理真理源，無需在名稱層面贅述強調。
-  - **杜絕熟重單品食材 (No Cooked Variations as Atomic Ingredients)**：
-    - 單品食材庫嚴格杜絕派生熟重單品（如嚴禁在單品庫中同時存在「糙米飯」、「熟義大利麵」等熟重副本）。所有熟食或複合料理一律透過「菜餚 (Recipes)」功能，以生重原料組合解構計算。
-- **原型食材原子化真理源 (Atomic Ingredients as Ground Truth)**：
-  - 單品食材庫僅收錄「原型食材」與具備客觀包裝標籤的「工業食品」。
-  - **絕對嚴禁在單品食材名稱中附加烹飪手法前綴**（如嚴禁「香煎雞胸肉」、「水煮蛋」、「烤地瓜」、「香煎鮭魚排」等）。烹調所產生的油脂、糖、鹽等烹飪變量，一律必須作為「菜餚組合 (Recipes)」進行成分解構與引用，不得污染底層原子食材。
-- **純粹命名原則 (Pure Naming & Zero Adjectives)**：
-  - 名稱必須簡潔、客觀、去修飾、去行銷化（如嚴禁「香煎」、「鮮嫩」、「高纖」、「精選」等形容詞）。
-  - 肉品部位直接以生理/分切部位命名（例如使用「牛板腱」而非「瘦牛肉 (板腱)」）。
-- **有品牌食材命名標準 (Branded Food Naming Standard)**：
-  - 凡具備品牌之工業食品或單品食材，名稱統一呈現與記錄為「`品牌 · 名稱`」（中間使用半形空格與 U+00B7 Middle Dot 間隔點 ` · `，例如「曼可頓 · 全麥吐司」、「Oatly · 燕麥奶」）。
-  - 清單副標題或次級資訊嚴格禁止重複堆疊品牌名稱，維持極簡現代純粹感。
-- **唯一計量真理源：克數與毫升 (Strict Gram/ml Metric Hierarchy)**：
-  - **絕對嚴禁在食物名稱或單位中使用模糊器具與非客觀量詞**（例如嚴禁「1 勺」、「1 匙」、「1 碗」、「1 份」、「中顆」、「掌心大」）。
-  - 固體食物一律以「克 (`g`)」、液體一律以「毫升 (`ml`)」為唯一底層物理計量真理源，引導使用者始終以電子秤物理測量，維護客觀測量儀之精確標準。
+## 3. 代碼、型別與極簡文案規範 (Code, TypeScript & Copy Standards)
+- **架構分層與關注點分離**：計算、非同步請求與資料庫操作收斂於 Hooks/Services，UI 僅負責狀態渲染與事件派發，JSX 模板嚴禁撰寫複雜資料推算。
+- **TypeScript 靜態約束**：嚴格啟用型別檢查，**絕對禁止使用 `any` 型別**。
+- **國際化與多語系 (i18n)**：全 UI 文案經由 `t('key')` 輸出（同步更新 en, zh-TW, zh-CN）；**絕對嚴禁使用「xx/xx」模糊並列翻譯**（提煉單一精確詞彙）。
+- **精密測量儀測試守則**：e1RM、EMA 抗噪體重、供能比、能量差額等純數學計算函數必須維持 100% 單元測試覆蓋率，且覆蓋 0、負數、除以零等異常邊界。
+- **全局極簡文本契約 (The 5 Rules of Ultra-Concise Copy)**：
+  1. **去上下文冗餘**：已有頁面語境時，嚴禁重複提及對象綴詞（使用「新增」、「編輯」、「已歸檔」，嚴禁「新增自定義食物」）。
+  2. **去口語與客套廢話**：零修飾、零說教，嚴禁「請…」、「您可以…」、「成功完成…」。
+  3. **動作動詞純粹化**：統一使用最短有力強動詞（「新增」、「儲存」、「匯出」、「刪除」）。
+  4. **通知 Toast 極限精簡**：對象 + 結果，2～4 個字結束（「已儲存」、「已刪除」）。
+  5. **空狀態客觀陳述**：客觀陳述現狀，零情緒與說教（「無食材」、「無飲食記錄」）。
 
-## 7. 三大營養素（三大元素）全局統一排序規範 (Strict Macro Nutrients Ordering Standards)
-- **固定唯一真理源順序：碳水、蛋白質、脂肪 (Carbs, Protein, Fat / C, P, F)**：
-  - 全應用程式中所有涉及三大營養素（三大元素）的視覺元件、表單輸入、統計看板、標籤選單與文字排版，**嚴格統一固定為「碳水化合物 -> 蛋白質 -> 脂肪」的恆定順序**，英文字母代號嚴格遵循「**C -> P -> F**」。
-- **全域貫徹覆蓋範疇 (Global Scope & Zero Exceptions)**：
-  1. **方塊矩陣與微型膠囊 (`MacroSquares`)**：由左至右固定為「`C` (碳水) -> `P` (蛋白質) -> `F` (脂肪)」，嚴禁將蛋白質放於碳水之前。
-  2. **表單與數值輸入框 (`FoodFormDialog`, `AddQuickModal` 等)**：輸入列與網格由上至下、由左至右一律遵循「熱量 -> 碳水化合物 -> 蛋白質 -> 脂肪」。
-  3. **橫向看板與 HUD Banner (`RecipeFormDialog`, `DietPlanModal` 等)**：巨量素網格、供能比標尺 (Ratio Bar) 與 3 欄並列卡片，嚴格依「碳水 -> 蛋白質 -> 脂肪」排列。
-  4. **文字副標與微彙總 (List Subtitle & Table Headers)**：凡以行內文字呈現三大元素時（如「`C: 28g · P: 10g · F: 2g`」或「`碳 28g · 蛋 10g · 脂 2g`」），嚴格維持 C/P/F 順序。
-  5. **特徵過濾與下拉選單 (Filter Dropdowns & Tags)**：下拉選單選項嚴格依「碳水主食 (`carb-source`) -> 高蛋白 (`high-protein`) -> 脂質來源 (`fat-source`) -> 低熱量 -> 高熱量」順序排列。
+---
 
-## 8. 關聯引用與純 ID 正規化規範 (Pure ID Reference & Association Normalization Standards)
-- **純 ID 關聯正規化原則 (Strict Pure ID Association)**：
-  - 專案所有資料庫實體（IndexedDB）、同步分卷（`.json`）與備份結構中，凡涉及「多對一」或「組合引用」之資料模型（例如菜餚引用食材、日誌引用動作、課表引用動作），**持久化層僅允許儲存外鍵 ID（如 `foodId`, `exerciseId`）以及該引用獨立產生的客觀物理量（如份量 `quantity`、單位 `unit`、組數 `sets`、次數 `reps`）**。
-  - **嚴格禁止在關聯引用中快照被引用實體的任何可變屬性**，包括但不限於：食材名稱（`foodName`）、動作名稱（`exerciseName`）、肌群分類（`category`）、營養素數值（`calories`, `protein`, `carbs`, `fat`）等。
-- **動態解析契約 (Dynamic Hydration at Runtime)**：
-  - 所有需要向使用者呈現的名稱、分類與計算指標，必須在視圖層（Hooks / Services）於記憶體中透過對應的維度表（`db.foods`, `db.exercises`）即時 Join 動態解析裝載（如 `HydratedFoodLog`, `HydratedWorkoutExerciseGroup`）。
-  - **保證全域同步唯一性**：當使用者在基礎庫中修改食材名稱或營養標籤時，全站所有引用該食材的歷史記錄、菜餚配方與統計圖表必須無感、即時且精確地同步反映最新數值，絕不殘留任何過期快照。
+## 4. 領域數據模型與常數契約 (Domain Data & Model Contracts)
+- **全食材生重基準與原子計量契約 (Raw Weight & Atomic Metric Standard)**：
+  - **生重唯一真理源**：天然食材營養常數一律嚴格以未經烹調之「生重 (Raw Weight)」為唯一基準。
+  - **去生熟與烹調修飾**：**嚴禁冠以「生」字前綴**（使用「白米」、「燕麥片」，嚴禁「生白米」）；**嚴禁「乾重/生重」後綴**（使用「米粉」、「冬粉」，嚴禁「純米粉乾重」）；**嚴禁烹飪手法前綴**（嚴禁「香煎」、「水煮」）；**嚴禁模糊泛稱**（精確至「白細麵」、「蕎麥麵」）。單品庫**嚴格禁止收錄熟重副本**（熟食複合料理透過菜餚 Recipe 解構計算）。
+  - **品牌命名與客觀計量**：品牌食品統一為「`品牌 · 名稱`」；固體一律以克 (`g`)、液體一律以毫升 (`ml`) 為唯一底層計量真理源，**嚴格禁止「1 勺」、「1 碗」、「中顆」等模糊量詞**。
+- **三大營養素全域統一排序契約 (Strict Macro Order: C -> P -> F)**：
+  - 全應用程式（方塊矩陣、表單輸入列、HUD 看板、文字副標、過濾選單等）中涉及三大元素時，**嚴格統一固定為「碳水化合物 -> 蛋白質 -> 脂肪 (C -> P -> F)」**，絕對嚴禁顛倒順序。
+- **純 ID 關聯正規化原則 (Strict Pure ID Association & Dynamic Hydration)**：
+  - 專案所有資料庫實體（IndexedDB）、同步分卷與備份結構中，凡多對一或組合引用，**持久層僅允許儲存外鍵 ID 及物理事實量**。
+  - **絕對嚴禁儲存反正規化快照欄位**（如 `foodName`, `exerciseName`, `calories` 等可變屬性）；展示指標於前端記憶體透過維度表即時 Join 動態解析裝載。
+- **全域實體平權與去主觀欄位契約**：
+  - 領域實體主鍵一律採用標準 RFC 4122 UUID（預設種子採用靜態固定 UUID），**嚴格禁止使用語意化 Slug ID**（如 `food_chicken_breast`）。
+  - 每日飲食背景僅記錄客觀生理參數，**全域嚴格禁止 `planName` 欄位**。
+  - 訓練日誌實體僅記錄客觀物理事實，**全域嚴格禁止 `WorkoutLog.title` 欄位**。
+  - 動作課表僅代表項目編排結構，**全域嚴格禁止配置組數 `RoutineExerciseItem.defaultSets` 欄位**。
+
+---
+
+## 5. 違規紅線速查清單 (Strict Prohibitions Checklist)
+以下 33 項行為在專案中被**絕對禁止**：
+1. **不得進行主觀批判與行為干涉**：嚴禁指示「該吃什麼」、「超標了」、「少練了」等批判警示或紅色超標卡片。
+2. **不得 Copy-Paste JSX**：凡重複 2 次以上必須抽離為共用元件。
+3. **不得使用 Arbitrary 任意數值與魔術色碼**：嚴禁使用未經 Tokens 定義的臨時值。
+4. **不得在容器或卡片上使用陰影**：絕對禁止 `shadow-*`，層級全靠邊框。
+5. **不得在列表行右側堆疊多個水平按鈕**：多選項切換一律採用 `Select` 下拉選單。
+6. **不得在 Component 中 Hardcode 文案**：文案 100% 透過 `t('key')`，嚴禁使用「xx/xx」斜線二等詞彙。
+7. **不得使用 `any` 型別**：全代碼嚴格靜態型別約束。
+8. **不得在 JSX 內部處理複雜業務計算**：計算與副作用收斂至 Hooks/Services。
+9. **不得巢狀聲明 Dialog**：平鋪兄弟節點，絕對禁止 Modal 內部嵌套 Modal。
+10. **不得在彈窗掛載時自動聚焦輸入框**：嚴禁 `autoFocus` 或 JS 主動 `.focus()`。
+11. **不得在動態 CSS 變數上附加 Tailwind 透明度修飾符**：避免舊版 WebKit `color-mix()` 實色 Bug。
+12. **不得在彈窗卡片上使用慢速漸入動畫**：彈窗本體必須原生級瞬時彈出（Instant Pop）。
+13. **不得動態插入元素撐大彈窗**：彈窗高度維持絕對穩定防抖。
+14. **不得裸奔核心數學計算公式**：純函數必須 100% 單元測試覆蓋與邊界測試。
+15. **不得執行未備份的毀滅性資料庫操作**：結構變更必升版本寫遷移腳本。
+16. **不得在單品食物名稱中包含烹調手法與修飾形容詞**：嚴禁「香煎」、「水煮」、「鮮嫩」等修飾。
+17. **不得在食物名稱或計量單位中使用模糊非客觀量詞**：嚴禁「1 勺」、「1 碗」、「中顆」，一律克 (`g`) / 毫升 (`ml`)。
+18. **不得將頁面內部 Tab 綁定至污染瀏覽器歷史的 Query 參數**：維持純淨 URL 與返回直達上一層。
+19. **不得在全局介面中使用冗長、客套或重複上下文的贅贅文案**：全面落實五大極簡文案法則。
+20. **不得任意顛倒三大營養素順序**：全應用程式嚴格固定為「碳水 -> 蛋白質 -> 脂肪 (C -> P -> F)」。
+21. **不得在標準數據彈窗上私自手寫覆蓋幾何尺寸與邊距類名**：統一透過 `<PrecisionDialogContent>`。
+22. **不得在標準精密彈窗中手寫重複的標頭 JSX**：統一透過 `<DialogPrecisionHeader>`。
+23. **不得使用雙破折號作為無數據佔位符**：全站一律使用半形單破折號「`-`」。
+24. **不得在關聯引用或聚合實體中快照可變屬性**：嚴禁儲存 `foodName`, `exerciseName` 等反正規化欄位。
+25. **不得使用語意化 Slug ID 區分實體**：全域唯一標準 RFC 4122 UUID。
+26. **不得在飲食模型與日誌頭部中儲存主觀計劃名稱**：全域嚴禁 `planName` 欄位。
+27. **不得在訓練日誌中儲存標題或快照**：全域嚴禁 `WorkoutLog.title` 欄位。
+28. **不得在動作組合中配置組數**：全域嚴禁 `RoutineExerciseItem.defaultSets` 欄位。
+29. **不得在食物名稱冠以「生」字前綴或收錄熟重副本**：全食材未烹生重唯一基準。
+30. **不得以非官方字體或正文強制粗體渲染產品名**：`e2Cal` 嚴格由 `<BrandWordmark />` / `<BrandText />` 渲染。
+31. **不得在正文段落中隨機挑詞加粗，亦不得在介面濫用 700+ 粗體**：微字重封頂，技術參數用 `code`。
+32. **不得在承載文字之容器上寫死固定高度 `h-*` 或濫用 `overflow-hidden`**：一律 `min-h-*` 自然撐開。
+33. **不得對核心客觀度量數據與確認操作按鈕附加 `truncate` 截斷**：客觀物理事實完整呈現。
