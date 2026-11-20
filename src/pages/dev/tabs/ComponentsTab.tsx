@@ -11,6 +11,7 @@ import { AdaptiveMuscleBadgeGroup } from '@/components/workout/AdaptiveMuscleBad
 import { TargetMusclesCard } from '@/components/workout/TargetMusclesCard';
 import { SyncStatusPill } from '@/components/sync/SyncStatusPill';
 import { LiquidElevationPicker } from '@/components/ui/LiquidElevationPicker';
+import { CopySnippet } from '../components/CopySnippet';
 import type { DetailedMuscle, MuscleRole } from '@/types';
 
 // Mock 營養成分數據（標準特級初榨橄欖油 15ml / 100ml）
@@ -78,7 +79,12 @@ export const ComponentsTab: React.FC = () => {
           {/* MetricValue 展示 */}
           <div className="p-4 rounded-lg border border-border bg-card space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-foreground">MetricValue (數值精密對齊)</span>
+              <div className="flex items-center gap-1.5">
+                <CopySnippet variant="subtle" value="<MetricValue />" className="text-xs font-medium text-foreground">
+                  MetricValue
+                </CopySnippet>
+                <span className="text-2xs text-muted-foreground">(數值精密對齊)</span>
+              </div>
               <span className="text-3xs font-mono text-muted-foreground">BASELINE ALIGNED</span>
             </div>
             <p className="text-2xs text-muted-foreground">
@@ -114,7 +120,14 @@ export const ComponentsTab: React.FC = () => {
 
           {/* SectionCard 展示 */}
           <SectionCard
-            title="SectionCard (內嵌表頭扁平容器)"
+            title={
+              <div className="flex items-center gap-1.5">
+                <CopySnippet variant="subtle" value="<SectionCard />" className="text-xs uppercase font-medium text-foreground">
+                  SectionCard
+                </CopySnippet>
+                <span className="text-3xs lowercase font-normal text-muted-foreground">(內嵌表頭扁平容器)</span>
+              </div>
+            }
             action={<Badge variant="outline" className="text-3xs font-mono">2 筆記錄</Badge>}
           >
             <div className="p-3 flex items-center justify-between hover:bg-hover transition-colors">
@@ -144,7 +157,9 @@ export const ComponentsTab: React.FC = () => {
           {/* NutritionBasisToggle */}
           <div className="p-4 rounded-lg border border-border bg-card space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-foreground">NutritionBasisToggle</span>
+              <CopySnippet variant="subtle" value="<NutritionBasisToggle />" className="text-xs font-medium text-foreground">
+                NutritionBasisToggle
+              </CopySnippet>
               <span className="text-3xs font-mono text-muted-foreground">ZUSTAND SSOT</span>
             </div>
             <p className="text-2xs text-muted-foreground leading-normal">
@@ -158,7 +173,15 @@ export const ComponentsTab: React.FC = () => {
           {/* NutritionFactsCard */}
           <div className="md:col-span-2">
             <NutritionFactsCard
-              title="NutritionFactsCard (標準食品營養規格卡)"
+              title="NutritionFactsCard"
+              action={
+                <div className="flex items-center gap-1.5">
+                  <CopySnippet variant="subtle" value="<NutritionFactsCard />" className="text-3xs">
+                    複製標籤
+                  </CopySnippet>
+                  <NutritionBasisToggle />
+                </div>
+              }
               data={MOCK_NUTRITION_DATA}
               highlights={{ calories: true, fat: true }}
             />
@@ -176,7 +199,12 @@ export const ComponentsTab: React.FC = () => {
           <div className="p-4 rounded-lg border border-border bg-card space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
-                <span className="text-xs font-medium text-foreground">BodyHighlighter (17 解剖肌群熱力圖)</span>
+                <div className="flex items-center gap-1.5">
+                  <CopySnippet variant="subtle" value="<BodyHighlighter />" className="text-xs font-medium text-foreground">
+                    BodyHighlighter
+                  </CopySnippet>
+                  <span className="text-2xs text-muted-foreground">(17 解剖肌群熱力圖)</span>
+                </div>
                 <p className="text-2xs font-mono text-muted-foreground mt-0.5">
                   點選肌群互動 · 赤陶磚紅強度階梯映射
                 </p>
@@ -230,7 +258,9 @@ export const ComponentsTab: React.FC = () => {
 
             <div className="p-4 rounded-lg border border-border bg-card space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-foreground">AdaptiveMuscleBadgeGroup</span>
+                <CopySnippet variant="subtle" value="<AdaptiveMuscleBadgeGroup />" className="text-xs font-medium text-foreground">
+                  AdaptiveMuscleBadgeGroup
+                </CopySnippet>
                 <span className="text-3xs font-mono text-muted-foreground">AUTO-TRUNCATE</span>
               </div>
               <p className="text-2xs text-muted-foreground">
@@ -253,7 +283,12 @@ export const ComponentsTab: React.FC = () => {
           {/* SyncStatusPill */}
           <div className="p-4 rounded-lg border border-border bg-card space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-foreground">SyncStatusPill (雲端同步狀態膠囊)</span>
+              <div className="flex items-center gap-1.5">
+                <CopySnippet variant="subtle" value="<SyncStatusPill />" className="text-xs font-medium text-foreground">
+                  SyncStatusPill
+                </CopySnippet>
+                <span className="text-2xs text-muted-foreground">(雲端同步狀態膠囊)</span>
+              </div>
               <span className="text-3xs font-mono text-muted-foreground">DROPBOX PKCE</span>
             </div>
             <p className="text-2xs text-muted-foreground leading-normal">
@@ -268,7 +303,12 @@ export const ComponentsTab: React.FC = () => {
           {/* LiquidElevationPicker */}
           <div className="p-4 rounded-lg border border-border bg-card space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-foreground">LiquidElevationPicker (物理升降刻度盤)</span>
+              <div className="flex items-center gap-1.5">
+                <CopySnippet variant="subtle" value="<LiquidElevationPicker />" className="text-xs font-medium text-foreground">
+                  LiquidElevationPicker
+                </CopySnippet>
+                <span className="text-2xs text-muted-foreground">(物理升降刻度盤)</span>
+              </div>
               <span className="text-3xs font-mono text-muted-foreground">PHYSICS TOUCH</span>
             </div>
             <p className="text-2xs text-muted-foreground leading-normal">

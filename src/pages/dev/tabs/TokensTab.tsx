@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CopySnippet } from '../components/CopySnippet';
 
 interface TokensTabProps {
   tokens: DevTokenConfig;
@@ -86,7 +87,9 @@ const FontFamilyControl: React.FC<FontFamilyControlProps> = ({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-foreground">{label}</span>
-          <span className="text-3xs font-mono text-muted-foreground">{tokenKey}</span>
+          <CopySnippet variant="subtle" className="text-3xs" value={tokenKey}>
+            {tokenKey}
+          </CopySnippet>
         </div>
         <div className="text-2xs text-muted-foreground mt-0.5 truncate font-mono">
           <span className="text-foreground/70">有效值：</span>
@@ -150,7 +153,9 @@ const ColorControl: React.FC<ColorControlProps> = ({
     <div className="flex items-center justify-between p-2 rounded border border-border bg-card hover:bg-hover transition-colors">
       <div className="min-w-0 pr-2">
         <div className="text-xs font-normal text-foreground truncate">{label}</div>
-        <div className="text-2xs font-mono text-muted-foreground truncate">{tokenKey}</div>
+        <CopySnippet variant="subtle" className="text-3xs" value={tokenKey}>
+          {tokenKey}
+        </CopySnippet>
       </div>
       <div className="flex items-center gap-2 shrink-0">
         <label className="relative flex items-center justify-center w-6 h-6 rounded border border-border cursor-pointer overflow-hidden shrink-0">
@@ -429,8 +434,11 @@ export const TokensTab: React.FC<TokensTabProps> = ({
           Corner radius
         </h3>
         <div className="p-3 rounded-lg border border-border bg-card flex flex-wrap items-center justify-between gap-3">
-          <div className="text-xs text-muted-foreground">
-            全域圓角值：<span className="font-mono text-foreground">{tokens['--radius'] ?? '0.5 rem (8 px 預設)'}</span>
+          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <span>全域圓角值：</span>
+            <CopySnippet variant="code" value={tokens['--radius'] ?? '0.5rem'}>
+              {tokens['--radius'] ?? '0.5 rem (8 px 預設)'}
+            </CopySnippet>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             {[
@@ -566,9 +574,13 @@ export const TokensTab: React.FC<TokensTabProps> = ({
             { token: 'text-2xl', px: '24.0px', sample: '100% 離線完備' },
           ].map((item) => (
             <div key={item.token} className="px-3.5 py-2.5 flex items-center justify-between gap-4">
-              <div className="w-40 shrink-0">
-                <span className="text-xs font-mono font-medium text-foreground">{item.token}</span>
-                <span className="text-3xs font-mono text-muted-foreground ml-2">({item.px})</span>
+              <div className="w-48 shrink-0 flex items-center gap-1.5">
+                <CopySnippet variant="code" value={item.token}>
+                  {item.token}
+                </CopySnippet>
+                <CopySnippet variant="subtle" value={item.px} className="text-3xs">
+                  ({item.px})
+                </CopySnippet>
               </div>
               <div className={`font-mono text-foreground ${item.token} truncate text-right`}>
                 {item.sample}

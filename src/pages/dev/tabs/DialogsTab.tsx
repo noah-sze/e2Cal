@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { toast } from '@/components/ui/toast';
+import { CopySnippet } from '../components/CopySnippet';
 
 // 飲食模組 Dialogs
 import { FoodFormDialog } from '@/components/food/FoodFormDialog';
@@ -164,7 +165,9 @@ const DialogRowItem: React.FC<DialogRowItemProps> = ({
     <div className="min-w-0 flex-1 space-y-0.5">
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs font-medium text-foreground">{name}</span>
-        <span className="text-2xs font-mono text-muted-foreground">{component}</span>
+        <CopySnippet variant="subtle" className="text-2xs" value={component}>
+          {component}
+        </CopySnippet>
         <Badge variant="outline" className="text-3xs font-mono py-0 h-4 px-1 border-border shadow-none">
           {badge}
         </Badge>
