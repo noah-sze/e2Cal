@@ -23,7 +23,18 @@ import { convertFoodWeight, convertFoodVolume, kcalToKj } from '@/utils/unitMath
 import { matchesAutocomplete } from '@/utils/multilingualSearch';
 import { ChevronRight } from 'lucide-react';
 
-type KeypadField = 'serving' | 'basis' | 'calories' | 'protein' | 'carbs' | 'fat';
+type KeypadField =
+  | 'serving'
+  | 'basis'
+  | 'calories'
+  | 'protein'
+  | 'carbs'
+  | 'fat'
+  | 'sugar'
+  | 'fiber'
+  | 'saturatedFat'
+  | 'transFat'
+  | 'sodium';
 
 interface KeypadConfig {
   field: KeypadField;
@@ -163,6 +174,11 @@ export function FoodFormDialog({
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
+  const [fiber, setFiber] = useState('');
+  const [sugar, setSugar] = useState('');
+  const [saturatedFat, setSaturatedFat] = useState('');
+  const [transFat, setTransFat] = useState('');
+  const [sodium, setSodium] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [keypadConfig, setKeypadConfig] = useState<KeypadConfig | null>(null);
@@ -215,10 +231,15 @@ export function FoodFormDialog({
         energyUnit === 'kJ'
           ? kcalToKj(initialData.calories, 2)
           : Math.round(initialData.calories * 100) / 100;
-      setCalories(displayCal > 0 ? String(displayCal) : '');
-      setProtein(initialData.protein ? String(initialData.protein) : '');
-      setCarbs(initialData.carbs ? String(initialData.carbs) : '');
-      setFat(initialData.fat ? String(initialData.fat) : '');
+      setCalories(displayCal >= 0 ? String(displayCal) : '');
+      setProtein(typeof initialData.protein === 'number' ? String(initialData.protein) : '');
+      setCarbs(typeof initialData.carbs === 'number' ? String(initialData.carbs) : '');
+      setFat(typeof initialData.fat === 'number' ? String(initialData.fat) : '');
+      setFiber(typeof initialData.fiber === 'number' ? String(initialData.fiber) : '');
+      setSugar(typeof initialData.sugar === 'number' ? String(initialData.sugar) : '');
+      setSaturatedFat(typeof initialData.saturatedFat === 'number' ? String(initialData.saturatedFat) : '');
+      setTransFat(typeof initialData.transFat === 'number' ? String(initialData.transFat) : '');
+      setSodium(typeof initialData.sodium === 'number' ? String(initialData.sodium) : '');
     } else {
       // 新增模式：完全純淨無初始數值，分類預設為空
       setName('');
@@ -234,6 +255,11 @@ export function FoodFormDialog({
       setProtein('');
       setCarbs('');
       setFat('');
+      setFiber('');
+      setSugar('');
+      setSaturatedFat('');
+      setTransFat('');
+      setSodium('');
     }
   }, [open, initialData, foodWeightUnit, foodVolumeUnit, energyUnit]);
 
@@ -254,9 +280,15 @@ export function FoodFormDialog({
   const parsedP = Math.max(0, parseFloat(protein) || 0);
   const parsedC = Math.max(0, parseFloat(carbs) || 0);
   const parsedF = Math.max(0, parseFloat(fat) || 0);
+  const parsedFiber = fiber !== '' && !Number.isNaN(Number(fiber)) ? Math.max(0, parseFloat(fiber)) : undefined;
+  const parsedSugar = sugar !== '' && !Number.isNaN(Number(sugar)) ? Math.max(0, parseFloat(sugar)) : undefined;
+  const parsedSaturatedFat = saturatedFat !== '' && !Number.isNaN(Number(saturatedFat)) ? Math.max(0, parseFloat(saturatedFat)) : undefined;
+  const parsedTransFat = transFat !== '' && !Number.isNaN(Number(transFat)) ? Math.max(0, parseFloat(transFat)) : undefined;
+  const parsedSodium = sodium !== '' && !Number.isNaN(Number(sodium)) ? Math.max(0, parseFloat(sodium)) : undefined;
 
   const roundTo2 = (num: number) => Math.round(num * 100) / 100;
-  const formatNum2 = (val: number) => (val > 0 ? String(roundTo2(val)) : '');
+  const formatNum2 = (val: number) => (typeof val === 'number' && !Number.isNaN(val) && val >= 0 ? String(roundTo2(val)) : '');
+  const formatInt = (val: number) => (typeof val === 'number' && !Number.isNaN(val) && val >= 0 ? String(Math.round(val)) : '');
 
   // 記錄開啟鍵盤時的初始狀態，供取消時安全回滾 (Revert)
   const initialKeypadValueRef = useRef<{ value: string; unit: string } | null>(null);
@@ -359,6 +391,76 @@ export function FoodFormDialog({
         });
         break;
       }
+      case 'sugar': {
+        initialKeypadValueRef.current = { value: sugar, unit: 'g' };
+        setKeypadConfig({
+          field: 'sugar',
+          title: t('diet.sugar'),
+          value: parsedSugar !== undefined ? parsedSugar : 0,
+          unit: 'g',
+          allowDecimals: true,
+          maxDecimals: 2,
+          anchorEl: targetEl || null,
+          valueClassName: 'text-foreground',
+        });
+        break;
+      }
+      case 'fiber': {
+        initialKeypadValueRef.current = { value: fiber, unit: 'g' };
+        setKeypadConfig({
+          field: 'fiber',
+          title: t('diet.fiber'),
+          value: parsedFiber !== undefined ? parsedFiber : 0,
+          unit: 'g',
+          allowDecimals: true,
+          maxDecimals: 2,
+          anchorEl: targetEl || null,
+          valueClassName: 'text-foreground',
+        });
+        break;
+      }
+      case 'saturatedFat': {
+        initialKeypadValueRef.current = { value: saturatedFat, unit: 'g' };
+        setKeypadConfig({
+          field: 'saturatedFat',
+          title: t('diet.saturatedFat'),
+          value: parsedSaturatedFat !== undefined ? parsedSaturatedFat : 0,
+          unit: 'g',
+          allowDecimals: true,
+          maxDecimals: 2,
+          anchorEl: targetEl || null,
+          valueClassName: 'text-foreground',
+        });
+        break;
+      }
+      case 'transFat': {
+        initialKeypadValueRef.current = { value: transFat, unit: 'g' };
+        setKeypadConfig({
+          field: 'transFat',
+          title: t('diet.transFat'),
+          value: parsedTransFat !== undefined ? parsedTransFat : 0,
+          unit: 'g',
+          allowDecimals: true,
+          maxDecimals: 2,
+          anchorEl: targetEl || null,
+          valueClassName: 'text-foreground',
+        });
+        break;
+      }
+      case 'sodium': {
+        initialKeypadValueRef.current = { value: sodium, unit: 'mg' };
+        setKeypadConfig({
+          field: 'sodium',
+          title: t('diet.sodium'),
+          value: parsedSodium !== undefined ? parsedSodium : 0,
+          unit: 'mg',
+          allowDecimals: false,
+          maxDecimals: 0,
+          anchorEl: targetEl || null,
+          valueClassName: 'text-foreground',
+        });
+        break;
+      }
     }
   };
 
@@ -386,6 +488,21 @@ export function FoodFormDialog({
         break;
       case 'fat':
         setFat(formatNum2(val));
+        break;
+      case 'sugar':
+        setSugar(formatNum2(val));
+        break;
+      case 'fiber':
+        setFiber(formatNum2(val));
+        break;
+      case 'saturatedFat':
+        setSaturatedFat(formatNum2(val));
+        break;
+      case 'transFat':
+        setTransFat(formatNum2(val));
+        break;
+      case 'sodium':
+        setSodium(formatInt(val));
         break;
     }
   };
@@ -419,6 +536,21 @@ export function FoodFormDialog({
       case 'fat':
         setFat(prevVal);
         break;
+      case 'sugar':
+        setSugar(prevVal);
+        break;
+      case 'fiber':
+        setFiber(prevVal);
+        break;
+      case 'saturatedFat':
+        setSaturatedFat(prevVal);
+        break;
+      case 'transFat':
+        setTransFat(prevVal);
+        break;
+      case 'sodium':
+        setSodium(prevVal);
+        break;
     }
     setKeypadConfig(null);
   };
@@ -447,6 +579,21 @@ export function FoodFormDialog({
       case 'fat':
         setFat(formatNum2(val));
         break;
+      case 'sugar':
+        setSugar(formatNum2(val));
+        break;
+      case 'fiber':
+        setFiber(formatNum2(val));
+        break;
+      case 'saturatedFat':
+        setSaturatedFat(formatNum2(val));
+        break;
+      case 'transFat':
+        setTransFat(formatNum2(val));
+        break;
+      case 'sodium':
+        setSodium(formatInt(val));
+        break;
     }
     setKeypadConfig(null);
   };
@@ -465,6 +612,11 @@ export function FoodFormDialog({
         carbs: parsedC,
         protein: parsedP,
         fat: parsedF,
+        fiber: parsedFiber,
+        sugar: parsedSugar,
+        saturatedFat: parsedSaturatedFat,
+        transFat: parsedTransFat,
+        sodium: parsedSodium,
         category: category || undefined,
       }),
     [
@@ -479,6 +631,11 @@ export function FoodFormDialog({
       parsedC,
       parsedP,
       parsedF,
+      parsedFiber,
+      parsedSugar,
+      parsedSaturatedFat,
+      parsedTransFat,
+      parsedSodium,
     ]
   );
 
@@ -499,6 +656,11 @@ export function FoodFormDialog({
         protein: normalizedMetricFood.protein,
         carbs: normalizedMetricFood.carbs,
         fat: normalizedMetricFood.fat,
+        fiber: normalizedMetricFood.fiber,
+        sugar: normalizedMetricFood.sugar,
+        saturatedFat: normalizedMetricFood.saturatedFat,
+        transFat: normalizedMetricFood.transFat,
+        sodium: normalizedMetricFood.sodium,
       });
 
       onOpenChange(false);
@@ -533,7 +695,7 @@ export function FoodFormDialog({
 
   // 格式化數值膠囊內容：有值時正常字重並賦予專屬色，為空 (-) 時呈現極淡佔位色
   const renderAmountValue = (val: string, activeClass: string = 'text-foreground') => {
-    if (val) {
+    if (val !== '' && val !== undefined) {
       return <span className={cn("font-normal", activeClass)}>{formatDisplayAmount(val)}</span>;
     }
     return <span className="font-normal text-muted-foreground/40 select-none">-</span>;
@@ -774,7 +936,7 @@ export function FoodFormDialog({
                   onClick={(e) => openKeypad('calories', e.currentTarget)}
                   className={cn(
                     "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
-                    calories ? "text-calories" : "text-muted-foreground"
+                    calories !== '' ? "text-calories" : "text-muted-foreground"
                   )}
                 >
                   {renderAmountValue(calories, "text-calories")}
@@ -791,10 +953,50 @@ export function FoodFormDialog({
                   onClick={(e) => openKeypad('carbs', e.currentTarget)}
                   className={cn(
                     "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
-                    carbs ? "text-carbs" : "text-muted-foreground"
+                    carbs !== '' ? "text-carbs" : "text-muted-foreground"
                   )}
                 >
                   {renderAmountValue(carbs, "text-carbs")}
+                  <span className="text-xs text-muted-foreground">g</span>
+                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                </button>
+              </div>
+
+              {/* 糖 (次級) */}
+              <div className="h-10 pl-7 pr-4 flex items-center justify-between bg-muted/10">
+                <span className="text-xs text-muted-foreground flex items-center">
+                  <span className="text-muted-foreground/60 mr-1.5 select-none">└</span>
+                  {t('diet.sugar')}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => openKeypad('sugar', e.currentTarget)}
+                  className={cn(
+                    "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
+                    sugar !== '' ? "text-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  {renderAmountValue(sugar, "text-foreground")}
+                  <span className="text-xs text-muted-foreground">g</span>
+                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                </button>
+              </div>
+
+              {/* 膳食纖維 (次級) */}
+              <div className="h-10 pl-7 pr-4 flex items-center justify-between bg-muted/10">
+                <span className="text-xs text-muted-foreground flex items-center">
+                  <span className="text-muted-foreground/60 mr-1.5 select-none">└</span>
+                  {t('diet.fiber')}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => openKeypad('fiber', e.currentTarget)}
+                  className={cn(
+                    "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
+                    fiber !== '' ? "text-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  {renderAmountValue(fiber, "text-foreground")}
                   <span className="text-xs text-muted-foreground">g</span>
                   <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                 </button>
@@ -808,7 +1010,7 @@ export function FoodFormDialog({
                   onClick={(e) => openKeypad('protein', e.currentTarget)}
                   className={cn(
                     "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
-                    protein ? "text-protein" : "text-muted-foreground"
+                    protein !== '' ? "text-protein" : "text-muted-foreground"
                   )}
                 >
                   {renderAmountValue(protein, "text-protein")}
@@ -825,11 +1027,68 @@ export function FoodFormDialog({
                   onClick={(e) => openKeypad('fat', e.currentTarget)}
                   className={cn(
                     "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
-                    fat ? "text-fat" : "text-muted-foreground"
+                    fat !== '' ? "text-fat" : "text-muted-foreground"
                   )}
                 >
                   {renderAmountValue(fat, "text-fat")}
                   <span className="text-xs text-muted-foreground">g</span>
+                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                </button>
+              </div>
+
+              {/* 飽和脂肪 (次級) */}
+              <div className="h-10 pl-7 pr-4 flex items-center justify-between bg-muted/10">
+                <span className="text-xs text-muted-foreground flex items-center">
+                  <span className="text-muted-foreground/60 mr-1.5 select-none">└</span>
+                  {t('diet.saturatedFat')}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => openKeypad('saturatedFat', e.currentTarget)}
+                  className={cn(
+                    "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
+                    saturatedFat !== '' ? "text-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  {renderAmountValue(saturatedFat, "text-foreground")}
+                  <span className="text-xs text-muted-foreground">g</span>
+                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                </button>
+              </div>
+
+              {/* 反式脂肪 (次級) */}
+              <div className="h-10 pl-7 pr-4 flex items-center justify-between bg-muted/10">
+                <span className="text-xs text-muted-foreground flex items-center">
+                  <span className="text-muted-foreground/60 mr-1.5 select-none">└</span>
+                  {t('diet.transFat')}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => openKeypad('transFat', e.currentTarget)}
+                  className={cn(
+                    "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
+                    transFat !== '' ? "text-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  {renderAmountValue(transFat, "text-foreground")}
+                  <span className="text-xs text-muted-foreground">g</span>
+                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                </button>
+              </div>
+
+              {/* 鈉 */}
+              <div className="h-10 px-4 flex items-center justify-between">
+                <span className="text-xs font-medium text-foreground">{t('diet.sodium')}</span>
+                <button
+                  type="button"
+                  onClick={(e) => openKeypad('sodium', e.currentTarget)}
+                  className={cn(
+                    "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
+                    sodium !== '' ? "text-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  {renderAmountValue(sodium, "text-foreground")}
+                  <span className="text-xs text-muted-foreground">mg</span>
                   <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                 </button>
               </div>

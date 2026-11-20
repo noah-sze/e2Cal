@@ -34,6 +34,7 @@ import {
 import { DEFAULT_NATURAL_FOODS } from './defaultNaturalFoods';
 import { inferDiningScenario, DINING_SCENARIOS } from '@/utils/foodNaming';
 import { normalizeServingToMetric } from '@/utils/nutritionMath';
+import { clearFoodsCache } from '@/hooks/useFoods';
 
 /**
  * 平滑遷移飲食日誌條目為系統分類原型 (System Entry Archetype):
@@ -1299,6 +1300,64 @@ export class E2CalDatabase extends Dexie {
           });
         }
       }
+    });
+
+    this.version(25).upgrade(async (tx) => {
+      // 升級至版本 25：全面無縫支援次級營養素（糖 sugar、膳食纖維 fiber、飽和脂肪 saturatedFat、反式脂肪 transFat、鈉 sodium）
+      // 遵循 SSOT 原則，既有自訂食材保持原樣；系統預設食材 (!isCustom) 強制同步為最新權威數值
+      const foodsTable = tx.table('foods');
+      const allFoods = await foodsTable.toArray();
+      const defaultFoodMap = new Map<string, Record<string, unknown>>();
+      for (const defFood of DEFAULT_FOODS) {
+        defaultFoodMap.set(defFood.id, defFood as Record<string, unknown>);
+      }
+
+      for (const food of allFoods) {
+        if (!food.isCustom && defaultFoodMap.has(food.id)) {
+          const defaults = defaultFoodMap.get(food.id);
+          if (!defaults) continue;
+          let changed = false;
+          const updated: Record<string, unknown> = { ...food };
+          for (const key of ['sugar', 'saturatedFat', 'transFat', 'sodium', 'fiber'] as const) {
+            if (defaults[key] !== undefined && updated[key] !== defaults[key]) {
+              updated[key] = defaults[key];
+              changed = true;
+            }
+          }
+          if (changed) {
+            await foodsTable.put(updated);
+          }
+        }
+      }
+    });
+
+    this.version(26).upgrade(async (tx) => {
+      // 升級至版本 26：全量 425 項預設食材次級營養素 100% 完整強制同步覆蓋（確保數值為 0.0 之各欄位如實寫入，清除歷史 undefined）
+      const foodsTable = tx.table('foods');
+      const allFoods = await foodsTable.toArray();
+      const defaultFoodMap = new Map<string, Record<string, unknown>>();
+      for (const defFood of DEFAULT_FOODS) {
+        defaultFoodMap.set(defFood.id, defFood as Record<string, unknown>);
+      }
+
+      for (const food of allFoods) {
+        if (!food.isCustom && defaultFoodMap.has(food.id)) {
+          const defaults = defaultFoodMap.get(food.id);
+          if (!defaults) continue;
+          let changed = false;
+          const updated: Record<string, unknown> = { ...food };
+          for (const key of ['sugar', 'saturatedFat', 'transFat', 'sodium', 'fiber'] as const) {
+            if (defaults[key] !== undefined && updated[key] !== defaults[key]) {
+              updated[key] = defaults[key];
+              changed = true;
+            }
+          }
+          if (changed) {
+            await foodsTable.put(updated);
+          }
+        }
+      }
+      clearFoodsCache();
     });
   }
 

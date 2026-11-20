@@ -8,6 +8,11 @@ export interface BaseNutritionInput {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
+  sugar?: number;
+  saturatedFat?: number;
+  transFat?: number;
+  sodium?: number;
   servingSize?: number;
   servingUnit?: string;
 }
@@ -17,6 +22,11 @@ export interface ScaledNutritionResult {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
+  sugar?: number;
+  saturatedFat?: number;
+  transFat?: number;
+  sodium?: number;
   servingSize: number;
   servingUnit: string;
 }
@@ -46,6 +56,12 @@ export function calculateScaledNutrition(
   const rawSize = typeof item?.servingSize === 'number' && !isNaN(item.servingSize) ? item.servingSize : 100;
   const rawUnit = (item?.servingUnit || 'g').trim() || 'g';
 
+  const scaleOpt = (val: number | undefined, f: number = 1, isInt: boolean = false) => {
+    if (typeof val !== 'number' || isNaN(val)) return undefined;
+    const safe = Math.max(0, val);
+    return isInt ? Math.round(safe * f) : Math.round(safe * f * 10) / 10;
+  };
+
   // 「每份」模式：直接輸出原始物理標籤數值
   if (mode === 'serving') {
     return {
@@ -53,6 +69,11 @@ export function calculateScaledNutrition(
       protein: Math.round(safeProtein * 10) / 10,
       carbs: Math.round(safeCarbs * 10) / 10,
       fat: Math.round(safeFat * 10) / 10,
+      fiber: scaleOpt(item?.fiber),
+      sugar: scaleOpt(item?.sugar),
+      saturatedFat: scaleOpt(item?.saturatedFat),
+      transFat: scaleOpt(item?.transFat),
+      sodium: scaleOpt(item?.sodium, 1, true),
       servingSize: rawSize,
       servingUnit: rawUnit,
     };
@@ -71,6 +92,11 @@ export function calculateScaledNutrition(
         protein: Math.round(safeProtein * 10) / 10,
         carbs: Math.round(safeCarbs * 10) / 10,
         fat: Math.round(safeFat * 10) / 10,
+        fiber: scaleOpt(item?.fiber),
+        sugar: scaleOpt(item?.sugar),
+        saturatedFat: scaleOpt(item?.saturatedFat),
+        transFat: scaleOpt(item?.transFat),
+        sodium: scaleOpt(item?.sodium, 1, true),
         servingSize: 1,
         servingUnit: isLiquid ? 'fl oz' : 'oz',
       };
@@ -80,6 +106,11 @@ export function calculateScaledNutrition(
       protein: Math.round(safeProtein * 10) / 10,
       carbs: Math.round(safeCarbs * 10) / 10,
       fat: Math.round(safeFat * 10) / 10,
+      fiber: scaleOpt(item?.fiber),
+      sugar: scaleOpt(item?.sugar),
+      saturatedFat: scaleOpt(item?.saturatedFat),
+      transFat: scaleOpt(item?.transFat),
+      sodium: scaleOpt(item?.sodium, 1, true),
       servingSize: 100,
       servingUnit: isLiquid ? 'ml' : 'g',
     };
@@ -102,6 +133,11 @@ export function calculateScaledNutrition(
         protein: Math.round(safeProtein * factor * 10) / 10,
         carbs: Math.round(safeCarbs * factor * 10) / 10,
         fat: Math.round(safeFat * factor * 10) / 10,
+        fiber: scaleOpt(item?.fiber, factor),
+        sugar: scaleOpt(item?.sugar, factor),
+        saturatedFat: scaleOpt(item?.saturatedFat, factor),
+        transFat: scaleOpt(item?.transFat, factor),
+        sodium: scaleOpt(item?.sodium, factor, true),
         servingSize: 1,
         servingUnit: 'fl oz',
       };
@@ -119,6 +155,11 @@ export function calculateScaledNutrition(
         protein: Math.round(safeProtein * factor * 10) / 10,
         carbs: Math.round(safeCarbs * factor * 10) / 10,
         fat: Math.round(safeFat * factor * 10) / 10,
+        fiber: scaleOpt(item?.fiber, factor),
+        sugar: scaleOpt(item?.sugar, factor),
+        saturatedFat: scaleOpt(item?.saturatedFat, factor),
+        transFat: scaleOpt(item?.transFat, factor),
+        sodium: scaleOpt(item?.sodium, factor, true),
         servingSize: 1,
         servingUnit: 'oz',
       };
@@ -139,6 +180,11 @@ export function calculateScaledNutrition(
       protein: Math.round(safeProtein * factor * 10) / 10,
       carbs: Math.round(safeCarbs * factor * 10) / 10,
       fat: Math.round(safeFat * factor * 10) / 10,
+      fiber: scaleOpt(item?.fiber, factor),
+      sugar: scaleOpt(item?.sugar, factor),
+      saturatedFat: scaleOpt(item?.saturatedFat, factor),
+      transFat: scaleOpt(item?.transFat, factor),
+      sodium: scaleOpt(item?.sodium, factor, true),
       servingSize: 100,
       servingUnit: 'ml',
     };
@@ -154,6 +200,11 @@ export function calculateScaledNutrition(
       protein: Math.round(safeProtein * factor * 10) / 10,
       carbs: Math.round(safeCarbs * factor * 10) / 10,
       fat: Math.round(safeFat * factor * 10) / 10,
+      fiber: scaleOpt(item?.fiber, factor),
+      sugar: scaleOpt(item?.sugar, factor),
+      saturatedFat: scaleOpt(item?.saturatedFat, factor),
+      transFat: scaleOpt(item?.transFat, factor),
+      sodium: scaleOpt(item?.sodium, factor, true),
       servingSize: 100,
       servingUnit: 'g',
     };
@@ -165,6 +216,11 @@ export interface ScaleBasisParams {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
+  sugar?: number;
+  saturatedFat?: number;
+  transFat?: number;
+  sodium?: number;
   servingSize: number; // 食用單份數值 (如 20g 或 2 oz)
   servingUnit?: string; // 食用單份單位 (如 'g', 'oz', 'ml', 'fl oz')
   basisSize: number;   // 標籤依據數值 (如 100g 或 1 oz)
@@ -176,6 +232,11 @@ export interface ScaledServingNutrition {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
+  sugar?: number;
+  saturatedFat?: number;
+  transFat?: number;
+  sodium?: number;
   servingSize: number;
   servingUnit: string;
 }
@@ -208,6 +269,12 @@ export function scaleNutritionFromBasis(params: ScaleBasisParams): ScaledServing
   const safeCarbs = Math.max(0, typeof params?.carbs === 'number' && !isNaN(params.carbs) ? params.carbs : 0);
   const safeFat = Math.max(0, typeof params?.fat === 'number' && !isNaN(params.fat) ? params.fat : 0);
 
+  const scaleOpt = (val: number | undefined, f: number = 1, isInt: boolean = false) => {
+    if (typeof val !== 'number' || isNaN(val)) return undefined;
+    const safe = Math.max(0, val);
+    return isInt ? Math.round(safe * f) : Math.round(safe * f * 10) / 10;
+  };
+
   const servingSize = Math.max(0, typeof params?.servingSize === 'number' && !isNaN(params.servingSize) ? params.servingSize : 100);
   const basisSize = typeof params?.basisSize === 'number' && !isNaN(params.basisSize) ? params.basisSize : 100;
   const rawServingUnit = (params?.servingUnit || 'g').trim() || 'g';
@@ -223,6 +290,11 @@ export function scaleNutritionFromBasis(params: ScaleBasisParams): ScaledServing
       protein: Math.round(safeProtein * 10) / 10,
       carbs: Math.round(safeCarbs * 10) / 10,
       fat: Math.round(safeFat * 10) / 10,
+      fiber: scaleOpt(params?.fiber),
+      sugar: scaleOpt(params?.sugar),
+      saturatedFat: scaleOpt(params?.saturatedFat),
+      transFat: scaleOpt(params?.transFat),
+      sodium: scaleOpt(params?.sodium, 1, true),
       servingSize: servingSize > 0 ? servingSize : 100,
       servingUnit: rawServingUnit,
     };
@@ -235,9 +307,26 @@ export function scaleNutritionFromBasis(params: ScaleBasisParams): ScaledServing
     protein: Math.round(safeProtein * ratio * 10) / 10,
     carbs: Math.round(safeCarbs * ratio * 10) / 10,
     fat: Math.round(safeFat * ratio * 10) / 10,
+    fiber: scaleOpt(params?.fiber, ratio),
+    sugar: scaleOpt(params?.sugar, ratio),
+    saturatedFat: scaleOpt(params?.saturatedFat, ratio),
+    transFat: scaleOpt(params?.transFat, ratio),
+    sodium: scaleOpt(params?.sodium, ratio, true),
     servingSize,
     servingUnit: rawServingUnit,
   };
+}
+
+export interface CalculatedFoodLogNutrients {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber?: number;
+  sugar?: number;
+  saturatedFat?: number;
+  transFat?: number;
+  sodium?: number;
 }
 
 /**
@@ -250,12 +339,17 @@ export function calculateFoodLogNutrients(
     protein: number;
     carbs: number;
     fat: number;
+    fiber?: number;
+    sugar?: number;
+    saturatedFat?: number;
+    transFat?: number;
+    sodium?: number;
     servingSize?: number;
     servingUnit?: string;
   } | null | undefined,
   quantity: number,
   unit?: string
-): { calories: number; protein: number; carbs: number; fat: number } {
+): CalculatedFoodLogNutrients {
   if (!food) {
     return { calories: 0, protein: 0, carbs: 0, fat: 0 };
   }
@@ -264,6 +358,11 @@ export function calculateFoodLogNutrients(
     protein: food.protein,
     carbs: food.carbs,
     fat: food.fat,
+    fiber: food.fiber,
+    sugar: food.sugar,
+    saturatedFat: food.saturatedFat,
+    transFat: food.transFat,
+    sodium: food.sodium,
     servingSize: quantity,
     servingUnit: unit || food.servingUnit || 'g',
     basisSize: food.servingSize || 100,
@@ -274,6 +373,11 @@ export function calculateFoodLogNutrients(
     protein: scaled.protein,
     carbs: scaled.carbs,
     fat: scaled.fat,
+    fiber: scaled.fiber,
+    sugar: scaled.sugar,
+    saturatedFat: scaled.saturatedFat,
+    transFat: scaled.transFat,
+    sodium: scaled.sodium,
   };
 }
 
@@ -384,6 +488,11 @@ export interface NormalizeFoodInputParams {
   carbs: number;
   protein: number;
   fat: number;
+  fiber?: number;
+  sugar?: number;
+  saturatedFat?: number;
+  transFat?: number;
+  sodium?: number;
   category?: FoodCategory;
 }
 
@@ -394,6 +503,11 @@ export interface NormalizedMetricFoodNutrition {
   carbs: number;
   protein: number;
   fat: number;
+  fiber?: number;
+  sugar?: number;
+  saturatedFat?: number;
+  transFat?: number;
+  sodium?: number;
 }
 
 /**
@@ -420,6 +534,11 @@ export function normalizeFoodInputToMetric(
       ? params.fat
       : 0;
 
+  const safeOpt = (val?: number, scale: number = 1, isInt: boolean = false) => {
+    if (typeof val !== 'number' || !Number.isFinite(val) || val < 0) return undefined;
+    return isInt ? Math.round(val * scale) : roundTo(val * scale, 2);
+  };
+
   // 1. 熱量統一折算為 kcal（1 kcal = 4.184 kJ）
   const baseCaloriesKcal =
     params.energyUnit === 'kJ' ? kjToKcal(safeRawCal, 4) : safeRawCal;
@@ -440,6 +559,11 @@ export function normalizeFoodInputToMetric(
       carbs: roundTo(safeCarbs, 2),
       protein: roundTo(safeProtein, 2),
       fat: roundTo(safeFat, 2),
+      fiber: safeOpt(params.fiber),
+      sugar: safeOpt(params.sugar),
+      saturatedFat: safeOpt(params.saturatedFat),
+      transFat: safeOpt(params.transFat),
+      sodium: safeOpt(params.sodium, 1, true),
     };
   }
 
@@ -467,6 +591,11 @@ export function normalizeFoodInputToMetric(
       carbs: roundTo(safeCarbs, 2),
       protein: roundTo(safeProtein, 2),
       fat: roundTo(safeFat, 2),
+      fiber: safeOpt(params.fiber),
+      sugar: safeOpt(params.sugar),
+      saturatedFat: safeOpt(params.saturatedFat),
+      transFat: safeOpt(params.transFat),
+      sodium: safeOpt(params.sodium, 1, true),
     };
   }
 
@@ -478,6 +607,36 @@ export function normalizeFoodInputToMetric(
     carbs: roundTo(safeCarbs * ratio, 2),
     protein: roundTo(safeProtein * ratio, 2),
     fat: roundTo(safeFat * ratio, 2),
+    fiber: safeOpt(params.fiber, ratio),
+    sugar: safeOpt(params.sugar, ratio),
+    saturatedFat: safeOpt(params.saturatedFat, ratio),
+    transFat: safeOpt(params.transFat, ratio),
+    sodium: safeOpt(params.sodium, ratio, true),
   };
+}
+
+/**
+ * 純函數：計算淨碳水（Net Carbs = carbs - fiber）
+ * 邊界防護：若 fiber 為空或未定義，淨碳水即為 carbs；淨碳水不得小於 0
+ */
+export function calculateNetCarbs(carbs: number, fiber?: number): number {
+  const safeCarbs = Math.max(0, typeof carbs === 'number' && Number.isFinite(carbs) ? carbs : 0);
+  const safeFiber = Math.max(0, typeof fiber === 'number' && Number.isFinite(fiber) ? fiber : 0);
+  return roundTo(Math.max(0, safeCarbs - safeFiber), 2);
+}
+
+/**
+ * 純函數：推算健康不飽和脂肪（Unsaturated Fat = totalFat - saturatedFat - transFat）
+ * 邊界防護：不得小於 0，若未填寫飽和或反式脂肪則視為 0 進行差額估算
+ */
+export function calculateUnsaturatedFat(
+  totalFat: number,
+  saturatedFat?: number,
+  transFat?: number
+): number {
+  const safeFat = Math.max(0, typeof totalFat === 'number' && Number.isFinite(totalFat) ? totalFat : 0);
+  const safeSat = Math.max(0, typeof saturatedFat === 'number' && Number.isFinite(saturatedFat) ? saturatedFat : 0);
+  const safeTrans = Math.max(0, typeof transFat === 'number' && Number.isFinite(transFat) ? transFat : 0);
+  return roundTo(Math.max(0, safeFat - safeSat - safeTrans), 2);
 }
 

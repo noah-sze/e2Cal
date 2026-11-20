@@ -6,6 +6,8 @@ import {
   calculateMealBudget,
   normalizeServingToMetric,
   normalizeFoodInputToMetric,
+  calculateNetCarbs,
+  calculateUnsaturatedFat,
   MEAL_RATIOS,
 } from './nutritionMath';
 
@@ -644,6 +646,120 @@ describe('nutritionMath - normalizeFoodInputToMetric', () => {
       protein: 0,
       fat: 0,
     });
+  });
+});
+
+describe('nutritionMath - 次級營養素擴充與純函數推算', () => {
+  it('calculateScaledNutrition 正確等比縮放次級營養素', () => {
+    const item = {
+      calories: 200,
+      protein: 10,
+      carbs: 30,
+      fat: 8,
+      fiber: 4,
+      sugar: 12,
+      saturatedFat: 2.5,
+      transFat: 0,
+      sodium: 350,
+      servingSize: 50,
+      servingUnit: 'g',
+    };
+
+    // per100g 縮放 100 / 50 = 2 倍
+    const scaled = calculateScaledNutrition(item, 'per100g');
+    expect(scaled.fiber).toBe(8);
+    expect(scaled.sugar).toBe(24);
+    expect(scaled.saturatedFat).toBe(5);
+    expect(scaled.transFat).toBe(0);
+    expect(scaled.sodium).toBe(700);
+  });
+
+  it('calculateScaledNutrition 當未提供次級營養素時保持 undefined', () => {
+    const item = {
+      calories: 100,
+      protein: 5,
+      carbs: 15,
+      fat: 2,
+      servingSize: 100,
+      servingUnit: 'g',
+    };
+
+    const scaled = calculateScaledNutrition(item, 'serving');
+    expect(scaled.fiber).toBeUndefined();
+    expect(scaled.sugar).toBeUndefined();
+    expect(scaled.saturatedFat).toBeUndefined();
+    expect(scaled.transFat).toBeUndefined();
+    expect(scaled.sodium).toBeUndefined();
+  });
+
+  it('scaleNutritionFromBasis 與 calculateFoodLogNutrients 正確折算次級營養素', () => {
+    const food = {
+      calories: 150,
+      protein: 10,
+      carbs: 20,
+      fat: 5,
+      fiber: 3,
+      sugar: 6,
+      saturatedFat: 1.5,
+      transFat: 0,
+      sodium: 120,
+      servingSize: 100,
+      servingUnit: 'g',
+    };
+
+    // 攝取 200g（2 倍）
+    const nutrients = calculateFoodLogNutrients(food, 200, 'g');
+    expect(nutrients.calories).toBe(300);
+    expect(nutrients.fiber).toBe(6);
+    expect(nutrients.sugar).toBe(12);
+    expect(nutrients.saturatedFat).toBe(3);
+    expect(nutrients.transFat).toBe(0);
+    expect(nutrients.sodium).toBe(240);
+  });
+
+  it('normalizeFoodInputToMetric 正確規整次級營養素', () => {
+    const res = normalizeFoodInputToMetric({
+      servingSize: 50,
+      servingUnit: 'g',
+      basisMode: 'custom',
+      basisSize: 100,
+      basisUnit: 'g',
+      calories: 400,
+      energyUnit: 'kcal',
+      carbs: 50,
+      protein: 20,
+      fat: 10,
+      fiber: 6,
+      sugar: 10,
+      saturatedFat: 3,
+      transFat: 0,
+      sodium: 500,
+    });
+
+    // ratio = 50 / 100 = 0.5
+    expect(res.servingSize).toBe(50);
+    expect(res.fiber).toBe(3);
+    expect(res.sugar).toBe(5);
+    expect(res.saturatedFat).toBe(1.5);
+    expect(res.transFat).toBe(0);
+    expect(res.sodium).toBe(250);
+  });
+
+  it('calculateNetCarbs 正確推算淨碳水並具備下限 0 防護', () => {
+    expect(calculateNetCarbs(25, 4)).toBe(21);
+    expect(calculateNetCarbs(10, undefined)).toBe(10);
+    expect(calculateNetCarbs(5, 8)).toBe(0); // 纖維大於總碳水時防護為 0
+    expect(calculateNetCarbs(-5, 2)).toBe(0);
+  });
+
+  it('calculateUnsaturatedFat 正確推算健康不飽和脂肪差額', () => {
+    // 總脂肪 14g，飽和 2g，反式 0g -> 不飽和 12g
+    expect(calculateUnsaturatedFat(14, 2, 0)).toBe(12);
+    // 未填寫反式或飽和時預設為 0
+    expect(calculateUnsaturatedFat(10, 3)).toBe(7);
+    expect(calculateUnsaturatedFat(10)).toBe(10);
+    // 總脂肪小於飽和脂肪時防護為 0
+    expect(calculateUnsaturatedFat(5, 6, 0)).toBe(0);
   });
 });
 

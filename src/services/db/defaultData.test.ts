@@ -66,6 +66,42 @@ describe('系統預設數據完整性與原子計量規範測試', () => {
     expect(soyMilk?.servingUnit).toBe('ml');
   });
 
+  it('所有默認食材必須 100% 完整定義 5 項次級營養素且符合物理守恆與上限防護', () => {
+    for (const food of DEFAULT_FOODS) {
+      expect(food.sugar).toBeDefined();
+      expect(food.fiber).toBeDefined();
+      expect(food.saturatedFat).toBeDefined();
+      expect(food.transFat).toBeDefined();
+      expect(food.sodium).toBeDefined();
+
+      expect(food.sugar).toBeGreaterThanOrEqual(0);
+      expect(Number.isNaN(food.sugar)).toBe(false);
+      expect(food.sugar!).toBeLessThanOrEqual(food.carbs + 0.05);
+
+      expect(food.fiber).toBeGreaterThanOrEqual(0);
+      expect(Number.isNaN(food.fiber)).toBe(false);
+
+      expect(food.saturatedFat).toBeGreaterThanOrEqual(0);
+      expect(Number.isNaN(food.saturatedFat)).toBe(false);
+      expect(food.transFat).toBeGreaterThanOrEqual(0);
+      expect(Number.isNaN(food.transFat)).toBe(false);
+      expect(food.saturatedFat! + food.transFat!).toBeLessThanOrEqual(food.fat + 0.05);
+
+      expect(food.sodium).toBeGreaterThanOrEqual(0);
+      expect(Number.isNaN(food.sodium)).toBe(false);
+    }
+  });
+
+  it('特定食材（如土豆粉）之次級營養素若物理為 0 必須顯式為 0.0 而非 undefined', () => {
+    const potatoVermicelli = DEFAULT_FOODS.find((f) => f.name === '土豆粉');
+    expect(potatoVermicelli).toBeDefined();
+    expect(potatoVermicelli?.sugar).toBe(0);
+    expect(potatoVermicelli?.saturatedFat).toBe(0);
+    expect(potatoVermicelli?.transFat).toBe(0);
+    expect(potatoVermicelli?.sodium).toBe(6);
+    expect(potatoVermicelli?.fiber).toBe(1.2);
+  });
+
   it('所有默認動作之刺激肌群應符合經典 3 級 MuscleRole 標準', () => {
     for (const ex of DEFAULT_EXERCISES) {
       expect(ex.name.trim()).toBeTruthy();

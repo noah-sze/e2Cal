@@ -16,6 +16,10 @@ export interface FoodItem {
   carbs: number;
   fat: number;
   fiber?: number;
+  sugar?: number;
+  saturatedFat?: number;
+  transFat?: number;
+  sodium?: number;
   isCustom: boolean;
   isArchived?: boolean;
   createdAt: number;
@@ -90,6 +94,11 @@ export interface HydratedFoodLog extends FoodLog {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
+  sugar?: number;
+  saturatedFat?: number;
+  transFat?: number;
+  sodium?: number;
 }
 
 /**

@@ -105,6 +105,11 @@ export function useFoodLogs(date: string) {
           protein: computedNutrients.protein,
           carbs: computedNutrients.carbs,
           fat: computedNutrients.fat,
+          fiber: computedNutrients.fiber,
+          sugar: computedNutrients.sugar,
+          saturatedFat: computedNutrients.saturatedFat,
+          transFat: computedNutrients.transFat,
+          sodium: computedNutrients.sodium,
         };
       });
 

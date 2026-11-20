@@ -55,4 +55,35 @@ describe('DEFAULT_NATURAL_FOODS 精密客觀測量儀審計', () => {
       expect(food.fat).toBeGreaterThanOrEqual(0);
     }
   });
+
+  it('所有天然食材必須 100% 完整定義 5 項次級營養素且符合物理守恆與上限防護', () => {
+    for (const food of DEFAULT_NATURAL_FOODS) {
+      // 確保 5 項次級營養素全部顯式定義
+      expect(food.sugar).toBeDefined();
+      expect(food.fiber).toBeDefined();
+      expect(food.saturatedFat).toBeDefined();
+      expect(food.transFat).toBeDefined();
+      expect(food.sodium).toBeDefined();
+
+      // 糖分
+      expect(food.sugar).toBeGreaterThanOrEqual(0);
+      expect(Number.isNaN(food.sugar)).toBe(false);
+      expect(food.sugar!).toBeLessThanOrEqual(food.carbs + 0.05);
+
+      // 膳食纖維
+      expect(food.fiber).toBeGreaterThanOrEqual(0);
+      expect(Number.isNaN(food.fiber)).toBe(false);
+
+      // 飽和脂肪與反式脂肪
+      expect(food.saturatedFat).toBeGreaterThanOrEqual(0);
+      expect(Number.isNaN(food.saturatedFat)).toBe(false);
+      expect(food.transFat).toBeGreaterThanOrEqual(0);
+      expect(Number.isNaN(food.transFat)).toBe(false);
+      expect(food.saturatedFat! + food.transFat!).toBeLessThanOrEqual(food.fat + 0.05);
+
+      // 鈉
+      expect(food.sodium).toBeGreaterThanOrEqual(0);
+      expect(Number.isNaN(food.sodium)).toBe(false);
+    }
+  });
 });

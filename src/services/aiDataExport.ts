@@ -47,6 +47,11 @@ export interface ExportNutrientSummary {
   carbs: number;
   protein: number;
   fat: number;
+  fiber?: number;
+  sugar?: number;
+  saturatedFat?: number;
+  transFat?: number;
+  sodium?: number;
 }
 
 export interface ExportRecipeIngredientItem {
@@ -379,6 +384,11 @@ function buildDietSection(
       carbs: roundTo(nutrients.carbs, 1),
       protein: roundTo(nutrients.protein, 1),
       fat: roundTo(nutrients.fat, 1),
+      fiber: nutrients.fiber,
+      sugar: nutrients.sugar,
+      saturatedFat: nutrients.saturatedFat,
+      transFat: nutrients.transFat,
+      sodium: nutrients.sodium,
     };
   });
 
@@ -389,6 +399,16 @@ function buildDietSection(
   let totalCarbs = 0;
   let totalProtein = 0;
   let totalFat = 0;
+  let totalFiber = 0;
+  let totalSugar = 0;
+  let totalSaturatedFat = 0;
+  let totalTransFat = 0;
+  let totalSodium = 0;
+  let hasFiber = false;
+  let hasSugar = false;
+  let hasSatFat = false;
+  let hasTransFat = false;
+  let hasSodium = false;
 
   for (const mealType of mealTypes) {
     const entriesForMeal = hydratedEntries.filter((e) => e.mealType === mealType);
@@ -415,6 +435,12 @@ function buildDietSection(
       totalCarbs += entry.carbs;
       totalProtein += entry.protein;
       totalFat += entry.fat;
+
+      if (typeof entry.fiber === 'number') { totalFiber += entry.fiber; hasFiber = true; }
+      if (typeof entry.sugar === 'number') { totalSugar += entry.sugar; hasSugar = true; }
+      if (typeof entry.saturatedFat === 'number') { totalSaturatedFat += entry.saturatedFat; hasSatFat = true; }
+      if (typeof entry.transFat === 'number') { totalTransFat += entry.transFat; hasTransFat = true; }
+      if (typeof entry.sodium === 'number') { totalSodium += entry.sodium; hasSodium = true; }
 
       if (entry.bundleId) {
         let bundleItem = bundleGroupMap.get(entry.bundleId);
@@ -500,6 +526,11 @@ function buildDietSection(
       carbs: roundTo(totalCarbs, 1),
       protein: roundTo(totalProtein, 1),
       fat: roundTo(totalFat, 1),
+      fiber: hasFiber ? roundTo(totalFiber, 1) : undefined,
+      sugar: hasSugar ? roundTo(totalSugar, 1) : undefined,
+      saturatedFat: hasSatFat ? roundTo(totalSaturatedFat, 1) : undefined,
+      transFat: hasTransFat ? roundTo(totalTransFat, 1) : undefined,
+      sodium: hasSodium ? Math.round(totalSodium) : undefined,
     },
     calorieDiff: actualEnergy - targetEnergy,
     meals: mealGroups,
@@ -774,8 +805,16 @@ export function formatDailyExportAsText(
     lines.push(
       `- ${t('aiExport.diet.target', '目標配額')}: ${d.target.calories}${eUnit} (C: ${d.target.carbs}g / P: ${d.target.protein}g / F: ${d.target.fat}g | ${d.macroSplit.carbs}/${d.macroSplit.protein}/${d.macroSplit.fat})`
     );
+    const secondaryDetails: string[] = [];
+    if (d.actual.sugar) secondaryDetails.push(`${t('diet.sugar', '糖')}: ${d.actual.sugar}g`);
+    if (d.actual.fiber) secondaryDetails.push(`${t('diet.fiber', '纖維')}: ${d.actual.fiber}g`);
+    if (d.actual.saturatedFat) secondaryDetails.push(`${t('diet.saturatedFat', '飽和脂肪')}: ${d.actual.saturatedFat}g`);
+    if (d.actual.transFat) secondaryDetails.push(`${t('diet.transFat', '反式脂肪')}: ${d.actual.transFat}g`);
+    if (d.actual.sodium) secondaryDetails.push(`${t('diet.sodium', '鈉')}: ${d.actual.sodium}mg`);
+    const secondaryText = secondaryDetails.length > 0 ? ` · ${secondaryDetails.join(' · ')}` : '';
+
     lines.push(
-      `- ${t('aiExport.diet.actual', '實際攝取')}: ${d.actual.calories}${eUnit} (C: ${d.actual.carbs}g / P: ${d.actual.protein}g / F: ${d.actual.fat}g)`
+      `- ${t('aiExport.diet.actual', '實際攝取')}: ${d.actual.calories}${eUnit} (C: ${d.actual.carbs}g / P: ${d.actual.protein}g / F: ${d.actual.fat}g${secondaryText})`
     );
     lines.push(
       `- ${t('aiExport.diet.calorieDiff', '熱量差值')}: ${diffSign}${d.calorieDiff}${eUnit}`
