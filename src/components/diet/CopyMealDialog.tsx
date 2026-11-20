@@ -38,7 +38,7 @@ interface CopyableMealItem extends FoodLog {
  * 1. 標準 Precision Modal 幾何（w-[320px] sm:w-[340px]，shadow-none，border border-border，p-4）。
  * 2. 標頭符合規範：左上角 ✕ 圓形關閉按鈕，中間標題純粹為「複製餐點」（去綴詞），右上角 ✓ 圓形確認按鈕。
  * 3. 佈局改用方案 1A（Integrated Header Notch）：移除舊有 40px Tab 欄，在食物滾動容器頂部整合灰底橫欄，左側顯示來源日期（如 11/09 (昨日)），右側膠囊按鈕「更換 ▾」呼出日期選擇器。
- * 4. 食材清單容器（min-h-[220px] max-h-[340px]），條目沿用食譜詳情（EditRecipeLogDialog）規格（min-h-12 / 48px），支援勾選、品名截斷與右側常用數字膠囊按鈕（點擊呼出 NumericKeypadDialog 即時調整重量）。
+ * 4. 食材清單容器（min-h-[220px] max-h-[340px]），條目沿用菜餚詳情（RecipeLogDialog）規格（min-h-12 / 48px），支援勾選、品名截斷與右側常用數字膠囊按鈕（點擊呼出 NumericKeypadDialog 即時調整重量）。
  * 5. 即時聯動：數字鍵盤數值變更時即時重算 calories 與底部彙總條。
  * 6. 底部單行彙總條維持無縫自然留白（無分割線）。
  * 7. 二級日期選擇 Dialog 與懸浮數字鍵盤採平級 Flat Sibling 宣告。

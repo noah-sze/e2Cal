@@ -14,7 +14,7 @@ import {
 } from '@/constants/dietTemplates';
 import { DietPlanModal } from '@/components/diet/DietPlanModal';
 import { EditFoodLogDialog } from '@/components/diet/EditFoodLogDialog';
-import { EditRecipeLogDialog } from '@/components/diet/EditRecipeLogDialog';
+import { RecipeLogDialog } from '@/components/diet/RecipeLogDialog';
 import { CopyMealDialog } from '@/components/diet/CopyMealDialog';
 import { RawWeightGuideDialog } from '@/components/diet/RawWeightGuideDialog';
 import {
@@ -22,7 +22,6 @@ import {
   type DiningScenarioId,
 } from '@/components/diet/QuickPlaceholderDialog';
 import { FoodRecipeSelectDialog } from '@/components/food/FoodRecipeSelectDialog';
-import { RecipeStagingDialog } from '@/components/food/RecipeStagingDialog';
 import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
 import { calculateIngredientMacros } from '@/utils/recipeMath';
 import { formatFoodDisplayName } from '@/utils/foodNaming';
@@ -374,8 +373,8 @@ export default function Diet() {
         onDelete={editingPlaceholderLog ? handleDeletePlaceholder : undefined}
       />
 
-      {/* 菜餚組合記錄編輯管理 Dialog (菜餚方案 1) */}
-      <EditRecipeLogDialog
+      {/* 菜餚組合記錄編輯管理 Dialog (共用通用 RecipeLogDialog) */}
+      <RecipeLogDialog
         open={!!editingBundle}
         onOpenChange={(open) => !open && setEditingBundle(null)}
         bundleId={editingBundle?.bundleId || null}
@@ -438,9 +437,9 @@ export default function Diet() {
         />
       )}
 
-      {/* 選擇食譜後的構成食材與重量調整 Dialog (RecipeStagingDialog，第二層彈窗 zIndex={70}) */}
+      {/* 選擇食譜後的構成食材與重量調整 Dialog (共用通用 RecipeLogDialog，第二層彈窗 zIndex={70}) */}
       {selectedRecipeForStaging && (
-        <RecipeStagingDialog
+        <RecipeLogDialog
           open={!!selectedRecipeForStaging}
           onOpenChange={(open) => {
             if (!open) setSelectedRecipeForStaging(null);

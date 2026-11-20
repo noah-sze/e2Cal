@@ -4,14 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { toast } from '@/components/ui/toast';
 import { CopySnippet } from '../components/CopySnippet';
+import { cn } from '@/lib/utils';
 
 // 飲食模組 Dialogs
 import { FoodFormDialog } from '@/components/food/FoodFormDialog';
 import { RecipeFormDialog } from '@/components/food/RecipeFormDialog';
 import { FoodRecipeSelectDialog } from '@/components/food/FoodRecipeSelectDialog';
-import { RecipeStagingDialog } from '@/components/food/RecipeStagingDialog';
+import { RecipeLogDialog } from '@/components/diet/RecipeLogDialog';
 import { EditFoodLogDialog } from '@/components/diet/EditFoodLogDialog';
-import { EditRecipeLogDialog } from '@/components/diet/EditRecipeLogDialog';
 import { CopyMealDialog } from '@/components/diet/CopyMealDialog';
 import { CopyMealDatePickerDialog } from '@/components/diet/CopyMealDatePickerDialog';
 import { QuickPlaceholderDialog } from '@/components/diet/QuickPlaceholderDialog';
@@ -41,6 +41,7 @@ import type {
   FoodItem,
   FoodRecipe,
   Exercise,
+  Equipment,
   WorkoutRoutine,
   HydratedFoodLog,
   UserProfile,
@@ -146,12 +147,28 @@ const MOCK_BASE_INFO: UserBaseInfo = {
   updatedAt: Date.now(),
 };
 
-interface DialogRowItemProps {
+const MOCK_EQUIPMENT: Equipment = {
+  id: 'eq-1',
+  name: '奧林匹克長槓',
+  isCustom: true,
+  isArchived: false,
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+};
+
+export interface DialogAction {
+  label: string;
+  onOpen: () => void;
+  variant?: 'outline' | 'default' | 'destructive';
+}
+
+export interface DialogRowItemProps {
   name: string;
   component: string;
   desc: string;
   badge?: string;
-  onOpen: () => void;
+  onOpen?: () => void;
+  actions?: DialogAction[];
 }
 
 const DialogRowItem: React.FC<DialogRowItemProps> = ({
@@ -160,60 +177,82 @@ const DialogRowItem: React.FC<DialogRowItemProps> = ({
   desc,
   badge = 'Modal',
   onOpen,
-}) => (
-  <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-hover transition-colors">
-    <div className="min-w-0 flex-1 space-y-0.5">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs font-medium text-foreground">{name}</span>
-        <CopySnippet variant="subtle" className="text-2xs" value={component}>
-          {component}
-        </CopySnippet>
-        <Badge variant="outline" className="text-3xs font-mono py-0 h-4 px-1 border-border shadow-none">
-          {badge}
-        </Badge>
+  actions,
+}) => {
+  const finalActions: DialogAction[] = actions ?? (onOpen ? [{ label: '測試', onOpen }] : []);
+
+  return (
+    <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-hover transition-colors">
+      <div className="min-w-0 flex-1 space-y-0.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-medium text-foreground">{name}</span>
+          <CopySnippet variant="subtle" className="text-2xs" value={component}>
+            {component}
+          </CopySnippet>
+          <Badge variant="outline" className="text-3xs font-mono py-0 h-4 px-1 border-border shadow-none">
+            {badge}
+          </Badge>
+        </div>
+        <div className="text-2xs text-muted-foreground truncate">{desc}</div>
       </div>
-      <div className="text-2xs text-muted-foreground truncate">{desc}</div>
+      <div className="shrink-0 flex items-center justify-end gap-1.5 flex-wrap">
+        {finalActions.map((action, idx) => (
+          <Button
+            key={idx}
+            variant={action.variant ?? 'outline'}
+            size="sm"
+            className={cn(
+              'h-6 text-2xs font-mono px-2.5 border-border shadow-none',
+              action.variant === 'destructive'
+                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                : 'hover:bg-foreground hover:text-background'
+            )}
+            onClick={action.onOpen}
+          >
+            {action.label}
+          </Button>
+        ))}
+      </div>
     </div>
-    <div className="shrink-0 flex items-center justify-end">
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-6 text-2xs font-mono px-2.5 border-border hover:bg-foreground hover:text-background shadow-none"
-        onClick={onOpen}
-      >
-        測試
-      </Button>
-    </div>
-  </div>
-);
+  );
+};
 
 export const DialogsTab: React.FC = () => {
   const confirm = useConfirm();
 
-  // 飲食模組 State (11 項)
+  // 飲食模組 State (10 項獨立組件)
   const [foodFormOpen, setFoodFormOpen] = useState(false);
   const [foodFormEditMode, setFoodFormEditMode] = useState(false);
+
   const [recipeFormOpen, setRecipeFormOpen] = useState(false);
+  const [recipeFormEditMode, setRecipeFormEditMode] = useState(false);
+
+  const [recipeLogOpen, setRecipeLogOpen] = useState(false);
+  const [recipeLogEditMode, setRecipeLogEditMode] = useState(false);
+
   const [foodRecipeSelectOpen, setFoodRecipeSelectOpen] = useState(false);
-  const [recipeStagingOpen, setRecipeStagingOpen] = useState(false);
   const [editFoodLogOpen, setEditFoodLogOpen] = useState(false);
-  const [editRecipeLogOpen, setEditRecipeLogOpen] = useState(false);
   const [copyMealOpen, setCopyMealOpen] = useState(false);
   const [copyMealDatePickerOpen, setCopyMealDatePickerOpen] = useState(false);
   const [quickPlaceholderOpen, setQuickPlaceholderOpen] = useState(false);
   const [rawWeightGuideOpen, setRawWeightGuideOpen] = useState(false);
   const [dietPlanOpen, setDietPlanOpen] = useState(false);
 
-  // 訓練模組 State (6 項)
+  // 訓練模組 State (6 項獨立組件)
   const [exerciseFormOpen, setExerciseFormOpen] = useState(false);
   const [exerciseFormEditMode, setExerciseFormEditMode] = useState(false);
+
   const [equipmentFormOpen, setEquipmentFormOpen] = useState(false);
+  const [equipmentFormEditMode, setEquipmentFormEditMode] = useState(false);
+
   const [routineFormOpen, setRoutineFormOpen] = useState(false);
+  const [routineFormEditMode, setRoutineFormEditMode] = useState(false);
+
   const [exerciseSelectOpen, setExerciseSelectOpen] = useState(false);
   const [copyWorkoutOpen, setCopyWorkoutOpen] = useState(false);
   const [copyWorkoutDatePickerOpen, setCopyWorkoutDatePickerOpen] = useState(false);
 
-  // 系統與設定模組 State (11 項)
+  // 系統與設定模組 State (10 項獨立組件)
   const [setupProfileOpen, setSetupProfileOpen] = useState(false);
   const [localImportOpen, setLocalImportOpen] = useState(false);
   const [importStrategyOpen, setImportStrategyOpen] = useState(false);
@@ -248,11 +287,11 @@ export const DialogsTab: React.FC = () => {
             彈窗型錄
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5 font-sans">
-            全應用程式 24 個業務 Dialog 與 Modal 統一驗收矩陣。
+            全應用程式 26 個業務 Dialog 統一驗收矩陣，支援同組件多形態（新增/編輯）整合檢視。
           </p>
         </div>
         <div className="text-2xs font-mono text-muted-foreground tabular-nums">
-          24 項元件
+          26 項元件
         </div>
       </div>
 
@@ -260,36 +299,75 @@ export const DialogsTab: React.FC = () => {
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-mono text-muted-foreground">
-            飲食與營養 (11)
+            飲食與營養 (10)
           </h3>
         </div>
         <div className="divide-y divide-border rounded-lg border border-border bg-card overflow-hidden shadow-none">
           <DialogRowItem
-            name="新增食材"
+            name="食材表單"
             component="FoodFormDialog"
-            desc="5 大分類、生重基準折算與度量單位"
-            badge="Create"
-            onOpen={() => {
-              setFoodFormEditMode(false);
-              setFoodFormOpen(true);
-            }}
-          />
-          <DialogRowItem
-            name="編輯食材"
-            component="FoodFormDialog"
-            desc="帶 Mock 雞胸肉資料與 100 g 基準折算"
-            badge="Edit"
-            onOpen={() => {
-              setFoodFormEditMode(true);
-              setFoodFormOpen(true);
-            }}
+            desc="5 大分類、生重基準折算與度量單位 (支援空白與既有數據)"
+            badge="Form"
+            actions={[
+              {
+                label: '新增',
+                onOpen: () => {
+                  setFoodFormEditMode(false);
+                  setFoodFormOpen(true);
+                },
+              },
+              {
+                label: '編輯',
+                onOpen: () => {
+                  setFoodFormEditMode(true);
+                  setFoodFormOpen(true);
+                },
+              },
+            ]}
           />
           <DialogRowItem
             name="菜餚配方"
             component="RecipeFormDialog"
-            desc="食材聚合、調味品與烹調油複合計算"
+            desc="食材聚合、調味品與烹調油複合計算 (支援空白與既有數據)"
             badge="Recipe"
-            onOpen={() => setRecipeFormOpen(true)}
+            actions={[
+              {
+                label: '新增',
+                onOpen: () => {
+                  setRecipeFormEditMode(false);
+                  setRecipeFormOpen(true);
+                },
+              },
+              {
+                label: '編輯',
+                onOpen: () => {
+                  setRecipeFormEditMode(true);
+                  setRecipeFormOpen(true);
+                },
+              },
+            ]}
+          />
+          <DialogRowItem
+            name="菜餚日誌"
+            component="RecipeLogDialog"
+            desc="複合菜餚拆解秤重暫存與已記錄組合成分編輯"
+            badge="Bundle"
+            actions={[
+              {
+                label: '新增秤重',
+                onOpen: () => {
+                  setRecipeLogEditMode(false);
+                  setRecipeLogOpen(true);
+                },
+              },
+              {
+                label: '編輯組合',
+                onOpen: () => {
+                  setRecipeLogEditMode(true);
+                  setRecipeLogOpen(true);
+                },
+              },
+            ]}
           />
           <DialogRowItem
             name="食材/菜餚選擇器"
@@ -299,25 +377,11 @@ export const DialogsTab: React.FC = () => {
             onOpen={() => setFoodRecipeSelectOpen(true)}
           />
           <DialogRowItem
-            name="暫存秤重"
-            component="RecipeStagingDialog"
-            desc="將複合菜餚拆解為單品食材並記錄真實重量"
-            badge="Staging"
-            onOpen={() => setRecipeStagingOpen(true)}
-          />
-          <DialogRowItem
             name="單品日誌"
             component="EditFoodLogDialog"
             desc="調整已記錄食材的攝入克數與數值"
             badge="Log"
             onOpen={() => setEditFoodLogOpen(true)}
-          />
-          <DialogRowItem
-            name="複合日誌"
-            component="EditRecipeLogDialog"
-            desc="調整複合菜餚組合的成分與克數"
-            badge="Bundle"
-            onOpen={() => setEditRecipeLogOpen(true)}
           />
           <DialogRowItem
             name="複製餐點"
@@ -366,38 +430,70 @@ export const DialogsTab: React.FC = () => {
         </div>
         <div className="divide-y divide-border rounded-lg border border-border bg-card overflow-hidden shadow-none">
           <DialogRowItem
-            name="新增動作"
+            name="動作表單"
             component="ExerciseFormDialog"
-            desc="器材類型、17 個解剖肌群 3 級角色指派"
-            badge="Create"
-            onOpen={() => {
-              setExerciseFormEditMode(false);
-              setExerciseFormOpen(true);
-            }}
-          />
-          <DialogRowItem
-            name="編輯動作"
-            component="ExerciseFormDialog"
-            desc="帶 Mock 槓鈴深蹲與肌群映射配置"
-            badge="Edit"
-            onOpen={() => {
-              setExerciseFormEditMode(true);
-              setExerciseFormOpen(true);
-            }}
+            desc="器材類型、17 個解剖肌群 3 級角色指派 (支援空白與既有數據)"
+            badge="Form"
+            actions={[
+              {
+                label: '新增',
+                onOpen: () => {
+                  setExerciseFormEditMode(false);
+                  setExerciseFormOpen(true);
+                },
+              },
+              {
+                label: '編輯',
+                onOpen: () => {
+                  setExerciseFormEditMode(true);
+                  setExerciseFormOpen(true);
+                },
+              },
+            ]}
           />
           <DialogRowItem
             name="器材規格"
             component="EquipmentFormDialog"
-            desc="自定義器材名稱與分類"
+            desc="自定義器材名稱與分類 (支援空白與既有數據)"
             badge="Equipment"
-            onOpen={() => setEquipmentFormOpen(true)}
+            actions={[
+              {
+                label: '新增',
+                onOpen: () => {
+                  setEquipmentFormEditMode(false);
+                  setEquipmentFormOpen(true);
+                },
+              },
+              {
+                label: '編輯',
+                onOpen: () => {
+                  setEquipmentFormEditMode(true);
+                  setEquipmentFormOpen(true);
+                },
+              },
+            ]}
           />
           <DialogRowItem
             name="課表編排"
             component="RoutineFormDialog"
-            desc="編排固定動作組合課表"
+            desc="編排固定動作組合課表 (支援空白與既有數據)"
             badge="Routine"
-            onOpen={() => setRoutineFormOpen(true)}
+            actions={[
+              {
+                label: '新增',
+                onOpen: () => {
+                  setRoutineFormEditMode(false);
+                  setRoutineFormOpen(true);
+                },
+              },
+              {
+                label: '編輯',
+                onOpen: () => {
+                  setRoutineFormEditMode(true);
+                  setRoutineFormOpen(true);
+                },
+              },
+            ]}
           />
           <DialogRowItem
             name="動作/課表選擇器"
@@ -427,7 +523,7 @@ export const DialogsTab: React.FC = () => {
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-mono text-muted-foreground">
-            設定、同步與通用 (11)
+            設定、同步與通用 (10)
           </h3>
         </div>
         <div className="divide-y divide-border rounded-lg border border-border bg-card overflow-hidden shadow-none">
@@ -495,23 +591,30 @@ export const DialogsTab: React.FC = () => {
             onOpen={() => setKeypadOpen(true)}
           />
           <DialogRowItem
-            name="高危確認"
-            component="useConfirm(destructive)"
-            desc="實色紅底高對比防呆二次確認"
+            name="確認彈窗"
+            component="ConfirmDialog (useConfirm)"
+            desc="全站通用防呆二次確認，支援普通確認、毀滅性操作與歸檔形態"
             badge="Confirm"
-            onOpen={() => handleTestConfirm('destructive')}
-          />
-          <DialogRowItem
-            name="歸檔確認"
-            component="useConfirm(archive)"
-            desc="帶實體規格說明的專案標準歸檔確認"
-            badge="Confirm"
-            onOpen={() => handleTestConfirm('archive')}
+            actions={[
+              {
+                label: '普通',
+                onOpen: () => handleTestConfirm('default'),
+              },
+              {
+                label: '毀滅',
+                variant: 'destructive',
+                onOpen: () => handleTestConfirm('destructive'),
+              },
+              {
+                label: '歸檔',
+                onOpen: () => handleTestConfirm('archive'),
+              },
+            ]}
           />
         </div>
       </div>
 
-      {/* ==================== 實際掛載 24 個 Dialog 實體 ==================== */}
+      {/* ==================== 實際掛載 26 個 Dialog 實體 ==================== */}
 
       {/* 飲食 1: 食材表單 */}
       <FoodFormDialog
@@ -528,32 +631,45 @@ export const DialogsTab: React.FC = () => {
       <RecipeFormDialog
         open={recipeFormOpen}
         onOpenChange={setRecipeFormOpen}
+        initialData={recipeFormEditMode ? MOCK_RECIPE : null}
         onSubmit={async () => {
           toast.show('已儲存');
           setRecipeFormOpen(false);
         }}
       />
 
-      {/* 飲食 3: 食材/食譜選擇器 */}
+      {/* 飲食 3: 菜餚日誌（整合秤重暫存與複合編輯） */}
+      <RecipeLogDialog
+        open={recipeLogOpen}
+        onOpenChange={setRecipeLogOpen}
+        mode={recipeLogEditMode ? 'edit' : 'create'}
+        recipe={recipeLogEditMode ? null : MOCK_RECIPE}
+        mealType="lunch"
+        date={new Date().toISOString().slice(0, 10)}
+        bundleId={recipeLogEditMode ? 'bundle-1' : undefined}
+        bundleTitle={recipeLogEditMode ? '雞胸肉義大利麵' : undefined}
+        logs={recipeLogEditMode ? [MOCK_HYDRATED_FOOD_LOG] : undefined}
+        onSuccess={() => {
+          toast.show('已記錄');
+          setRecipeLogOpen(false);
+        }}
+        onSave={async () => {
+          toast.show('已更新');
+          setRecipeLogOpen(false);
+        }}
+        onDeleteBundle={async () => {
+          toast.show('已刪除');
+          setRecipeLogOpen(false);
+        }}
+      />
+
+      {/* 飲食 4: 食材/食譜選擇器 */}
       <FoodRecipeSelectDialog
         open={foodRecipeSelectOpen}
         onOpenChange={setFoodRecipeSelectOpen}
         onSelect={() => {
           toast.show('已選取');
           setFoodRecipeSelectOpen(false);
-        }}
-      />
-
-      {/* 飲食 4: 菜餚暫存彈窗 */}
-      <RecipeStagingDialog
-        open={recipeStagingOpen}
-        onOpenChange={setRecipeStagingOpen}
-        recipe={MOCK_RECIPE}
-        mealType="lunch"
-        date={new Date().toISOString().slice(0, 10)}
-        onSuccess={() => {
-          toast.show('已記錄');
-          setRecipeStagingOpen(false);
         }}
       />
 
@@ -572,24 +688,7 @@ export const DialogsTab: React.FC = () => {
         }}
       />
 
-      {/* 飲食 6: 編輯食譜記錄 */}
-      <EditRecipeLogDialog
-        open={editRecipeLogOpen}
-        onOpenChange={setEditRecipeLogOpen}
-        bundleId="bundle-1"
-        bundleTitle="雞胸肉便當"
-        logs={[MOCK_HYDRATED_FOOD_LOG]}
-        onSave={async () => {
-          toast.show('已更新');
-          setEditRecipeLogOpen(false);
-        }}
-        onDeleteBundle={async () => {
-          toast.show('已刪除');
-          setEditRecipeLogOpen(false);
-        }}
-      />
-
-      {/* 飲食 7: 複製餐點 */}
+      {/* 飲食 6: 複製餐點 */}
       <CopyMealDialog
         open={copyMealOpen}
         onOpenChange={setCopyMealOpen}
@@ -597,7 +696,7 @@ export const DialogsTab: React.FC = () => {
         targetDate={new Date().toISOString().slice(0, 10)}
       />
 
-      {/* 飲食 8: 複製餐點日期選擇器 */}
+      {/* 飲食 7: 複製餐點日期選擇器 */}
       <CopyMealDatePickerDialog
         open={copyMealDatePickerOpen}
         onOpenChange={setCopyMealDatePickerOpen}
@@ -611,7 +710,7 @@ export const DialogsTab: React.FC = () => {
         }}
       />
 
-      {/* 飲食 9: 外食估算/配額佔位 */}
+      {/* 飲食 8: 外食估算/配額佔位 */}
       <QuickPlaceholderDialog
         open={quickPlaceholderOpen}
         onOpenChange={setQuickPlaceholderOpen}
@@ -623,7 +722,7 @@ export const DialogsTab: React.FC = () => {
         }}
       />
 
-      {/* 飲食 10: 生重引導 */}
+      {/* 飲食 9: 生重引導 */}
       <RawWeightGuideDialog
         open={rawWeightGuideOpen}
         onOpenChange={setRawWeightGuideOpen}
@@ -633,7 +732,7 @@ export const DialogsTab: React.FC = () => {
         }}
       />
 
-      {/* 飲食 11: 飲食計劃設定 */}
+      {/* 飲食 10: 飲食計劃設定 */}
       <DietPlanModal
         isOpen={dietPlanOpen}
         onClose={() => setDietPlanOpen(false)}
@@ -659,7 +758,7 @@ export const DialogsTab: React.FC = () => {
       <EquipmentFormDialog
         open={equipmentFormOpen}
         onOpenChange={setEquipmentFormOpen}
-        equipment={{ id: 'eq-1', name: '奧林匹克槓鈴', isCustom: true, isArchived: false, createdAt: Date.now(), updatedAt: Date.now() }}
+        equipment={equipmentFormEditMode ? MOCK_EQUIPMENT : null}
         onSubmit={async () => {
           toast.show('已儲存');
           setEquipmentFormOpen(false);
@@ -670,7 +769,7 @@ export const DialogsTab: React.FC = () => {
       <RoutineFormDialog
         open={routineFormOpen}
         onOpenChange={setRoutineFormOpen}
-        initialData={MOCK_ROUTINE}
+        initialData={routineFormEditMode ? MOCK_ROUTINE : null}
         onSubmit={async () => {
           toast.show('已儲存');
           setRoutineFormOpen(false);

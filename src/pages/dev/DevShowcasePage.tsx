@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Moon, Sun, ArrowLeft } from 'lucide-react';
-import { BrandWordmark } from '@/components/ui/Logo';
+import { BrandWordmark, BrandText } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -89,7 +89,7 @@ export default function DevShowcasePage() {
               </TabsTrigger>
             </TabsList>
             <div className="text-2xs font-mono text-muted-foreground hidden sm:block">
-              e2Cal UI System
+              <BrandText text="e2Cal UI System" />
             </div>
           </div>
 

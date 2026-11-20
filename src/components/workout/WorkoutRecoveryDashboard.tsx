@@ -166,7 +166,6 @@ export const WorkoutRecoveryDashboard = memo(function WorkoutRecoveryDashboard({
               interactive={interactive}
               size="md"
               showLabels={true}
-              showHud={false}
               className="w-full max-w-[340px] sm:max-w-[400px]"
             />
           </div>

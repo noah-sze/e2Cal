@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, ChevronRight } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 import { APP_ROUTES } from '@/utils/navigation';
 import {
   Dialog,
@@ -11,20 +12,20 @@ import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
 import { FoodRecipeSelectDialog } from '@/components/food/FoodRecipeSelectDialog';
 import { HoldToDeleteButton } from '@/components/ui/HoldToDeleteButton';
 import { db } from '@/services/db/db';
-import type { HydratedFoodLog, FoodItem, FoodRecipe } from '@/types';
-import { formatDisplayAmount } from '@/lib/utils';
+import type { HydratedFoodLog, FoodItem, FoodRecipe, MealType } from '@/types';
+import { cn, formatDisplayAmount } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
 import { calculateIngredientMacros } from '@/utils/recipeMath';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { formatEnergy } from '@/utils/unitMath';
 import { formatFoodDisplayName } from '@/utils/foodNaming';
-import { getInMemoryFoodsCache, prewarmFoodsCache } from '@/hooks/useFoods';
+import { getInMemoryFoodsCache, prewarmFoodsCache, useFoods } from '@/hooks/useFoods';
 import { getInMemoryRecipesCache, prewarmRecipesCache } from '@/hooks/useRecipes';
-import { prewarmDailyDietLogsCache } from '@/hooks/useFoodLogs';
+import { prewarmDailyDietLogsCache, useFoodLogs } from '@/hooks/useFoodLogs';
 
 export interface EditableRecipeIngredient {
   id: string; // 唯一列識別碼
-  originalLogId?: string; // 原 FoodLog ID (若是新增的則無)
+  originalLogId?: string; // 原 FoodLog ID (若為新增則無)
   foodId?: string;
   foodName: string;
   quantity: number;
@@ -33,13 +34,27 @@ export interface EditableRecipeIngredient {
   baseRatio?: { calories: number; carbs: number; protein: number; fat: number };
 }
 
-export interface EditRecipeLogDialogProps {
+export interface RecipeLogDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  bundleId: string | null;
-  bundleTitle: string;
-  logs: HydratedFoodLog[];
-  onSave: (
+  /** 操作模式：預設依據是否傳入 logs / onDeleteBundle 自動判定 */
+  mode?: 'create' | 'edit';
+  /** 新增模式：待記錄之食譜原型 */
+  recipe?: FoodRecipe | null;
+  /** 新增模式：餐別 (breakfast, lunch, dinner, snack) */
+  mealType?: MealType;
+  /** 新增模式：記錄日期 (YYYY-MM-DD) */
+  date?: string;
+  /** 完成回調（新增成功或外部自訂儲存後呼叫） */
+  onSuccess?: () => void;
+  /** 編輯模式：既有菜餚 Bundle ID */
+  bundleId?: string | null;
+  /** 編輯模式：菜餚顯示名稱（若傳入 recipe 則優先使用 recipe.name） */
+  bundleTitle?: string;
+  /** 編輯模式：既有飲食日誌清單 */
+  logs?: HydratedFoodLog[];
+  /** 自訂保存回調（若未傳入且在新增模式，內部會自動調用 addFoodLogBundle 寫入 DB） */
+  onSave?: (
     bundleId: string,
     items: Array<{
       id?: string;
@@ -48,26 +63,53 @@ export interface EditRecipeLogDialogProps {
       unit: string;
     }>
   ) => Promise<void>;
-  onDeleteBundle: (bundleId: string) => Promise<void>;
+  /** 刪除整組菜餚記錄回調（僅在編輯模式展示長按刪除按鈕） */
+  onDeleteBundle?: (bundleId: string) => Promise<void>;
+  /** 多層彈窗層級 @default 70 */
+  zIndex?: number;
+  overlayClassName?: string;
+  className?: string;
 }
 
-export function EditRecipeLogDialog({
+/**
+ * 全域菜餚組合日誌管理彈窗（單一真理源通用元件）
+ * 兼具「記錄前暫存秤重（Staging）」與「已記錄菜餚日誌編輯（Edit）」雙模式。
+ * 遵循 e2Cal 視覺與排版標準：
+ * 1. 4 欄即時巨量素 HUD Banner + 供能比標尺（C -> P -> F 嚴格順序）
+ * 2. 食材列表支援點擊名稱替換、點擊右側膠囊呼出懸浮數字鍵盤
+ * 3. 兄弟節點平鋪彈窗聲明，無嵌套 Dialog
+ */
+export function RecipeLogDialog({
   open,
   onOpenChange,
-  bundleId,
-  bundleTitle,
+  mode: explicitMode,
+  recipe,
+  mealType,
+  date,
+  onSuccess,
+  bundleId: explicitBundleId,
+  bundleTitle: explicitBundleTitle,
   logs,
   onSave,
   onDeleteBundle,
-}: EditRecipeLogDialogProps) {
+  zIndex = 70,
+  overlayClassName,
+  className,
+}: RecipeLogDialogProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { allFoods } = useFoods();
+  const { addFoodLogBundle } = useFoodLogs(date || '');
   const { energyUnit, foodWeightUnit, foodVolumeUnit } = useUnitPreferences();
+
+  const isCreateMode = explicitMode ? explicitMode === 'create' : Boolean(recipe && !logs);
+  const effectiveBundleId = explicitBundleId || recipe?.id || null;
+  const effectiveTitle = recipe?.name || explicitBundleTitle || '';
 
   const [ingredients, setIngredients] = useState<EditableRecipeIngredient[]>([]);
   const [hasRecipeInDb, setHasRecipeInDb] = useState(() => {
-    if (!bundleId) return false;
-    return Boolean(getInMemoryRecipesCache()?.some((r) => r.id === bundleId));
+    if (!effectiveBundleId) return false;
+    return Boolean(getInMemoryRecipesCache()?.some((r) => r.id === effectiveBundleId));
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -85,28 +127,58 @@ export function EditRecipeLogDialog({
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [replacingIndex, setReplacingIndex] = useState<number | null>(null);
 
-  // 檢查 bundleId 是否存在對應的食譜於資料庫中，並預熱詳情頁所需快取
+  // 建立全量食材索引 Map
+  const foodMap = useMemo(() => {
+    const map = new Map<string, FoodItem>();
+    allFoods.forEach((f) => map.set(f.id, f));
+    return map;
+  }, [allFoods]);
+
+  // 檢查 bundleId 是否存在對應的食譜於資料庫中，並預熱詳情頁快取
   useEffect(() => {
-    if (open && bundleId) {
+    if (open && effectiveBundleId) {
       void prewarmRecipesCache();
       void prewarmFoodsCache();
       void prewarmDailyDietLogsCache();
 
-      const cachedHas = getInMemoryRecipesCache()?.some((r) => r.id === bundleId);
+      const cachedHas = getInMemoryRecipesCache()?.some((r) => r.id === effectiveBundleId);
       if (cachedHas) {
         setHasRecipeInDb(true);
       }
-      db.recipes.get(bundleId).then((recipe) => {
-        setHasRecipeInDb(Boolean(recipe || cachedHas));
+      db.recipes.get(effectiveBundleId).then((rec) => {
+        setHasRecipeInDb(Boolean(rec || cachedHas));
       });
     } else {
       setHasRecipeInDb(false);
     }
-  }, [open, bundleId]);
+  }, [open, effectiveBundleId]);
 
-  // 初始化食材清單與拉取關聯 FoodItem 基準資料
+  // 初始化食材清單（支援從 recipe 或既有 logs 載入）
   useEffect(() => {
-    if (open && logs.length > 0) {
+    if (!open) {
+      setIngredients([]);
+      setKeypadConfig(null);
+      setIsPickerOpen(false);
+      setReplacingIndex(null);
+      return;
+    }
+
+    if (isCreateMode && recipe) {
+      // 新增模式：從食譜原型初始化
+      const initialStaged: EditableRecipeIngredient[] = recipe.ingredients.map((ing) => {
+        const baseFood = foodMap.get(ing.foodId) || null;
+        return {
+          id: `${ing.foodId}-${uuidv4()}`,
+          foodId: ing.foodId,
+          foodName: baseFood ? formatFoodDisplayName(baseFood) : '',
+          quantity: ing.quantity,
+          unit: ing.unit || 'g',
+          baseFood,
+        };
+      });
+      setIngredients(initialStaged);
+    } else if (logs && logs.length > 0) {
+      // 編輯模式：從既有日誌條目初始化
       const cachedFoods = getInMemoryFoodsCache();
       const cachedFoodMap = cachedFoods ? new Map(cachedFoods.map((f) => [f.id, f])) : null;
       const initRows: EditableRecipeIngredient[] = logs.map((log) => {
@@ -132,11 +204,11 @@ export function EditRecipeLogDialog({
       const foodIds = logs.map((l) => l.foodId).filter(Boolean) as string[];
       if (foodIds.length > 0) {
         db.foods.where('id').anyOf(foodIds).toArray().then((foods) => {
-          const foodMap = new Map(foods.map((f) => [f.id, f]));
+          const map = new Map(foods.map((f) => [f.id, f]));
           setIngredients(
             initRows.map((row) => ({
               ...row,
-              baseFood: row.foodId ? foodMap.get(row.foodId) || null : null,
+              baseFood: row.foodId ? map.get(row.foodId) || null : null,
             }))
           );
         });
@@ -144,12 +216,13 @@ export function EditRecipeLogDialog({
         setIngredients(initRows);
       }
     }
-  }, [open, logs]);
+  }, [open, isCreateMode, recipe, logs, foodMap]);
 
   // 單項食材即時營養素計算
-  const getIngredientMacros = (item: EditableRecipeIngredient) => {
-    if (item.baseFood) {
-      return calculateIngredientMacros(item.baseFood, item.quantity);
+  const getIngredientMacros = useCallback((item: EditableRecipeIngredient) => {
+    const targetFood = item.baseFood || (item.foodId ? foodMap.get(item.foodId) : null);
+    if (targetFood) {
+      return calculateIngredientMacros(targetFood, item.quantity);
     }
     if (item.baseRatio) {
       return {
@@ -160,7 +233,7 @@ export function EditRecipeLogDialog({
       };
     }
     return { calories: 0, carbs: 0, protein: 0, fat: 0 };
-  };
+  }, [foodMap]);
 
   // 全菜餚總營養素累計 (C -> P -> F 順序)
   const totals = useMemo(() => {
@@ -175,7 +248,7 @@ export function EditRecipeLogDialog({
       },
       { calories: 0, carbs: 0, protein: 0, fat: 0 }
     );
-  }, [ingredients]);
+  }, [ingredients, getIngredientMacros]);
 
   // 供能比比例條推算
   const energyRatios = useMemo(() => {
@@ -227,12 +300,14 @@ export function EditRecipeLogDialog({
     });
   }, [keypadConfig]);
 
-  const handleKeypadConfirm = useCallback((val: number) => {
+  const handleKeypadConfirm = useCallback((val: number, unit?: string) => {
     isKeypadConfirmedRef.current = true;
     setIngredients((prev) => {
       if (!keypadConfig) return prev;
       return prev.map((row, idx) =>
-        idx === keypadConfig.index ? { ...row, quantity: val > 0 ? val : 1 } : row
+        idx === keypadConfig.index
+          ? { ...row, quantity: val > 0 ? val : 1, unit: unit || row.unit }
+          : row
       );
     });
     setKeypadConfig(null);
@@ -291,7 +366,7 @@ export function EditRecipeLogDialog({
       );
     } else {
       const newRow: EditableRecipeIngredient = {
-        id: `row-${Date.now()}-${Math.random()}`,
+        id: `${food.id}-${uuidv4()}`,
         foodId: food.id,
         foodName: formatFoodDisplayName(food),
         quantity: defaultQty,
@@ -303,6 +378,7 @@ export function EditRecipeLogDialog({
 
     triggerHaptic('selection');
     setReplacingIndex(null);
+    setIsPickerOpen(false);
   };
 
   // 移除食材 (至少保留 1 項)
@@ -322,19 +398,31 @@ export function EditRecipeLogDialog({
 
   // 保存整組菜餚記錄
   const handleSubmit = async () => {
-    if (!bundleId || isSubmitting || ingredients.length === 0) return;
+    if (!effectiveBundleId || isSubmitting || ingredients.length === 0) return;
     setIsSubmitting(true);
     try {
-      const updatedItems = ingredients.map((item) => ({
-        id: item.originalLogId,
-        foodId: item.foodId,
-        quantity: item.quantity,
-        unit: item.unit,
-      }));
+      if (onSave) {
+        const updatedItems = ingredients.map((item) => ({
+          id: item.originalLogId,
+          foodId: item.foodId,
+          quantity: item.quantity,
+          unit: item.unit,
+        }));
+        await onSave(effectiveBundleId, updatedItems);
+      } else if (date && mealType) {
+        const logItems = ingredients.map((item) => ({
+          date,
+          mealType,
+          foodId: item.foodId || '',
+          quantity: item.quantity,
+          unit: item.unit,
+        }));
+        await addFoodLogBundle(effectiveBundleId, logItems);
+      }
 
-      await onSave(bundleId, updatedItems);
       triggerHaptic('success');
       onOpenChange(false);
+      onSuccess?.();
     } finally {
       setIsSubmitting(false);
     }
@@ -342,10 +430,10 @@ export function EditRecipeLogDialog({
 
   // 刪除整組菜餚記錄
   const handleDeleteAll = async () => {
-    if (!bundleId || isSubmitting) return;
+    if (!effectiveBundleId || isSubmitting || !onDeleteBundle) return;
     setIsSubmitting(true);
     try {
-      await onDeleteBundle(bundleId);
+      await onDeleteBundle(effectiveBundleId);
       triggerHaptic('medium');
       onOpenChange(false);
     } finally {
@@ -353,27 +441,27 @@ export function EditRecipeLogDialog({
     }
   };
 
-  if (!bundleId) return null;
+  if (!effectiveBundleId && !recipe) return null;
 
   const handleTitleClick = () => {
-    if (!hasRecipeInDb || !bundleId) return;
+    if (!hasRecipeInDb || !effectiveBundleId) return;
     triggerHaptic('selection');
     onOpenChange(false);
-    navigate(APP_ROUTES.recipeDetail(bundleId));
+    navigate(APP_ROUTES.recipeDetail(effectiveBundleId));
   };
 
   return (
     <>
       <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <PrecisionDialogContent
-          title={bundleTitle}
+          title={effectiveTitle}
           onTitleClick={hasRecipeInDb ? handleTitleClick : undefined}
           onSubmit={handleSubmit}
           submitDisabled={isSubmitting || ingredients.length === 0}
           submitAriaLabel={t('common.save')}
           cancelAriaLabel={t('common.cancel')}
-          overlayClassName="z-[70]"
-          className="z-[70] flex flex-col max-h-[85vh] overflow-hidden"
+          overlayClassName={overlayClassName ?? `z-[${zIndex}]`}
+          className={cn(`z-[${zIndex}]`, "flex flex-col max-h-[85vh] overflow-hidden", className)}
           initialFocus={false}
         >
           {/* 表單主體 (聯合滾動區域) */}
@@ -488,18 +576,20 @@ export function EditRecipeLogDialog({
               </div>
             </div>
 
-            {/* 底部破壞性按鈕 (長按 0.5s 防誤觸刪除 · 方案 1 全背景蓄力充能) */}
-            <HoldToDeleteButton
-              onConfirm={handleDeleteAll}
-              disabled={isSubmitting}
-              text={t('common.delete', '刪除')}
-              className="shrink-0"
-            />
+            {/* 底部破壞性按鈕 (長按 0.5s 防誤觸刪除 · 僅在提供 onDeleteBundle 之編輯模式展示) */}
+            {onDeleteBundle && !isCreateMode && (
+              <HoldToDeleteButton
+                onConfirm={handleDeleteAll}
+                disabled={isSubmitting}
+                text={t('common.delete', '刪除')}
+                className="shrink-0"
+              />
+            )}
           </div>
         </PrecisionDialogContent>
       </Dialog>
 
-      {/* 次級懸浮鍵盤 (平級兄弟節點聲明，層級 zIndex={70} 高於主彈窗) */}
+      {/* 次級懸浮鍵盤 (平級兄弟節點聲明，層級高於主彈窗) */}
       {keypadConfig && (
         <NumericKeypadDialog
           open={!!keypadConfig}
@@ -529,15 +619,18 @@ export function EditRecipeLogDialog({
         />
       )}
 
-      {/* 次級食材選擇器 (平級兄弟節點聲明，層級 zIndex={80}) */}
+      {/* 次級食材選擇器 (平級兄弟節點聲明，層級 zIndex={zIndex + 10}) */}
       <FoodRecipeSelectDialog
         open={isPickerOpen}
         onOpenChange={setIsPickerOpen}
         mode="foods"
-        zIndex={80}
+        zIndex={zIndex + 10}
         disabledIds={replacingIndex !== null ? disabledFoodIds.filter((id) => id !== ingredients[replacingIndex]?.foodId) : disabledFoodIds}
         onSelect={handleSelectFood}
       />
     </>
   );
 }
+
+// 別名匯出，確保向後相容
+export { RecipeLogDialog as EditRecipeLogDialog };

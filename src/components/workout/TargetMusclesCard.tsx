@@ -106,7 +106,6 @@ export const TargetMusclesCard = memo(function TargetMusclesCard({
               interactive
               showLabels
               showOutline
-              showHud={false}
             />
           </div>
 

@@ -211,10 +211,10 @@ export const TokensTab: React.FC<TokensTabProps> = ({
       {/* 頂部極簡控制列 */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold tracking-tight text-foreground">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground font-sans">
             Design Tokens
           </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5 font-sans">
             全域 CSS 變數即時微調。所有變更即刻穿透至頁面與彈窗。
           </p>
         </div>
@@ -224,7 +224,7 @@ export const TokensTab: React.FC<TokensTabProps> = ({
               variant="outline"
               size="sm"
               onClick={resetTokens}
-              className="h-7 text-xs font-mono text-destructive hover:bg-destructive/10 border-border"
+              className="h-7 text-xs font-mono text-destructive hover:bg-destructive/10 border-border shadow-none"
             >
               全部還原
             </Button>
@@ -232,9 +232,9 @@ export const TokensTab: React.FC<TokensTabProps> = ({
           <Button
             size="sm"
             onClick={handleCopy}
-            className="h-7 text-xs font-mono"
+            className="h-7 text-xs font-mono shadow-none"
           >
-            {copied ? '已複製 CSS' : '複製 CSS'}
+            {copied ? '已複製' : '複製 CSS'}
           </Button>
         </div>
       </div>
@@ -252,7 +252,7 @@ export const TokensTab: React.FC<TokensTabProps> = ({
               <span className="text-3xs font-mono text-muted-foreground">GEIST SANS</span>
             </div>
             <div className="text-xs text-muted-foreground leading-normal">
-              正文字體：<BrandText text="e2Cal" /> 本地優先飲食、訓練記錄工具
+              <BrandText text="正文字體：e2Cal 本地優先飲食、訓練記錄工具" />
             </div>
             <div className="text-xs font-mono text-foreground tabular-nums">
               1,850 kcal · 145.0 kg · 5 reps
@@ -567,7 +567,7 @@ export const TokensTab: React.FC<TokensTabProps> = ({
             { token: 'text-3xs', px: '9.1px', sample: 'DELTOID 0.6' },
             { token: 'text-2xs', px: '10.1px', sample: 'CARBS 210G · PROTEIN 150G' },
             { token: 'text-xs', px: '11.2px', sample: '新增食材與課表記錄' },
-            { token: 'text-sm', px: '14.0px', sample: '特級初榨橄欖油 100g 884 kcal' },
+            { token: 'text-sm', px: '14.0px', sample: '特級初榨橄欖油 100 g 884 kcal' },
             { token: 'text-base', px: '16.0px', sample: '今日熱量盈餘 +250 kcal' },
             { token: 'text-lg', px: '18.0px', sample: '78.5 kg · EWMA' },
             { token: 'text-xl', px: '20.0px', sample: '2,450 kcal' },

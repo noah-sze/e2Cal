@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { MetricValue } from '@/components/ui/metric-value';
 import { SectionCard } from '@/components/ui/section-card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { NutritionBasisToggle } from '@/components/food/NutritionBasisToggle';
 import { NutritionFactsCard, type NutritionFactsData } from '@/components/food/NutritionFactsCard';
-import { BodyHighlighter, type BodyHighlighterGender, type BodyHighlighterView } from '@/components/workout/BodyHighlighter';
+import type { BodyHighlighterGender } from '@/components/workout/BodyHighlighter';
 import { AdaptiveMuscleBadgeGroup } from '@/components/workout/AdaptiveMuscleBadgeGroup';
 import { TargetMusclesCard } from '@/components/workout/TargetMusclesCard';
 import { SyncStatusPill } from '@/components/sync/SyncStatusPill';
-import { LiquidElevationPicker } from '@/components/ui/LiquidElevationPicker';
 import { CopySnippet } from '../components/CopySnippet';
 import type { DetailedMuscle, MuscleRole } from '@/types';
 
@@ -49,25 +47,24 @@ const MOCK_ADAPTIVE_ENTRIES: [DetailedMuscle, MuscleRole | number][] = [
 ];
 
 export const ComponentsTab: React.FC = () => {
-  // 人體解剖模型交互狀態
+  // 人體解剖模型性別狀態
   const [highlighterGender, setHighlighterGender] = useState<BodyHighlighterGender>('male');
-  const [highlighterView, setHighlighterView] = useState<BodyHighlighterView>('both');
-  const [selectedMuscle, setSelectedMuscle] = useState<DetailedMuscle | null>(null);
-
-  // 升降選擇器交互狀態
-  const [isLiquidPickerOpen, setIsLiquidPickerOpen] = useState(false);
-  const [liquidValue, setLiquidValue] = useState(120);
 
   return (
     <div className="space-y-6">
-      {/* 標題與定位 */}
-      <div>
-        <h2 className="text-sm font-semibold tracking-tight text-foreground">
-          Shared Components & Domain Patterns
-        </h2>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          跨模組共用複合元件與領域模式（L3 領域架構真理源），扁平無陰影、數值基線平齊、嚴格三大元素與解剖機能學規範。
-        </p>
+      {/* 標題與客觀說明 */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground font-sans">
+            共用組件
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5 font-sans">
+            跨模組共用複合元件與領域模式（L3 領域架構真理源），扁平無陰影、數值基線平齊、嚴格三大元素與解剖機能學規範。
+          </p>
+        </div>
+        <div className="text-2xs font-mono text-muted-foreground tabular-nums">
+          L3 複合模式
+        </div>
       </div>
 
       {/* 1. 數值微排版與卡片容器 (Metric Values & Containers) */}
@@ -132,7 +129,7 @@ export const ComponentsTab: React.FC = () => {
           >
             <div className="p-3 flex items-center justify-between hover:bg-hover transition-colors">
               <div className="min-w-0">
-                <div className="text-xs font-normal text-foreground truncate">去骨生雞胸肉</div>
+                <div className="text-xs font-normal text-foreground truncate">雞胸肉</div>
                 <div className="text-2xs font-mono text-muted-foreground">蛋白質核心來源</div>
               </div>
               <MetricValue value="250" unit="g" className="text-xs text-foreground shrink-0" />
@@ -191,84 +188,50 @@ export const ComponentsTab: React.FC = () => {
 
       {/* 3. 人體解剖熱力圖與機能學 (Anatomy & Workout Kinematics) */}
       <div className="space-y-2.5">
-        <h3 className="text-xs font-mono text-muted-foreground">
-          Anatomy & muscle kinematics
-        </h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {/* BodyHighlighter 互動熱力圖 */}
-          <div className="p-4 rounded-lg border border-border bg-card space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <CopySnippet variant="subtle" value="<BodyHighlighter />" className="text-xs font-medium text-foreground">
-                    BodyHighlighter
-                  </CopySnippet>
-                  <span className="text-2xs text-muted-foreground">(17 解剖肌群熱力圖)</span>
-                </div>
-                <p className="text-2xs font-mono text-muted-foreground mt-0.5">
-                  點選肌群互動 · 赤陶磚紅強度階梯映射
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <SegmentedControl
-                  value={highlighterGender}
-                  onChange={(v) => setHighlighterGender(v as BodyHighlighterGender)}
-                  options={[
-                    { value: 'male', label: '男' },
-                    { value: 'female', label: '女' },
-                  ]}
-                  className="w-20"
-                />
-                <SegmentedControl
-                  value={highlighterView}
-                  onChange={(v) => setHighlighterView(v as BodyHighlighterView)}
-                  options={[
-                    { value: 'both', label: '並排' },
-                    { value: 'anterior', label: '前' },
-                    { value: 'posterior', label: '後' },
-                  ]}
-                  className="w-28"
-                />
-              </div>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <CopySnippet variant="subtle" value="<TargetMusclesCard />" className="text-xs font-medium text-foreground">
+                TargetMusclesCard
+              </CopySnippet>
+              <span className="text-2xs text-muted-foreground">(17 解剖肌群熱力圖與機能學量表)</span>
             </div>
-
-            <div className="p-3 rounded border border-border bg-background flex flex-col items-center justify-center min-h-[300px]">
-              <BodyHighlighter
-                gender={highlighterGender}
-                view={highlighterView}
-                muscles={MOCK_MUSCLE_MAP}
-                selectedMuscle={selectedMuscle}
-                interactive={true}
-                onMuscleClick={(muscle) => {
-                  setSelectedMuscle((prev) => (prev === muscle ? null : muscle));
-                }}
-              />
-              <div className="mt-2 text-2xs font-mono text-muted-foreground">
-                選中肌群：<span className="text-foreground font-semibold">{selectedMuscle ?? '無 (點擊人體肌群以檢視)'}</span>
-              </div>
-            </div>
+            <p className="text-2xs font-mono text-muted-foreground mt-0.5">
+              點選肌群觸發原生 Popover 提示 · 赤陶磚紅強度階梯映射
+            </p>
           </div>
-
-          {/* TargetMusclesCard & AdaptiveMuscleBadgeGroup */}
-          <div className="space-y-3">
-            <TargetMusclesCard
-              gender={highlighterGender}
-              muscles={MOCK_MUSCLE_MAP}
+          <div className="flex items-center gap-1.5">
+            <span className="text-2xs font-mono text-muted-foreground">性別模型</span>
+            <SegmentedControl
+              value={highlighterGender}
+              onChange={(v) => setHighlighterGender(v as BodyHighlighterGender)}
+              options={[
+                { value: 'male', label: '男' },
+                { value: 'female', label: '女' },
+              ]}
+              className="w-20"
             />
+          </div>
+        </div>
 
-            <div className="p-4 rounded-lg border border-border bg-card space-y-2.5">
-              <div className="flex items-center justify-between">
-                <CopySnippet variant="subtle" value="<AdaptiveMuscleBadgeGroup />" className="text-xs font-medium text-foreground">
-                  AdaptiveMuscleBadgeGroup
-                </CopySnippet>
-                <span className="text-3xs font-mono text-muted-foreground">AUTO-TRUNCATE</span>
-              </div>
-              <p className="text-2xs text-muted-foreground">
-                依據容器寬度動態自適應計算可見膠囊數，主動肌在最前、協同肌居中、穩定肌在後，溢出自動收折為「+N」膠囊。
-              </p>
-              <div className="p-3 rounded border border-border bg-background">
-                <AdaptiveMuscleBadgeGroup entries={MOCK_ADAPTIVE_ENTRIES} />
-              </div>
+        <div className="space-y-3">
+          <TargetMusclesCard
+            gender={highlighterGender}
+            muscles={MOCK_MUSCLE_MAP}
+          />
+
+          <div className="p-4 rounded-lg border border-border bg-card space-y-2.5">
+            <div className="flex items-center justify-between">
+              <CopySnippet variant="subtle" value="<AdaptiveMuscleBadgeGroup />" className="text-xs font-medium text-foreground">
+                AdaptiveMuscleBadgeGroup
+              </CopySnippet>
+              <span className="text-3xs font-mono text-muted-foreground">AUTO-TRUNCATE</span>
+            </div>
+            <p className="text-2xs text-muted-foreground">
+              依據容器寬度動態自適應計算可見膠囊數，主動肌在最前、協同肌居中、穩定肌在後，溢出自動收折為「+N」膠囊。
+            </p>
+            <div className="p-3 rounded border border-border bg-background">
+              <AdaptiveMuscleBadgeGroup entries={MOCK_ADAPTIVE_ENTRIES} />
             </div>
           </div>
         </div>
@@ -298,47 +261,6 @@ export const ComponentsTab: React.FC = () => {
               <SyncStatusPill />
               <span className="text-2xs font-mono text-muted-foreground">點擊膠囊可喚起連線或手動同步</span>
             </div>
-          </div>
-
-          {/* LiquidElevationPicker */}
-          <div className="p-4 rounded-lg border border-border bg-card space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <CopySnippet variant="subtle" value="<LiquidElevationPicker />" className="text-xs font-medium text-foreground">
-                  LiquidElevationPicker
-                </CopySnippet>
-                <span className="text-2xs text-muted-foreground">(物理升降刻度盤)</span>
-              </div>
-              <span className="text-3xs font-mono text-muted-foreground">PHYSICS TOUCH</span>
-            </div>
-            <p className="text-2xs text-muted-foreground leading-normal">
-              微重力擬真物理手勢滑動刻度盤，支援步進對齊與單位鎖定。
-            </p>
-            <div className="pt-2 flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsLiquidPickerOpen(true)}
-                className="h-8 text-xs font-mono border-border"
-              >
-                開啟刻度盤（當前：{liquidValue} ml）
-              </Button>
-            </div>
-
-            <LiquidElevationPicker
-              open={isLiquidPickerOpen}
-              onOpenChange={setIsLiquidPickerOpen}
-              value={liquidValue}
-              onConfirm={(val) => {
-                setLiquidValue(val);
-                setIsLiquidPickerOpen(false);
-              }}
-              allowedUnits={['ml', 'g']}
-              unit="ml"
-              min={0}
-              max={500}
-              step={5}
-            />
           </div>
         </div>
       </div>
