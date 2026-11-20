@@ -2,6 +2,7 @@ import React from 'react';
 import { type DevTokenConfig } from '../useDevTokens';
 import { BrandWordmark, BrandText } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/button';
+import { MetricValue } from '@/components/ui/metric-value';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -265,19 +266,22 @@ export const TokensTab: React.FC<TokensTabProps> = ({
               <span className="text-xs font-medium text-foreground">Macronutrients</span>
               <span className="text-3xs font-mono text-muted-foreground">C · P · F</span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="px-1.5 py-0.5 text-2xs font-mono font-medium rounded border border-carbs/20 bg-carbs/10 text-carbs">
-                碳水 210 g
+                碳水 <MetricValue value="210" unit="g" unitClassName="text-current opacity-80" />
               </span>
               <span className="px-1.5 py-0.5 text-2xs font-mono font-medium rounded border border-protein/20 bg-protein/10 text-protein">
-                蛋白質 150 g
+                蛋白質 <MetricValue value="150" unit="g" unitClassName="text-current opacity-80" />
               </span>
               <span className="px-1.5 py-0.5 text-2xs font-mono font-medium rounded border border-fat/20 bg-fat/10 text-fat">
-                脂肪 55 g
+                脂肪 <MetricValue value="55" unit="g" unitClassName="text-current opacity-80" />
+              </span>
+              <span className="px-1.5 py-0.5 text-2xs font-mono font-medium rounded border border-sodium/20 bg-sodium/10 text-sodium">
+                鈉 <MetricValue value="1,800" unit="mg" unitClassName="text-current opacity-80" />
               </span>
             </div>
-            <div className="text-2xs font-mono text-muted-foreground">
-              Calories: <span className="text-calories font-semibold">2,150 kcal</span>
+            <div className="text-2xs font-mono text-muted-foreground flex items-baseline gap-1">
+              Calories: <MetricValue value="2,150" unit="kcal" valueClassName="text-calories font-semibold" unitClassName="text-current opacity-80" />
             </div>
           </div>
 
@@ -361,12 +365,12 @@ export const TokensTab: React.FC<TokensTabProps> = ({
         </div>
       </div>
 
-      {/* 色彩群組 2: 宏量元素 */}
+      {/* 色彩群組 2: 宏量與微量營養素 */}
       <div className="space-y-2.5">
         <h3 className="text-xs font-mono text-muted-foreground">
-          Calories & macronutrients
+          Calories, macronutrients & electrolytes
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
           <ColorControl
             label="Calories"
             tokenKey="--calories"
@@ -394,6 +398,13 @@ export const TokensTab: React.FC<TokensTabProps> = ({
             fallback="#7c3aed"
             currentValue={tokens['--fat']}
             onChange={(v) => updateToken('--fat', v)}
+          />
+          <ColorControl
+            label="Sodium"
+            tokenKey="--sodium"
+            fallback="#0d9488"
+            currentValue={tokens['--sodium']}
+            onChange={(v) => updateToken('--sodium', v)}
           />
         </div>
       </div>

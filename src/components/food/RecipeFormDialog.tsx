@@ -12,6 +12,7 @@ import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { calculateRecipeTotals } from '@/utils/recipeMath';
 import { formatFoodDisplayName } from '@/utils/foodNaming';
 import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
+import { MetricValue } from '@/components/ui/metric-value';
 import {
   ozToG,
   gToOz,
@@ -463,14 +464,14 @@ export function RecipeFormDialog({
                         <button
                           type="button"
                           onClick={(e) => handleOpenKeypad(index, e.currentTarget)}
-                          className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-muted font-mono text-xs flex items-center gap-1 transition-colors cursor-pointer active:scale-95 select-none shrink-0"
+                          className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-muted font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none shrink-0"
                         >
-                          <span className="font-normal text-foreground">
-                            {formatDisplayAmount(item.quantity) || '-'}
-                          </span>
-                          <span className="font-sans text-muted-foreground text-[11px]">
-                            {item.unit}
-                          </span>
+                          <MetricValue
+                            value={formatDisplayAmount(item.quantity) || '-'}
+                            unit={item.unit}
+                            valueClassName="font-normal text-foreground"
+                            unitClassName="text-[11px]"
+                          />
                           <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                         </button>
                       </div>

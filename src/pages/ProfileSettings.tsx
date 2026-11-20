@@ -8,6 +8,7 @@ import { triggerHaptic } from '@/lib/haptics';
 import { calculateBMI, calculateBMR, calculateAgeFromBirth } from '@/utils/weightMath';
 import { cmToIn, inToCm } from '@/utils/unitMath';
 import { MonthPicker } from '@/components/ui/month-picker';
+import { MetricValue } from '@/components/ui/metric-value';
 import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
 import { cn } from '@/lib/utils';
 
@@ -245,16 +246,12 @@ export default function ProfileSettings() {
             <div className="text-[11px] font-normal text-muted-foreground truncate">
               {t('welcome.bmr', '靜態基礎代謝 (BMR)')}
             </div>
-            <div className="flex items-baseline gap-0.5 text-foreground font-mono leading-none">
-              <span className="text-base sm:text-lg font-normal">
-                {currentBMR > 0 ? currentBMR : '-'}
-              </span>
-              {currentBMR > 0 && (
-                <span className="font-sans text-[11px] text-muted-foreground font-normal">
-                  kcal/day
-                </span>
-              )}
-            </div>
+            <MetricValue
+              value={currentBMR > 0 ? currentBMR : '-'}
+              unit={currentBMR > 0 ? 'kcal/day' : undefined}
+              valueClassName="text-base sm:text-lg font-normal text-foreground"
+              unitClassName="text-[11px] font-normal"
+            />
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import {
   PrecisionDialogContent,
 } from '@/components/ui/dialog';
 import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
+import { MetricValue } from '@/components/ui/metric-value';
 import {
   Select,
   SelectContent,
@@ -390,9 +391,12 @@ export function DietPlanModal({
                     </div>
                   )}
 
-                  <span className="text-2xs font-mono text-muted-foreground truncate max-w-full">
-                    {calculatedMacros.carbsGrams} g
-                  </span>
+                  <MetricValue
+                    value={calculatedMacros.carbsGrams}
+                    unit="g"
+                    className="text-2xs text-muted-foreground whitespace-nowrap"
+                    unitClassName="text-3xs"
+                  />
                 </div>
 
                 {/* 2. 蛋白質 (P) */}
@@ -419,9 +423,12 @@ export function DietPlanModal({
                     </div>
                   )}
 
-                  <span className="text-2xs font-mono text-muted-foreground truncate max-w-full">
-                    {calculatedMacros.proteinGrams} g
-                  </span>
+                  <MetricValue
+                    value={calculatedMacros.proteinGrams}
+                    unit="g"
+                    className="text-2xs text-muted-foreground whitespace-nowrap"
+                    unitClassName="text-3xs"
+                  />
                 </div>
 
                 {/* 3. 脂肪 (F) */}
@@ -448,9 +455,12 @@ export function DietPlanModal({
                     </div>
                   )}
 
-                  <span className="text-2xs font-mono text-muted-foreground truncate max-w-full">
-                    {calculatedMacros.fatGrams} g
-                  </span>
+                  <MetricValue
+                    value={calculatedMacros.fatGrams}
+                    unit="g"
+                    className="text-2xs text-muted-foreground whitespace-nowrap"
+                    unitClassName="text-3xs"
+                  />
                 </div>
               </div>
 

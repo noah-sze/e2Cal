@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
+import { MetricValue } from '@/components/ui/metric-value';
 import {
   type OverviewPeriod,
   type HeatmapDay,
@@ -283,9 +284,12 @@ export function IntakeFootprintHeatmap({
               {selectedCellData.count} {t('common.times')}
             </span>
             <span className="text-border mx-1.5 select-none">·</span>
-            <span className={selectedCellData.count === 0 ? "text-muted-foreground" : "text-foreground"}>
-              {selectedCellData.grams} g
-            </span>
+            <MetricValue
+              value={selectedCellData.grams}
+              unit="g"
+              className={selectedCellData.count === 0 ? "text-muted-foreground" : "text-foreground"}
+              unitClassName="text-xs"
+            />
           </div>
         )}
       </div>

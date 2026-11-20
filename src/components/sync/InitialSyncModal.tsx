@@ -9,6 +9,7 @@ import {
 import { useInitialSync } from '@/hooks/useInitialSync';
 import { Dialog, PrecisionDialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { MetricValue } from '@/components/ui/metric-value';
 import { HoldToDeleteButton } from '@/components/ui/HoldToDeleteButton';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
@@ -302,10 +303,10 @@ export function InitialSyncModal({ onCompleted }: InitialSyncModalProps = {}) {
                     {t('profile.height', '身高')}
                   </span>
                   <span className="col-span-2 text-center text-muted-foreground font-mono">
-                    {localBaseInfo?.heightCm ? `${localBaseInfo.heightCm} cm` : '-'}
+                    {localBaseInfo?.heightCm ? <MetricValue value={localBaseInfo.heightCm} unit="cm" /> : '-'}
                   </span>
                   <span className="col-span-3 text-right text-muted-foreground font-mono">
-                    {remoteBaseInfo?.heightCm ? `${remoteBaseInfo.heightCm} cm` : '-'}
+                    {remoteBaseInfo?.heightCm ? <MetricValue value={remoteBaseInfo.heightCm} unit="cm" /> : '-'}
                   </span>
                 </div>
 

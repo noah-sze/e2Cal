@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, PrecisionDialogContent } from '@/components/ui/dialog';
+import { MetricValue } from '@/components/ui/metric-value';
 import { HoldToDeleteButton } from '@/components/ui/HoldToDeleteButton';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -153,10 +154,10 @@ export function ImportStrategyModal({
               <div className="grid grid-cols-7 px-2.5 py-1.5 items-center">
                 <span className="col-span-2 text-muted-foreground">{t('profile.height', '身高')}</span>
                 <span className="col-span-2 text-center text-muted-foreground">
-                  {localBaseInfo?.heightCm ? `${localBaseInfo.heightCm}cm` : '-'}
+                  {localBaseInfo?.heightCm ? <MetricValue value={localBaseInfo.heightCm} unit="cm" /> : '-'}
                 </span>
                 <span className="col-span-3 text-right text-muted-foreground">
-                  {backupBaseInfo?.heightCm ? `${backupBaseInfo.heightCm}cm` : '-'}
+                  {backupBaseInfo?.heightCm ? <MetricValue value={backupBaseInfo.heightCm} unit="cm" /> : '-'}
                 </span>
               </div>
             </div>

@@ -14,9 +14,9 @@ import type { HydratedFoodLog, FoodItem } from '@/types';
 import { formatDisplayAmount } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
 import { calculateIngredientMacros } from '@/utils/recipeMath';
-import { useUnitPreferences } from '@/hooks/useUnitPreferences';
-import { formatEnergy } from '@/utils/unitMath';
 import { resolveFoodLogTitle } from '@/utils/foodNaming';
+import { NutritionFactsCard, type NutritionFactsData } from '@/components/food/NutritionFactsCard';
+import { MetricValue } from '@/components/ui/metric-value';
 import { getInMemoryFoodsCache, prewarmFoodsCache } from '@/hooks/useFoods';
 import { prewarmRecipesCache } from '@/hooks/useRecipes';
 import { prewarmDailyDietLogsCache } from '@/hooks/useFoodLogs';
@@ -50,7 +50,6 @@ export function EditFoodLogDialog({
 }: EditFoodLogDialogProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { energyUnit } = useUnitPreferences();
 
   // 本地狀態：用量與基準食材資訊
   const [quantity, setQuantity] = useState<number>(log?.quantity || 100);
@@ -103,15 +102,17 @@ export function EditFoodLogDialog({
     }
   }, [log, open, isSystemEntry]);
 
-  // 動態推算即時營養素 (C -> P -> F 順序)
-  const currentMacros = useMemo(() => {
+  // 動態推算即時營養素 (包含微量元素)
+  const nutritionFactsData = useMemo<NutritionFactsData | null>(() => {
     if (!log) {
-      return { calories: 0, carbs: 0, protein: 0, fat: 0 };
+      return null;
     }
 
     // 系統條目 (歷史均值 / 快速估算) 無物理克數，直接原樣呈現既有數值，嚴禁等比縮放
     if (isSystemEntry) {
       return {
+        servingSize: log.quantity || 1,
+        servingUnit: log.unit || '份',
         calories: Math.round(log.calories || 0),
         carbs: Math.round((log.carbs || 0) * 10) / 10,
         protein: Math.round((log.protein || 0) * 10) / 10,
@@ -120,37 +121,34 @@ export function EditFoodLogDialog({
     }
 
     if (baseFood) {
-      return calculateIngredientMacros(baseFood, quantity);
+      const macros = calculateIngredientMacros(baseFood, quantity);
+      return {
+        servingSize: quantity,
+        servingUnit: log.unit || baseFood.servingUnit || 'g',
+        calories: macros.calories,
+        carbs: macros.carbs,
+        protein: macros.protein,
+        fat: macros.fat,
+        sugar: macros.sugar,
+        fiber: macros.fiber,
+        saturatedFat: macros.saturatedFat,
+        transFat: macros.transFat,
+        sodium: macros.sodium,
+      };
     }
 
     // 若無原始 FoodItem 定義，依原記錄等比縮放
     const baseQty = log.quantity || 1;
     const ratio = quantity / baseQty;
     return {
+      servingSize: quantity,
+      servingUnit: log.unit || 'g',
       calories: Math.round((log.calories || 0) * ratio),
       carbs: Math.round((log.carbs || 0) * ratio * 10) / 10,
       protein: Math.round((log.protein || 0) * ratio * 10) / 10,
       fat: Math.round((log.fat || 0) * ratio * 10) / 10,
     };
   }, [log, isSystemEntry, baseFood, quantity]);
-
-  // 供能比比例推算 (供能比標尺：碳水 4kcal/g, 蛋白 4kcal/g, 脂肪 9kcal/g)
-  const energyRatios = useMemo(() => {
-    const carbCals = currentMacros.carbs * 4;
-    const proteinCals = currentMacros.protein * 4;
-    const fatCals = currentMacros.fat * 9;
-    const totalCal = carbCals + proteinCals + fatCals;
-
-    if (totalCal <= 0) {
-      return { carbs: 33.3, protein: 33.3, fat: 33.4 };
-    }
-
-    return {
-      carbs: (carbCals / totalCal) * 100,
-      protein: (proteinCals / totalCal) * 100,
-      fat: (fatCals / totalCal) * 100,
-    };
-  }, [currentMacros]);
 
   // 打開數字鍵盤
   const handleOpenKeypad = (el: HTMLElement) => {
@@ -196,10 +194,10 @@ export function EditFoodLogDialog({
     try {
       await onSave(log.id, {
         ...(isSystemEntry ? {} : { quantity: quantity > 0 ? quantity : 1 }),
-        calories: currentMacros.calories,
-        carbs: currentMacros.carbs,
-        protein: currentMacros.protein,
-        fat: currentMacros.fat,
+        calories: nutritionFactsData?.calories ?? 0,
+        carbs: nutritionFactsData?.carbs ?? 0,
+        protein: nutritionFactsData?.protein ?? 0,
+        fat: nutritionFactsData?.fat ?? 0,
       });
       triggerHaptic('success');
       onOpenChange(false);
@@ -244,96 +242,45 @@ export function EditFoodLogDialog({
           submitAriaLabel={t('common.save')}
           cancelAriaLabel={t('common.cancel')}
           overlayClassName="z-[70]"
-          className="z-[70] flex flex-col overflow-hidden"
+          className="z-[70] flex flex-col max-h-[85vh] overflow-hidden"
           initialFocus={false}
         >
-          {/* 表單主體 */}
-          <div className="flex flex-col space-y-3 pt-3.5">
-            {/* 4 欄即時 HUD Banner 與供能比標尺組合 */}
-            {/* 4 欄即時 HUD Banner + 供能比標尺 + 食用份量 整合卡片 */}
-            <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border shrink-0">
-              <div>
-                {/* 供能比標尺 (Ratio Bar: 置於卡片頂部，嚴格固定 C -> P -> F 順序) */}
-                <div className="h-1 w-full overflow-hidden flex bg-track" title="供能比標尺">
-                  <div className="bg-carbs transition-all duration-150" style={{ width: `${energyRatios.carbs}%` }} />
-                  <div className="bg-protein transition-all duration-150" style={{ width: `${energyRatios.protein}%` }} />
-                  <div className="bg-fat transition-all duration-150" style={{ width: `${energyRatios.fat}%` }} />
-                </div>
+          {/* 表單主體 (支援滑動檢視完整營養素) */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 pt-3.5 pr-0.5">
+            {/* 食用份量調節卡片 (實體食材條目) */}
+            {!isSystemEntry && (
+              <div className="h-11 px-3.5 flex items-center justify-between border border-border rounded-lg bg-card text-sm shrink-0">
+                <span className="text-muted-foreground text-xs font-sans">
+                  {t('diet.serving', '食用份量')}
+                </span>
 
-                <div className="grid grid-cols-4 divide-x divide-border select-none text-center">
-                  {/* 熱量 */}
-                  <div className="py-2 px-1 flex flex-col items-center justify-center min-w-0">
-                    <span className="text-[10px] font-medium text-calories uppercase tracking-wider truncate">
-                      {t('diet.calories')}
-                    </span>
-                    <div className="font-mono text-xs font-normal text-calories mt-0.5 truncate flex items-baseline gap-0.5">
-                      <span>{formatEnergy(currentMacros.calories, energyUnit).value}</span>
-                      <span className="font-sans text-[9px] font-normal opacity-75">{formatEnergy(currentMacros.calories, energyUnit).unit}</span>
-                    </div>
-                  </div>
-
-                  {/* 碳水化合物 */}
-                  <div className="py-2 px-1 flex flex-col items-center justify-center min-w-0">
-                    <span className="text-[10px] font-medium text-carbs uppercase tracking-wider truncate">
-                      {t('diet.macroMicro.carbs', '碳水')}
-                    </span>
-                    <div className="font-mono text-xs font-normal text-carbs mt-0.5 truncate flex items-baseline gap-0.5">
-                      <span>{currentMacros.carbs}</span>
-                      <span className="font-sans text-[9px] font-normal opacity-75">g</span>
-                    </div>
-                  </div>
-
-                  {/* 蛋白質 */}
-                  <div className="py-2 px-1 flex flex-col items-center justify-center min-w-0">
-                    <span className="text-[10px] font-medium text-protein uppercase tracking-wider truncate">
-                      {t('diet.macroMicro.protein', '蛋')}
-                    </span>
-                    <div className="font-mono text-xs font-normal text-protein mt-0.5 truncate flex items-baseline gap-0.5">
-                      <span>{currentMacros.protein}</span>
-                      <span className="font-sans text-[9px] font-normal opacity-75">g</span>
-                    </div>
-                  </div>
-
-                  {/* 脂肪 */}
-                  <div className="py-2 px-1 flex flex-col items-center justify-center min-w-0">
-                    <span className="text-[10px] font-medium text-fat uppercase tracking-wider truncate">
-                      {t('diet.macroMicro.fat', '脂')}
-                    </span>
-                    <div className="font-mono text-xs font-normal text-fat mt-0.5 truncate flex items-baseline gap-0.5">
-                      <span>{currentMacros.fat}</span>
-                      <span className="font-sans text-[9px] font-normal opacity-75">g</span>
-                    </div>
-                  </div>
-                </div>
+                {/* e2Cal 專案標準數字輸入框膠囊 */}
+                <button
+                  type="button"
+                  onClick={(e) => handleOpenKeypad(e.currentTarget)}
+                  className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none"
+                  title={t('diet.clickToEnter', '點擊輸入數值')}
+                >
+                  <MetricValue
+                    value={formatDisplayAmount(String(quantity)) || '0'}
+                    unit={log.unit || 'g'}
+                    valueClassName="font-normal text-foreground"
+                    unitClassName="text-[11px]"
+                  />
+                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                </button>
               </div>
+            )}
 
-              {/* Usage List 表格行：食用份量 + 常用數字輸入框膠囊 */}
-              {!isSystemEntry && (
-                <div className="h-11 px-3 flex items-center justify-between bg-card text-sm">
-                  <span className="text-muted-foreground text-xs font-sans">
-                    {t('diet.serving', '食用份量')}
-                  </span>
+            {/* 即時營養成分卡片 (共用通用規格卡片，單品編輯上方已有份量調整故隱藏基準行) */}
+            <NutritionFactsCard
+              title={t('diet.servingNutrients', '營養成分')}
+              data={nutritionFactsData}
+              action={null}
+              showServingRow={false}
+            />
 
-                  {/* e2Cal 專案常用的標準數字輸入框膠囊 */}
-                  <button
-                    type="button"
-                    onClick={(e) => handleOpenKeypad(e.currentTarget)}
-                    className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1 transition-colors cursor-pointer active:scale-95 select-none"
-                    title={t('diet.clickToEnter', '點擊輸入數值')}
-                  >
-                    <span className="font-normal text-foreground">
-                      {formatDisplayAmount(String(quantity)) || '0'}
-                    </span>
-                    <span className="font-sans text-muted-foreground text-[11px]">
-                      {log.unit || 'g'}
-                    </span>
-                    <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* 底部破壞性按鈕 (長按 0.5s 防誤觸刪除 · 方案 1 全背景蓄力充能) */}
+            {/* 底部破壞性按鈕 (長按 0.5s 防誤觸刪除) */}
             <HoldToDeleteButton
               onConfirm={handleDelete}
               disabled={isSubmitting}

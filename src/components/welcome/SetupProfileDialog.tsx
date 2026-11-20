@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { MonthPicker } from '@/components/ui/month-picker';
+import { MetricValue } from '@/components/ui/metric-value';
 import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
 import { Logo, BrandText } from '@/components/ui/Logo';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -430,16 +431,12 @@ export function SetupProfileDialog({
                 <div className="text-[10px] text-muted-foreground truncate">
                   {t('welcome.bmr', '靜態基礎代謝 (BMR)')}
                 </div>
-                <div className="flex items-baseline gap-1 text-foreground font-mono leading-none">
-                  <span className="text-xs sm:text-sm font-normal">
-                    {currentBMR > 0 ? currentBMR : '-'}
-                  </span>
-                  {currentBMR > 0 && (
-                    <span className="text-[9px] text-muted-foreground font-normal">
-                      kcal/day
-                    </span>
-                  )}
-                </div>
+                <MetricValue
+                  value={currentBMR > 0 ? currentBMR : '-'}
+                  unit={currentBMR > 0 ? 'kcal/day' : undefined}
+                  valueClassName="text-xs sm:text-sm font-normal text-foreground"
+                  unitClassName="text-[9px] font-normal"
+                />
               </div>
             </div>
           </div>

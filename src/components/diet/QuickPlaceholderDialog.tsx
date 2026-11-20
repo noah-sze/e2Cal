@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Popover, PopoverContent } from '@/components/ui/popover';
 import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
+import { MetricValue } from '@/components/ui/metric-value';
 import { HoldToDeleteButton } from '@/components/ui/HoldToDeleteButton';
 import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
@@ -460,18 +461,18 @@ export function QuickPlaceholderDialog({
             >
               <div
                 className={cn(
-                  'flex items-baseline justify-center gap-1.5 transition-opacity',
+                  'flex items-baseline justify-center transition-opacity',
                   hasAnyMacro
                     ? 'text-foreground group-hover:opacity-80'
                     : 'text-muted-foreground opacity-45'
                 )}
               >
-                <span className="text-4xl font-mono font-extrabold tracking-tight tabular-nums">
-                  {hasAnyMacro ? calories : 0}
-                </span>
-                <span className="text-xs font-mono font-medium text-muted-foreground">
-                  kcal
-                </span>
+                <MetricValue
+                  value={hasAnyMacro ? calories : 0}
+                  unit="kcal"
+                  valueClassName="text-4xl font-extrabold tracking-tight"
+                  unitClassName="text-xs font-normal"
+                />
               </div>
 
               {/* 動態供能比例條 */}
@@ -526,10 +527,12 @@ export function QuickPlaceholderDialog({
                     carbs !== null && carbs > 0 ? 'text-carbs' : 'text-muted-foreground'
                   )}
                 >
-                  <span className={carbs !== null && carbs > 0 ? 'text-carbs font-normal tabular-nums' : 'text-muted-foreground'}>
-                    {carbs !== null && carbs > 0 ? formatDisplayAmount(String(carbs)) : '-'}
-                  </span>
-                  <span className="font-sans text-xs text-muted-foreground">g</span>
+                  <MetricValue
+                    value={carbs !== null && carbs > 0 ? formatDisplayAmount(String(carbs)) : '-'}
+                    unit="g"
+                    valueClassName={carbs !== null && carbs > 0 ? 'text-carbs font-normal' : 'text-muted-foreground font-normal'}
+                    unitClassName="text-xs text-muted-foreground"
+                  />
                   <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                 </button>
               </div>
@@ -547,10 +550,12 @@ export function QuickPlaceholderDialog({
                     protein !== null && protein > 0 ? 'text-protein' : 'text-muted-foreground'
                   )}
                 >
-                  <span className={protein !== null && protein > 0 ? 'text-protein font-normal tabular-nums' : 'text-muted-foreground'}>
-                    {protein !== null && protein > 0 ? formatDisplayAmount(String(protein)) : '-'}
-                  </span>
-                  <span className="font-sans text-xs text-muted-foreground">g</span>
+                  <MetricValue
+                    value={protein !== null && protein > 0 ? formatDisplayAmount(String(protein)) : '-'}
+                    unit="g"
+                    valueClassName={protein !== null && protein > 0 ? 'text-protein font-normal' : 'text-muted-foreground font-normal'}
+                    unitClassName="text-xs text-muted-foreground"
+                  />
                   <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                 </button>
               </div>
@@ -568,10 +573,12 @@ export function QuickPlaceholderDialog({
                     fat !== null && fat > 0 ? 'text-fat' : 'text-muted-foreground'
                   )}
                 >
-                  <span className={fat !== null && fat > 0 ? 'text-fat font-normal tabular-nums' : 'text-muted-foreground'}>
-                    {fat !== null && fat > 0 ? formatDisplayAmount(String(fat)) : '-'}
-                  </span>
-                  <span className="font-sans text-xs text-muted-foreground">g</span>
+                  <MetricValue
+                    value={fat !== null && fat > 0 ? formatDisplayAmount(String(fat)) : '-'}
+                    unit="g"
+                    valueClassName={fat !== null && fat > 0 ? 'text-fat font-normal' : 'text-muted-foreground font-normal'}
+                    unitClassName="text-xs text-muted-foreground"
+                  />
                   <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                 </button>
               </div>

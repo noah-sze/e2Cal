@@ -335,12 +335,12 @@ export function DietView({
 
           {/* 核心巨型熱量數值 (居中) */}
           <div className="pt-2 pb-1 text-center">
-            <div className="hero-number flex items-baseline justify-center gap-1 font-mono tabular-nums">
-              <span>{consumedEnergy.toLocaleString()}</span>
-              <span className="text-sm sm:text-base font-sans font-normal text-muted-foreground">
-                {energyUnit}
-              </span>
-            </div>
+            <MetricValue
+              value={consumedEnergy.toLocaleString()}
+              unit={energyUnit}
+              className="hero-number flex items-baseline justify-center"
+              unitClassName="text-sm sm:text-base font-normal text-muted-foreground ml-1"
+            />
 
             {/* 客觀差額事實 */}
             <div className="flex items-center justify-center gap-1.5 mt-1 text-sm font-sans text-muted-foreground">

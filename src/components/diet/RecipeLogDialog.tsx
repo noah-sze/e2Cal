@@ -17,8 +17,9 @@ import { cn, formatDisplayAmount } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
 import { calculateIngredientMacros } from '@/utils/recipeMath';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
-import { formatEnergy } from '@/utils/unitMath';
 import { formatFoodDisplayName } from '@/utils/foodNaming';
+import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
+import { MetricValue } from '@/components/ui/metric-value';
 import { getInMemoryFoodsCache, prewarmFoodsCache, useFoods } from '@/hooks/useFoods';
 import { getInMemoryRecipesCache, prewarmRecipesCache } from '@/hooks/useRecipes';
 import { prewarmDailyDietLogsCache, useFoodLogs } from '@/hooks/useFoodLogs';
@@ -100,7 +101,7 @@ export function RecipeLogDialog({
   const navigate = useNavigate();
   const { allFoods } = useFoods();
   const { addFoodLogBundle } = useFoodLogs(date || '');
-  const { energyUnit, foodWeightUnit, foodVolumeUnit } = useUnitPreferences();
+  const { foodWeightUnit, foodVolumeUnit } = useUnitPreferences();
 
   const isCreateMode = explicitMode ? explicitMode === 'create' : Boolean(recipe && !logs);
   const effectiveBundleId = explicitBundleId || recipe?.id || null;
@@ -235,38 +236,37 @@ export function RecipeLogDialog({
     return { calories: 0, carbs: 0, protein: 0, fat: 0 };
   }, [foodMap]);
 
-  // 全菜餚總營養素累計 (C -> P -> F 順序)
+  // 全菜餚總營養素累計 (C -> P -> F 順序與微量素)
   const totals = useMemo(() => {
     return ingredients.reduce(
       (acc, item) => {
         const macros = getIngredientMacros(item);
+        acc.totalWeightGrams += item.quantity || 0;
         acc.calories += macros.calories;
         acc.carbs += macros.carbs;
         acc.protein += macros.protein;
         acc.fat += macros.fat;
+        if (typeof macros.sugar === 'number') acc.sugar = (acc.sugar || 0) + macros.sugar;
+        if (typeof macros.fiber === 'number') acc.fiber = (acc.fiber || 0) + macros.fiber;
+        if (typeof macros.saturatedFat === 'number') acc.saturatedFat = (acc.saturatedFat || 0) + macros.saturatedFat;
+        if (typeof macros.transFat === 'number') acc.transFat = (acc.transFat || 0) + macros.transFat;
+        if (typeof macros.sodium === 'number') acc.sodium = (acc.sodium || 0) + macros.sodium;
         return acc;
       },
-      { calories: 0, carbs: 0, protein: 0, fat: 0 }
+      {
+        totalWeightGrams: 0,
+        calories: 0,
+        carbs: 0,
+        protein: 0,
+        fat: 0,
+        sugar: undefined as number | undefined,
+        fiber: undefined as number | undefined,
+        saturatedFat: undefined as number | undefined,
+        transFat: undefined as number | undefined,
+        sodium: undefined as number | undefined,
+      }
     );
   }, [ingredients, getIngredientMacros]);
-
-  // 供能比比例條推算
-  const energyRatios = useMemo(() => {
-    const carbCals = totals.carbs * 4;
-    const proteinCals = totals.protein * 4;
-    const fatCals = totals.fat * 9;
-    const totalCal = carbCals + proteinCals + fatCals;
-
-    if (totalCal <= 0) {
-      return { carbs: 33.3, protein: 33.3, fat: 33.4 };
-    }
-
-    return {
-      carbs: (carbCals / totalCal) * 100,
-      protein: (proteinCals / totalCal) * 100,
-      fat: (fatCals / totalCal) * 100,
-    };
-  }, [totals]);
 
   // 食材清單反灰清單（防重複添加）
   const disabledFoodIds = useMemo(() => {
@@ -464,66 +464,30 @@ export function RecipeLogDialog({
           className={cn(`z-[${zIndex}]`, "flex flex-col max-h-[85vh] overflow-hidden", className)}
           initialFocus={false}
         >
-          {/* 表單主體 (聯合滾動區域) */}
-          <div className="flex-1 min-h-0 flex flex-col space-y-3 pt-3.5 overflow-hidden">
-            {/* 4 欄即時 HUD Banner 與供能比標尺組合 */}
+          {/* 表單主體 (單一聯合滾動區域，保證營養成分與食材清單順暢瀏覽) */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 pt-3.5 pr-0.5">
+            {/* 表格段落 1: 配方總計指標規格卡片 (共用通用規格卡片，累計全菜餚總量故隱藏基準每份行) */}
+            <NutritionFactsCard
+              title={t('diet.totalEstimated', '總計營養')}
+              action={null}
+              showServingRow={false}
+              data={{
+                servingSize: totals.totalWeightGrams,
+                servingUnit: 'g',
+                calories: Math.round(totals.calories),
+                carbs: Math.round(totals.carbs * 10) / 10,
+                protein: Math.round(totals.protein * 10) / 10,
+                fat: Math.round(totals.fat * 10) / 10,
+                sugar: totals.sugar !== undefined ? Math.round(totals.sugar * 10) / 10 : undefined,
+                fiber: totals.fiber !== undefined ? Math.round(totals.fiber * 10) / 10 : undefined,
+                saturatedFat: totals.saturatedFat !== undefined ? Math.round(totals.saturatedFat * 10) / 10 : undefined,
+                transFat: totals.transFat !== undefined ? Math.round(totals.transFat * 10) / 10 : undefined,
+                sodium: totals.sodium !== undefined ? Math.round(totals.sodium) : undefined,
+              }}
+            />
+
+            {/* 表格段落 2: 構成食材段落 */}
             <div className="space-y-1.5 shrink-0">
-              <div className="border border-border rounded-lg overflow-hidden bg-card grid grid-cols-4 divide-x divide-border select-none text-center shrink-0">
-                {/* 熱量 */}
-                <div className="py-2 px-1 flex flex-col items-center justify-center min-w-0">
-                  <span className="text-[10px] font-medium text-calories uppercase tracking-wider truncate">
-                    {t('diet.calories')}
-                  </span>
-                  <div className="font-mono text-xs font-normal text-calories mt-0.5 truncate flex items-baseline gap-0.5">
-                    <span>{formatEnergy(totals.calories, energyUnit).value}</span>
-                    <span className="font-sans text-[9px] font-normal opacity-75">{formatEnergy(totals.calories, energyUnit).unit}</span>
-                  </div>
-                </div>
-
-                {/* 碳水化合物 */}
-                <div className="py-2 px-1 flex flex-col items-center justify-center min-w-0">
-                  <span className="text-[10px] font-medium text-carbs uppercase tracking-wider truncate">
-                    {t('diet.macroMicro.carbs', '碳')}
-                  </span>
-                  <div className="font-mono text-xs font-normal text-carbs mt-0.5 truncate flex items-baseline gap-0.5">
-                    <span>{Math.round(totals.carbs * 10) / 10}</span>
-                    <span className="font-sans text-[9px] font-normal opacity-75">g</span>
-                  </div>
-                </div>
-
-                {/* 蛋白質 */}
-                <div className="py-2 px-1 flex flex-col items-center justify-center min-w-0">
-                  <span className="text-[10px] font-medium text-protein uppercase tracking-wider truncate">
-                    {t('diet.macroMicro.protein', '蛋')}
-                  </span>
-                  <div className="font-mono text-xs font-normal text-protein mt-0.5 truncate flex items-baseline gap-0.5">
-                    <span>{Math.round(totals.protein * 10) / 10}</span>
-                    <span className="font-sans text-[9px] font-normal opacity-75">g</span>
-                  </div>
-                </div>
-
-                {/* 脂肪 */}
-                <div className="py-2 px-1 flex flex-col items-center justify-center min-w-0">
-                  <span className="text-[10px] font-medium text-fat uppercase tracking-wider truncate">
-                    {t('diet.macroMicro.fat', '脂')}
-                  </span>
-                  <div className="font-mono text-xs font-normal text-fat mt-0.5 truncate flex items-baseline gap-0.5">
-                    <span>{Math.round(totals.fat * 10) / 10}</span>
-                    <span className="font-sans text-[9px] font-normal opacity-75">g</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 供能比標尺 (Ratio Bar: 嚴格固定 C -> P -> F 順序) */}
-              <div className="h-1 w-full rounded-full overflow-hidden flex bg-track shrink-0" title="供能比標尺">
-                <div className="bg-carbs transition-all duration-150" style={{ width: `${energyRatios.carbs}%` }} />
-                <div className="bg-protein transition-all duration-150" style={{ width: `${energyRatios.protein}%` }} />
-                <div className="bg-fat transition-all duration-150" style={{ width: `${energyRatios.fat}%` }} />
-              </div>
-            </div>
-
-            {/* 構成食材段落 */}
-            <div className="space-y-1.5 flex-1 min-h-0 flex flex-col">
               <div className="flex items-center justify-between px-0 shrink-0">
                 <div className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">
                   {t('diet.recipeIngredients', '構成食材')} ({ingredients.length})
@@ -540,8 +504,8 @@ export function RecipeLogDialog({
                 </button>
               </div>
 
-              {/* 食材清單滾動容器 */}
-              <div className="border border-border rounded-lg overflow-y-auto bg-card divide-y divide-border text-sm flex-1 min-h-0">
+              {/* 食材清單容器 */}
+              <div className="border border-border rounded-lg bg-card divide-y divide-border text-sm">
                 {ingredients.map((item, index) => (
                   <div
                     key={item.id}
@@ -561,14 +525,14 @@ export function RecipeLogDialog({
                     <button
                       type="button"
                       onClick={(e) => handleOpenKeypad(index, e.currentTarget)}
-                      className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1 transition-colors cursor-pointer active:scale-95 select-none shrink-0"
+                      className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none shrink-0"
                     >
-                      <span className="font-normal text-foreground">
-                        {formatDisplayAmount(String(item.quantity)) || '0'}
-                      </span>
-                      <span className="font-sans text-muted-foreground text-[11px]">
-                        {item.unit}
-                      </span>
+                      <MetricValue
+                        value={formatDisplayAmount(String(item.quantity)) || '0'}
+                        unit={item.unit}
+                        valueClassName="font-normal text-foreground"
+                        unitClassName="text-[11px]"
+                      />
                       <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                     </button>
                   </div>

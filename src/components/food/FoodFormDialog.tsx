@@ -23,6 +23,7 @@ import { convertFoodWeight, convertFoodVolume, kcalToKj } from '@/utils/unitMath
 import { matchesAutocomplete } from '@/utils/multilingualSearch';
 import { ChevronRight } from 'lucide-react';
 import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
+import { MetricValue } from '@/components/ui/metric-value';
 
 type KeypadField =
   | 'serving'
@@ -458,7 +459,7 @@ export function FoodFormDialog({
           allowDecimals: false,
           maxDecimals: 0,
           anchorEl: targetEl || null,
-          valueClassName: 'text-foreground',
+          valueClassName: 'text-sodium',
         });
         break;
       }
@@ -694,14 +695,6 @@ export function FoodFormDialog({
     }
   };
 
-  // 格式化數值膠囊內容：有值時正常字重並賦予專屬色，為空 (-) 時呈現極淡佔位色
-  const renderAmountValue = (val: string, activeClass: string = 'text-foreground') => {
-    if (val !== '' && val !== undefined) {
-      return <span className={cn("font-normal", activeClass)}>{formatDisplayAmount(val)}</span>;
-    }
-    return <span className="font-normal text-muted-foreground/40 select-none">-</span>;
-  };
-
   const formId = useId();
 
   return (
@@ -845,8 +838,12 @@ export function FoodFormDialog({
                     servingSize ? "text-foreground" : "text-muted-foreground"
                   )}
                 >
-                  {renderAmountValue(servingSize, "text-foreground")}
-                  <span className="text-muted-foreground">{servingUnit}</span>
+                  <MetricValue
+                    value={servingSize ? formatDisplayAmount(servingSize) : '-'}
+                    unit={servingUnit}
+                    valueClassName={servingSize ? "text-foreground font-normal" : "text-muted-foreground/40 font-normal"}
+                    unitClassName="text-muted-foreground"
+                  />
                   <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                 </button>
               </div>
@@ -904,8 +901,12 @@ export function FoodFormDialog({
                   case 'serving':
                     return basisMode === 'serving' ? (
                       <div className="h-7 px-3 rounded-full border border-border/50 bg-hover font-mono text-xs flex items-center gap-1.5 text-muted-foreground select-none">
-                        {renderAmountValue(servingSize, "text-foreground/75")}
-                        <span className="text-xs text-muted-foreground">{servingUnit}</span>
+                        <MetricValue
+                          value={servingSize ? formatDisplayAmount(servingSize) : '-'}
+                          unit={servingUnit}
+                          valueClassName={servingSize ? "text-foreground/75 font-normal" : "text-muted-foreground/40 font-normal"}
+                          unitClassName="text-muted-foreground"
+                        />
                       </div>
                     ) : (
                       <button
@@ -916,8 +917,12 @@ export function FoodFormDialog({
                           basisSize ? "text-foreground" : "text-muted-foreground"
                         )}
                       >
-                        {renderAmountValue(basisSize, "text-foreground")}
-                        <span className="text-muted-foreground">{basisUnit}</span>
+                        <MetricValue
+                          value={basisSize ? formatDisplayAmount(basisSize) : '-'}
+                          unit={basisUnit}
+                          valueClassName={basisSize ? "text-foreground font-normal" : "text-muted-foreground/40 font-normal"}
+                          unitClassName="text-muted-foreground"
+                        />
                         <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                       </button>
                     );
@@ -931,8 +936,12 @@ export function FoodFormDialog({
                           calories !== '' ? "text-calories" : "text-muted-foreground"
                         )}
                       >
-                        {renderAmountValue(calories, "text-calories")}
-                        <span className="text-xs text-muted-foreground">{calorieUnit}</span>
+                        <MetricValue
+                          value={calories !== '' ? formatDisplayAmount(calories) : '-'}
+                          unit={calorieUnit}
+                          valueClassName={calories !== '' ? "text-calories font-normal" : "text-muted-foreground/40 font-normal"}
+                          unitClassName="text-xs text-muted-foreground"
+                        />
                         <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                       </button>
                     );
@@ -946,8 +955,12 @@ export function FoodFormDialog({
                           carbs !== '' ? "text-carbs" : "text-muted-foreground"
                         )}
                       >
-                        {renderAmountValue(carbs, "text-carbs")}
-                        <span className="text-xs text-muted-foreground">g</span>
+                        <MetricValue
+                          value={carbs !== '' ? formatDisplayAmount(carbs) : '-'}
+                          unit="g"
+                          valueClassName={carbs !== '' ? "text-carbs font-normal" : "text-muted-foreground/40 font-normal"}
+                          unitClassName="text-xs text-muted-foreground"
+                        />
                         <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                       </button>
                     );
@@ -961,8 +974,12 @@ export function FoodFormDialog({
                           sugar !== '' ? "text-foreground" : "text-muted-foreground"
                         )}
                       >
-                        {renderAmountValue(sugar, "text-foreground")}
-                        <span className="text-xs text-muted-foreground">g</span>
+                        <MetricValue
+                          value={sugar !== '' ? formatDisplayAmount(sugar) : '-'}
+                          unit="g"
+                          valueClassName={sugar !== '' ? "text-foreground font-normal" : "text-muted-foreground/40 font-normal"}
+                          unitClassName="text-xs text-muted-foreground"
+                        />
                         <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                       </button>
                     );
@@ -976,8 +993,12 @@ export function FoodFormDialog({
                           fiber !== '' ? "text-foreground" : "text-muted-foreground"
                         )}
                       >
-                        {renderAmountValue(fiber, "text-foreground")}
-                        <span className="text-xs text-muted-foreground">g</span>
+                        <MetricValue
+                          value={fiber !== '' ? formatDisplayAmount(fiber) : '-'}
+                          unit="g"
+                          valueClassName={fiber !== '' ? "text-foreground font-normal" : "text-muted-foreground/40 font-normal"}
+                          unitClassName="text-xs text-muted-foreground"
+                        />
                         <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                       </button>
                     );
@@ -991,8 +1012,12 @@ export function FoodFormDialog({
                           protein !== '' ? "text-protein" : "text-muted-foreground"
                         )}
                       >
-                        {renderAmountValue(protein, "text-protein")}
-                        <span className="text-xs text-muted-foreground">g</span>
+                        <MetricValue
+                          value={protein !== '' ? formatDisplayAmount(protein) : '-'}
+                          unit="g"
+                          valueClassName={protein !== '' ? "text-protein font-normal" : "text-muted-foreground/40 font-normal"}
+                          unitClassName="text-xs text-muted-foreground"
+                        />
                         <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                       </button>
                     );
@@ -1006,8 +1031,12 @@ export function FoodFormDialog({
                           fat !== '' ? "text-fat" : "text-muted-foreground"
                         )}
                       >
-                        {renderAmountValue(fat, "text-fat")}
-                        <span className="text-xs text-muted-foreground">g</span>
+                        <MetricValue
+                          value={fat !== '' ? formatDisplayAmount(fat) : '-'}
+                          unit="g"
+                          valueClassName={fat !== '' ? "text-fat font-normal" : "text-muted-foreground/40 font-normal"}
+                          unitClassName="text-xs text-muted-foreground"
+                        />
                         <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                       </button>
                     );
@@ -1021,8 +1050,12 @@ export function FoodFormDialog({
                           saturatedFat !== '' ? "text-foreground" : "text-muted-foreground"
                         )}
                       >
-                        {renderAmountValue(saturatedFat, "text-foreground")}
-                        <span className="text-xs text-muted-foreground">g</span>
+                        <MetricValue
+                          value={saturatedFat !== '' ? formatDisplayAmount(saturatedFat) : '-'}
+                          unit="g"
+                          valueClassName={saturatedFat !== '' ? "text-foreground font-normal" : "text-muted-foreground/40 font-normal"}
+                          unitClassName="text-xs text-muted-foreground"
+                        />
                         <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                       </button>
                     );
@@ -1036,8 +1069,12 @@ export function FoodFormDialog({
                           transFat !== '' ? "text-foreground" : "text-muted-foreground"
                         )}
                       >
-                        {renderAmountValue(transFat, "text-foreground")}
-                        <span className="text-xs text-muted-foreground">g</span>
+                        <MetricValue
+                          value={transFat !== '' ? formatDisplayAmount(transFat) : '-'}
+                          unit="g"
+                          valueClassName={transFat !== '' ? "text-foreground font-normal" : "text-muted-foreground/40 font-normal"}
+                          unitClassName="text-xs text-muted-foreground"
+                        />
                         <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                       </button>
                     );
@@ -1048,11 +1085,15 @@ export function FoodFormDialog({
                         onClick={(e) => openKeypad('sodium', e.currentTarget)}
                         className={cn(
                           "h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none",
-                          sodium !== '' ? "text-foreground" : "text-muted-foreground"
+                          sodium !== '' ? "text-sodium" : "text-muted-foreground"
                         )}
                       >
-                        {renderAmountValue(sodium, "text-foreground")}
-                        <span className="text-xs text-muted-foreground">mg</span>
+                        <MetricValue
+                          value={sodium !== '' ? formatDisplayAmount(sodium) : '-'}
+                          unit="mg"
+                          valueClassName={sodium !== '' ? "text-sodium font-normal" : "text-muted-foreground/40 font-normal"}
+                          unitClassName="text-xs text-muted-foreground"
+                        />
                         <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                       </button>
                     );

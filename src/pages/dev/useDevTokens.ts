@@ -11,11 +11,12 @@ export interface DevTokenConfig {
   '--muted'?: string;
   '--muted-foreground'?: string;
 
-  // 熱量與三大營養素 (Calories, Carbs, Protein, Fat)
+  // 熱量、三大營養素與微量鈉 (Calories, Carbs, Protein, Fat, Sodium)
   '--calories'?: string;
   '--carbs'?: string;
   '--protein'?: string;
   '--fat'?: string;
+  '--sodium'?: string;
 
   // 肌群強度赤陶階梯
   '--muscle-intensity-high-bg'?: string;

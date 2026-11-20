@@ -67,6 +67,12 @@
   --color-fat-subtle-border: var(--fat-subtle-border);
   --color-fat-subtle-bg: var(--fat-subtle-bg);
 
+  --color-sodium: var(--sodium);
+  --color-sodium-foreground: var(--sodium-foreground);
+  --color-sodium-subtle: var(--sodium-subtle);
+  --color-sodium-subtle-border: var(--sodium-subtle-border);
+  --color-sodium-subtle-bg: var(--sodium-subtle-bg);
+
   /* 肌群刺激強度赤陶磚紅系統 (Terracotta / Burnt Sienna Spectrum) */
   --color-muscle-intensity-high-bg: var(--muscle-intensity-high-bg);
   --color-muscle-intensity-high-text: var(--muscle-intensity-high-text);
@@ -201,6 +207,12 @@
     --fat-subtle-border: rgba(124, 58, 237, 0.15);
     --fat-subtle-bg: rgba(124, 58, 237, 0.035);
 
+    --sodium: #0d9488; /* 水青湖綠 - 體液滲透壓與電解質平衡，客觀無焦慮 */
+    --sodium-foreground: #ffffff;
+    --sodium-subtle: rgba(13, 148, 136, 0.15);
+    --sodium-subtle-border: rgba(13, 148, 136, 0.15);
+    --sodium-subtle-bg: rgba(13, 148, 136, 0.035);
+
     /* 肌群刺激強度與人體地圖系統 - 亮色模式 */
     --muscle-intensity-high-bg: rgba(255, 36, 83, 0.75);
     --muscle-intensity-high-text: #000000;
@@ -303,6 +315,12 @@
     --fat-subtle: rgba(167, 139, 250, 0.18);
     --fat-subtle-border: rgba(167, 139, 250, 0.20);
     --fat-subtle-bg: rgba(167, 139, 250, 0.05);
+
+    --sodium: #14b8a6;
+    --sodium-foreground: #000000;
+    --sodium-subtle: rgba(20, 184, 166, 0.18);
+    --sodium-subtle-border: rgba(20, 184, 166, 0.20);
+    --sodium-subtle-bg: rgba(20, 184, 166, 0.05);
 
     /* 肌群刺激強度與人體地圖系統 - 深色模式 */
     --muscle-intensity-high-bg: rgba(251, 113, 133, 0.24);

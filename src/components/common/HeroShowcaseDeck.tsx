@@ -5,6 +5,7 @@ import { useInAppNavigation } from '@/store/useInAppNavigation';
 import { DashboardView, getDemoDashboardData } from '@/components/dashboard/DashboardView';
 import { DietView, getDemoDietData } from '@/components/diet/DietView';
 import { BrandWordmark } from '@/components/ui/Logo';
+import { MetricValue } from '@/components/ui/metric-value';
 
 function DeckWindowChrome({
   moduleLabel,
@@ -115,20 +116,35 @@ export function HeroShowcaseDeck() {
             <div className="grid grid-cols-3 divide-x divide-border bg-card">
               <div className="p-3 flex flex-col justify-between">
                 <span className="text-xs text-muted-foreground">{t('landing.deck.totalIntake', '總攝入')}</span>
-                <div className="font-mono text-xs font-semibold tabular-nums text-foreground mt-1">
-                  3,240 <span className="text-xs font-normal text-muted-foreground">kcal</span>
+                <div className="mt-1">
+                  <MetricValue
+                    value="3,240"
+                    unit="kcal"
+                    className="font-semibold text-xs text-foreground"
+                    unitClassName="text-xs font-normal"
+                  />
                 </div>
               </div>
               <div className="p-3 flex flex-col justify-between">
                 <span className="text-xs text-muted-foreground">{t('landing.deck.frequency', '頻率')}</span>
-                <div className="font-mono text-xs font-semibold tabular-nums text-foreground mt-1">
-                  18 <span className="text-xs font-normal text-muted-foreground">{t('landing.deck.timesUnit', '次')}</span>
+                <div className="mt-1">
+                  <MetricValue
+                    value="18"
+                    unit={t('landing.deck.timesUnit', '次')}
+                    className="font-semibold text-xs text-foreground"
+                    unitClassName="text-xs font-normal"
+                  />
                 </div>
               </div>
               <div className="p-3 flex flex-col justify-between">
                 <span className="text-xs text-muted-foreground">{t('landing.deck.singleDayMax', '單日最高')}</span>
-                <div className="font-mono text-xs font-semibold tabular-nums text-foreground mt-1">
-                  250 <span className="text-xs font-normal text-muted-foreground">g</span>
+                <div className="mt-1">
+                  <MetricValue
+                    value="250"
+                    unit="g"
+                    className="font-semibold text-xs text-foreground"
+                    unitClassName="text-xs font-normal"
+                  />
                 </div>
               </div>
             </div>
@@ -160,19 +176,19 @@ export function HeroShowcaseDeck() {
             <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border text-xs font-mono">
               <div className="h-8 px-3 flex items-center justify-between">
                 <span className="text-muted-foreground">{t('landing.deck.calories', '熱量')}</span>
-                <span className="font-bold text-foreground">110 kcal</span>
+                <MetricValue value="110" unit="kcal" valueClassName="font-bold text-foreground" />
               </div>
               <div className="h-8 px-3 flex items-center justify-between">
                 <span className="text-muted-foreground">{t('landing.deck.carbs', '碳水化合物')}</span>
-                <span className="font-semibold text-foreground">0.0 g</span>
+                <MetricValue value="0.0" unit="g" valueClassName="font-semibold text-foreground" />
               </div>
               <div className="h-8 px-3 flex items-center justify-between bg-emerald-50/30 dark:bg-emerald-950/20">
                 <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{t('landing.deck.protein', '蛋白質')}</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">23.1 g</span>
+                <MetricValue value="23.1" unit="g" valueClassName="font-bold text-emerald-600 dark:text-emerald-400" unitClassName="text-emerald-600/70 dark:text-emerald-400/70" />
               </div>
               <div className="h-8 px-3 flex items-center justify-between">
                 <span className="text-muted-foreground">{t('landing.deck.fat', '脂肪')}</span>
-                <span className="font-semibold text-foreground">1.2 g</span>
+                <MetricValue value="1.2" unit="g" valueClassName="font-semibold text-foreground" />
               </div>
             </div>
           </div>

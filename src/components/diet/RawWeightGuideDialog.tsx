@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
 import { Dialog, PrecisionDialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { MetricValue } from '@/components/ui/metric-value';
 import { triggerHaptic } from '@/lib/haptics';
 
 export interface RawWeightGuideDialogProps {
@@ -12,15 +13,15 @@ export interface RawWeightGuideDialogProps {
 }
 
 const RICE_STEPS = [
-  { methodKey: 'riceSteamed', methodFb: '正常蒸煮', weight: '250 g', scale: 0.76, kcal: '142 kcal' },
-  { methodKey: 'ricePorridge', methodFb: '軟爛稀飯', weight: '320 g', scale: 0.97, kcal: '111 kcal' },
-  { methodKey: 'riceFried', methodFb: '乾硬炒飯', weight: '210 g', scale: 0.64, kcal: '170 kcal' },
+  { methodKey: 'riceSteamed', methodFb: '正常蒸煮', weight: 250, scale: 0.76, kcal: 142 },
+  { methodKey: 'ricePorridge', methodFb: '軟爛稀飯', weight: 320, scale: 0.97, kcal: 111 },
+  { methodKey: 'riceFried', methodFb: '乾硬炒飯', weight: 210, scale: 0.64, kcal: 170 },
 ] as const;
 
 const MEAT_STEPS = [
-  { methodKey: 'meatBoiled', methodFb: '水煮', weight: '82 g', scale: 0.82, kcal: '134 kcal' },
-  { methodKey: 'meatPanSeared', methodFb: '香煎', weight: '74 g', scale: 0.74, kcal: '149 kcal' },
-  { methodKey: 'meatAirFried', methodFb: '氣炸烘烤', weight: '66 g', scale: 0.66, kcal: '167 kcal' },
+  { methodKey: 'meatBoiled', methodFb: '水煮', weight: 82, scale: 0.82, kcal: 134 },
+  { methodKey: 'meatPanSeared', methodFb: '香煎', weight: 74, scale: 0.74, kcal: 149 },
+  { methodKey: 'meatAirFried', methodFb: '氣炸烘烤', weight: 66, scale: 0.66, kcal: 167 },
 ] as const;
 
 /**
@@ -97,9 +98,12 @@ export function RawWeightGuideDialog({
                     {t(`diet.rawWeightGuide.${rice.methodKey}`, rice.methodFb)}
                   </span>
                 </div>
-                <span className="tabular-nums text-foreground font-medium shrink-0">
-                  {rice.weight}
-                </span>
+                <MetricValue
+                  value={rice.weight}
+                  unit="g"
+                  className="text-foreground font-medium shrink-0"
+                  unitClassName="text-xs"
+                />
               </div>
               <div className="relative h-2 w-full rounded-full border border-dashed border-border overflow-hidden bg-background">
                 <div
@@ -112,7 +116,12 @@ export function RawWeightGuideDialog({
                 <span className="font-sans">
                   {t('diet.rawWeightGuide.riceDensityLabel', '每 100g 熟飯熱量')}
                 </span>
-                <span className="text-telemetry-accent font-medium">{rice.kcal}</span>
+                <MetricValue
+                  value={rice.kcal}
+                  unit="kcal"
+                  className="text-telemetry-accent font-medium"
+                  unitClassName="text-xs"
+                />
               </div>
             </div>
 
@@ -128,9 +137,12 @@ export function RawWeightGuideDialog({
                     {t(`diet.rawWeightGuide.${meat.methodKey}`, meat.methodFb)}
                   </span>
                 </div>
-                <span className="tabular-nums text-foreground font-medium shrink-0">
-                  {meat.weight}
-                </span>
+                <MetricValue
+                  value={meat.weight}
+                  unit="g"
+                  className="text-foreground font-medium shrink-0"
+                  unitClassName="text-xs"
+                />
               </div>
               <div className="relative h-2 w-full rounded-full bg-track overflow-hidden">
                 <div
@@ -142,7 +154,12 @@ export function RawWeightGuideDialog({
                 <span className="font-sans">
                   {t('diet.rawWeightGuide.meatDensityLabel', '每 100g 熟肉熱量')}
                 </span>
-                <span className="text-telemetry-accent font-medium">{meat.kcal}</span>
+                <MetricValue
+                  value={meat.kcal}
+                  unit="kcal"
+                  className="text-telemetry-accent font-medium"
+                  unitClassName="text-xs"
+                />
               </div>
             </div>
 
@@ -151,9 +168,12 @@ export function RawWeightGuideDialog({
               <span className="font-sans text-muted-foreground truncate">
                 {t('diet.rawWeightGuide.oilRule', '烹調用油獨立計量')}
               </span>
-              <span className="tabular-nums text-telemetry-accent font-medium shrink-0">
-                + 5 g
-              </span>
+              <MetricValue
+                value="+5"
+                unit="g"
+                className="text-telemetry-accent font-medium shrink-0"
+                unitClassName="text-xs"
+              />
             </div>
           </div>
 

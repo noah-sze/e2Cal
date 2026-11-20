@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronRight } from 'lucide-react';
 import { SectionCard } from '@/components/ui/section-card';
 import { NutritionBasisToggle } from '@/components/food/NutritionBasisToggle';
+import { MetricValue } from '@/components/ui/metric-value';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { formatEnergy, formatFoodServing } from '@/utils/unitMath';
 import { cn } from '@/lib/utils';
@@ -48,9 +49,12 @@ export interface NutritionFactsCardProps {
     protein?: boolean;
     carbs?: boolean;
     fat?: boolean;
+    sodium?: boolean;
   } | null;
   /** 首行基準標籤，預設為 t('diet.perLabelBasis', '每') */
   perLabel?: string;
+  /** 是否顯示首行基準份量行（例如「每 100 g」），預設為 true */
+  showServingRow?: boolean;
   /** 碳水化合物次級指標初始展開狀態 */
   defaultCarbsExpanded?: boolean;
   /** 脂肪次級指標初始展開狀態 */
@@ -83,6 +87,7 @@ export function NutritionFactsCard({
   fallbackData,
   highlights,
   perLabel,
+  showServingRow = true,
   defaultCarbsExpanded,
   defaultFatExpanded,
   editable,
@@ -128,23 +133,25 @@ export function NutritionFactsCard({
       className={className}
     >
       {/* 1. 每基準份量行 (h-10) */}
-      <div className="h-10 px-4 flex items-center justify-between">
-        <span className="text-muted-foreground text-xs">{perLabel ?? t('diet.perLabelBasis', '每')}</span>
-        <div onClick={(e) => e.stopPropagation()}>
-          {editable ? (
-            editable.renderValue(
-              'serving',
-              <span className="font-mono text-foreground font-medium text-xs tabular-nums whitespace-nowrap">
-                {formatFoodServing(servingSize, servingUnit, foodWeightUnit, foodVolumeUnit).formatted}
-              </span>
-            )
-          ) : (
-            <span className="font-mono text-foreground font-medium text-xs tabular-nums whitespace-nowrap">
-              {formatFoodServing(servingSize, servingUnit, foodWeightUnit, foodVolumeUnit).formatted}
-            </span>
-          )}
+      {showServingRow && (
+        <div className="h-10 px-4 flex items-center justify-between">
+          <span className="text-muted-foreground text-xs">{perLabel ?? t('diet.perLabelBasis', '每')}</span>
+          <div onClick={(e) => e.stopPropagation()}>
+            {(() => {
+              const s = formatFoodServing(servingSize, servingUnit, foodWeightUnit, foodVolumeUnit);
+              const node = (
+                <MetricValue
+                  value={s.size}
+                  unit={s.unit}
+                  valueClassName="font-medium text-foreground text-xs"
+                  unitClassName="text-xs"
+                />
+              );
+              return editable ? editable.renderValue('serving', node) : node;
+            })()}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 2. 熱量行 (h-10) */}
       <div
@@ -155,18 +162,18 @@ export function NutritionFactsCard({
       >
         <span className="text-calories text-xs font-medium">{t('diet.calories')}</span>
         <div onClick={(e) => e.stopPropagation()}>
-          {editable ? (
-            editable.renderValue(
-              'calories',
-              <span className="font-mono text-calories font-medium text-xs tabular-nums whitespace-nowrap">
-                {formatEnergy(calories, energyUnit).formatted}
-              </span>
-            )
-          ) : (
-            <span className="font-mono text-calories font-medium text-xs tabular-nums whitespace-nowrap">
-              {formatEnergy(calories, energyUnit).formatted}
-            </span>
-          )}
+          {(() => {
+            const e = formatEnergy(calories, energyUnit);
+            const node = (
+              <MetricValue
+                value={e.value.toLocaleString()}
+                unit={e.unit}
+                valueClassName="font-medium text-calories text-xs"
+                unitClassName="text-xs"
+              />
+            );
+            return editable ? editable.renderValue('calories', node) : node;
+          })()}
         </div>
       </div>
 
@@ -196,18 +203,17 @@ export function NutritionFactsCard({
             )}
           </div>
           <div onClick={(e) => e.stopPropagation()}>
-            {editable ? (
-              editable.renderValue(
-                'carbs',
-                <span className="font-mono text-carbs font-medium text-xs tabular-nums whitespace-nowrap">
-                  {carbs} g
-                </span>
-              )
-            ) : (
-              <span className="font-mono text-carbs font-medium text-xs tabular-nums whitespace-nowrap">
-                {carbs} g
-              </span>
-            )}
+            {(() => {
+              const node = (
+                <MetricValue
+                  value={carbs}
+                  unit="g"
+                  valueClassName="font-medium text-carbs text-xs"
+                  unitClassName="text-xs"
+                />
+              );
+              return editable ? editable.renderValue('carbs', node) : node;
+            })()}
           </div>
         </div>
 
@@ -219,26 +225,19 @@ export function NutritionFactsCard({
               <div className="absolute left-2.5 top-1/2 w-2.5 h-px bg-border" />
               <span className="font-sans text-muted-foreground text-xs">{t('diet.sugar')}</span>
               <div onClick={(e) => e.stopPropagation()}>
-                {editable ? (
-                  editable.renderValue(
-                    'sugar',
-                    <span className="tabular-nums whitespace-nowrap text-foreground/80">
-                      {typeof sugarVal === 'number' ? (
-                        `${sugarVal} g`
-                      ) : (
-                        <span className="text-muted-foreground/40 select-none font-mono">-</span>
-                      )}
-                    </span>
-                  )
-                ) : (
-                  <span className="tabular-nums whitespace-nowrap text-foreground/80">
-                    {typeof sugarVal === 'number' ? (
-                      `${sugarVal} g`
-                    ) : (
-                      <span className="text-muted-foreground/40 select-none font-mono">-</span>
-                    )}
-                  </span>
-                )}
+                {(() => {
+                  const node = typeof sugarVal === 'number' ? (
+                    <MetricValue
+                      value={sugarVal}
+                      unit="g"
+                      valueClassName="text-foreground/80 text-xs"
+                      unitClassName="text-xs"
+                    />
+                  ) : (
+                    <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
+                  );
+                  return editable ? editable.renderValue('sugar', node) : node;
+                })()}
               </div>
             </div>
 
@@ -247,26 +246,19 @@ export function NutritionFactsCard({
               <div className="absolute left-2.5 top-0 h-1/2 w-2.5 border-l border-b border-border rounded-bl-[3px]" />
               <span className="font-sans text-muted-foreground text-xs">{t('diet.fiber')}</span>
               <div onClick={(e) => e.stopPropagation()}>
-                {editable ? (
-                  editable.renderValue(
-                    'fiber',
-                    <span className="tabular-nums whitespace-nowrap text-foreground/80">
-                      {typeof fiberVal === 'number' ? (
-                        `${fiberVal} g`
-                      ) : (
-                        <span className="text-muted-foreground/40 select-none font-mono">-</span>
-                      )}
-                    </span>
-                  )
-                ) : (
-                  <span className="tabular-nums whitespace-nowrap text-foreground/80">
-                    {typeof fiberVal === 'number' ? (
-                      `${fiberVal} g`
-                    ) : (
-                      <span className="text-muted-foreground/40 select-none font-mono">-</span>
-                    )}
-                  </span>
-                )}
+                {(() => {
+                  const node = typeof fiberVal === 'number' ? (
+                    <MetricValue
+                      value={fiberVal}
+                      unit="g"
+                      valueClassName="text-foreground/80 text-xs"
+                      unitClassName="text-xs"
+                    />
+                  ) : (
+                    <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
+                  );
+                  return editable ? editable.renderValue('fiber', node) : node;
+                })()}
               </div>
             </div>
           </div>
@@ -282,18 +274,17 @@ export function NutritionFactsCard({
       >
         <span className="text-protein text-xs font-medium">{t('diet.protein')}</span>
         <div onClick={(e) => e.stopPropagation()}>
-          {editable ? (
-            editable.renderValue(
-              'protein',
-              <span className="font-mono text-protein font-medium text-xs tabular-nums whitespace-nowrap">
-                {protein} g
-              </span>
-            )
-          ) : (
-            <span className="font-mono text-protein font-medium text-xs tabular-nums whitespace-nowrap">
-              {protein} g
-            </span>
-          )}
+          {(() => {
+            const node = (
+              <MetricValue
+                value={protein}
+                unit="g"
+                valueClassName="font-medium text-protein text-xs"
+                unitClassName="text-xs"
+              />
+            );
+            return editable ? editable.renderValue('protein', node) : node;
+          })()}
         </div>
       </div>
 
@@ -323,18 +314,17 @@ export function NutritionFactsCard({
             )}
           </div>
           <div onClick={(e) => e.stopPropagation()}>
-            {editable ? (
-              editable.renderValue(
-                'fat',
-                <span className="font-mono text-fat font-medium text-xs tabular-nums whitespace-nowrap">
-                  {fat} g
-                </span>
-              )
-            ) : (
-              <span className="font-mono text-fat font-medium text-xs tabular-nums whitespace-nowrap">
-                {fat} g
-              </span>
-            )}
+            {(() => {
+              const node = (
+                <MetricValue
+                  value={fat}
+                  unit="g"
+                  valueClassName="font-medium text-fat text-xs"
+                  unitClassName="text-xs"
+                />
+              );
+              return editable ? editable.renderValue('fat', node) : node;
+            })()}
           </div>
         </div>
 
@@ -346,26 +336,19 @@ export function NutritionFactsCard({
               <div className="absolute left-2.5 top-1/2 w-2.5 h-px bg-border" />
               <span className="font-sans text-muted-foreground text-xs">{t('diet.saturatedFat')}</span>
               <div onClick={(e) => e.stopPropagation()}>
-                {editable ? (
-                  editable.renderValue(
-                    'saturatedFat',
-                    <span className="tabular-nums whitespace-nowrap text-foreground/80">
-                      {typeof satFatVal === 'number' ? (
-                        `${satFatVal} g`
-                      ) : (
-                        <span className="text-muted-foreground/40 select-none font-mono">-</span>
-                      )}
-                    </span>
-                  )
-                ) : (
-                  <span className="tabular-nums whitespace-nowrap text-foreground/80">
-                    {typeof satFatVal === 'number' ? (
-                      `${satFatVal} g`
-                    ) : (
-                      <span className="text-muted-foreground/40 select-none font-mono">-</span>
-                    )}
-                  </span>
-                )}
+                {(() => {
+                  const node = typeof satFatVal === 'number' ? (
+                    <MetricValue
+                      value={satFatVal}
+                      unit="g"
+                      valueClassName="text-foreground/80 text-xs"
+                      unitClassName="text-xs"
+                    />
+                  ) : (
+                    <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
+                  );
+                  return editable ? editable.renderValue('saturatedFat', node) : node;
+                })()}
               </div>
             </div>
 
@@ -374,26 +357,19 @@ export function NutritionFactsCard({
               <div className="absolute left-2.5 top-0 h-1/2 w-2.5 border-l border-b border-border rounded-bl-[3px]" />
               <span className="font-sans text-muted-foreground text-xs">{t('diet.transFat')}</span>
               <div onClick={(e) => e.stopPropagation()}>
-                {editable ? (
-                  editable.renderValue(
-                    'transFat',
-                    <span className="tabular-nums whitespace-nowrap text-foreground/80">
-                      {typeof transFatVal === 'number' ? (
-                        `${transFatVal} g`
-                      ) : (
-                        <span className="text-muted-foreground/40 select-none font-mono">-</span>
-                      )}
-                    </span>
-                  )
-                ) : (
-                  <span className="tabular-nums whitespace-nowrap text-foreground/80">
-                    {typeof transFatVal === 'number' ? (
-                      `${transFatVal} g`
-                    ) : (
-                      <span className="text-muted-foreground/40 select-none font-mono">-</span>
-                    )}
-                  </span>
-                )}
+                {(() => {
+                  const node = typeof transFatVal === 'number' ? (
+                    <MetricValue
+                      value={transFatVal}
+                      unit="g"
+                      valueClassName="text-foreground/80 text-xs"
+                      unitClassName="text-xs"
+                    />
+                  ) : (
+                    <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
+                  );
+                  return editable ? editable.renderValue('transFat', node) : node;
+                })()}
               </div>
             </div>
           </div>
@@ -401,29 +377,27 @@ export function NutritionFactsCard({
       </div>
 
       {/* 6. 鈉獨立指標行 (h-10) */}
-      <div className="h-10 px-4 flex items-center justify-between">
-        <span className="text-foreground text-xs font-medium">{t('diet.sodium')}</span>
+      <div
+        className={cn(
+          "h-10 px-4 flex items-center justify-between transition-colors",
+          highlights?.sodium && "bg-sodium-subtle-bg"
+        )}
+      >
+        <span className="text-sodium text-xs font-medium">{t('diet.sodium')}</span>
         <div onClick={(e) => e.stopPropagation()}>
-          {editable ? (
-            editable.renderValue(
-              'sodium',
-              <span className="font-mono text-foreground font-medium text-xs tabular-nums whitespace-nowrap">
-                {typeof sodiumVal === 'number' ? (
-                  `${sodiumVal} mg`
-                ) : (
-                  <span className="text-muted-foreground/40 select-none font-mono">-</span>
-                )}
-              </span>
-            )
-          ) : (
-            <span className="font-mono text-foreground font-medium text-xs tabular-nums whitespace-nowrap">
-              {typeof sodiumVal === 'number' ? (
-                `${sodiumVal} mg`
-              ) : (
-                <span className="text-muted-foreground/40 select-none font-mono">-</span>
-              )}
-            </span>
-          )}
+          {(() => {
+            const node = typeof sodiumVal === 'number' ? (
+              <MetricValue
+                value={sodiumVal}
+                unit="mg"
+                valueClassName="font-medium text-sodium text-xs"
+                unitClassName="text-xs"
+              />
+            ) : (
+              <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
+            );
+            return editable ? editable.renderValue('sodium', node) : node;
+          })()}
         </div>
       </div>
     </SectionCard>
