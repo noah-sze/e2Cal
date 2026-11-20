@@ -127,5 +127,36 @@ describe('recipeMath 核心純函數測試', () => {
         ingredientCount: 0,
       });
     });
+
+    it('次級營養素累計：食材包含糖、纖維、飽和脂肪與鈉時動態求和', () => {
+      const foodWithSecondary: FoodItem = {
+        id: 'food_oats',
+        name: '燕麥',
+        servingSize: 100,
+        servingUnit: 'g',
+        calories: 380,
+        protein: 13,
+        carbs: 68,
+        fat: 7,
+        sugar: 1,
+        fiber: 10,
+        saturatedFat: 1.5,
+        sodium: 5,
+        isCustom: false,
+        createdAt: 0,
+        updatedAt: 0,
+      };
+      const customFoodMap = new Map<string, FoodItem>([[foodWithSecondary.id, foodWithSecondary]]);
+      const totals = calculateRecipeTotals(
+        { ingredients: [{ foodId: foodWithSecondary.id, quantity: 50, unit: 'g', isOptional: false }] },
+        customFoodMap
+      );
+      expect(totals.calories).toBe(190);
+      expect(totals.carbs).toBe(34);
+      expect(totals.sugar).toBe(0.5);
+      expect(totals.fiber).toBe(5);
+      expect(totals.saturatedFat).toBe(0.8);
+      expect(totals.sodium).toBe(3);
+    });
   });
 });

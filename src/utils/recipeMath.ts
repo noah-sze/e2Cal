@@ -5,6 +5,11 @@ export interface NutrientBreakdown {
   protein: number;
   carbs: number;
   fat: number;
+  sugar?: number;
+  fiber?: number;
+  saturatedFat?: number;
+  transFat?: number;
+  sodium?: number;
 }
 
 export interface RecipeTotals extends NutrientBreakdown {
@@ -17,7 +22,7 @@ export interface RecipeTotals extends NutrientBreakdown {
  * 純函數無副作用，處理異常與邊界輸入
  */
 export function calculateIngredientMacros(
-  food: Pick<FoodItem, 'servingSize' | 'calories' | 'protein' | 'carbs' | 'fat'> | undefined | null,
+  food: Pick<FoodItem, 'servingSize' | 'calories' | 'protein' | 'carbs' | 'fat' | 'sugar' | 'fiber' | 'saturatedFat' | 'transFat' | 'sodium'> | undefined | null,
   quantity: number
 ): NutrientBreakdown {
   if (
@@ -37,12 +42,22 @@ export function calculateIngredientMacros(
   const safeProtein = typeof food.protein === 'number' && !isNaN(food.protein) ? food.protein : 0;
   const safeCarbs = typeof food.carbs === 'number' && !isNaN(food.carbs) ? food.carbs : 0;
   const safeFat = typeof food.fat === 'number' && !isNaN(food.fat) ? food.fat : 0;
+  const safeSugar = typeof food.sugar === 'number' && !isNaN(food.sugar) ? food.sugar : undefined;
+  const safeFiber = typeof food.fiber === 'number' && !isNaN(food.fiber) ? food.fiber : undefined;
+  const safeSatFat = typeof food.saturatedFat === 'number' && !isNaN(food.saturatedFat) ? food.saturatedFat : undefined;
+  const safeTransFat = typeof food.transFat === 'number' && !isNaN(food.transFat) ? food.transFat : undefined;
+  const safeSodium = typeof food.sodium === 'number' && !isNaN(food.sodium) ? food.sodium : undefined;
 
   return {
     calories: Math.round(safeCalories * ratio),
     protein: Math.round(safeProtein * ratio * 10) / 10,
     carbs: Math.round(safeCarbs * ratio * 10) / 10,
     fat: Math.round(safeFat * ratio * 10) / 10,
+    ...(typeof safeSugar === 'number' ? { sugar: Math.round(safeSugar * ratio * 10) / 10 } : {}),
+    ...(typeof safeFiber === 'number' ? { fiber: Math.round(safeFiber * ratio * 10) / 10 } : {}),
+    ...(typeof safeSatFat === 'number' ? { saturatedFat: Math.round(safeSatFat * ratio * 10) / 10 } : {}),
+    ...(typeof safeTransFat === 'number' ? { transFat: Math.round(safeTransFat * ratio * 10) / 10 } : {}),
+    ...(typeof safeSodium === 'number' ? { sodium: Math.round(safeSodium * ratio) } : {}),
   };
 }
 
@@ -63,6 +78,16 @@ export function calculateRecipeTotals(
   let totalProtein = 0;
   let totalCarbs = 0;
   let totalFat = 0;
+  let totalSugar = 0;
+  let hasSugar = false;
+  let totalFiber = 0;
+  let hasFiber = false;
+  let totalSatFat = 0;
+  let hasSatFat = false;
+  let totalTransFat = 0;
+  let hasTransFat = false;
+  let totalSodium = 0;
+  let hasSodium = false;
   let totalWeight = 0;
   let effectiveCount = 0;
 
@@ -85,6 +110,27 @@ export function calculateRecipeTotals(
     totalCarbs += macros.carbs;
     totalFat += macros.fat;
 
+    if (typeof macros.sugar === 'number') {
+      totalSugar += macros.sugar;
+      hasSugar = true;
+    }
+    if (typeof macros.fiber === 'number') {
+      totalFiber += macros.fiber;
+      hasFiber = true;
+    }
+    if (typeof macros.saturatedFat === 'number') {
+      totalSatFat += macros.saturatedFat;
+      hasSatFat = true;
+    }
+    if (typeof macros.transFat === 'number') {
+      totalTransFat += macros.transFat;
+      hasTransFat = true;
+    }
+    if (typeof macros.sodium === 'number') {
+      totalSodium += macros.sodium;
+      hasSodium = true;
+    }
+
     if (ing.unit === 'g' || ing.unit === 'ml') {
       totalWeight += ing.quantity;
     }
@@ -98,5 +144,10 @@ export function calculateRecipeTotals(
     fat: Math.round(totalFat * 10) / 10,
     totalWeightGrams: Math.round(totalWeight),
     ingredientCount: effectiveCount,
+    ...(hasSugar ? { sugar: Math.round(totalSugar * 10) / 10 } : {}),
+    ...(hasFiber ? { fiber: Math.round(totalFiber * 10) / 10 } : {}),
+    ...(hasSatFat ? { saturatedFat: Math.round(totalSatFat * 10) / 10 } : {}),
+    ...(hasTransFat ? { transFat: Math.round(totalTransFat * 10) / 10 } : {}),
+    ...(hasSodium ? { sodium: Math.round(totalSodium) } : {}),
   };
 }

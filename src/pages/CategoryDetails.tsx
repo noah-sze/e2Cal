@@ -21,7 +21,7 @@ import { formatFoodDisplayName } from '@/utils/foodNaming';
 import { getLocalizedFoodName } from '@/utils/defaultLocalization';
 import { useAppStore } from '@/store/useAppStore';
 import { calculateScaledNutrition } from '@/utils/nutritionMath';
-import { NutritionBasisToggle } from '@/components/food/NutritionBasisToggle';
+import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
 import { FoodFormDialog, type FoodFormData } from '@/components/food/FoodFormDialog';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { formatEnergy, formatFoodServing } from '@/utils/unitMath';
@@ -439,55 +439,13 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
         />
       </div>
 
-      {/* 每份營養素標籤基準卡片 */}
-      <SectionCard
+      {/* 每份營養素標籤基準卡片 (共用通用元件) */}
+      <NutritionFactsCard
         title={t('diet.servingNutrients', '基準營養素')}
-        action={<NutritionBasisToggle />}
-        bodyClassName="text-sm"
-      >
-        <div className="h-10 px-4 flex items-center justify-between">
-          <span className="text-muted-foreground">{t('diet.serving')}</span>
-          <span className="font-mono text-foreground">
-            {formatFoodServing(scaledNutrition?.servingSize ?? food.servingSize, scaledNutrition?.servingUnit ?? food.servingUnit, foodWeightUnit, foodVolumeUnit).formatted}
-          </span>
-        </div>
-        <div className={cn(
-          "h-10 px-4 flex items-center justify-between transition-colors",
-          evalRes?.highlights.calories && "bg-calories-subtle-bg"
-        )}>
-          <span className="text-calories font-medium">{t('diet.calories')}</span>
-          <span className="font-mono text-calories font-medium">
-            {formatEnergy(scaledNutrition?.calories ?? food.calories, energyUnit).formatted}
-          </span>
-        </div>
-        <div className={cn(
-          "h-10 px-4 flex items-center justify-between transition-colors",
-          evalRes?.highlights.carbs && "bg-carbs-subtle-bg"
-        )}>
-          <span className="text-carbs font-medium">{t('diet.carbs')}</span>
-          <span className="font-mono text-carbs font-medium">
-            {scaledNutrition?.carbs ?? food.carbs} g
-          </span>
-        </div>
-        <div className={cn(
-          "h-10 px-4 flex items-center justify-between transition-colors",
-          evalRes?.highlights.protein && "bg-protein-subtle-bg"
-        )}>
-          <span className="text-protein font-medium">{t('diet.protein')}</span>
-          <span className="font-mono text-protein font-medium">
-            {scaledNutrition?.protein ?? food.protein} g
-          </span>
-        </div>
-        <div className={cn(
-          "h-10 px-4 flex items-center justify-between transition-colors",
-          evalRes?.highlights.fat && "bg-fat-subtle-bg"
-        )}>
-          <span className="text-fat font-medium">{t('diet.fat')}</span>
-          <span className="font-mono text-fat font-medium">
-            {scaledNutrition?.fat ?? food.fat} g
-          </span>
-        </div>
-      </SectionCard>
+        data={scaledNutrition}
+        fallbackData={food}
+        highlights={evalRes?.highlights}
+      />
 
       {/* 包含此食材的食譜組合 */}
       <SectionCard title={t('diet.relatedRecipes')}>

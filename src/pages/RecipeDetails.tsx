@@ -26,7 +26,7 @@ import { cn } from '@/lib/utils';
 import { calculateIngredientMacros, calculateRecipeTotals } from '@/utils/recipeMath';
 import { useAppStore } from '@/store/useAppStore';
 import { calculateScaledNutrition } from '@/utils/nutritionMath';
-import { NutritionBasisToggle } from '@/components/food/NutritionBasisToggle';
+import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
 import { RecipeFormDialog, type RecipeFormData } from '@/components/food/RecipeFormDialog';
 import { FoodRecipeSelectDialog } from '@/components/food/FoodRecipeSelectDialog';
 import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
@@ -190,6 +190,11 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
         protein: standardTotals.protein,
         carbs: standardTotals.carbs,
         fat: standardTotals.fat,
+        sugar: standardTotals.sugar,
+        fiber: standardTotals.fiber,
+        saturatedFat: standardTotals.saturatedFat,
+        transFat: standardTotals.transFat,
+        sodium: standardTotals.sodium,
         servingSize: standardTotals.totalWeightGrams || 100,
         servingUnit: 'g',
       },
@@ -553,59 +558,25 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
         />
       </div>
 
-      {/* 配方營養素總計卡片 (三大營養素 C -> P -> F 順序) */}
-      <SectionCard
+      {/* 配方營養素總計卡片 (三大營養素 C -> P -> F 順序，共用通用元件) */}
+      <NutritionFactsCard
         title={t('diet.recipeNutrients', '配方營養素總計')}
-        action={<NutritionBasisToggle />}
-        bodyClassName="text-sm"
-      >
-        <div className="h-10 px-4 flex items-center justify-between">
-          <span className="text-muted-foreground">
-            {nutritionDisplayMode === 'per100g'
-              ? (foodWeightUnit === 'oz' ? t('diet.per1ozDensity', '1oz 密度') : t('diet.per100gDensity', '100g 密度'))
-              : t('diet.unit')}
-          </span>
-          <span className="font-mono text-foreground font-medium">
-            {formatFoodServing(scaledRecipeTotals?.servingSize ?? standardTotals.totalWeightGrams, scaledRecipeTotals?.servingUnit ?? 'g', foodWeightUnit, foodVolumeUnit).formatted}
-          </span>
-        </div>
-        <div className={cn(
-          "h-10 px-4 flex items-center justify-between transition-colors",
-          evalRes?.highlights.calories && "bg-calories-subtle-bg"
-        )}>
-          <span className="text-calories font-medium">{t('diet.calories')}</span>
-          <span className="font-mono text-calories font-medium">
-            {formatEnergy(scaledRecipeTotals?.calories ?? standardTotals.calories, energyUnit).formatted}
-          </span>
-        </div>
-        <div className={cn(
-          "h-10 px-4 flex items-center justify-between transition-colors",
-          evalRes?.highlights.carbs && "bg-carbs-subtle-bg"
-        )}>
-          <span className="text-carbs font-medium">{t('diet.carbs')}</span>
-          <span className="font-mono text-carbs font-medium">
-            {scaledRecipeTotals?.carbs ?? standardTotals.carbs} g
-          </span>
-        </div>
-        <div className={cn(
-          "h-10 px-4 flex items-center justify-between transition-colors",
-          evalRes?.highlights.protein && "bg-protein-subtle-bg"
-        )}>
-          <span className="text-protein font-medium">{t('diet.protein')}</span>
-          <span className="font-mono text-protein font-medium">
-            {scaledRecipeTotals?.protein ?? standardTotals.protein} g
-          </span>
-        </div>
-        <div className={cn(
-          "h-10 px-4 flex items-center justify-between transition-colors",
-          evalRes?.highlights.fat && "bg-fat-subtle-bg"
-        )}>
-          <span className="text-fat font-medium">{t('diet.fat')}</span>
-          <span className="font-mono text-fat font-medium">
-            {scaledRecipeTotals?.fat ?? standardTotals.fat} g
-          </span>
-        </div>
-      </SectionCard>
+        data={scaledRecipeTotals}
+        fallbackData={standardTotals ? {
+          servingSize: standardTotals.totalWeightGrams,
+          servingUnit: 'g',
+          calories: standardTotals.calories,
+          carbs: standardTotals.carbs,
+          protein: standardTotals.protein,
+          fat: standardTotals.fat,
+          sugar: standardTotals.sugar,
+          fiber: standardTotals.fiber,
+          saturatedFat: standardTotals.saturatedFat,
+          transFat: standardTotals.transFat,
+          sodium: standardTotals.sodium,
+        } : undefined}
+        highlights={evalRes?.highlights}
+      />
 
       {/* 食材解構清單 (Ingredient Breakdown List) */}
       <SectionCard
