@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Trash2, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { MetricValue } from '@/components/ui/metric-value';
 
 export type BodyMetricKeypadField =
   | 'weight'
@@ -244,15 +245,15 @@ export function BodyTodayDataCard({
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate transition-colors',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayShoulders
                         ? 'text-foreground'
                         : shoulders
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {shoulders ? `${shoulders}${lengthUnit}` : '-'}
+                    {shoulders ? <MetricValue value={shoulders} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </button>
               ) : (
@@ -262,15 +263,15 @@ export function BodyTodayDataCard({
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayShoulders
                         ? 'text-foreground'
                         : shoulders
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {shoulders ? `${shoulders}${lengthUnit}` : '-'}
+                    {shoulders ? <MetricValue value={shoulders} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </div>
               )}
@@ -295,15 +296,15 @@ export function BodyTodayDataCard({
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate transition-colors',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayChest
                         ? 'text-foreground'
                         : chest
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {chest ? `${chest}${lengthUnit}` : '-'}
+                    {chest ? <MetricValue value={chest} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </button>
               ) : (
@@ -313,15 +314,15 @@ export function BodyTodayDataCard({
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayChest
                         ? 'text-foreground'
                         : chest
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {chest ? `${chest}${lengthUnit}` : '-'}
+                    {chest ? <MetricValue value={chest} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </div>
               )}
@@ -346,15 +347,15 @@ export function BodyTodayDataCard({
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate transition-colors',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayWaist
                         ? 'text-foreground'
                         : waist
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {waist ? `${waist}${lengthUnit}` : '-'}
+                    {waist ? <MetricValue value={waist} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </button>
               ) : (
@@ -364,15 +365,15 @@ export function BodyTodayDataCard({
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayWaist
                         ? 'text-foreground'
                         : waist
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {waist ? `${waist}${lengthUnit}` : '-'}
+                    {waist ? <MetricValue value={waist} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </div>
               )}
@@ -397,15 +398,15 @@ export function BodyTodayDataCard({
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate transition-colors',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayHips
                         ? 'text-foreground'
                         : hips
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {hips ? `${hips}${lengthUnit}` : '-'}
+                    {hips ? <MetricValue value={hips} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </button>
               ) : (
@@ -415,15 +416,15 @@ export function BodyTodayDataCard({
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayHips
                         ? 'text-foreground'
                         : hips
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {hips ? `${hips}${lengthUnit}` : '-'}
+                    {hips ? <MetricValue value={hips} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </div>
               )}
@@ -453,15 +454,15 @@ export function BodyTodayDataCard({
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate transition-colors',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayArms
                         ? 'text-foreground'
                         : arms
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {arms ? `${arms}${lengthUnit}` : '-'}
+                    {arms ? <MetricValue value={arms} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </button>
               ) : (
@@ -471,15 +472,15 @@ export function BodyTodayDataCard({
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayArms
                         ? 'text-foreground'
                         : arms
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {arms ? `${arms}${lengthUnit}` : '-'}
+                    {arms ? <MetricValue value={arms} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </div>
               )}
@@ -504,15 +505,15 @@ export function BodyTodayDataCard({
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate transition-colors',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayThighs
                         ? 'text-foreground'
                         : thighs
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {thighs ? `${thighs}${lengthUnit}` : '-'}
+                    {thighs ? <MetricValue value={thighs} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </button>
               ) : (
@@ -522,15 +523,15 @@ export function BodyTodayDataCard({
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayThighs
                         ? 'text-foreground'
                         : thighs
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {thighs ? `${thighs}${lengthUnit}` : '-'}
+                    {thighs ? <MetricValue value={thighs} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </div>
               )}

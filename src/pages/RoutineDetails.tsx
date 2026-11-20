@@ -345,7 +345,7 @@ export default function RoutineDetails({ id }: RoutineDetailsProps) {
                 {t('workout.totalExercises')}
               </span>
             </div>
-            <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline truncate whitespace-nowrap">
+            <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline whitespace-nowrap">
               <span className="font-normal text-foreground tabular-nums">
                 {summary.exerciseCount}
               </span>
@@ -362,7 +362,7 @@ export default function RoutineDetails({ id }: RoutineDetailsProps) {
                 {t('workout.coveredMusclesShort', '覆蓋肌群')}
               </span>
             </div>
-            <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline truncate whitespace-nowrap">
+            <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline whitespace-nowrap">
               <span className="font-normal text-foreground tabular-nums">
                 {summary.coveredMuscles.length}
               </span>

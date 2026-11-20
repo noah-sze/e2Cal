@@ -179,7 +179,7 @@ export const WorkoutRecoveryDashboard = memo(function WorkoutRecoveryDashboard({
             <div className="text-xs font-normal text-muted-foreground truncate whitespace-nowrap">
               {t('workout.exercises', '動作項目')}
             </div>
-            <div className="text-sm sm:text-base tracking-tight flex items-baseline truncate whitespace-nowrap">
+            <div className="text-sm sm:text-base tracking-tight flex items-baseline whitespace-nowrap">
               <span className="font-normal text-foreground">
                 {exerciseCount}
               </span>
@@ -194,7 +194,7 @@ export const WorkoutRecoveryDashboard = memo(function WorkoutRecoveryDashboard({
             <div className="text-xs font-normal text-muted-foreground truncate whitespace-nowrap">
               {t('workout.completedSets', '完成組數')}
             </div>
-            <div className="text-sm sm:text-base tracking-tight flex items-baseline truncate whitespace-nowrap">
+            <div className="text-sm sm:text-base tracking-tight flex items-baseline whitespace-nowrap">
               <span className="font-normal text-foreground">
                 {setCount}
               </span>
@@ -209,7 +209,7 @@ export const WorkoutRecoveryDashboard = memo(function WorkoutRecoveryDashboard({
             <div className="text-xs font-normal text-muted-foreground truncate whitespace-nowrap">
               {t('workout.totalVolume', '訓練容量')}
             </div>
-            <div className="text-sm sm:text-base tracking-tight flex items-baseline truncate whitespace-nowrap">
+            <div className="text-sm sm:text-base tracking-tight flex items-baseline whitespace-nowrap">
               <span className="font-normal text-foreground">
                 {Math.round(totalVolume).toLocaleString()}
               </span>

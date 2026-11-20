@@ -809,8 +809,8 @@ export function FoodFormDialog({
                     <SelectValue
                       className={cn(
                         category
-                          ? 'font-bold text-foreground'
-                          : 'font-normal font-mono text-muted-foreground/40 select-none'
+                          ? 'font-medium text-foreground'
+                          : 'font-normal font-mono text-label-tertiary select-none'
                       )}
                     >
                       {category ? t(`diet.foodCategory.${category}`) : '-'}

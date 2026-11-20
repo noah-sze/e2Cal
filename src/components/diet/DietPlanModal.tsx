@@ -368,7 +368,7 @@ export function DietPlanModal({
               <div className="grid grid-cols-3 divide-x divide-border">
                 {/* 1. 碳水化合物 (C) */}
                 <div className="p-2.5 flex flex-col items-center justify-center text-center gap-1.5 hover:bg-hover/10 transition-colors">
-                  <span className="text-[11px] font-bold text-carbs tracking-tight truncate max-w-full">
+                  <span className="text-[11px] font-semibold text-carbs tracking-tight truncate max-w-full">
                     {t('dietPlan.carbs', '碳水化合物')}
                   </span>
 
@@ -397,7 +397,7 @@ export function DietPlanModal({
 
                 {/* 2. 蛋白質 (P) */}
                 <div className="p-2.5 flex flex-col items-center justify-center text-center gap-1.5 hover:bg-hover/10 transition-colors">
-                  <span className="text-[11px] font-bold text-protein tracking-tight truncate max-w-full">
+                  <span className="text-[11px] font-semibold text-protein tracking-tight truncate max-w-full">
                     {t('dietPlan.protein', '蛋白質')}
                   </span>
 
@@ -426,7 +426,7 @@ export function DietPlanModal({
 
                 {/* 3. 脂肪 (F) */}
                 <div className="p-2.5 flex flex-col items-center justify-center text-center gap-1.5 hover:bg-hover/10 transition-colors">
-                  <span className="text-[11px] font-bold text-fat tracking-tight truncate max-w-full">
+                  <span className="text-[11px] font-semibold text-fat tracking-tight truncate max-w-full">
                     {t('dietPlan.fat', '脂肪')}
                   </span>
 

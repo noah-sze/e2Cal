@@ -76,10 +76,10 @@ export function HoldToDeleteButton({
           'relative z-10 flex items-center justify-center gap-1.5 transition-colors duration-150',
           isPrimary
             ? progress > 0.35
-              ? 'text-background font-bold'
+              ? 'text-background font-semibold'
               : 'text-foreground'
             : progress > 0.35
-              ? 'text-destructive-foreground font-bold'
+              ? 'text-destructive-foreground font-semibold'
               : 'text-destructive'
         )}
       >

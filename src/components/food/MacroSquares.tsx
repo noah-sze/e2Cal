@@ -74,7 +74,7 @@ export const MacroSquares = React.memo(function MacroSquares({
             resolvedHighlights?.carbs
               ? isSubtle
                 ? "text-carbs/65 font-medium"
-                : "text-carbs font-bold"
+                : "text-carbs font-semibold"
               : "text-muted-foreground"
           )}
         >
@@ -103,7 +103,7 @@ export const MacroSquares = React.memo(function MacroSquares({
             resolvedHighlights?.protein
               ? isSubtle
                 ? "text-protein/65 font-medium"
-                : "text-protein font-bold"
+                : "text-protein font-semibold"
               : "text-muted-foreground"
           )}
         >
@@ -132,7 +132,7 @@ export const MacroSquares = React.memo(function MacroSquares({
             resolvedHighlights?.fat
               ? isSubtle
                 ? "text-fat/65 font-medium"
-                : "text-fat font-bold"
+                : "text-fat font-semibold"
               : "text-muted-foreground"
           )}
         >

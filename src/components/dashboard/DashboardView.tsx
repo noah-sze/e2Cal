@@ -194,7 +194,7 @@ export function DashboardView({
             <div className="text-xs font-medium text-carbs truncate whitespace-nowrap">
               {t('dietPlan.carbsShort', '碳水')}
             </div>
-            <div className="text-sm sm:text-base tracking-tight flex items-baseline truncate whitespace-nowrap">
+            <div className="text-sm sm:text-base tracking-tight flex items-baseline whitespace-nowrap">
               <MetricValue
                 value={Math.round(totals.carbs)}
                 unit="g"
@@ -230,7 +230,7 @@ export function DashboardView({
             <div className="text-xs font-medium text-protein truncate whitespace-nowrap">
               {t('dietPlan.proteinShort', '蛋白質')}
             </div>
-            <div className="text-sm sm:text-base tracking-tight flex items-baseline truncate whitespace-nowrap">
+            <div className="text-sm sm:text-base tracking-tight flex items-baseline whitespace-nowrap">
               <MetricValue
                 value={Math.round(totals.protein)}
                 unit="g"
@@ -266,7 +266,7 @@ export function DashboardView({
             <div className="text-xs font-medium text-fat truncate whitespace-nowrap">
               {t('dietPlan.fatShort', '脂肪')}
             </div>
-            <div className="text-sm sm:text-base tracking-tight flex items-baseline truncate whitespace-nowrap">
+            <div className="text-sm sm:text-base tracking-tight flex items-baseline whitespace-nowrap">
               <MetricValue
                 value={Math.round(totals.fat)}
                 unit="g"

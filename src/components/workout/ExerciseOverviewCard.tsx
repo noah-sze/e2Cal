@@ -138,7 +138,7 @@ export function ExerciseOverviewCard({
                   />
                 </div>
               </div>
-              <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline truncate whitespace-nowrap">
+              <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline whitespace-nowrap">
                 <span className="font-normal text-foreground tabular-nums">
                   {convertBodyWeight(bestE1RM, 'kg', bodyWeightUnit, 1)}
                 </span>
@@ -159,7 +159,7 @@ export function ExerciseOverviewCard({
                   onChange={handlePeriodChange}
                 />
               </div>
-              <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline truncate whitespace-nowrap">
+              <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline whitespace-nowrap">
                 <span className="font-normal text-foreground tabular-nums">
                   {totalSets.toLocaleString()}
                 </span>
@@ -181,7 +181,7 @@ export function ExerciseOverviewCard({
                 onChange={handlePeriodChange}
               />
             </div>
-            <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline truncate whitespace-nowrap">
+            <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline whitespace-nowrap">
               <span className="font-normal text-foreground tabular-nums">
                 {convertBodyWeight(totalVolume, 'kg', bodyWeightUnit, 1)}
               </span>

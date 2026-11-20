@@ -491,7 +491,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
                 onChange={setOverviewPeriod}
               />
             </div>
-            <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline truncate whitespace-nowrap">
+            <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline whitespace-nowrap">
               <span className="font-normal text-foreground tabular-nums">
                 {formatEnergy(periodCalories, energyUnit).value.toLocaleString()}
               </span>
@@ -512,7 +512,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
                 onChange={setOverviewPeriod}
               />
             </div>
-            <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline truncate whitespace-nowrap">
+            <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline whitespace-nowrap">
               <span className="font-normal text-foreground tabular-nums">
                 {periodCount.toLocaleString()}
               </span>
@@ -533,7 +533,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
                 onChange={setOverviewPeriod}
               />
             </div>
-            <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline truncate whitespace-nowrap">
+            <div className="text-sm sm:text-base font-mono tracking-tight flex items-baseline whitespace-nowrap">
               <span className="font-normal text-foreground tabular-nums">
                 {formatFoodServing(periodMaxGrams, 'g', foodWeightUnit, foodVolumeUnit).size.toLocaleString()}
               </span>

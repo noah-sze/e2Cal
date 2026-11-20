@@ -314,7 +314,7 @@ export function WorkoutManagementBrowser({
           <div className="flex items-baseline gap-1 sm:gap-1.5">
             <span
               className={cn(
-                'text-lg sm:text-xl font-bold tracking-tight',
+                'text-lg sm:text-xl font-semibold tracking-tight',
                 viewTab === 'exercises' ? 'text-foreground' : 'text-muted-foreground'
               )}
             >
@@ -358,7 +358,7 @@ export function WorkoutManagementBrowser({
           <div className="flex items-baseline gap-1 sm:gap-1.5">
             <span
               className={cn(
-                'text-lg sm:text-xl font-bold tracking-tight',
+                'text-lg sm:text-xl font-semibold tracking-tight',
                 viewTab === 'routines' ? 'text-foreground' : 'text-muted-foreground'
               )}
             >
@@ -402,7 +402,7 @@ export function WorkoutManagementBrowser({
           <div className="flex items-baseline gap-1 sm:gap-1.5">
             <span
               className={cn(
-                'text-lg sm:text-xl font-bold tracking-tight',
+                'text-lg sm:text-xl font-semibold tracking-tight',
                 viewTab === 'equipments' ? 'text-foreground' : 'text-muted-foreground'
               )}
             >

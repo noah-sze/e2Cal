@@ -22,6 +22,7 @@ import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { useBodyPreferences } from '@/hooks/useBodyPreferences';
 import { Trash2, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { MetricValue } from '@/components/ui/metric-value';
 import type { BodyMetric } from '@/types';
 
 type KeypadMetricField =
@@ -610,15 +611,15 @@ export default function Body() {
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate transition-colors',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayShoulders
                         ? 'text-foreground'
                         : effectiveShoulders
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {effectiveShoulders ? `${effectiveShoulders}${lengthUnit}` : '-'}
+                    {effectiveShoulders ? <MetricValue value={effectiveShoulders} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </button>
 
@@ -641,15 +642,15 @@ export default function Body() {
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate transition-colors',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayChest
                         ? 'text-foreground'
                         : effectiveChest
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {effectiveChest ? `${effectiveChest}${lengthUnit}` : '-'}
+                    {effectiveChest ? <MetricValue value={effectiveChest} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </button>
 
@@ -672,15 +673,15 @@ export default function Body() {
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate transition-colors',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayWaist
                         ? 'text-foreground'
                         : effectiveWaist
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {effectiveWaist ? `${effectiveWaist}${lengthUnit}` : '-'}
+                    {effectiveWaist ? <MetricValue value={effectiveWaist} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </button>
 
@@ -703,15 +704,15 @@ export default function Body() {
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate transition-colors',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayHips
                         ? 'text-foreground'
                         : effectiveHips
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {effectiveHips ? `${effectiveHips}${lengthUnit}` : '-'}
+                    {effectiveHips ? <MetricValue value={effectiveHips} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </button>
               </div>
@@ -739,15 +740,15 @@ export default function Body() {
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate transition-colors',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayArms
                         ? 'text-foreground'
                         : effectiveArms
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {effectiveArms ? `${effectiveArms}${lengthUnit}` : '-'}
+                    {effectiveArms ? <MetricValue value={effectiveArms} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </button>
 
@@ -770,15 +771,15 @@ export default function Body() {
                   </div>
                   <div
                     className={cn(
-                      'text-sm sm:text-base font-normal truncate transition-colors',
+                      'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                       hasTodayThighs
                         ? 'text-foreground'
                         : effectiveThighs
-                          ? 'text-muted-foreground/40'
-                          : 'text-muted-foreground/25'
+                          ? 'text-label-tertiary'
+                          : 'text-label-quaternary'
                     )}
                   >
-                    {effectiveThighs ? `${effectiveThighs}${lengthUnit}` : '-'}
+                    {effectiveThighs ? <MetricValue value={effectiveThighs} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
                   </div>
                 </button>
               </div>
@@ -808,15 +809,15 @@ export default function Body() {
           </div>
           <div
             className={cn(
-              'text-base sm:text-lg font-normal truncate transition-colors',
+              'text-base sm:text-lg font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
               hasTodayWeight
                 ? 'text-foreground'
                 : displayTrendWeight
-                  ? 'text-muted-foreground/40'
-                  : 'text-muted-foreground/25'
+                  ? 'text-label-tertiary'
+                  : 'text-label-quaternary'
             )}
           >
-            {displayTrendWeight ? `${displayTrendWeight} ${bodyWeightUnit}` : '-'}
+            {displayTrendWeight ? <MetricValue value={displayTrendWeight} unit={bodyWeightUnit} unitClassName="text-xs sm:text-sm" /> : '-'}
           </div>
         </button>
 
@@ -833,15 +834,15 @@ export default function Body() {
             </div>
             <div
               className={cn(
-                'text-sm sm:text-base font-normal truncate transition-colors',
+                'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                 hasTodayWeight
                   ? 'text-foreground'
                   : bmi > 0
-                    ? 'text-muted-foreground/40'
-                    : 'text-muted-foreground/25'
+                    ? 'text-label-tertiary'
+                    : 'text-label-quaternary'
               )}
             >
-              {bmi > 0 ? bmi : '-'}
+              {bmi > 0 ? <MetricValue value={bmi} /> : '-'}
             </div>
           </button>
 
@@ -856,15 +857,15 @@ export default function Body() {
             </div>
             <div
               className={cn(
-                'text-sm sm:text-base font-normal truncate transition-colors',
+                'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                 hasTodayWeight && hasTodayBodyFat
                   ? 'text-foreground'
                   : ffmi !== null
-                    ? 'text-muted-foreground/40'
-                    : 'text-muted-foreground/25'
+                    ? 'text-label-tertiary'
+                    : 'text-label-quaternary'
               )}
             >
-              {ffmi !== null ? ffmi : '-'}
+              {ffmi !== null ? <MetricValue value={ffmi} /> : '-'}
             </div>
           </button>
         </div>
@@ -882,15 +883,15 @@ export default function Body() {
             </div>
             <div
               className={cn(
-                'text-sm sm:text-base font-normal truncate transition-colors',
+                'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                 hasTodayWeight && hasTodayBodyFat
                   ? 'text-foreground'
                   : displayLeanMass
-                    ? 'text-muted-foreground/40'
-                    : 'text-muted-foreground/25'
+                    ? 'text-label-tertiary'
+                    : 'text-label-quaternary'
               )}
             >
-              {displayLeanMass ? `${displayLeanMass} ${bodyWeightUnit}` : '-'}
+              {displayLeanMass ? <MetricValue value={displayLeanMass} unit={bodyWeightUnit} unitClassName="text-xs sm:text-sm" /> : '-'}
             </div>
           </button>
 
@@ -905,15 +906,15 @@ export default function Body() {
             </div>
             <div
               className={cn(
-                'text-sm sm:text-base font-normal truncate transition-colors',
+                'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                 hasTodayWeight && hasTodayBodyFat
                   ? 'text-foreground'
                   : displayFatMass
-                    ? 'text-muted-foreground/40'
-                    : 'text-muted-foreground/25'
+                    ? 'text-label-tertiary'
+                    : 'text-label-quaternary'
               )}
             >
-              {displayFatMass ? `${displayFatMass} ${bodyWeightUnit}` : '-'}
+              {displayFatMass ? <MetricValue value={displayFatMass} unit={bodyWeightUnit} unitClassName="text-xs sm:text-sm" /> : '-'}
             </div>
           </button>
         </div>
@@ -1010,17 +1011,17 @@ export default function Body() {
                 </div>
                 <div
                   className={cn(
-                    'text-base sm:text-lg font-normal truncate transition-colors',
+                    'text-base sm:text-lg font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                     hasTodayChest && hasTodayWaist
                       ? 'text-foreground'
                       : vTaperRatio !== null
-                        ? 'text-muted-foreground/40'
-                        : 'text-muted-foreground/25'
+                        ? 'text-label-tertiary'
+                        : 'text-label-quaternary'
                   )}
                 >
-                  {vTaperRatio !== null ? vTaperRatio : '-'}
+                  {vTaperRatio !== null ? <MetricValue value={vTaperRatio} /> : '-'}
                 </div>
-                <div className="text-[11px] text-muted-foreground/60 truncate">
+                <div className="text-[11px] text-label-tertiary truncate">
                   {t('body.vTaperHint', '倒三角係數')}
                 </div>
               </button>
@@ -1036,17 +1037,17 @@ export default function Body() {
                 </div>
                 <div
                   className={cn(
-                    'text-base sm:text-lg font-normal truncate transition-colors',
+                    'text-base sm:text-lg font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                     hasTodayWaist && hasTodayHips
                       ? 'text-foreground'
                       : whRatio !== null
-                        ? 'text-muted-foreground/40'
-                        : 'text-muted-foreground/25'
+                        ? 'text-label-tertiary'
+                        : 'text-label-quaternary'
                   )}
                 >
-                  {whRatio !== null ? whRatio : '-'}
+                  {whRatio !== null ? <MetricValue value={whRatio} /> : '-'}
                 </div>
-                <div className="text-[11px] text-muted-foreground/60 truncate">
+                <div className="text-[11px] text-label-tertiary truncate">
                   {t('body.whRatioHint', '形態基準')}
                 </div>
               </button>

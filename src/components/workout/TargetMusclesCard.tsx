@@ -218,7 +218,7 @@ export const TargetMusclesCard = memo(function TargetMusclesCard({
           >
             <div className="w-[176px] rounded-lg border border-border bg-popover text-popover-foreground shadow-none font-mono select-none overflow-hidden">
               <div className="px-2.5 py-1.5 border-b border-border bg-muted flex items-center justify-between">
-                <span className="font-bold text-foreground text-[13px] sm:text-sm leading-tight truncate">
+                <span className="font-semibold text-foreground text-[13px] sm:text-sm leading-tight truncate">
                   {getMuscleLabel(selectedMuscle)}
                 </span>
               </div>
@@ -230,7 +230,7 @@ export const TargetMusclesCard = memo(function TargetMusclesCard({
                   className={cn(
                     'text-xs leading-tight truncate mt-0.5',
                     selectedRole
-                      ? cn('font-bold', getMuscleRoleBadgeClasses(selectedRole).text)
+                      ? cn('font-semibold', getMuscleRoleBadgeClasses(selectedRole).text)
                       : 'font-normal text-muted-foreground'
                   )}
                 >

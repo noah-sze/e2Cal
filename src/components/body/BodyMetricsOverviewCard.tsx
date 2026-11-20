@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { MetricValue } from '@/components/ui/metric-value';
 
 export type MetricType = 'trendWeight' | 'bmi' | 'ffmi' | 'leanBodyMass' | 'fatMass';
 
@@ -123,15 +124,19 @@ export function BodyMetricsOverviewCard({
             </div>
             <div
               className={cn(
-                'text-base sm:text-lg font-normal truncate transition-colors',
+                'text-base sm:text-lg font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                 hasTodayWeight
                   ? 'text-foreground'
                   : trendWeight
-                    ? 'text-muted-foreground/40'
-                    : 'text-muted-foreground/25'
+                    ? 'text-label-tertiary'
+                    : 'text-label-quaternary'
               )}
             >
-              {trendWeight ? `${trendWeight} ${bodyWeightUnit}` : '-'}
+              {trendWeight ? (
+                <MetricValue value={trendWeight} unit={bodyWeightUnit} unitClassName="text-xs sm:text-sm" />
+              ) : (
+                '-'
+              )}
             </div>
           </PopoverTrigger>
           {renderMetricPopoverContent('trendWeight')}
@@ -143,15 +148,19 @@ export function BodyMetricsOverviewCard({
           </div>
           <div
             className={cn(
-              'text-base sm:text-lg font-normal truncate',
+              'text-base sm:text-lg font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
               hasTodayWeight
                 ? 'text-foreground'
                 : trendWeight
-                  ? 'text-muted-foreground/40'
-                  : 'text-muted-foreground/25'
+                  ? 'text-label-tertiary'
+                  : 'text-label-quaternary'
             )}
           >
-            {trendWeight ? `${trendWeight}${bodyWeightUnit}` : '-'}
+            {trendWeight ? (
+              <MetricValue value={trendWeight} unit={bodyWeightUnit} unitClassName="text-xs sm:text-sm" />
+            ) : (
+              '-'
+            )}
           </div>
         </div>
       )}
@@ -174,15 +183,15 @@ export function BodyMetricsOverviewCard({
               </div>
               <div
                 className={cn(
-                  'text-sm sm:text-base font-normal truncate transition-colors',
+                  'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                   hasTodayWeight
                     ? 'text-foreground'
                     : bmi && bmi > 0
-                      ? 'text-muted-foreground/40'
-                      : 'text-muted-foreground/25'
+                      ? 'text-label-tertiary'
+                      : 'text-label-quaternary'
                 )}
               >
-                {bmi && bmi > 0 ? bmi : '-'}
+                {bmi && bmi > 0 ? <MetricValue value={bmi} /> : '-'}
               </div>
             </PopoverTrigger>
             {renderMetricPopoverContent('bmi')}
@@ -194,15 +203,15 @@ export function BodyMetricsOverviewCard({
             </div>
             <div
               className={cn(
-                'text-sm sm:text-base font-normal truncate',
+                'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                 hasTodayWeight
                   ? 'text-foreground'
                   : bmi && bmi > 0
-                    ? 'text-muted-foreground/40'
-                    : 'text-muted-foreground/25'
+                    ? 'text-label-tertiary'
+                    : 'text-label-quaternary'
               )}
             >
-              {bmi && bmi > 0 ? bmi : '-'}
+              {bmi && bmi > 0 ? <MetricValue value={bmi} /> : '-'}
             </div>
           </div>
         )}
@@ -223,15 +232,15 @@ export function BodyMetricsOverviewCard({
               </div>
               <div
                 className={cn(
-                  'text-sm sm:text-base font-normal truncate transition-colors',
+                  'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                   hasTodayWeight && hasTodayBodyFat
                     ? 'text-foreground'
                     : ffmi !== null && ffmi !== undefined && ffmi > 0
-                      ? 'text-muted-foreground/40'
-                      : 'text-muted-foreground/25'
+                      ? 'text-label-tertiary'
+                      : 'text-label-quaternary'
                 )}
               >
-                {ffmi !== null && ffmi !== undefined && ffmi > 0 ? ffmi : '-'}
+                {ffmi !== null && ffmi !== undefined && ffmi > 0 ? <MetricValue value={ffmi} /> : '-'}
               </div>
             </PopoverTrigger>
             {renderMetricPopoverContent('ffmi')}
@@ -243,15 +252,15 @@ export function BodyMetricsOverviewCard({
             </div>
             <div
               className={cn(
-                'text-sm sm:text-base font-normal truncate',
+                'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                 hasTodayWeight && hasTodayBodyFat
                   ? 'text-foreground'
                   : ffmi !== null && ffmi !== undefined && ffmi > 0
-                    ? 'text-muted-foreground/40'
-                    : 'text-muted-foreground/25'
+                    ? 'text-label-tertiary'
+                    : 'text-label-quaternary'
               )}
             >
-              {ffmi !== null && ffmi !== undefined && ffmi > 0 ? ffmi : '-'}
+              {ffmi !== null && ffmi !== undefined && ffmi > 0 ? <MetricValue value={ffmi} /> : '-'}
             </div>
           </div>
         )}
@@ -275,15 +284,15 @@ export function BodyMetricsOverviewCard({
               </div>
               <div
                 className={cn(
-                  'text-sm sm:text-base font-normal truncate transition-colors',
+                  'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                   hasTodayWeight && hasTodayBodyFat
                     ? 'text-foreground'
                     : leanMass
-                      ? 'text-muted-foreground/40'
-                      : 'text-muted-foreground/25'
+                      ? 'text-label-tertiary'
+                      : 'text-label-quaternary'
                 )}
               >
-                {leanMass ? `${leanMass} ${bodyWeightUnit}` : '-'}
+                {leanMass ? <MetricValue value={leanMass} unit={bodyWeightUnit} unitClassName="text-xs sm:text-sm" /> : '-'}
               </div>
             </PopoverTrigger>
             {renderMetricPopoverContent('leanBodyMass')}
@@ -295,15 +304,15 @@ export function BodyMetricsOverviewCard({
             </div>
             <div
               className={cn(
-                'text-sm sm:text-base font-normal truncate',
+                'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                 hasTodayWeight && hasTodayBodyFat
                   ? 'text-foreground'
                   : leanMass
-                    ? 'text-muted-foreground/40'
-                    : 'text-muted-foreground/25'
+                    ? 'text-label-tertiary'
+                    : 'text-label-quaternary'
               )}
             >
-              {leanMass ? `${leanMass}${bodyWeightUnit}` : '-'}
+              {leanMass ? <MetricValue value={leanMass} unit={bodyWeightUnit} unitClassName="text-xs sm:text-sm" /> : '-'}
             </div>
           </div>
         )}
@@ -324,15 +333,15 @@ export function BodyMetricsOverviewCard({
               </div>
               <div
                 className={cn(
-                  'text-sm sm:text-base font-normal truncate transition-colors',
+                  'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                   hasTodayWeight && hasTodayBodyFat
                     ? 'text-foreground'
                     : fatMass
-                      ? 'text-muted-foreground/40'
-                      : 'text-muted-foreground/25'
+                      ? 'text-label-tertiary'
+                      : 'text-label-quaternary'
                 )}
               >
-                {fatMass ? `${fatMass} ${bodyWeightUnit}` : '-'}
+                {fatMass ? <MetricValue value={fatMass} unit={bodyWeightUnit} unitClassName="text-xs sm:text-sm" /> : '-'}
               </div>
             </PopoverTrigger>
             {renderMetricPopoverContent('fatMass')}
@@ -344,15 +353,15 @@ export function BodyMetricsOverviewCard({
             </div>
             <div
               className={cn(
-                'text-sm sm:text-base font-normal truncate',
+                'text-sm sm:text-base font-normal transition-colors flex items-baseline justify-center whitespace-nowrap',
                 hasTodayWeight && hasTodayBodyFat
                   ? 'text-foreground'
                   : fatMass
-                    ? 'text-muted-foreground/40'
-                    : 'text-muted-foreground/25'
+                    ? 'text-label-tertiary'
+                    : 'text-label-quaternary'
               )}
             >
-              {fatMass ? `${fatMass}${bodyWeightUnit}` : '-'}
+              {fatMass ? <MetricValue value={fatMass} unit={bodyWeightUnit} unitClassName="text-xs sm:text-sm" /> : '-'}
             </div>
           </div>
         )}
