@@ -250,7 +250,7 @@ export async function resetDatabaseToFactory(db: E2CalDatabase): Promise<void> {
     gender: 'male',
     heightCm: 0,
     currentWeightKg: 0,
-    activityLevel: 1.55,
+    activityLevel: 1.2,
     goalType: 'lose_fat',
     weightUnit: 'kg',
     isSetupCompleted: false,

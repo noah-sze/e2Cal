@@ -23,7 +23,7 @@ export interface UseDietPlanResult {
   resetToDefault: () => Promise<void>;
 }
 
-export const DEFAULT_ACTIVITY_LEVEL = 1.55;
+export const DEFAULT_ACTIVITY_LEVEL = 1.2;
 export const DEFAULT_MACRO_SPLIT: MacroSplit = { carbs: 40, protein: 30, fat: 30 };
 
 /**

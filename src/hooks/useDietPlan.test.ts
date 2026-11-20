@@ -35,7 +35,7 @@ export function resolveDietPlan(params: {
   const inherited = sortedPrevious[0];
 
   const fallbackActivity =
-    inherited?.activityLevel ?? userProfile?.activityLevel ?? 1.55;
+    inherited?.activityLevel ?? userProfile?.activityLevel ?? 1.2;
   const fallbackSplit =
     inherited?.macroSplit ??
     userProfile?.macroSplit ??
@@ -83,7 +83,7 @@ export function determineSaveAction(params: {
 
 describe('useDietPlan 核心契約與沿用邏輯', () => {
   const baseProfile: Partial<UserProfile> = {
-    activityLevel: 1.55,
+    activityLevel: 1.2,
     macroSplit: { carbs: 40, protein: 30, fat: 30 },
   };
 
@@ -150,7 +150,7 @@ describe('useDietPlan 核心契約與沿用邏輯', () => {
     });
 
     expect(res.isCustomPlan).toBe(false);
-    expect(res.activityLevel).toBe(1.55);
+    expect(res.activityLevel).toBe(1.2);
     expect(res.macroSplit).toEqual({ carbs: 40, protein: 30, fat: 30 });
     expect(res.plan.caloriesTarget).toBe(2000);
   });

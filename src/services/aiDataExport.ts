@@ -295,7 +295,7 @@ function buildDietSection(
   const foodWeightUnit: FoodWeightUnit = input.unitPreferences?.foodWeight || 'g';
   const foodVolumeUnit: FoodVolumeUnit = input.unitPreferences?.foodVolume || 'ml';
 
-  const activityLevel = input.dietPlan?.activityLevel ?? 1.55;
+  const activityLevel = input.dietPlan?.activityLevel ?? 1.2;
   const isBinge = activityLevel === 999;
   const macroSplit: MacroSplit = input.dietPlan?.macroSplit ?? {
     carbs: 40,

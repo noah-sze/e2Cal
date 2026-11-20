@@ -85,7 +85,7 @@ export function useUserProfile() {
       heightCm: baseInfo?.heightCm || 0,
       currentWeightKg,
       weightUnit: bodyWeightUnit,
-      activityLevel: 1.55,
+      activityLevel: 1.2,
       macroSplit: {
         carbs: 40,
         protein: 30,

@@ -107,7 +107,7 @@ export interface DietViewProps {
 }
 
 export function DietView({
-  currentActivity = 1.55,
+  currentActivity = 1.2,
   consumedEnergy,
   targetEnergy,
   energyDiff,

@@ -184,7 +184,7 @@ export function sanitizeDailyDietLog(rawInput: unknown): DailyDietLog {
     id: rawId,
     date: String(raw.date || ''),
     meta: {
-      activityLevel: Number(meta.activityLevel) || 1.55,
+      activityLevel: Number(meta.activityLevel) || 1.2,
       macroSplit: (meta.macroSplit as MacroSplit | undefined) || { carbs: 40, protein: 30, fat: 30 },
     },
     entries: Array.isArray(raw.entries)

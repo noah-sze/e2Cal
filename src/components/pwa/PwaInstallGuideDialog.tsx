@@ -10,6 +10,7 @@ import {
   SquarePlus,
 } from 'lucide-react';
 import { Dialog, PrecisionDialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -19,6 +20,9 @@ import {
 } from '@/components/ui/select';
 import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
+import { cn } from '@/lib/utils';
+import { useHoldToDelete } from '@/hooks/useHoldToDelete';
+import { downloadBackupZip } from '@/services/backup/exportBackupZip';
 import {
   detectPwaPlatform,
   type PwaGuidePlatform,
@@ -214,6 +218,7 @@ export function PwaInstallGuideDialog({
   const [selectedPlatform, setSelectedPlatform] = useState<PwaGuidePlatform>(
     detection.platform
   );
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -221,17 +226,43 @@ export function PwaInstallGuideDialog({
     }
   }, [open, detection.platform]);
 
+  const isIosPlatform =
+    selectedPlatform === 'ios-safari' || selectedPlatform === 'ios-chrome';
+
   const currentPlatformOption =
     PLATFORM_OPTIONS.find((opt) => opt.value === selectedPlatform) ??
     PLATFORM_OPTIONS[0];
   const steps = PLATFORM_STEPS[selectedPlatform];
 
+  const handleExportBackup = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      await downloadBackupZip();
+      triggerHaptic('success');
+      toast.show(t('settings.exported'));
+    } catch {
+      toast.show(t('common.error'));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleHidePrompt = () => {
-    triggerHaptic('selection');
     onHidePrompt();
     onOpenChange(false);
     toast.show(t('pwa.hiddenToast'));
   };
+
+  const {
+    progress: hideProgress,
+    isHolding: isHoldingHide,
+    handlers: holdToHideHandlers,
+  } = useHoldToDelete({
+    onConfirm: handleHidePrompt,
+    durationMs: 500,
+    hintText: t('pwa.dontShowAgain'),
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -300,6 +331,29 @@ export function PwaInstallGuideDialog({
             </Select>
           </div>
 
+          {/* iOS 數據隔離提示與匯出按鈕 */}
+          {isIosPlatform && (
+            <div className="border border-border rounded-lg p-3 bg-muted/40 space-y-2">
+              <div className="flex items-center gap-1.5 font-mono text-2xs uppercase tracking-widest text-foreground font-semibold">
+                <span>{t('pwa.iosNotice.title')}</span>
+              </div>
+              <p className="font-sans text-xs text-muted-foreground leading-relaxed">
+                {t('pwa.iosNotice.desc')}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleExportBackup}
+                disabled={isExporting}
+                className="w-full font-mono text-xs cursor-pointer h-8"
+              >
+                <Download className="size-3.5" />
+                <span>{isExporting ? '...' : t('pwa.iosNotice.export')}</span>
+              </Button>
+            </div>
+          )}
+
           {/* 傻瓜式編號步驟卡片 */}
           <ol className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
             {steps.map((step, index) => (
@@ -319,13 +373,24 @@ export function PwaInstallGuideDialog({
             ))}
           </ol>
 
-          {/* 底部低調快捷操作：改用瀏覽器、不再提示 */}
+          {/* 底部低調快捷操作：長按不再提示 */}
           <button
             type="button"
-            onClick={handleHidePrompt}
-            className="w-full h-8 rounded-md font-sans text-xs text-muted-foreground hover:text-foreground hover:bg-hover transition-colors cursor-pointer"
+            {...holdToHideHandlers}
+            className="w-full h-8 rounded-md font-sans text-xs text-muted-foreground hover:text-foreground border border-border/40 hover:border-border transition-colors cursor-pointer select-none relative overflow-hidden flex items-center justify-center active:scale-[0.99]"
+            aria-label={t('pwa.dontShowAgain')}
           >
-            {t('pwa.dontShowAgain')}
+            {/* 蓄力進度填充層 */}
+            <div
+              className={cn(
+                'absolute inset-y-0 left-0 bg-foreground/10 pointer-events-none',
+                isHoldingHide ? 'transition-none' : 'transition-[width] duration-150 ease-out'
+              )}
+              style={{ width: `${hideProgress * 100}%` }}
+            />
+            <span className="relative z-10 flex items-center justify-center gap-1.5">
+              <span>{t('pwa.dontShowAgain')}</span>
+            </span>
           </button>
         </div>
       </PrecisionDialogContent>

@@ -128,7 +128,7 @@ const MOCK_USER_PROFILE: UserProfile = {
   birthDate: '1995-06-15',
   heightCm: 178,
   currentWeightKg: 75,
-  activityLevel: 1.55,
+  activityLevel: 1.2,
   macroSplit: { carbs: 50, protein: 30, fat: 20 },
   weightUnit: 'kg',
   isSetupCompleted: true,

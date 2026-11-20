@@ -153,7 +153,7 @@ export function calculateMacrosFromSplit(
 /**
  * 依據 BMR 與活動係數 (PAL) 計算客觀每日總能量消耗 (TDEE)
  */
-export function calculateTDEE(bmr: number, activityLevel = 1.55): number {
+export function calculateTDEE(bmr: number, activityLevel = 1.2): number {
   if (bmr <= 0) return 0;
   return Math.round(bmr * activityLevel);
 }

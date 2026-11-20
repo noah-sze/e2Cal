@@ -16,7 +16,7 @@ import type { UiScale } from '@/utils/uiScale';
 import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
 import { db } from '@/services/db/db';
-import { exportBackupZip } from '@/services/backup/exportBackupZip';
+import { downloadBackupZip } from '@/services/backup/exportBackupZip';
 import {
   parseBackupFile,
   executeImport,
@@ -107,14 +107,7 @@ export default function Settings() {
   // 匯出資料備份為 ZIP 檔案（文件結構與 Dropbox 同步目錄一致）
   const handleExportZip = async () => {
     try {
-      const blob = await exportBackupZip();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `e2cal-backup-${new Date().toISOString().slice(0, 10)}.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
-
+      await downloadBackupZip();
       triggerHaptic('success');
       toast.show(t('settings.exported'));
     } catch {

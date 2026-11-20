@@ -146,6 +146,7 @@ describe('weightMath utils', () => {
 
     it('multiplies bmr by activity level', () => {
       expect(calculateTDEE(1674, 1.55)).toBe(2595);
+      expect(calculateTDEE(1674)).toBe(Math.round(1674 * 1.2));
     });
   });
 

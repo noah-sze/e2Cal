@@ -1586,8 +1586,13 @@
       "installed": "已安裝",
       "guideTitle": "安裝應用",
       "deviceLabel": "設備",
-      "dontShowAgain": "不再提示",
+      "dontShowAgain": "長按不再提示",
       "hiddenToast": "已隱藏",
+      "iosNotice": {
+        "title": "資料隔離提示",
+        "desc": "iOS 瀏覽器與主畫面 App 儲存空間相互獨立。若已在瀏覽器記錄資料，可先匯出備份，安裝後於設定中匯入。",
+        "export": "匯出備份"
+      },
       "inAppBadge": "STEP 0",
       "inAppTitle": "先以系統瀏覽器開啟",
       "inAppPrefix": "目前處於 App 內建瀏覽器，請先點擊右上角",

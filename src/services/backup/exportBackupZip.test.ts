@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import JSZip from 'jszip';
-import { exportBackupZip } from './exportBackupZip';
+import { exportBackupZip, downloadBackupZip } from './exportBackupZip';
 import { db } from '@/services/db/db';
 
 vi.mock('@/services/db/db', () => ({
@@ -209,5 +209,50 @@ describe('exportBackupZip', () => {
 
     const bMetrics = JSON.parse(await zip.file('body/metrics/2026-11-08.json')!.async('string'));
     expect(bMetrics[0].weight).toBe(65);
+  });
+
+  it('downloadBackupZip 應產生 Blob、觸發下載並返回檔案名稱', async () => {
+    vi.mocked(db.user_base_info.toArray).mockResolvedValue([]);
+    vi.mocked(db.foods.toArray).mockResolvedValue([]);
+    vi.mocked(db.recipes.toArray).mockResolvedValue([]);
+    vi.mocked(db.daily_diet_logs.toArray).mockResolvedValue([]);
+    vi.mocked(db.exercises.toArray).mockResolvedValue([]);
+    vi.mocked(db.equipments.toArray).mockResolvedValue([]);
+    vi.mocked(db.routines.toArray).mockResolvedValue([]);
+    vi.mocked(db.workout_logs.toArray).mockResolvedValue([]);
+    vi.mocked(db.body_metrics.toArray).mockResolvedValue([]);
+
+    const mockCreateObjectURL = vi.fn().mockReturnValue('blob:mock-url');
+    const mockRevokeObjectURL = vi.fn();
+    const originalCreate = URL.createObjectURL;
+    const originalRevoke = URL.revokeObjectURL;
+    URL.createObjectURL = mockCreateObjectURL;
+    URL.revokeObjectURL = mockRevokeObjectURL;
+
+    const clickSpy = vi.fn();
+    const mockAnchor = {
+      href: '',
+      download: '',
+      click: clickSpy,
+    };
+    const originalDocument = (globalThis as unknown as { document?: unknown }).document;
+    (globalThis as unknown as { document: unknown }).document = {
+      createElement: vi.fn().mockReturnValue(mockAnchor),
+    };
+
+    const fileName = await downloadBackupZip();
+
+    expect(mockCreateObjectURL).toHaveBeenCalled();
+    expect(clickSpy).toHaveBeenCalled();
+    expect(mockRevokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+    expect(fileName).toMatch(/^e2cal-backup-\d{4}-\d{2}-\d{2}\.zip$/);
+
+    if (originalDocument === undefined) {
+      delete (globalThis as unknown as { document?: unknown }).document;
+    } else {
+      (globalThis as unknown as { document: unknown }).document = originalDocument;
+    }
+    URL.createObjectURL = originalCreate;
+    URL.revokeObjectURL = originalRevoke;
   });
 });

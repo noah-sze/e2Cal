@@ -180,3 +180,18 @@ export async function exportBackupZip(): Promise<Blob> {
     compressionOptions: { level: 6 },
   });
 }
+
+/**
+ * 匯出備份 ZIP 並觸發瀏覽器下載
+ */
+export async function downloadBackupZip(): Promise<string> {
+  const blob = await exportBackupZip();
+  const url = URL.createObjectURL(blob);
+  const fileName = `e2cal-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+  return fileName;
+}

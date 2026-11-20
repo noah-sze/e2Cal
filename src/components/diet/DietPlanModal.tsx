@@ -51,7 +51,7 @@ export function DietPlanModal({
   const { t } = useTranslation();
 
   // 活動係數：依據當日日誌或使用者個人資料繼承，彈窗內不再提供冗餘設置
-  const activityLevel = currentPlan?.activityLevel || profile.activityLevel || 1.55;
+  const activityLevel = currentPlan?.activityLevel || profile.activityLevel || 1.2;
 
   // 本地供能比狀態 (嚴格固定順序：碳 C ➔ 蛋 P ➔ 脂 F)
   const [carbsPercent, setCarbsPercent] = useState<number>(40);

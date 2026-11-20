@@ -1586,8 +1586,13 @@
       "installed": "已安装",
       "guideTitle": "安装应用",
       "deviceLabel": "设备",
-      "dontShowAgain": "不再提示",
+      "dontShowAgain": "长按不再提示",
       "hiddenToast": "已隐藏",
+      "iosNotice": {
+        "title": "数据隔离提示",
+        "desc": "iOS 浏览器与主屏幕 App 存储空间相互独立。若已在浏览器记录数据，可先导出备份，安装后在设置中导入。",
+        "export": "导出备份"
+      },
       "inAppBadge": "STEP 0",
       "inAppTitle": "先用系统浏览器打开",
       "inAppPrefix": "当前处于 App 内置浏览器，请先点击右上角",

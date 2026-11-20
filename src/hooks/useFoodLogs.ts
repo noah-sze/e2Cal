@@ -149,7 +149,7 @@ export function useFoodLogs(date: string) {
       id: uuidv4(),
       date: targetDate,
       meta: {
-        activityLevel: meta.activityLevel ?? 1.55,
+        activityLevel: meta.activityLevel ?? 1.2,
         macroSplit: meta.macroSplit ?? { carbs: 40, protein: 30, fat: 30 },
       },
       entries: [],
