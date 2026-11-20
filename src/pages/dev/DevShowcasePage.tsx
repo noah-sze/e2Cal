@@ -8,11 +8,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useDevTokens } from './useDevTokens';
 import { TokensTab } from './tabs/TokensTab';
 import { PrimitivesTab } from './tabs/PrimitivesTab';
+import { ComponentsTab } from './tabs/ComponentsTab';
 import { DialogsTab } from './tabs/DialogsTab';
 
 export default function DevShowcasePage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'tokens' | 'primitives' | 'dialogs'>('tokens');
+  const [activeTab, setActiveTab] = useState<'tokens' | 'primitives' | 'components' | 'dialogs'>('tokens');
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
   const { tokens, updateToken, resetTokens, exportCss, hasModifications } = useDevTokens();
@@ -80,6 +81,9 @@ export default function DevShowcasePage() {
               <TabsTrigger value="primitives" className="text-xs font-mono px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-none">
                 Primitives
               </TabsTrigger>
+              <TabsTrigger value="components" className="text-xs font-mono px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-none">
+                Components
+              </TabsTrigger>
               <TabsTrigger value="dialogs" className="text-xs font-mono px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-none">
                 Dialogs
               </TabsTrigger>
@@ -102,6 +106,10 @@ export default function DevShowcasePage() {
 
             <TabsContent value="primitives" className="m-0 focus-visible:outline-none">
               <PrimitivesTab />
+            </TabsContent>
+
+            <TabsContent value="components" className="m-0 focus-visible:outline-none">
+              <ComponentsTab />
             </TabsContent>
 
             <TabsContent value="dialogs" className="m-0 focus-visible:outline-none">
