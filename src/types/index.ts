@@ -2,7 +2,13 @@ export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
 export type FoodCategory = 'natural' | 'processed' | 'beverage' | 'oil' | 'condiment';
 
-export type NutritionTag = 'high-protein' | 'carb-source' | 'fat-source' | 'low-calorie' | 'high-calorie';
+export type NutritionTag =
+  | 'high-protein'
+  | 'carb-source'
+  | 'fat-source'
+  | 'high-fiber'
+  | 'low-calorie'
+  | 'high-calorie';
 
 export interface FoodItem {
   id: string;

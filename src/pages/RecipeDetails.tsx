@@ -144,6 +144,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
       protein: standardTotals.protein,
       carbs: standardTotals.carbs,
       fat: standardTotals.fat,
+      fiber: standardTotals.fiber,
       servingSize: standardTotals.totalWeightGrams || 100,
       servingUnit: 'g',
     });
@@ -154,6 +155,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
       case 'high-protein':
         return 'text-protein border-protein-subtle-border bg-protein-subtle';
       case 'carb-source':
+      case 'high-fiber':
         return 'text-carbs border-carbs-subtle-border bg-carbs-subtle';
       case 'fat-source':
         return 'text-fat border-fat-subtle-border bg-fat-subtle';

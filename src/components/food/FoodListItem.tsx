@@ -127,6 +127,10 @@ export const FoodListItem = React.memo(function FoodListItem({
           carbs={scaledNutrition.carbs}
           protein={scaledNutrition.protein}
           fat={scaledNutrition.fat}
+          sugar={scaledNutrition.sugar}
+          fiber={scaledNutrition.fiber}
+          saturatedFat={scaledNutrition.saturatedFat}
+          transFat={scaledNutrition.transFat}
           highlights={evalRes.highlights}
         />
 

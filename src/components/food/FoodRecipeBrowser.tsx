@@ -293,6 +293,7 @@ export function FoodRecipeBrowser({
       'high-protein': 0,
       'carb-source': 0,
       'fat-source': 0,
+      'high-fiber': 0,
       'low-calorie': 0,
       'high-calorie': 0,
     };
@@ -336,7 +337,7 @@ export function FoodRecipeBrowser({
     }
 
     // 預先對列表項目計算對應當前 displayMode 的營養數值，避免在 sort O(N log N) 比較中重複多次計算
-    const scaledMap = new Map<string, { calories: number; protein: number; carbs: number; fat: number }>();
+    const scaledMap = new Map<string, { calories: number; protein: number; carbs: number; fat: number; fiber?: number }>();
     if (foodSortBy !== 'default') {
       for (const item of list) {
         scaledMap.set(item.id, calculateScaledNutrition(item, nutritionDisplayMode));
@@ -362,6 +363,9 @@ export function FoodRecipeBrowser({
             if (Math.abs(diff) > 0.001) return diff;
           } else if (foodSortBy === 'fat-desc') {
             const diff = valB.fat - valA.fat;
+            if (Math.abs(diff) > 0.001) return diff;
+          } else if (foodSortBy === 'fiber-desc') {
+            const diff = (valB.fiber ?? 0) - (valA.fiber ?? 0);
             if (Math.abs(diff) > 0.001) return diff;
           }
         }
@@ -478,6 +482,7 @@ export function FoodRecipeBrowser({
         { id: 'carbs-desc' as const, label: t('diet.sort.carbsDesc', '碳水最高') },
         { id: 'protein-desc' as const, label: t('diet.sort.proteinDesc', '蛋白質最高') },
         { id: 'fat-desc' as const, label: t('diet.sort.fatDesc', '脂肪最高') },
+        { id: 'fiber-desc' as const, label: t('diet.sort.fiberDesc', '膳食纖維最高') },
       ] as const,
     [t]
   );
@@ -521,6 +526,7 @@ export function FoodRecipeBrowser({
         protein: macros.protein,
         carbs: macros.carbs,
         fat: macros.fat,
+        fiber: macros.fiber,
         servingSize: macros.totalWeightGrams || 100,
         servingUnit: 'g',
       });
@@ -534,6 +540,7 @@ export function FoodRecipeBrowser({
       'high-protein': 0,
       'carb-source': 0,
       'fat-source': 0,
+      'high-fiber': 0,
       'low-calorie': 0,
       'high-calorie': 0,
     };
@@ -591,6 +598,9 @@ export function FoodRecipeBrowser({
           if (Math.abs(diff) > 0.001) return diff;
         } else if (recipeSortBy === 'fat-desc') {
           const diff = macrosB.fat - macrosA.fat;
+          if (Math.abs(diff) > 0.001) return diff;
+        } else if (recipeSortBy === 'fiber-desc') {
+          const diff = (macrosB.fiber ?? 0) - (macrosA.fiber ?? 0);
           if (Math.abs(diff) > 0.001) return diff;
         }
       }
@@ -1024,6 +1034,7 @@ export function FoodRecipeBrowser({
                       { id: 'carb-source', label: t('diet.nutritionTags.carb-source') },
                       { id: 'high-protein', label: t('diet.nutritionTags.high-protein') },
                       { id: 'fat-source', label: t('diet.nutritionTags.fat-source') },
+                      { id: 'high-fiber', label: t('diet.nutritionTags.high-fiber') },
                       { id: 'low-calorie', label: t('diet.nutritionTags.low-calorie') },
                       { id: 'high-calorie', label: t('diet.nutritionTags.high-calorie') },
                     ] as const
@@ -1395,6 +1406,7 @@ export function FoodRecipeBrowser({
                       { id: 'carb-source', label: t('diet.nutritionTags.carb-source') },
                       { id: 'high-protein', label: t('diet.nutritionTags.high-protein') },
                       { id: 'fat-source', label: t('diet.nutritionTags.fat-source') },
+                      { id: 'high-fiber', label: t('diet.nutritionTags.high-fiber') },
                       { id: 'low-calorie', label: t('diet.nutritionTags.low-calorie') },
                       { id: 'high-calorie', label: t('diet.nutritionTags.high-calorie') },
                     ] as const

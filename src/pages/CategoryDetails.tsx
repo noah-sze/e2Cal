@@ -82,6 +82,7 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
       case 'high-protein':
         return 'text-protein border-protein-subtle-border bg-protein-subtle';
       case 'carb-source':
+      case 'high-fiber':
         return 'text-carbs border-carbs-subtle-border bg-carbs-subtle';
       case 'fat-source':
         return 'text-fat border-fat-subtle-border bg-fat-subtle';

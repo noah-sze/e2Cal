@@ -136,7 +136,15 @@ export const PrimitivesTab: React.FC = () => {
           <div className="space-y-2">
             <div className="text-2xs font-mono text-muted-foreground">Macro split matrix (碳水 -&gt; 蛋白質 -&gt; 脂肪)</div>
             <div className="flex items-center gap-3">
-              <MacroSquares carbs={220} protein={140} fat={50} />
+              <MacroSquares
+                carbs={220}
+                protein={140}
+                fat={50}
+                sugar={18}
+                fiber={24}
+                saturatedFat={12}
+                transFat={0}
+              />
               <div className="text-2xs font-mono text-muted-foreground tabular-nums">
                 C: 220 g (51%) · P: 140 g (29%) · F: 50 g (20%)
               </div>

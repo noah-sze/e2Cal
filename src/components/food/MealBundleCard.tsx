@@ -46,10 +46,30 @@ export function MealBundleCard({
         protein: acc.protein + (curr.protein || 0),
         carbs: acc.carbs + (curr.carbs || 0),
         fat: acc.fat + (curr.fat || 0),
+        sugar: typeof curr.sugar === 'number' ? (acc.sugar ?? 0) + curr.sugar : acc.sugar,
+        fiber: typeof curr.fiber === 'number' ? (acc.fiber ?? 0) + curr.fiber : acc.fiber,
+        saturatedFat:
+          typeof curr.saturatedFat === 'number'
+            ? (acc.saturatedFat ?? 0) + curr.saturatedFat
+            : acc.saturatedFat,
+        transFat:
+          typeof curr.transFat === 'number'
+            ? (acc.transFat ?? 0) + curr.transFat
+            : acc.transFat,
         totalWeightGrams: acc.totalWeightGrams + weightInG,
       };
     },
-    { calories: 0, protein: 0, carbs: 0, fat: 0, totalWeightGrams: 0 }
+    {
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      sugar: undefined as number | undefined,
+      fiber: undefined as number | undefined,
+      saturatedFat: undefined as number | undefined,
+      transFat: undefined as number | undefined,
+      totalWeightGrams: 0,
+    }
   );
 
   // 沿用食譜管理頁面同款營養評價函數，得出 highlights 與高/低熱量標籤
@@ -129,6 +149,22 @@ export function MealBundleCard({
             protein={Math.round(bundleTotals.protein)}
             carbs={Math.round(bundleTotals.carbs)}
             fat={Math.round(bundleTotals.fat)}
+            sugar={
+              bundleTotals.sugar !== undefined ? Math.round(bundleTotals.sugar * 10) / 10 : undefined
+            }
+            fiber={
+              bundleTotals.fiber !== undefined ? Math.round(bundleTotals.fiber * 10) / 10 : undefined
+            }
+            saturatedFat={
+              bundleTotals.saturatedFat !== undefined
+                ? Math.round(bundleTotals.saturatedFat * 10) / 10
+                : undefined
+            }
+            transFat={
+              bundleTotals.transFat !== undefined
+                ? Math.round(bundleTotals.transFat * 10) / 10
+                : undefined
+            }
             highlights={evalRes.highlights}
             variant="subtle"
           />
@@ -196,6 +232,10 @@ export function MealBundleCard({
                     protein={item.protein || 0}
                     carbs={item.carbs || 0}
                     fat={item.fat || 0}
+                    sugar={item.sugar}
+                    fiber={item.fiber}
+                    saturatedFat={item.saturatedFat}
+                    transFat={item.transFat}
                     highlights={itemEval.highlights}
                     variant="subtle"
                     className="scale-[0.9] origin-right"

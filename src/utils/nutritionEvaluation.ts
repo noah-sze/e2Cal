@@ -5,6 +5,7 @@ export interface NutritionEvaluationInput {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number | null;
   servingSize?: number;
   servingUnit?: string;
   category?: FoodCategory;
@@ -54,6 +55,7 @@ export function evaluateNutritionalHighlight(food: NutritionEvaluationInput): Nu
   const carbs = Math.max(0, food.carbs || 0);
   const protein = Math.max(0, food.protein || 0);
   const fat = Math.max(0, food.fat || 0);
+  const fiber = typeof food.fiber === 'number' && !isNaN(food.fiber) ? Math.max(0, food.fiber) : 0;
 
   const { carbsPct, proteinPct, fatPct } = calculateMacroPercentages(carbs, protein, fat);
 
@@ -72,6 +74,7 @@ export function evaluateNutritionalHighlight(food: NutritionEvaluationInput): Nu
   const cPer100 = carbs * factor;
   const pPer100 = protein * factor;
   const fPer100 = fat * factor;
+  const fiberPer100 = fiber * factor;
 
   // 微量調味品截斷防護：微量調料（如黑胡椒粒、食鹽、醬油、醋等 <=40 kcal 或 <=10g 且 <=60 kcal）不強掛標籤，留白維持清爽，
   // 避免微量調料因換算至 100g 放大倍數而誤觸高碳水/高蛋白/高熱量標籤。
@@ -141,7 +144,19 @@ export function evaluateNutritionalHighlight(food: NutritionEvaluationInput): Nu
     highlights.fat = true;
   }
 
-  // ④ 低熱量判定 (客觀物理能量密度，排除食用油)
+  // ④ 高膳食纖維判定 (雙軌客觀基準：固體 >= 6g/100g 或 >= 3g/100kcal 且 >= 2.5g/100g；液體 >= 3g/100ml；排除食用油)
+  const fiberPer100kcal = calories > 0 ? (fiber / calories) * 100 : 0;
+  const isHighFiberQualified =
+    food.category !== 'oil' &&
+    fiber > 0 &&
+    (isLiquid
+      ? fiberPer100 >= 3
+      : fiberPer100 >= 6 || (fiberPer100kcal >= 3 && fiberPer100 >= 2.5));
+  if (isHighFiberQualified) {
+    labels.push('high-fiber');
+  }
+
+  // ⑤ 低熱量判定 (客觀物理能量密度，排除食用油)
   const isLowCalQualified = isLowCal && food.category !== 'oil';
   if (isLowCalQualified) {
     labels.push('low-calorie');

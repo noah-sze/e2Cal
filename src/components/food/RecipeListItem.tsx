@@ -18,6 +18,10 @@ export interface RecipeListItemProps {
     protein: number;
     carbs: number;
     fat: number;
+    sugar?: number;
+    fiber?: number;
+    saturatedFat?: number;
+    transFat?: number;
     totalWeightGrams: number;
   };
   onClick?: (recipe: FoodRecipe) => void;
@@ -69,6 +73,10 @@ export const RecipeListItem = React.memo(function RecipeListItem({
       protein: macros.protein,
       carbs: macros.carbs,
       fat: macros.fat,
+      sugar: macros.sugar,
+      fiber: macros.fiber,
+      saturatedFat: macros.saturatedFat,
+      transFat: macros.transFat,
       servingSize: macros.totalWeightGrams || 100,
       servingUnit: 'g',
     },
@@ -196,6 +204,10 @@ export const RecipeListItem = React.memo(function RecipeListItem({
           carbs={scaledRecipeMacros.carbs}
           protein={scaledRecipeMacros.protein}
           fat={scaledRecipeMacros.fat}
+          sugar={scaledRecipeMacros.sugar}
+          fiber={scaledRecipeMacros.fiber}
+          saturatedFat={scaledRecipeMacros.saturatedFat}
+          transFat={scaledRecipeMacros.transFat}
           highlights={evalRes.highlights}
         />
 

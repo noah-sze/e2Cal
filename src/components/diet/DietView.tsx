@@ -683,6 +683,10 @@ export function DietView({
                           protein={item.protein || 0}
                           carbs={item.carbs || 0}
                           fat={item.fat || 0}
+                          sugar={item.sugar}
+                          fiber={item.fiber}
+                          saturatedFat={item.saturatedFat}
+                          transFat={item.transFat}
                           highlights={evalRes.highlights}
                           variant="subtle"
                           dashed={isSystemEntry}

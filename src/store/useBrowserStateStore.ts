@@ -8,7 +8,8 @@ export type FoodSortOption =
   | 'calories-asc'
   | 'protein-desc'
   | 'carbs-desc'
-  | 'fat-desc';
+  | 'fat-desc'
+  | 'fiber-desc';
 
 export interface FoodBrowserState {
   activeTab: 'foods' | 'recipes';

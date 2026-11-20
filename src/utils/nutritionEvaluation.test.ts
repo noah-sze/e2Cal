@@ -315,4 +315,88 @@ describe('evaluateNutritionalHighlight', () => {
 
     expect(res.labels).not.toContain('high-calorie');
   });
+
+  it('高膳食纖維固體絕對密度 (燕麥片 100g, fiber 10g)：>= 6g/100g 應識別為 high-fiber', () => {
+    const res = evaluateNutritionalHighlight({
+      calories: 389,
+      protein: 16.9,
+      carbs: 66.3,
+      fat: 6.9,
+      fiber: 10.6,
+      servingSize: 100,
+      servingUnit: 'g',
+      category: 'natural',
+    });
+
+    expect(res.labels).toContain('high-fiber');
+    expect(res.labels).toContain('carb-source');
+  });
+
+  it('高膳食纖維雙軌低卡高纖蔬菜 (西蘭花 100g, 34 kcal, fiber 2.6g)：每 100kcal >= 3g 且每 100g >= 2.5g，應識別為 high-fiber 且不誤亮碳水', () => {
+    const res = evaluateNutritionalHighlight({
+      calories: 34,
+      protein: 2.8,
+      carbs: 6.6,
+      fat: 0.4,
+      fiber: 2.6,
+      servingSize: 100,
+      servingUnit: 'g',
+      category: 'natural',
+    });
+
+    expect(res.labels).toContain('high-fiber');
+    expect(res.labels).toContain('low-calorie');
+    expect(res.highlights.carbs).toBe(false);
+  });
+
+  it('高膳食纖維液體 (高纖豆漿 100ml, fiber 3.2g)：>= 3g/100ml 應識別為 high-fiber', () => {
+    const res = evaluateNutritionalHighlight({
+      calories: 45,
+      protein: 3.6,
+      carbs: 2.5,
+      fat: 1.8,
+      fiber: 3.2,
+      servingSize: 100,
+      servingUnit: 'ml',
+      category: 'beverage',
+    });
+
+    expect(res.labels).toContain('high-fiber');
+  });
+
+  it('異常邊界與防護：無 fiber、負數 fiber 或微量調味品不應標記為 high-fiber', () => {
+    expect(
+      evaluateNutritionalHighlight({
+        calories: 100,
+        protein: 5,
+        carbs: 15,
+        fat: 2,
+        fiber: undefined,
+        servingSize: 100,
+      }).labels
+    ).not.toContain('high-fiber');
+
+    expect(
+      evaluateNutritionalHighlight({
+        calories: 100,
+        protein: 5,
+        carbs: 15,
+        fat: 2,
+        fiber: -5,
+        servingSize: 100,
+      }).labels
+    ).not.toContain('high-fiber');
+
+    expect(
+      evaluateNutritionalHighlight({
+        calories: 15,
+        protein: 0.5,
+        carbs: 3,
+        fat: 0.1,
+        fiber: 1.5,
+        servingSize: 5,
+        category: 'condiment',
+      }).labels
+    ).not.toContain('high-fiber');
+  });
 });

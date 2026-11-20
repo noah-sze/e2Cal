@@ -318,6 +318,7 @@
         "high-protein": "High Protein",
         "carb-source": "Carb Source",
         "fat-source": "Fat Source",
+        "high-fiber": "High Fiber",
         "low-calorie": "Low Calorie",
         "high-calorie": "High Calorie"
       },
@@ -331,7 +332,8 @@
         "caloriesAsc": "Lowest Calories",
         "proteinDesc": "Highest Protein",
         "carbsDesc": "Highest Carbs",
-        "fatDesc": "Highest Fat"
+        "fatDesc": "Highest Fat",
+        "fiberDesc": "Highest Fiber"
       },
       "replaceIngredient": "Replace ingredient",
       "unknownFood": "Unknown food",

@@ -318,6 +318,7 @@
         "high-protein": "高蛋白",
         "carb-source": "碳水主食",
         "fat-source": "脂质来源",
+        "high-fiber": "高膳食纤维",
         "low-calorie": "低热量",
         "high-calorie": "高热量"
       },
@@ -330,7 +331,8 @@
         "caloriesAsc": "热量最低",
         "proteinDesc": "蛋白质最高",
         "carbsDesc": "碳水最高",
-        "fatDesc": "脂肪最高"
+        "fatDesc": "脂肪最高",
+        "fiberDesc": "膳食纤维最高"
       },
       "replaceIngredient": "替换食材",
       "unknownFood": "未知食材",

@@ -21,6 +21,10 @@ export interface RecipeIngredientItem {
     protein: number;
     carbs: number;
     fat: number;
+    sugar?: number;
+    fiber?: number;
+    saturatedFat?: number;
+    transFat?: number;
   };
   /** 高／低熱量與三大營養素高亮評價結果 */
   evalResult?: NutritionEvaluationResult;
@@ -202,6 +206,10 @@ export function RecipeIngredientsCard({
                   protein={macros.protein}
                   carbs={macros.carbs}
                   fat={macros.fat}
+                  sugar={item.macros?.sugar}
+                  fiber={item.macros?.fiber}
+                  saturatedFat={item.macros?.saturatedFat}
+                  transFat={item.macros?.transFat}
                   highlights={item.evalResult?.highlights}
                 />
               </div>
