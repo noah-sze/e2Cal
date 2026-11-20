@@ -156,6 +156,24 @@ export const BodyHighlighter = memo(function BodyHighlighter({
   const frontParts = isFemale ? FEMALE_BODY_FRONT_PARTS : BODY_FRONT_PARTS;
   const backParts = isFemale ? FEMALE_BODY_BACK_PARTS : BODY_BACK_PARTS;
 
+  const frontNonMuscleParts = useMemo(
+    () => frontParts.filter((p) => NON_MUSCLE_SLUGS.has(p.slug)),
+    [frontParts]
+  );
+  const frontMuscleParts = useMemo(
+    () => frontParts.filter((p) => !NON_MUSCLE_SLUGS.has(p.slug)),
+    [frontParts]
+  );
+
+  const backNonMuscleParts = useMemo(
+    () => backParts.filter((p) => NON_MUSCLE_SLUGS.has(p.slug)),
+    [backParts]
+  );
+  const backMuscleParts = useMemo(
+    () => backParts.filter((p) => !NON_MUSCLE_SLUGS.has(p.slug)),
+    [backParts]
+  );
+
   const viewBox = useMemo(() => {
     switch (view) {
       case 'anterior':
@@ -375,6 +393,7 @@ export const BodyHighlighter = memo(function BodyHighlighter({
           viewBox={viewBox}
           className={`${SIZE_CLASSES[size]} max-h-full max-w-full text-foreground transition-all duration-200`}
           preserveAspectRatio="xMidYMid meet"
+          shapeRendering="geometricPrecision"
         >
           {/* 外圍人體精確輪廓線 (清晰剪影輪廓，一眼識別完整人體結構) */}
           {showOutline && (
@@ -405,14 +424,50 @@ export const BodyHighlighter = memo(function BodyHighlighter({
           {/* 正面肌肉與部位 */}
           {(view === 'anterior' || view === 'both') && (
             <g id="body-anterior">
-              {frontParts.map((group) => renderPartGroup(group, 'anterior'))}
+              {/* 非肌肉結構部位 (頭部、頸部、關節、手腳：單一合成組離屏柵格化，徹底杜絕半透明疊加黑邊/亮斑) */}
+              <g
+                className="pointer-events-none"
+                style={{
+                  opacity: baseColor ? 0.03 : 'var(--muscle-non-opacity, 0.08)',
+                  fill: baseColor || 'var(--muscle-non-color, currentColor)',
+                }}
+              >
+                {frontNonMuscleParts.flatMap((group) =>
+                  group.paths.map((d, idx) => (
+                    <path
+                      key={`non-${group.slug}-${group.side || 'c'}-${idx}`}
+                      d={d}
+                      stroke="none"
+                    />
+                  ))
+                )}
+              </g>
+              {frontMuscleParts.map((group) => renderPartGroup(group, 'anterior'))}
             </g>
           )}
 
           {/* 背面肌肉與部位 */}
           {(view === 'posterior' || view === 'both') && (
             <g id="body-posterior">
-              {backParts.map((group) => renderPartGroup(group, 'posterior'))}
+              {/* 非肌肉結構部位 (頭部、髮際、頸部、關節、手腳：單一合成組離屏柵格化，徹底杜絕半透明疊加黑邊/亮斑) */}
+              <g
+                className="pointer-events-none"
+                style={{
+                  opacity: baseColor ? 0.03 : 'var(--muscle-non-opacity, 0.08)',
+                  fill: baseColor || 'var(--muscle-non-color, currentColor)',
+                }}
+              >
+                {backNonMuscleParts.flatMap((group) =>
+                  group.paths.map((d, idx) => (
+                    <path
+                      key={`non-${group.slug}-${group.side || 'c'}-${idx}`}
+                      d={d}
+                      stroke="none"
+                    />
+                  ))
+                )}
+              </g>
+              {backMuscleParts.map((group) => renderPartGroup(group, 'posterior'))}
             </g>
           )}
         </svg>
