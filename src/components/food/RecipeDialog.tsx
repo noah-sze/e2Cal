@@ -648,16 +648,14 @@ export function RecipeDialog({
           className="shrink-0"
           bodyClassName="text-sm font-sans"
         >
-          <div className="h-10 px-4 flex items-center justify-between gap-2 bg-card shrink-0">
-            <span className="text-muted-foreground text-xs shrink-0">
-              {t('diet.recipeName')}
-            </span>
+          <div className="h-10 relative flex items-stretch bg-card shrink-0 rounded-b-lg focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground focus-within:z-[1] transition-shadow duration-100">
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t('diet.recipeNamePlaceholder')}
-              className="h-7 px-3 rounded-full border border-border/80 bg-background text-right text-xs font-sans text-foreground font-medium focus:outline-none placeholder:text-muted-foreground/40 focus:border-foreground transition-all duration-100 w-36"
+              aria-label={t('diet.recipeName')}
+              className="w-full h-full px-4 bg-transparent text-center text-xs font-sans text-foreground font-normal focus:outline-none placeholder:text-muted-foreground/40"
             />
           </div>
         </SectionCard>

@@ -70,18 +70,6 @@ export interface FoodFormDialogProps {
   zIndex?: number;
 }
 
-let measurementContext: CanvasRenderingContext2D | null = null;
-function measureInputTextWidth(text: string, font: string = '500 12px Inter, system-ui, sans-serif'): number {
-  if (typeof window === 'undefined') return 30;
-  if (!measurementContext) {
-    const canvas = document.createElement('canvas');
-    measurementContext = canvas.getContext('2d');
-  }
-  if (!measurementContext) return text.length * 8;
-  measurementContext.font = font;
-  return Math.ceil(measurementContext.measureText(text).width);
-}
-
 /**
  * 領域共用組件：新增與編輯單品食材表單彈窗
  * 嚴格遵循 Design Standards 規範：
@@ -144,21 +132,8 @@ export function FoodFormDialog({
 
   const showBrandSuggestions = open && isBrandFocused && brandSuggestions.length > 0;
 
-  // 品牌與名稱輸入框自適應寬度 (精確等於輸入文字長度，風格 A：純粹名詞「品牌」)
   const brandPlaceholder = t('diet.brand');
   const namePlaceholder = t('diet.foodNamePlaceholder');
-
-  const brandWidth = useMemo(() => {
-    const text = brand || brandPlaceholder;
-    const w = measureInputTextWidth(text, '400 12px Inter, -apple-system, sans-serif') + 20;
-    return Math.min(130, Math.max(46, w));
-  }, [brand, brandPlaceholder]);
-
-  const nameWidth = useMemo(() => {
-    const text = name || namePlaceholder;
-    const w = measureInputTextWidth(text, '500 12px Inter, -apple-system, sans-serif') + 20;
-    return Math.min(180, Math.max(46, w));
-  }, [name, namePlaceholder]);
 
   // 物理份量與單位
   const [servingSize, setServingSize] = useState('');
@@ -714,11 +689,10 @@ export function FoodFormDialog({
           <form id={formId} onSubmit={handleSubmit} className="space-y-3.5 pt-3.5 pb-0">
           {/* 表格段落 1: 基本資訊 (共用 SectionCard 內嵌表頭) */}
           <SectionCard title={t('diet.basicInfo')} bodyClassName="text-sm font-sans">
-            {/* 品牌 · 名稱 整合行 */}
-              <div className="h-10 px-4 flex items-center justify-between gap-2 bg-card">
-                <span className="text-muted-foreground text-xs shrink-0">{t('diet.foodName')}</span>
-                <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-end font-sans">
-                  {/* 品牌 (選填) - 長度自適應之膠囊輸入框（含既有品牌聯想） */}
+            {/* 品牌 ｜ 名稱 50/50 分割行 */}
+              <div className="h-10 grid grid-cols-2 divide-x divide-border bg-card">
+                {/* 品牌 (選填，含既有品牌聯想) */}
+                <div className="relative flex items-stretch min-w-0 focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground focus-within:z-[1] transition-shadow duration-100">
                   <input
                     ref={setBrandInputEl}
                     type="text"
@@ -761,21 +735,20 @@ export function FoodFormDialog({
                       }
                     }}
                     placeholder={brandPlaceholder}
-                    style={{ width: `${brandWidth}px` }}
-                    className="h-7 px-2.5 rounded-full border border-border/80 bg-background text-center text-xs font-sans text-muted-foreground focus:text-foreground focus:outline-none placeholder:text-muted-foreground/40 focus:border-foreground transition-all duration-100"
+                    aria-label={brandPlaceholder}
+                    className="w-full h-full px-3 bg-transparent text-center text-xs font-sans text-foreground focus:outline-none placeholder:text-muted-foreground/40"
                   />
+                </div>
 
-                  {/* 中間間隔點：固定常駐顯示 */}
-                  <span className="text-muted-foreground/60 text-xs font-mono shrink-0 select-none">·</span>
-
-                  {/* 食材名稱 (必填) - 長度自適應之膠囊輸入框 */}
+                {/* 食材名稱 (必填) */}
+                <div className="relative flex items-stretch min-w-0 focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground focus-within:z-[1] transition-shadow duration-100">
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder={namePlaceholder}
-                    style={{ width: `${nameWidth}px` }}
-                    className="h-7 px-2.5 rounded-full border border-border/80 bg-background text-center text-xs font-sans text-foreground font-medium focus:outline-none placeholder:text-muted-foreground/40 focus:border-foreground transition-all duration-100"
+                    aria-label={namePlaceholder}
+                    className="w-full h-full px-3 bg-transparent text-center text-xs font-sans text-foreground font-normal focus:outline-none placeholder:text-muted-foreground/40"
                   />
                 </div>
               </div>
@@ -800,7 +773,7 @@ export function FoodFormDialog({
                     <SelectValue
                       className={cn(
                         category
-                          ? 'font-medium text-foreground'
+                          ? 'font-normal text-foreground'
                           : 'font-normal font-mono text-label-tertiary select-none'
                       )}
                     >
