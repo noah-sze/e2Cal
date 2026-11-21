@@ -210,7 +210,7 @@ export function CopyMealDatePickerDialog({
             const isCurrentMonth = isSameMonth(day, monthStart);
             const isSelected = selectedDate === dateStr;
             const hasRecord =
-              isCurrentMonth && recordedDateSet.has(dateStr) && dateStr < targetDate;
+              isCurrentMonth && recordedDateSet.has(dateStr) && dateStr <= targetDate;
 
             return (
               <button

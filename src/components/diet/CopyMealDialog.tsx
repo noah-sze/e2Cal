@@ -5,6 +5,7 @@ import { format, parseISO, isValid, differenceInCalendarDays } from 'date-fns';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Dialog, DialogContent, DialogPrecisionHeader } from '@/components/ui/dialog';
+import { MetricValue } from '@/components/ui/metric-value';
 import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
 import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
@@ -57,19 +58,50 @@ export function CopyMealDialog({
   const [selectedHistoryDate, setSelectedHistoryDate] = useState<string | null>(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
-  // 查詢當前目標日期前，該來源餐別所有有記錄的歷史日期 (降序排列)
-  const recordedDates = useLiveQuery<string[]>(async () => {
-    if (!open || !targetDate || !sourceMealType) return [];
+  // 查詢當前目標日期及之前，該來源餐別所有有記錄的歷史日期 (降序排列)
+  // 若目標日期（今天）有除 targetMealType 以外的餐別數據，亦允許選擇今天
+  const recordedInfo = useLiveQuery<{
+    dates: string[];
+    pickerDates: string[];
+    todayOtherMeals: MealType[];
+  }>(async () => {
+    if (!open || !targetDate || !sourceMealType) {
+      return { dates: [], pickerDates: [], todayOtherMeals: [] };
+    }
     const logs = await db.daily_diet_logs
       .where('date')
-      .below(targetDate)
+      .belowOrEqual(targetDate)
       .reverse()
       .toArray();
 
-    return logs
-      .filter((log) => log.entries && log.entries.some((e) => e.mealType === sourceMealType))
+    const mealOrder: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+    const todayLog = logs.find((l) => l.date === targetDate);
+    const todayOtherMeals = todayLog
+      ? mealOrder.filter(
+          (m) => m !== targetMealType && Boolean(todayLog.entries?.some((e) => e.mealType === m))
+        )
+      : [];
+
+    const dates = logs
+      .filter((log) => {
+        if (log.date === targetDate && sourceMealType === targetMealType) {
+          return false;
+        }
+        return Boolean(log.entries?.some((e) => e.mealType === sourceMealType));
+      })
       .map((log) => log.date);
-  }, [open, targetDate, sourceMealType]);
+
+    const pickerDates =
+      todayOtherMeals.length > 0 && !dates.includes(targetDate)
+        ? [targetDate, ...dates]
+        : dates;
+
+    return { dates, pickerDates, todayOtherMeals };
+  }, [open, targetDate, sourceMealType, targetMealType]);
+
+  const recordedDates = recordedInfo?.dates;
+  const pickerRecordedDates = recordedInfo?.pickerDates;
+  const todayOtherMeals = useMemo(() => recordedInfo?.todayOtherMeals ?? [], [recordedInfo]);
 
   const lastRecordedDate = recordedDates && recordedDates.length > 0 ? recordedDates[0] : null;
 
@@ -411,70 +443,80 @@ export function CopyMealDialog({
           <div className="flex flex-col min-h-0">
             {/* 食材清單容器（方案 B 雙層整合頭：固定高度防切換跳動，超出時內部滾動） */}
             <div className="h-[300px] shrink-0 flex flex-col mt-5 mb-5 rounded-lg border border-border bg-card overflow-hidden">
-            {/* 第一列：居中日期左右步進器 + 點擊開啟月曆 */}
-            <div className="h-11 bg-muted/40 border-b border-border px-3 flex items-center justify-center select-none shrink-0">
-              <div className="inline-flex items-center h-7 rounded-md border border-border/80 bg-background overflow-hidden">
-                <button
-                  type="button"
-                  disabled={!prevRecordedDate}
-                  onClick={() => {
-                    if (!prevRecordedDate) return;
-                    triggerHaptic('selection');
-                    setSelectedHistoryDate(prevRecordedDate);
-                  }}
-                  aria-label={t('common.previousDay', '前一天')}
-                  className="w-6.5 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-hover transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
-                >
-                  <ChevronLeft className="size-3.5" />
-                </button>
-                <button
-                  type="button"
-                  disabled={!recordedDates || recordedDates.length === 0}
-                  onClick={() => {
-                    triggerHaptic('selection');
-                    setIsDatePickerOpen(true);
-                  }}
-                  className="h-full w-32 px-2 border-x border-border/80 font-mono text-xs font-semibold text-foreground hover:bg-hover transition-colors cursor-pointer disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center truncate"
-                >
-                  {sourceDateLabel || t('common.none', '無')}
-                </button>
-                <button
-                  type="button"
-                  disabled={!nextRecordedDate}
-                  onClick={() => {
-                    if (!nextRecordedDate) return;
-                    triggerHaptic('selection');
-                    setSelectedHistoryDate(nextRecordedDate);
-                  }}
-                  aria-label={t('common.nextDay', '後一天')}
-                  className="w-6.5 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-hover transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
-                >
-                  <ChevronRight className="size-3.5" />
-                </button>
-              </div>
+            {/* 第一列：滿寬三欄日期步進器（左右切換貼邊，點擊中間開啟月曆） */}
+            <div className="h-11 bg-muted/40 border-b border-border grid grid-cols-[44px_1fr_44px] divide-x divide-border items-stretch select-none shrink-0">
+              <button
+                type="button"
+                disabled={!prevRecordedDate}
+                onClick={() => {
+                  if (!prevRecordedDate) return;
+                  triggerHaptic('selection');
+                  setSelectedHistoryDate(prevRecordedDate);
+                }}
+                aria-label={t('common.previousDay', '前一天')}
+                className="w-full h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-hover transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+              >
+                <ChevronLeft className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                disabled={!pickerRecordedDates || pickerRecordedDates.length === 0}
+                onClick={() => {
+                  triggerHaptic('selection');
+                  setIsDatePickerOpen(true);
+                }}
+                className="w-full h-full px-3 font-mono text-xs font-medium text-foreground hover:bg-hover transition-colors cursor-pointer disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center truncate"
+              >
+                {sourceDateLabel || t('common.none', '無')}
+              </button>
+              <button
+                type="button"
+                disabled={!nextRecordedDate}
+                onClick={() => {
+                  if (!nextRecordedDate) return;
+                  triggerHaptic('selection');
+                  setSelectedHistoryDate(nextRecordedDate);
+                }}
+                aria-label={t('common.nextDay', '後一天')}
+                className="w-full h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-hover transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+              >
+                <ChevronRight className="size-3.5" />
+              </button>
             </div>
 
-            {/* 第二列：四餐別膠囊切換欄（早 / 午 / 晚 / 加餐） */}
-            <div className="grid grid-cols-4 h-11 px-2 gap-1.5 items-center bg-card border-b border-border select-none shrink-0">
+            {/* 第二列：四餐別等分格切換欄（格內採緊湊膠囊選中態；若來源日期為今天，當前目標餐別不可選） */}
+            <div className="grid grid-cols-4 h-11 divide-x divide-border items-stretch bg-card border-b border-border select-none shrink-0">
               {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((meal) => {
                 const isActive = sourceMealType === meal;
+                const isSameTargetMealToday =
+                  activeHistoryDate === targetDate && meal === targetMealType;
                 return (
                   <button
                     key={meal}
                     type="button"
+                    disabled={isSameTargetMealToday}
                     onClick={() => {
-                      if (sourceMealType === meal) return;
+                      if (sourceMealType === meal || isSameTargetMealToday) return;
                       triggerHaptic('selection');
                       setSourceMealType(meal);
                     }}
                     className={cn(
-                      'h-7 rounded-full text-xs font-sans transition-colors cursor-pointer flex items-center justify-center',
-                      isActive
-                        ? 'bg-foreground text-background font-semibold'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-hover'
+                      'w-full h-full px-1 flex items-center justify-center group',
+                      isSameTargetMealToday ? 'cursor-not-allowed' : 'cursor-pointer'
                     )}
                   >
-                    <span>{t(`diet.${meal}`)}</span>
+                    <span
+                      className={cn(
+                        'h-6.5 px-3 rounded-full text-xs font-sans transition-colors inline-flex items-center justify-center whitespace-nowrap',
+                        isSameTargetMealToday
+                          ? 'opacity-30 text-muted-foreground'
+                          : isActive
+                          ? 'bg-foreground text-background font-semibold'
+                          : 'text-muted-foreground group-hover:text-foreground group-hover:bg-hover'
+                      )}
+                    >
+                      {t(`diet.${meal}`)}
+                    </span>
                   </button>
                 );
               })}
@@ -495,32 +537,40 @@ export function CopyMealDialog({
                 <div className="divide-y divide-border">
                   {items.map((item, index) => {
                     const isSelected = selectedIds.has(item.id);
+                    const energyDisplay = formatEnergy(item.calories || 0, energyUnit);
 
                     return (
                       <div
                         key={item.id}
                         onClick={() => toggleItem(item.id)}
                         className={cn(
-                          'min-h-12 py-2 px-3 sm:px-4 flex items-center justify-between gap-2 bg-card transition-all cursor-pointer hover:bg-hover select-none',
+                          'min-h-13 py-2 px-3 sm:px-4 flex items-center justify-between gap-2.5 bg-card transition-all cursor-pointer hover:bg-hover select-none',
                           !isSelected && 'opacity-40'
                         )}
                       >
-                        {/* 自訂高對比 Checkbox 與食材名稱 */}
+                        {/* 圓形 D 勾選器 + 雙行食材名稱與熱量副標 */}
                         <div className="flex items-center gap-2.5 flex-1 min-w-0">
                           <div
                             className={cn(
-                              'size-4 rounded flex items-center justify-center shrink-0 border transition-colors',
+                              'size-4 rounded-full flex items-center justify-center shrink-0 border transition-colors',
                               isSelected
                                 ? 'bg-foreground text-background border-foreground'
                                 : 'border-border bg-transparent text-transparent'
                             )}
                           >
-                            {isSelected && <Check className="size-3 stroke-[3]" />}
+                            {isSelected && <Check className="size-2.5" strokeWidth={2.5} />}
                           </div>
 
-                          <span className="truncate text-xs font-medium text-foreground flex-1 min-w-0">
-                            {item.foodName}
-                          </span>
+                          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                            <span className="truncate text-xs font-medium text-foreground">
+                              {item.foodName}
+                            </span>
+                            <MetricValue
+                              value={energyDisplay.value.toLocaleString()}
+                              unit={energyDisplay.unit}
+                              className="text-2xs text-muted-foreground"
+                            />
+                          </div>
                         </div>
 
                         {/* 右側結構：常用數字輸入框膠囊 / 系統條目熱量標籤 */}
@@ -579,9 +629,16 @@ export function CopyMealDialog({
         targetMealType={targetMealType}
         targetDate={targetDate}
         selectedDate={activeHistoryDate}
-        recordedDates={recordedDates || []}
+        recordedDates={pickerRecordedDates || []}
         onSelectDate={(dateStr) => {
           setSelectedHistoryDate(dateStr);
+          if (
+            dateStr === targetDate &&
+            sourceMealType === targetMealType &&
+            todayOtherMeals.length > 0
+          ) {
+            setSourceMealType(todayOtherMeals[0]);
+          }
           setIsDatePickerOpen(false);
         }}
       />

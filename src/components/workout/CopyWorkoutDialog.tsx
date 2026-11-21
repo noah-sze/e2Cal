@@ -5,10 +5,13 @@ import { format, parseISO, isValid, differenceInCalendarDays } from 'date-fns';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Dialog, DialogContent, DialogPrecisionHeader } from '@/components/ui/dialog';
+import { MetricValue } from '@/components/ui/metric-value';
 import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
 import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
 import { db } from '@/services/db/db';
+import { useUnitPreferences } from '@/hooks/useUnitPreferences';
+import { convertBodyWeight } from '@/utils/unitMath';
 import { cn } from '@/lib/utils';
 import { CopyWorkoutDatePickerDialog } from './CopyWorkoutDatePickerDialog';
 import { getLocalizedExerciseName } from '@/utils/defaultLocalization';
@@ -75,6 +78,7 @@ export function CopyWorkoutDialog({
   targetDate,
 }: CopyWorkoutDialogProps) {
   const { t } = useTranslation();
+  const { bodyWeightUnit } = useUnitPreferences();
 
   // 查詢當前目標日期前，所有有訓練記錄的歷史日期 (降序排列)
   const recordedDates = useLiveQuery<string[]>(async () => {
@@ -393,49 +397,47 @@ export function CopyWorkoutDialog({
           />
 
           <div className="flex flex-col min-h-0">
-            {/* 動作清單容器（對齊複製餐點設計：固定高度防切換跳動，居中日期步進器 + 內部滾動） */}
-            <div className="h-[300px] shrink-0 flex flex-col mt-5 mb-5 rounded-lg border border-border bg-card overflow-hidden">
-              {/* 第一列：居中日期左右步進器 + 點擊開啟月曆 */}
-              <div className="h-11 bg-muted/40 border-b border-border px-3 flex items-center justify-center select-none shrink-0">
-                <div className="inline-flex items-center h-7 rounded-md border border-border/80 bg-background overflow-hidden">
-                  <button
-                    type="button"
-                    disabled={!prevRecordedDate}
-                    onClick={() => {
-                      if (!prevRecordedDate) return;
-                      triggerHaptic('selection');
-                      setSelectedHistoryDate(prevRecordedDate);
-                    }}
-                    aria-label={t('common.previousDay', '前一天')}
-                    className="w-6.5 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-hover transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
-                  >
-                    <ChevronLeft className="size-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!recordedDates || recordedDates.length === 0}
-                    onClick={() => {
-                      triggerHaptic('selection');
-                      setIsDatePickerOpen(true);
-                    }}
-                    className="h-full w-32 px-2 border-x border-border/80 font-mono text-xs font-semibold text-foreground hover:bg-hover transition-colors cursor-pointer disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center truncate"
-                  >
-                    {sourceDateLabel || t('common.none', '無')}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!nextRecordedDate}
-                    onClick={() => {
-                      if (!nextRecordedDate) return;
-                      triggerHaptic('selection');
-                      setSelectedHistoryDate(nextRecordedDate);
-                    }}
-                    aria-label={t('common.nextDay', '後一天')}
-                    className="w-6.5 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-hover transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
-                  >
-                    <ChevronRight className="size-3.5" />
-                  </button>
-                </div>
+            {/* 動作清單容器（固定高度防切換跳動，較複製餐點少一列餐別欄故略微收緊高度） */}
+            <div className="h-[260px] shrink-0 flex flex-col mt-5 mb-5 rounded-lg border border-border bg-card overflow-hidden">
+              {/* 第一列：滿寬三欄日期步進器（左右切換貼邊，點擊中間開啟月曆） */}
+              <div className="h-11 bg-muted/40 border-b border-border grid grid-cols-[44px_1fr_44px] divide-x divide-border items-stretch select-none shrink-0">
+                <button
+                  type="button"
+                  disabled={!prevRecordedDate}
+                  onClick={() => {
+                    if (!prevRecordedDate) return;
+                    triggerHaptic('selection');
+                    setSelectedHistoryDate(prevRecordedDate);
+                  }}
+                  aria-label={t('common.previousDay', '前一天')}
+                  className="w-full h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-hover transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  <ChevronLeft className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={!recordedDates || recordedDates.length === 0}
+                  onClick={() => {
+                    triggerHaptic('selection');
+                    setIsDatePickerOpen(true);
+                  }}
+                  className="w-full h-full px-3 font-mono text-xs font-medium text-foreground hover:bg-hover transition-colors cursor-pointer disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center truncate"
+                >
+                  {sourceDateLabel || t('common.none', '無')}
+                </button>
+                <button
+                  type="button"
+                  disabled={!nextRecordedDate}
+                  onClick={() => {
+                    if (!nextRecordedDate) return;
+                    triggerHaptic('selection');
+                    setSelectedHistoryDate(nextRecordedDate);
+                  }}
+                  aria-label={t('common.nextDay', '後一天')}
+                  className="w-full h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-hover transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  <ChevronRight className="size-3.5" />
+                </button>
               </div>
 
               {/* 動作清單滾動區 */}
@@ -453,32 +455,47 @@ export function CopyWorkoutDialog({
                   <div className="divide-y divide-border">
                     {items.map((item, index) => {
                       const isSelected = selectedIds.has(item.id);
+                      const rawVolumeKg = item.sets.reduce(
+                        (sum, s) => sum + (s.weight || 0) * (s.reps || 0),
+                        0
+                      );
+                      const displayVolume =
+                        rawVolumeKg > 0
+                          ? Math.round(convertBodyWeight(rawVolumeKg, 'kg', bodyWeightUnit, 1))
+                          : 0;
 
                       return (
                         <div
                           key={item.id}
                           onClick={() => toggleItem(item.id)}
                           className={cn(
-                            'min-h-12 py-2 px-3 sm:px-4 flex items-center justify-between gap-2 bg-card transition-all cursor-pointer hover:bg-hover select-none',
+                            'min-h-13 py-2 px-3 sm:px-4 flex items-center justify-between gap-2.5 bg-card transition-all cursor-pointer hover:bg-hover select-none',
                             !isSelected && 'opacity-40'
                           )}
                         >
-                          {/* 自訂高對比 Checkbox 與動作名稱 */}
+                          {/* 圓形 D 勾選器 + 雙行動作名稱與訓練容量副標 */}
                           <div className="flex items-center gap-2.5 flex-1 min-w-0">
                             <div
                               className={cn(
-                                'size-4 rounded flex items-center justify-center shrink-0 border transition-colors',
+                                'size-4 rounded-full flex items-center justify-center shrink-0 border transition-colors',
                                 isSelected
                                   ? 'bg-foreground text-background border-foreground'
                                   : 'border-border bg-transparent text-transparent'
                               )}
                             >
-                              {isSelected && <Check className="size-3 stroke-[3]" />}
+                              {isSelected && <Check className="size-2.5" strokeWidth={2.5} />}
                             </div>
 
-                            <span className="truncate text-xs font-medium text-foreground flex-1 min-w-0">
-                              {item.exerciseName}
-                            </span>
+                            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                              <span className="truncate text-xs font-medium text-foreground">
+                                {item.exerciseName}
+                              </span>
+                              <MetricValue
+                                value={displayVolume.toLocaleString()}
+                                unit={bodyWeightUnit}
+                                className="text-2xs text-muted-foreground"
+                              />
+                            </div>
                           </div>
 
                           {/* 右側結構：常用數字輸入框膠囊 (組數) */}
