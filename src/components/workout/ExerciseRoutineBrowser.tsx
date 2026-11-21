@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, ChevronRight, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { triggerHaptic } from '@/lib/haptics';
 import { cn } from '@/lib/utils';
 import { matchesMultilingual } from '@/utils/multilingualSearch';
 import { getLocalizedExerciseName } from '@/utils/defaultLocalization';
+import { compareByRecentActivityThenName } from '@/utils/activitySorting';
 import type { Exercise, WorkoutRoutine, DetailedMuscle } from '@/types';
 
 export type ExerciseSelectMode = 'all' | 'exercises' | 'routines';
@@ -54,11 +55,11 @@ export function ExerciseRoutineBrowser({
   const { t } = useTranslation();
 
   // 動作庫資料
-  const { activeExercises, isLoading: isExercisesLoading } = useExercises();
+  const { activeExercises } = useExercises();
   const { getEquipmentDisplayName } = useEquipments();
 
   // 組合庫資料
-  const { activeRoutines, isLoading: isRoutinesLoading, exerciseMap } = useRoutines();
+  const { activeRoutines, exerciseMap } = useRoutines();
 
   // 禁用 ID 快取集合
   const disabledIdSet = useMemo(() => new Set(disabledIds || []), [disabledIds]);
@@ -92,28 +93,11 @@ export function ExerciseRoutineBrowser({
     }
   };
 
-  // 最近訓練動作提取
-  const { recentExerciseIds, recentRoutineIds, isLoading: isRecentLoading } = useRecentExercises();
-  const recentExerciseIdSet = useMemo(() => new Set(recentExerciseIds), [recentExerciseIds]);
-
-
-  const recentExerciseOrderMap = useMemo(() => {
-    const map = new Map<string, number>();
-    recentExerciseIds.forEach((id, idx) => map.set(id, idx));
-    return map;
-  }, [recentExerciseIds]);
-
-  const recentRoutineOrderMap = useMemo(() => {
-    const map = new Map<string, number>();
-    recentRoutineIds.forEach((id, idx) => map.set(id, idx));
-    return map;
-  }, [recentRoutineIds]);
-
-  const isManage = interactiveMode === 'manage';
+  // 最近使用時間提取（用於預設活躍度排序：最近使用／添加／修改優先，其次依名稱升序）
+  const { exerciseLastUsedMap, routineLastUsedMap } = useRecentExercises();
 
   // 分類導航列橫向自動平滑滾動對齊
   const categoryScrollRef = useRef<HTMLDivElement>(null);
-  const routineCategoryScrollRef = useRef<HTMLDivElement>(null);
 
   const handleScrollTabIntoView = (
     container: HTMLDivElement | null,
@@ -143,13 +127,8 @@ export function ExerciseRoutineBrowser({
     });
   };
 
-  const recentExercisesCount = useMemo(() => {
-    return activeExercises.filter((e) => recentExerciseIdSet.has(e.id)).length;
-  }, [activeExercises, recentExerciseIdSet]);
-
   const muscleGroupCounts = useMemo(() => {
     const counts: Record<string, number> = {
-      recent: recentExercisesCount,
       all: activeExercises.length,
       chest: 0,
       back: 0,
@@ -169,49 +148,30 @@ export function ExerciseRoutineBrowser({
       }
     }
     return counts;
-  }, [activeExercises, recentExercisesCount]);
+  }, [activeExercises]);
 
-  // 動作過濾狀態
+  // 動作過濾狀態（預設 'all'）
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState('');
-  const [selectedMuscleFilter, setSelectedMuscleFilter] = useState<string>(() => {
-    return !isManage ? 'recent' : 'all';
-  });
-
-  // 初次載入/打開定位決策：若動作最近記錄為空且當前仍為 recent，自動定位至 'all'（useRef 確保後續手動切換不受影響）
-  const initialMuscleFilterResolvedRef = useRef(false);
-  useEffect(() => {
-    if (isManage) return;
-    if (initialMuscleFilterResolvedRef.current) return;
-    if (isRecentLoading || isExercisesLoading) return;
-
-    initialMuscleFilterResolvedRef.current = true;
-    if (recentExercisesCount === 0 && selectedMuscleFilter === 'recent') {
-      setSelectedMuscleFilter('all');
-    }
-  }, [isManage, isRecentLoading, isExercisesLoading, recentExercisesCount, selectedMuscleFilter]);
+  const [selectedMuscleFilter, setSelectedMuscleFilter] = useState<string>('all');
 
   const filteredExercises = useMemo(() => {
     let list = activeExercises;
     const isSearching = Boolean(exerciseSearchQuery.trim());
 
-    // 1. 部位過濾 / 最近過濾 (僅在非搜尋狀態下套用)
-    if (!isSearching) {
-      if (selectedMuscleFilter === 'recent') {
-        list = list.filter((ex) => recentExerciseIdSet.has(ex.id));
-      } else if (selectedMuscleFilter !== 'all') {
-        const targetGroup = MAJOR_MUSCLE_GROUPS.find((g) => g.id === selectedMuscleFilter);
-        if (targetGroup) {
-          list = list.filter((ex) => {
-            if (!ex.targetMuscles) return false;
-            return Object.keys(ex.targetMuscles).some((m) =>
-              targetGroup.detailedMuscles.includes(m as DetailedMuscle)
-            );
-          });
-        }
+    // 1. 部位過濾 (僅在非搜尋狀態下套用)
+    if (!isSearching && selectedMuscleFilter !== 'all') {
+      const targetGroup = MAJOR_MUSCLE_GROUPS.find((g) => g.id === selectedMuscleFilter);
+      if (targetGroup) {
+        list = list.filter((ex) => {
+          if (!ex.targetMuscles) return false;
+          return Object.keys(ex.targetMuscles).some((m) =>
+            targetGroup.detailedMuscles.includes(m as DetailedMuscle)
+          );
+        });
       }
     }
 
-    // 2. 搜尋字串過濾：跳過部位與最近過濾，全局檢索動作名稱與備註
+    // 2. 搜尋字串過濾：跳過部位過濾，全局檢索動作名稱與備註
     if (isSearching) {
       list = list.filter((ex) =>
         matchesMultilingual(
@@ -222,55 +182,24 @@ export function ExerciseRoutineBrowser({
       );
     }
 
-    // 3. 排序：僅在 !isSearching && selectedMuscleFilter === 'recent' 時套用最近時間排序
-    if (!isSearching && selectedMuscleFilter === 'recent') {
-      return list.slice().sort((a, b) => {
-        const orderA = recentExerciseOrderMap.get(a.id) ?? 999999;
-        const orderB = recentExerciseOrderMap.get(b.id) ?? 999999;
-        return orderA - orderB;
-      });
-    }
+    // 3. 預設排序：對齊 FoodRecipeBrowser（最近使用／添加／修改優先，其次依名稱升序）
+    return list
+      .slice()
+      .sort((a, b) =>
+        compareByRecentActivityThenName(a, b, exerciseLastUsedMap, (ex) =>
+          getLocalizedExerciseName(ex)
+        )
+      );
+  }, [activeExercises, selectedMuscleFilter, exerciseSearchQuery, exerciseLastUsedMap]);
 
-    return list;
-  }, [activeExercises, selectedMuscleFilter, exerciseSearchQuery, recentExerciseIdSet, recentExerciseOrderMap]);
-
-  // 組合過濾狀態
-  const recentRoutineIdSet = useMemo(() => new Set(recentRoutineIds), [recentRoutineIds]);
-
-  const recentRoutinesCount = useMemo(() => {
-    return activeRoutines.filter((r) => recentRoutineIdSet.has(r.id)).length;
-  }, [activeRoutines, recentRoutineIdSet]);
-
+  // 組合搜尋狀態
   const [routineSearchQuery, setRoutineSearchQuery] = useState('');
-  const [selectedRoutineFilter, setSelectedRoutineFilter] = useState<'recent' | 'all'>(() => {
-    return !isManage ? 'recent' : 'all';
-  });
-
-  // 初次載入/打開定位決策：若組合最近記錄為空且當前仍為 recent，自動定位至 'all'
-  const initialRoutineFilterResolvedRef = useRef(false);
-  useEffect(() => {
-    if (isManage) return;
-    if (initialRoutineFilterResolvedRef.current) return;
-    if (isRecentLoading || isRoutinesLoading) return;
-
-    initialRoutineFilterResolvedRef.current = true;
-    if (recentRoutinesCount === 0 && selectedRoutineFilter === 'recent') {
-      setSelectedRoutineFilter('all');
-    }
-  }, [isManage, isRecentLoading, isRoutinesLoading, recentRoutinesCount, selectedRoutineFilter]);
 
   const filteredRoutines = useMemo(() => {
     let list = activeRoutines;
     const isSearching = Boolean(routineSearchQuery.trim());
 
-    // 1. 最近過濾 (僅在非搜尋狀態下套用)
-    if (!isSearching) {
-      if (selectedRoutineFilter === 'recent') {
-        list = list.filter((r) => recentRoutineIdSet.has(r.id));
-      }
-    }
-
-    // 2. 搜尋字串過濾：全域檢索組合名稱與備註
+    // 1. 搜尋字串過濾：全域檢索組合名稱與備註
     if (isSearching) {
       list = list.filter((r) =>
         matchesMultilingual(
@@ -281,17 +210,11 @@ export function ExerciseRoutineBrowser({
       );
     }
 
-    // 3. 排序：僅在 !isSearching && selectedRoutineFilter === 'recent' 時套用最近時間排序
-    if (!isSearching && selectedRoutineFilter === 'recent') {
-      return list.slice().sort((a, b) => {
-        const orderA = recentRoutineOrderMap.get(a.id) ?? 999999;
-        const orderB = recentRoutineOrderMap.get(b.id) ?? 999999;
-        return orderA - orderB;
-      });
-    }
-
-    return list;
-  }, [activeRoutines, selectedRoutineFilter, routineSearchQuery, recentRoutineIdSet, recentRoutineOrderMap]);
+    // 2. 預設排序：對齊 FoodRecipeBrowser（最近使用／添加／修改優先，其次依名稱升序）
+    return list
+      .slice()
+      .sort((a, b) => compareByRecentActivityThenName(a, b, routineLastUsedMap));
+  }, [activeRoutines, routineSearchQuery, routineLastUsedMap]);
 
   const handleExerciseClick = useCallback((exercise: Exercise, isDisabled: boolean) => {
     if (isDisabled) {
@@ -472,40 +395,13 @@ export function ExerciseRoutineBrowser({
           >
             <div className="flex items-center gap-1 shrink-0 pr-1">
               {/* 最近動作膠囊 (僅在選擇彈窗模式下顯示) */}
-              {!isManage && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    triggerHaptic('selection');
-                    setSelectedMuscleFilter('recent');
-                    handleScrollTabIntoView(categoryScrollRef.current, e.currentTarget, true, false);
-                  }}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1',
-                    selectedMuscleFilter === 'recent'
-                      ? 'bg-foreground text-background'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  )}
-                >
-                  <span>{t('common.recent', '最近')}</span>
-                  <span
-                    className={cn(
-                      'text-[10px] tabular-nums',
-                      selectedMuscleFilter === 'recent' ? 'opacity-60' : 'opacity-45'
-                    )}
-                  >
-                    {recentExercisesCount}
-                  </span>
-                </button>
-              )}
-
               {/* 全部動作膠囊 */}
               <button
                 type="button"
                 onClick={(e) => {
                   triggerHaptic('selection');
                   setSelectedMuscleFilter('all');
-                  handleScrollTabIntoView(categoryScrollRef.current, e.currentTarget, false, false);
+                  handleScrollTabIntoView(categoryScrollRef.current, e.currentTarget, true, false);
                 }}
                 className={cn(
                   'px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1',
@@ -572,8 +468,6 @@ export function ExerciseRoutineBrowser({
               <div className="py-8 text-center text-xs font-mono text-muted-foreground">
                 {exerciseSearchQuery.trim()
                   ? t('common.noResults', '無搜尋結果')
-                  : selectedMuscleFilter === 'recent'
-                  ? t('workout.noRecentExercises', '無最近記錄')
                   : t('workout.noExercises', '無動作')}
               </div>
             ) : (
@@ -647,73 +541,6 @@ export function ExerciseRoutineBrowser({
             )}
           </div>
 
-          {/* 組合快捷分類膠囊列 */}
-          <div
-            ref={routineCategoryScrollRef}
-            onWheel={(e) => {
-              if (e.deltaY !== 0 && routineCategoryScrollRef.current) {
-                routineCategoryScrollRef.current.scrollLeft += e.deltaY;
-              }
-            }}
-            className="overflow-x-auto no-scrollbar shrink-0 py-0.5"
-          >
-            <div className="flex items-center gap-1 shrink-0 pr-1">
-              {/* 最近組合膠囊 (僅在選擇彈窗模式下顯示) */}
-              {!isManage && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    triggerHaptic('selection');
-                    setSelectedRoutineFilter('recent');
-                    handleScrollTabIntoView(routineCategoryScrollRef.current, e.currentTarget, true, false);
-                  }}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1',
-                    selectedRoutineFilter === 'recent'
-                      ? 'bg-foreground text-background'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  )}
-                >
-                  <span>{t('common.recent', '最近')}</span>
-                  <span
-                    className={cn(
-                      'text-[10px] tabular-nums',
-                      selectedRoutineFilter === 'recent' ? 'opacity-60' : 'opacity-45'
-                    )}
-                  >
-                    {recentRoutinesCount}
-                  </span>
-                </button>
-              )}
-
-              {/* 全部組合膠囊 */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  triggerHaptic('selection');
-                  setSelectedRoutineFilter('all');
-                  handleScrollTabIntoView(routineCategoryScrollRef.current, e.currentTarget, false, true);
-                }}
-                className={cn(
-                  'px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1',
-                  selectedRoutineFilter === 'all'
-                    ? 'bg-foreground text-background'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                )}
-              >
-                <span>{t('common.all', '全部')}</span>
-                <span
-                  className={cn(
-                    'text-[10px] tabular-nums',
-                    selectedRoutineFilter === 'all' ? 'opacity-60' : 'opacity-45'
-                  )}
-                >
-                  {activeRoutines.length}
-                </span>
-              </button>
-            </div>
-          </div>
-
           {/* 組合清單 */}
           <div
             className={cn(
@@ -725,8 +552,6 @@ export function ExerciseRoutineBrowser({
               <div className="py-8 text-center text-xs font-mono text-muted-foreground">
                 {routineSearchQuery.trim()
                   ? t('common.noResults', '無搜尋結果')
-                  : selectedRoutineFilter === 'recent'
-                  ? t('workout.noRecentRoutines', '無最近記錄')
                   : t('workout.noRoutines', '無組合')}
               </div>
             ) : (

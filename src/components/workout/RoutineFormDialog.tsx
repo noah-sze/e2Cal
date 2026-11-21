@@ -7,6 +7,8 @@ import {
 } from '@/components/ui/dialog';
 import { ExerciseSelectDialog } from '@/components/workout/ExerciseSelectDialog';
 import { EquipmentBadge } from '@/components/workout/EquipmentBadge';
+import { SectionCard } from '@/components/ui/section-card';
+import { MetricValue } from '@/components/ui/metric-value';
 import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
 import { useExercises } from '@/hooks/useExercises';
@@ -156,130 +158,119 @@ export function RoutineFormDialog({
             className="pt-3.5 space-y-3 font-mono text-xs select-none"
           >
             <div className="space-y-3">
-              {/* 表單段落 1: 名稱 (Usage List 佈局) */}
-              <div className="border border-border rounded-lg overflow-hidden bg-card text-xs shrink-0">
-                {/* 組合名稱 */}
-                <div className="min-h-11 py-2 px-3 sm:px-4 flex items-center justify-between gap-3 bg-card">
-                  <span className="text-muted-foreground whitespace-nowrap shrink-0">
-                    {t('workout.routineName')}
+              {/* 表單段落 1: 基本資訊 (方案 A：標準 h-10 表格行整合名稱與統計) */}
+              <SectionCard
+                title={t('workout.basicInfo')}
+                className="shrink-0"
+                bodyClassName="text-sm font-sans"
+              >
+                <div className="h-10 relative flex items-stretch bg-card shrink-0 focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground focus-within:z-[1] transition-shadow duration-100">
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={t('workout.routineNamePlaceholder', '名稱')}
+                    aria-label={t('workout.routineName')}
+                    className="w-full h-full px-4 bg-transparent text-center text-xs font-sans text-foreground font-normal focus:outline-none placeholder:text-muted-foreground/40"
+                    maxLength={50}
+                  />
+                </div>
+                <div className="h-10 px-4 flex items-center justify-between bg-card">
+                  <span className="text-muted-foreground text-xs shrink-0">
+                    {t('workout.exercises', '動作數')}
                   </span>
-                  <div className="flex-1 flex justify-end">
-                    <input
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder={t('workout.routineNamePlaceholder', '例如：推力日 A')}
-                      className="h-7 px-3 rounded-full border border-border/80 bg-background text-right text-xs font-sans text-foreground font-medium focus:outline-none placeholder:text-muted-foreground/40 focus:border-foreground transition-all duration-100 w-36"
-                      maxLength={50}
-                    />
-                  </div>
+                  <MetricValue
+                    value={summary.exerciseCount}
+                    unit={t('common.items', '項')}
+                    valueClassName="font-normal text-foreground text-xs"
+                    unitClassName="text-xs"
+                  />
                 </div>
-              </div>
-
-              {/* 表單段落 2: 即時事實看板 (HUD Banner) */}
-              <div className="space-y-1.5 shrink-0">
-                <div className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">
-                  {t('workout.objectiveMetrics', '客觀概覽')}
+                <div className="h-10 px-4 flex items-center justify-between bg-card">
+                  <span className="text-muted-foreground text-xs shrink-0">
+                    {t('workout.coveredMusclesShort', '覆蓋肌群')}
+                  </span>
+                  <MetricValue
+                    value={summary.coveredMuscles.length}
+                    unit={t('workout.muscleUnit', '個')}
+                    valueClassName="font-normal text-foreground text-xs"
+                    unitClassName="text-xs"
+                  />
                 </div>
-                <div className="border border-border rounded-lg overflow-hidden bg-card grid grid-cols-2 divide-x divide-border select-none text-center shrink-0">
-                  <div className="py-2 px-1 flex flex-col items-center justify-center min-w-0">
-                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider truncate">
-                      {t('workout.exercises', '動作數')}
-                    </span>
-                    <div className="font-mono text-xs font-normal text-foreground mt-0.5 truncate flex items-baseline gap-0.5">
-                      <span>{summary.exerciseCount}</span>
-                      <span className="font-sans text-[9px] font-normal opacity-75">{t('common.items', '項')}</span>
-                    </div>
-                  </div>
-                  <div className="py-2 px-1 flex flex-col items-center justify-center min-w-0">
-                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider truncate">
-                      {t('workout.coveredMusclesShort', '覆蓋肌群')}
-                    </span>
-                    <div className="font-mono text-xs font-normal text-foreground mt-0.5 truncate flex items-baseline gap-0.5">
-                      <span>{summary.coveredMuscles.length}</span>
-                      <span className="font-sans text-[9px] font-normal opacity-75">{t('workout.muscleUnit', '個肌群')}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              </SectionCard>
 
-              {/* 表單段落 3: 動作清單 */}
-              <div className="space-y-1.5 shrink-0">
-                <div className="flex items-center justify-between px-0">
-                  <div className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">
-                    {t('workout.routineExerciseList', '動作清單')}
-                  </div>
-
+              {/* 表單段落 2: 動作清單 (共用 SectionCard 內嵌表頭) */}
+              <SectionCard
+                title={`${t('workout.routineExerciseList', '動作清單')} (${items.length})`}
+                className="shrink-0"
+                bodyClassName="text-sm"
+                action={
                   <button
                     type="button"
                     onClick={handleOpenAddExercise}
-                    className="h-6 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-[11px] flex items-center gap-1 transition-colors cursor-pointer text-foreground active:scale-95 select-none"
+                    className="h-6 px-2.5 rounded-full border border-border/80 bg-card hover:bg-hover font-mono text-xs flex items-center gap-1 transition-colors cursor-pointer text-muted-foreground hover:text-foreground active:scale-95 select-none"
                   >
                     <Plus className="size-3 text-muted-foreground" />
                     <span>{t('workout.addExercise')}</span>
                   </button>
-                </div>
-
-                <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border text-sm">
-                  {items.length === 0 ? (
-                    <div className="py-6 px-4 text-center shrink-0">
-                      <button
-                        type="button"
-                        onClick={handleOpenAddExercise}
-                        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none font-mono"
+                }
+              >
+                {items.length === 0 ? (
+                  <div className="min-h-12 py-2 px-3 sm:px-4 flex items-center justify-center shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleOpenAddExercise}
+                      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none font-mono"
+                    >
+                      <Plus className="size-3.5" />
+                      <span>{t('workout.addExercise')}</span>
+                    </button>
+                  </div>
+                ) : (
+                  items.map((item, index) => {
+                    const ex = exerciseMap.get(item.exerciseId);
+                    return (
+                      <div
+                        key={`${item.exerciseId}-${index}`}
+                        className="min-h-12 py-2 px-3 sm:px-4 flex items-center justify-between gap-2 bg-card shrink-0"
                       >
-                        <Plus className="size-3.5" />
-                        <span>{t('workout.addExercise')}</span>
-                      </button>
-                    </div>
-                  ) : (
-                    items.map((item, index) => {
-                      const ex = exerciseMap.get(item.exerciseId);
-                      return (
-                        <div
-                          key={`${item.exerciseId}-${index}`}
-                          className="min-h-12 py-2 px-3 sm:px-4 flex items-center justify-between gap-2 bg-card shrink-0"
+                        {/* 左側：動作名與器械 (點擊可替換動作) */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenReplaceExercise(index)}
+                          className="text-left min-w-0 flex-1 truncate cursor-pointer outline-none group"
+                          title={ex ? getLocalizedExerciseName(ex) : t('workout.unknownExercise')}
                         >
-                          {/* 左側：動作名與器械 (點擊可替換動作) */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenReplaceExercise(index)}
-                            className="text-left min-w-0 flex-1 truncate cursor-pointer outline-none group"
-                            title={ex ? getLocalizedExerciseName(ex) : t('workout.unknownExercise')}
-                          >
-                            <div className="text-xs font-medium text-foreground truncate group-hover:opacity-75 transition-opacity">
-                              {ex ? getLocalizedExerciseName(ex) : t('workout.unknownExercise')}
-                            </div>
-                            {ex && (
-                              <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
-                                <EquipmentBadge
-                                  name={getEquipmentDisplayName(ex.equipment, t)}
-                                  size="sm"
-                                  className="text-[9px] px-1 py-0 h-4 leading-none"
-                                />
-                              </div>
-                            )}
-                          </button>
-
-                          {/* 右側：刪除按鈕 */}
-                          <div className="flex items-center shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveItem(index)}
-                              className="size-7 flex items-center justify-center rounded-full text-muted-foreground hover:text-destructive hover:bg-hover transition-colors cursor-pointer shrink-0"
-                              title={t('common.delete')}
-                              aria-label={t('common.delete')}
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
+                          <div className="text-xs font-normal text-foreground truncate group-hover:opacity-75 transition-opacity">
+                            {ex ? getLocalizedExerciseName(ex) : t('workout.unknownExercise')}
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
+                          {ex && (
+                            <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
+                              <EquipmentBadge
+                                name={getEquipmentDisplayName(ex.equipment, t)}
+                                size="sm"
+                                className="text-[9px] px-1 py-0 h-4 leading-none"
+                              />
+                            </div>
+                          )}
+                        </button>
+
+                        {/* 右側：圓形膠囊刪除按鈕 */}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(index)}
+                          className="size-7 rounded-full border border-border/80 bg-background flex items-center justify-center transition-colors shrink-0 text-muted-foreground hover:text-destructive hover:bg-hover cursor-pointer active:scale-95"
+                          title={t('common.delete')}
+                          aria-label={t('common.delete')}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </SectionCard>
             </div>
           </form>
         </PrecisionDialogContent>

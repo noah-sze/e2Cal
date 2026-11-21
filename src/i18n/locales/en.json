@@ -562,7 +562,7 @@
       "archivedEquipments": "Archived",
       "noArchivedEquipments": "No archived items",
       "atLeastOneExercise": "At least one exercise",
-      "routineNamePlaceholder": "e.g. Push Day A",
+      "routineNamePlaceholder": "Name",
       "searchExercisePlaceholder": "Search exercise name or notes...",
       "searchRoutinePlaceholder": "Search routine name or notes...",
       "routineExerciseList": "Exercises",
@@ -610,7 +610,7 @@
       "atLeastOneMuscle": "At least one target muscle required",
       "customEquipment": "Custom Equipment",
       "equipmentName": "Equipment Name",
-      "equipmentPlaceholder": "e.g. Cable Machine",
+      "equipmentPlaceholder": "Name",
       "exerciseNamePlaceholder": "Name",
       "searchEquipmentPlaceholder": "Search equipment...",
       "selectDateHint": "Apply a routine or add an exercise to log"

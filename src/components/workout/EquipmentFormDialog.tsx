@@ -5,6 +5,7 @@ import {
   PrecisionDialogContent,
 } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/toast';
+import { SectionCard } from '@/components/ui/section-card';
 import type { Equipment } from '@/types';
 
 export interface EquipmentFormDialogProps {
@@ -61,24 +62,19 @@ export function EquipmentFormDialog({
         submitDisabled={!name.trim()}
       >
         <form id={formId} onSubmit={handleSubmit} className="pt-3.5 space-y-3.5">
-          <div className="space-y-1.5">
-            <div className="text-[11px] uppercase tracking-widest text-muted-foreground px-0 font-semibold">
-              {t('workout.basicInfo')}
+          <SectionCard title={t('workout.basicInfo')} bodyClassName="text-sm font-sans">
+            <div className="h-10 relative flex items-stretch bg-card shrink-0 rounded-b-lg focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground focus-within:z-[1] transition-shadow duration-100">
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t('workout.equipmentPlaceholder', '名稱')}
+                aria-label={t('workout.equipmentName', '器械名稱')}
+                className="w-full h-full px-4 bg-transparent text-center text-xs font-sans text-foreground font-normal focus:outline-none placeholder:text-muted-foreground/40"
+                maxLength={40}
+              />
             </div>
-            <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border text-sm font-sans">
-              <div className="h-10 px-4 flex items-center justify-between gap-2 bg-card">
-                <span className="text-muted-foreground text-xs shrink-0">{t('workout.equipmentName', '器械名稱')}</span>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t('workout.equipmentPlaceholder', '例如：滑輪機')}
-                  className="h-7 px-3 rounded-full border border-border/80 bg-background text-right text-xs font-sans text-foreground font-medium focus:outline-none placeholder:text-muted-foreground/40 focus:border-foreground transition-all duration-100 flex-1 max-w-[170px]"
-                  maxLength={40}
-                />
-              </div>
-            </div>
-          </div>
+          </SectionCard>
         </form>
       </PrecisionDialogContent>
     </Dialog>
