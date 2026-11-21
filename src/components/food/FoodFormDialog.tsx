@@ -22,6 +22,7 @@ import { normalizeFoodInputToMetric } from '@/utils/nutritionMath';
 import { convertFoodWeight, convertFoodVolume, kcalToKj } from '@/utils/unitMath';
 import { matchesAutocomplete } from '@/utils/multilingualSearch';
 import { ChevronRight } from 'lucide-react';
+import { SectionCard } from '@/components/ui/section-card';
 import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
 import { MetricValue } from '@/components/ui/metric-value';
 
@@ -701,7 +702,7 @@ export function FoodFormDialog({
     <>
       <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <PrecisionDialogContent
-          title={isEdit ? t('settings.editCustomFood') : t('diet.addFood', '新增單品食材')}
+          title={isEdit ? t('settings.editCustomFood') : t('diet.addFood', '新增')}
           form={formId}
           submitDisabled={!name.trim() || !category || isSubmitting || !servingSize || parseFloat(servingSize) <= 0}
           submitAriaLabel={isEdit ? t('common.save') : t('common.add')}
@@ -711,13 +712,9 @@ export function FoodFormDialog({
         >
 
           <form id={formId} onSubmit={handleSubmit} className="space-y-3.5 pt-3.5 pb-0">
-          {/* 表格段落 1: 基本資訊 (Vercel Usage List) */}
-          <div className="space-y-1.5">
-            <div className="text-[11px] uppercase tracking-widest text-muted-foreground px-0 font-semibold">
-              {t('diet.basicInfo')}
-            </div>
-            <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border text-sm font-sans">
-              {/* 品牌 · 名稱 整合行 */}
+          {/* 表格段落 1: 基本資訊 (共用 SectionCard 內嵌表頭) */}
+          <SectionCard title={t('diet.basicInfo')} bodyClassName="text-sm font-sans">
+            {/* 品牌 · 名稱 整合行 */}
               <div className="h-10 px-4 flex items-center justify-between gap-2 bg-card">
                 <span className="text-muted-foreground text-xs shrink-0">{t('diet.foodName')}</span>
                 <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-end font-sans">
@@ -819,15 +816,8 @@ export function FoodFormDialog({
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-          </div>
 
-          {/* 表格段落 2: 食用份量 (獨立卡片區塊) */}
-          <div className="space-y-1.5">
-            <div className="text-[11px] uppercase tracking-widest text-muted-foreground px-0 font-semibold">
-              {t('diet.serving')}
-            </div>
-            <div className="border border-border rounded-lg overflow-hidden bg-card text-sm">
+              {/* 食用份量 */}
               <div className="h-10 px-4 flex items-center justify-between">
                 <span className="text-muted-foreground text-xs">{t('diet.serving')}</span>
                 <button
@@ -847,10 +837,9 @@ export function FoodFormDialog({
                   <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                 </button>
               </div>
-            </div>
-          </div>
+          </SectionCard>
 
-          {/* 表格段落 3: 基準營養素 (共用通用規格卡片) */}
+          {/* 表格段落 2: 基準營養素 (共用通用規格卡片) */}
           <NutritionFactsCard
             title={t('diet.servingNutrients')}
             action={

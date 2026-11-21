@@ -12,6 +12,7 @@ import { FoodRecipeSelectDialog } from '@/components/food/FoodRecipeSelectDialog
 import { HoldToDeleteButton } from '@/components/ui/HoldToDeleteButton';
 import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
 import { RecipeIngredientsCard } from '@/components/food/RecipeIngredientsCard';
+import { SectionCard } from '@/components/ui/section-card';
 import { db } from '@/services/db/db';
 import type {
   FoodItem,
@@ -640,27 +641,26 @@ export function RecipeDialog({
 
   const bodyContent = (
     <>
-      {/* 表格段落 1 (僅食譜定義模式)：基本資訊與菜餚名稱 */}
+      {/* 表格段落 1 (僅食譜定義模式)：基本資訊與菜餚名稱 (共用 SectionCard 內嵌表頭) */}
       {isRecipeVariant && (
-        <div className="space-y-1.5 shrink-0">
-          <div className="text-[11px] uppercase tracking-widest text-muted-foreground px-0 font-semibold">
-            {t('diet.basicInfo')}
+        <SectionCard
+          title={t('diet.basicInfo')}
+          className="shrink-0"
+          bodyClassName="text-sm font-sans"
+        >
+          <div className="h-10 px-4 flex items-center justify-between gap-2 bg-card shrink-0">
+            <span className="text-muted-foreground text-xs shrink-0">
+              {t('diet.recipeName')}
+            </span>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t('diet.recipeNamePlaceholder')}
+              className="h-7 px-3 rounded-full border border-border/80 bg-background text-right text-xs font-sans text-foreground font-medium focus:outline-none placeholder:text-muted-foreground/40 focus:border-foreground transition-all duration-100 w-36"
+            />
           </div>
-          <div className="border border-border rounded-lg overflow-hidden bg-card text-sm font-sans">
-            <div className="h-10 px-4 flex items-center justify-between gap-2 bg-card shrink-0">
-              <span className="text-muted-foreground text-xs shrink-0">
-                {t('diet.recipeName')}
-              </span>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t('diet.recipeNamePlaceholder')}
-                className="h-7 px-3 rounded-full border border-border/80 bg-background text-right text-xs font-sans text-foreground font-medium focus:outline-none placeholder:text-muted-foreground/40 focus:border-foreground transition-all duration-100 w-36"
-              />
-            </div>
-          </div>
-        </div>
+        </SectionCard>
       )}
 
       {/* 表格段落 2：配方總計指標規格卡片 */}
