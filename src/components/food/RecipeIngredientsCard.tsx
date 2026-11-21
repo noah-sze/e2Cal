@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, Plus } from 'lucide-react';
+import { ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { SectionCard } from '@/components/ui/section-card';
 import { MetricValue } from '@/components/ui/metric-value';
 import { MacroSquares } from '@/components/food/MacroSquares';
@@ -49,6 +49,8 @@ export interface RecipeIngredientsCardProps {
   onReplaceItem?: (item: RecipeIngredientItem, index: number) => void;
   /** 編輯模式：點擊右側用量膠囊開啟數字鍵盤 */
   onEditQuantity?: (item: RecipeIngredientItem, index: number, anchorEl: HTMLElement) => void;
+  /** 編輯模式：點擊右側刪除按鈕移除食材 */
+  onRemoveItem?: (item: RecipeIngredientItem, index: number) => void;
   className?: string;
 }
 
@@ -66,6 +68,7 @@ export function RecipeIngredientsCard({
   onItemClick,
   onReplaceItem,
   onEditQuantity,
+  onRemoveItem,
   className,
 }: RecipeIngredientsCardProps) {
   const { t } = useTranslation();
@@ -119,7 +122,7 @@ export function RecipeIngredientsCard({
                 <button
                   type="button"
                   onClick={() => onReplaceItem?.(item, idx)}
-                  className="text-left min-w-0 flex-1 truncate text-xs font-medium text-foreground hover:opacity-75 transition-opacity cursor-pointer outline-none"
+                  className="text-left min-w-0 flex-1 truncate text-xs font-normal text-foreground hover:opacity-75 transition-opacity cursor-pointer outline-none"
                   title={item.foodName}
                 >
                   <div className="flex items-center gap-1.5 truncate">
@@ -132,24 +135,37 @@ export function RecipeIngredientsCard({
                   </div>
                 </button>
 
-                {/* 右側：用量膠囊（點擊喚起數字鍵盤） */}
-                <button
-                  type="button"
-                  onClick={(e) => onEditQuantity?.(item, idx, e.currentTarget)}
-                  className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none shrink-0"
-                >
-                  <MetricValue
-                    value={
-                      item.quantity > 0
-                        ? formatDisplayAmount(String(item.quantity)) || '0'
-                        : '-'
-                    }
-                    unit={item.unit}
-                    valueClassName="font-normal text-foreground"
-                    unitClassName="text-[11px]"
-                  />
-                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                </button>
+                {/* 右側：用量膠囊 + 刪除按鈕 */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => onEditQuantity?.(item, idx, e.currentTarget)}
+                    className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none shrink-0"
+                  >
+                    <MetricValue
+                      value={
+                        item.quantity > 0
+                          ? formatDisplayAmount(String(item.quantity)) || '0'
+                          : '-'
+                      }
+                      unit={item.unit}
+                      valueClassName="font-normal text-foreground"
+                      unitClassName="text-[11px]"
+                    />
+                    <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                  </button>
+                  {onRemoveItem && (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveItem(item, idx)}
+                      className="size-7 rounded-full border border-border/80 bg-background flex items-center justify-center transition-colors shrink-0 text-muted-foreground hover:text-destructive hover:bg-hover cursor-pointer active:scale-95"
+                      title={t('common.delete')}
+                      aria-label={t('common.delete')}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             );
           }

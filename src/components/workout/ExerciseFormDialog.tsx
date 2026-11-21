@@ -29,6 +29,7 @@ import {
 } from '@/utils/muscleIntensity';
 import type { EquipmentType, DetailedMuscle, MuscleRole, Exercise } from '@/types';
 import { EquipmentFormDialog } from './EquipmentFormDialog';
+import { SectionCard } from '@/components/ui/section-card';
 
 export interface ExerciseFormData {
   name: string;
@@ -222,71 +223,68 @@ export function ExerciseFormDialog({
             className="flex-1 min-h-0 flex flex-col pt-3.5 pb-0"
           >
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3.5 pr-0.5">
-              {/* 表格段落 1: 基本資訊 (Vercel Usage List) */}
-              <div className="space-y-1.5 shrink-0">
-                <div className="text-[11px] uppercase tracking-widest text-muted-foreground px-0 font-semibold">
-                  {t('workout.basicInfo')}
+              {/* 表格段落 1: 基本資訊 (共用 SectionCard 內嵌表頭) */}
+              <SectionCard
+                title={t('workout.basicInfo')}
+                className="shrink-0"
+                bodyClassName="text-sm font-sans"
+              >
+                {/* 動作名稱行 (100% 滿寬無膠囊輸入格) */}
+                <div className="h-10 relative flex items-stretch bg-card shrink-0 focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground focus-within:z-[1] transition-shadow duration-100">
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={t('workout.exerciseNamePlaceholder', '例如：槓鈴臥推')}
+                    aria-label={t('workout.exerciseName')}
+                    className="w-full h-full px-4 bg-transparent text-center text-xs font-sans text-foreground font-normal focus:outline-none placeholder:text-muted-foreground/40"
+                    maxLength={50}
+                  />
                 </div>
-                <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border text-sm font-sans">
-                  {/* 動作名稱行 */}
-                  <div className="h-10 px-4 flex items-center justify-between gap-2 bg-card shrink-0">
-                    <span className="text-muted-foreground text-xs shrink-0">
-                      {t('workout.exerciseName')}
-                    </span>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder={t('workout.exerciseNamePlaceholder', '例如：槓鈴臥推')}
-                      className="h-7 px-3 rounded-full border border-border/80 bg-background text-right text-xs font-sans text-foreground font-medium focus:outline-none placeholder:text-muted-foreground/40 focus:border-foreground transition-all duration-100 flex-1 max-w-[170px]"
-                      maxLength={50}
-                    />
-                  </div>
 
-                  {/* 所需器械行 */}
-                  <div className="h-10 px-4 flex items-center justify-between gap-2 bg-card shrink-0">
-                    <span className="text-muted-foreground text-xs shrink-0">
-                      {t('workout.equipment')}
-                    </span>
-                    <Select
-                      value={equipment}
-                      onValueChange={(val) => {
-                        if (val === '__add_custom__') {
-                          setIsAddEquipmentOpen(true);
-                          return;
-                        }
-                        if (val) {
-                          triggerHaptic('selection');
-                          setEquipment(val as EquipmentType);
-                        }
-                      }}
+                {/* 所需器械行 */}
+                <div className="h-10 px-4 flex items-center justify-between gap-2 bg-card shrink-0">
+                  <span className="text-muted-foreground text-xs shrink-0">
+                    {t('workout.equipment')}
+                  </span>
+                  <Select
+                    value={equipment}
+                    onValueChange={(val) => {
+                      if (val === '__add_custom__') {
+                        setIsAddEquipmentOpen(true);
+                        return;
+                      }
+                      if (val) {
+                        triggerHaptic('selection');
+                        setEquipment(val as EquipmentType);
+                      }
+                    }}
+                  >
+                    <SelectTrigger
+                      size="custom"
+                      iconClassName="size-3 text-muted-foreground/60"
+                      className="h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-muted font-sans text-xs flex items-center gap-1.5 transition-colors cursor-pointer text-foreground active:scale-95"
                     >
-                      <SelectTrigger
-                        size="custom"
-                        iconClassName="size-3 text-muted-foreground/60"
-                        className="h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-muted font-sans text-xs flex items-center gap-1.5 transition-colors cursor-pointer text-foreground active:scale-95"
-                      >
-                        <SelectValue className="font-bold text-foreground">
-                          {getEquipmentDisplayName(equipment, t)}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent align="end" className="min-w-44 max-h-56 font-mono text-xs">
-                        {availableEquipments.map((eq) => (
-                          <SelectItem key={eq.id} value={eq.id}>
-                            {getEquipmentDisplayName(eq.id, t)}
-                          </SelectItem>
-                        ))}
-                        <SelectItem
-                          value="__add_custom__"
-                          className="text-xs text-muted-foreground hover:text-foreground font-medium border-t border-border mt-1 pt-1.5 cursor-pointer"
-                        >
-                          ＋ {t('workout.customEquipment', '自定義器械')}
+                      <SelectValue className="font-bold text-foreground">
+                        {getEquipmentDisplayName(equipment, t)}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent align="end" className="min-w-44 max-h-56 font-mono text-xs">
+                      {availableEquipments.map((eq) => (
+                        <SelectItem key={eq.id} value={eq.id}>
+                          {getEquipmentDisplayName(eq.id, t)}
                         </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      ))}
+                      <SelectItem
+                        value="__add_custom__"
+                        className="text-xs text-muted-foreground hover:text-foreground font-medium border-t border-border mt-1 pt-1.5 cursor-pointer"
+                      >
+                        ＋ {t('workout.customEquipment', '自定義器械')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
+              </SectionCard>
 
               {/* 表格段落 2: 目標肌群 (Vercel Usage List) */}
               <div className="space-y-1.5 shrink-0">

@@ -459,9 +459,8 @@ export function RecipeDialog({
     }
   };
 
-  // 移除食材（至少保留 1 項）
+  // 移除食材（允許清空至 0 項，此時送出按鈕將自動禁用）
   const handleRemoveIngredient = (index: number) => {
-    if (ingredients.length <= 1) return;
     triggerHaptic('light');
     setIngredients((prev) => prev.filter((_, idx) => idx !== index));
   };
@@ -694,6 +693,7 @@ export function RecipeDialog({
         onAddIngredient={handleOpenAddIngredient}
         onReplaceItem={(_, index) => handleOpenReplaceIngredient(index)}
         onEditQuantity={(_, index, anchorEl) => handleOpenKeypad(index, anchorEl)}
+        onRemoveItem={(_, index) => handleRemoveIngredient(index)}
       />
 
       {/* 底部破壞性按鈕（僅日誌編輯模式且提供 onDeleteBundle 時展示） */}
@@ -761,15 +761,11 @@ export function RecipeDialog({
           maxDecimals={2}
           anchorEl={keypadConfig.anchorEl}
           zIndex={zIndex + 10}
-          onDelete={
-            ingredients.length > 1
-              ? () => {
-                  const idx = keypadConfig.index;
-                  setKeypadConfig(null);
-                  handleRemoveIngredient(idx);
-                }
-              : undefined
-          }
+          onDelete={() => {
+            const idx = keypadConfig.index;
+            setKeypadConfig(null);
+            handleRemoveIngredient(idx);
+          }}
           onLiveChange={handleKeypadLiveChange}
           onConfirm={handleKeypadConfirm}
           onCancel={handleKeypadCancel}

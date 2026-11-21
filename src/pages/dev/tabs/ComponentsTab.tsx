@@ -11,6 +11,11 @@ import {
   buildCarbsSubRows,
   buildFatSubRows,
 } from '@/components/food/SubNutrientsPopover';
+import {
+  RecipeIngredientsCard,
+  type RecipeIngredientItem,
+} from '@/components/food/RecipeIngredientsCard';
+import { evaluateNutritionalHighlight } from '@/utils/nutritionEvaluation';
 import type { BodyHighlighterGender } from '@/components/workout/BodyHighlighter';
 import { AdaptiveMuscleBadgeGroup } from '@/components/workout/AdaptiveMuscleBadgeGroup';
 import { TargetMusclesCard } from '@/components/workout/TargetMusclesCard';
@@ -32,6 +37,60 @@ const MOCK_NUTRITION_DATA: NutritionFactsData = {
   transFat: 0,
   sodium: 0,
 };
+
+// Mock 構成食材清單（雞胸肉義大利麵範例）
+const MOCK_RECIPE_INGREDIENTS: RecipeIngredientItem[] = [
+  {
+    id: 'mock-ing-1',
+    foodName: '雞胸肉',
+    quantity: 150,
+    unit: 'g',
+    macros: { calories: 248, carbs: 0, protein: 46.5, fat: 5.4 },
+    evalResult: evaluateNutritionalHighlight({
+      calories: 248,
+      carbs: 0,
+      protein: 46.5,
+      fat: 5.4,
+      servingSize: 150,
+      servingUnit: 'g',
+      category: 'natural',
+    }),
+  },
+  {
+    id: 'mock-ing-2',
+    foodName: '義大利麵',
+    quantity: 80,
+    unit: 'g',
+    macros: { calories: 288, carbs: 59.2, protein: 10.4, fat: 1.2, fiber: 2.8 },
+    evalResult: evaluateNutritionalHighlight({
+      calories: 288,
+      carbs: 59.2,
+      protein: 10.4,
+      fat: 1.2,
+      fiber: 2.8,
+      servingSize: 80,
+      servingUnit: 'g',
+      category: 'natural',
+    }),
+  },
+  {
+    id: 'mock-ing-3',
+    foodName: '特級初榨橄欖油',
+    quantity: 10,
+    unit: 'ml',
+    isOptional: true,
+    macros: { calories: 82, carbs: 0, protein: 0, fat: 9.3, saturatedFat: 1.3 },
+    evalResult: evaluateNutritionalHighlight({
+      calories: 82,
+      carbs: 0,
+      protein: 0,
+      fat: 9.3,
+      servingSize: 10,
+      servingUnit: 'ml',
+      category: 'oil',
+    }),
+  },
+];
 
 // Mock 目標肌群機能學角色 (精準 17 解剖肌群)
 const MOCK_MUSCLE_MAP: Partial<Record<DetailedMuscle, MuscleRole | number>> = {
@@ -222,6 +281,38 @@ export const ComponentsTab: React.FC = () => {
               }
               data={MOCK_NUTRITION_DATA}
               highlights={{ calories: true, fat: true }}
+            />
+          </div>
+        </div>
+
+        {/* RecipeIngredientsCard (詳情 / 編輯雙模式並排) */}
+        <div className="space-y-2 pt-2">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-1.5">
+              <CopySnippet variant="subtle" value="<RecipeIngredientsCard />" className="text-xs font-medium text-foreground">
+                RecipeIngredientsCard
+              </CopySnippet>
+              <span className="text-2xs text-muted-foreground">(共用於 RecipeDetails 與 RecipeDialog)</span>
+            </div>
+            <span className="text-3xs font-mono text-muted-foreground">DETAIL / EDIT MODES</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+            <RecipeIngredientsCard
+              title="詳情模式 (detail)"
+              showCount={true}
+              mode="detail"
+              items={MOCK_RECIPE_INGREDIENTS}
+              onItemClick={() => {}}
+            />
+            <RecipeIngredientsCard
+              title="編輯模式 (edit)"
+              showCount={true}
+              mode="edit"
+              items={MOCK_RECIPE_INGREDIENTS}
+              onAddIngredient={() => {}}
+              onReplaceItem={() => {}}
+              onEditQuantity={() => {}}
+              onRemoveItem={() => {}}
             />
           </div>
         </div>
