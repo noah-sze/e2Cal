@@ -4,8 +4,11 @@ import {
   Dialog,
   PrecisionDialogContent,
 } from '@/components/ui/dialog';
+import { SectionCard } from '@/components/ui/section-card';
 import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
 import { MetricValue } from '@/components/ui/metric-value';
+import { useUnitPreferences } from '@/hooks/useUnitPreferences';
+import { formatEnergy } from '@/utils/unitMath';
 import {
   Select,
   SelectContent,
@@ -15,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { ChevronRight } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
+import { cn } from '@/lib/utils';
 import {
   calculateMacrosFromSplit,
   calculateBMR,
@@ -146,11 +150,8 @@ export function DietPlanModal({
     );
   }, [isBinge, targetCaloriesKcal, carbsPercent, proteinPercent, fatPercent]);
 
-  // 供能比標尺寬度推算
-  const ratioScale = ratioTotal > 100 ? 100 / ratioTotal : 1;
-  const carbsBarWidth = Math.min(100, Math.round(carbsPercent * ratioScale));
-  const proteinBarWidth = Math.min(100 - carbsBarWidth, Math.round(proteinPercent * ratioScale));
-  const fatBarWidth = Math.max(0, 100 - carbsBarWidth - proteinBarWidth);
+  const { energyUnit } = useUnitPreferences();
+  const targetEnergyDisplay = formatEnergy(targetCaloriesKcal, energyUnit);
 
   // 切換供能比模板
   const handleTemplateChange = (val: string) => {
@@ -314,26 +315,24 @@ export function DietPlanModal({
           initialFocus={false}
         >
           {/* 主容器：pt-3.5 space-y-3 嚴格縱向律動 */}
-          <div className="flex flex-col space-y-3 pt-3.5">
-            {/* 單行 Usage Table：供能比比例選項 (統一使用 Select 下拉選單) */}
-            <div className="border border-border rounded-lg bg-card overflow-hidden">
-              <div className="h-10 px-3 flex items-center justify-between">
-                <span className="text-xs font-normal text-foreground">
-                  {t('dietPlan.ratio', '比例')}
-                </span>
+          <div className="flex flex-col space-y-3 pt-3.5 select-none">
+            {/* 單張 SectionCard：表頭整合比例選單 + 三欄左對齊專屬進度條 + 底部目標熱量與配比總和 */}
+            <SectionCard
+              title={t('dietPlan.ratio', '比例')}
+              action={
                 <Select
                   value={template}
                   onValueChange={(val) => val && handleTemplateChange(val)}
                 >
                   <SelectTrigger
                     size="custom"
-                    className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                    className="h-6.5 px-2.5 rounded-full border border-border/80 bg-card hover:bg-hover flex items-center gap-1 text-2xs font-sans text-foreground cursor-pointer transition-colors"
                   >
                     <SelectValue className="flex-none text-right">
                       {getTemplateLabel(template)}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent align="end" className="min-w-48">
+                  <SelectContent align="end" className="min-w-44">
                     {MACRO_SPLIT_TEMPLATES.map((item) => (
                       <SelectItem key={item.id} value={item.id}>
                         {t(item.labelKey)}
@@ -344,149 +343,121 @@ export function DietPlanModal({
                     </SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
-
-            {/* 供能比卡片模組：能量標尺 + 3 欄並列 (嚴格固定順序：碳 ➔ 蛋 ➔ 脂) + 重構配比總和 */}
-            <div className="border border-border rounded-lg bg-card overflow-hidden select-none">
-              {/* 頂部能量彩色標尺 (Ratio Bar) */}
-              <div className="h-1 w-full bg-track flex overflow-hidden">
-                <div
-                  style={{ width: `${carbsBarWidth}%` }}
-                  className="h-full bg-carbs transition-all duration-200"
-                />
-                <div
-                  style={{ width: `${proteinBarWidth}%` }}
-                  className="h-full bg-protein transition-all duration-200"
-                />
-                <div
-                  style={{ width: `${fatBarWidth}%` }}
-                  className="h-full bg-fat transition-all duration-200"
-                />
-              </div>
-
-              {/* 3 欄並列：碳水化合物 (C) ➔ 蛋白質 (P) ➔ 脂肪 (F) */}
+              }
+              bodyClassName="text-xs font-sans"
+            >
+              {/* 3 欄並列左對齊（融合 MacroProgressGrid 風格：碳水 ➔ 蛋白質 ➔ 脂肪） */}
               <div className="grid grid-cols-3 divide-x divide-border">
-                {/* 1. 碳水化合物 (C) */}
-                <div className="p-2.5 flex flex-col items-center justify-center text-center gap-1.5 hover:bg-hover/10 transition-colors">
-                  <span className="text-[11px] font-semibold text-carbs tracking-tight truncate max-w-full">
-                    {t('dietPlan.carbs', '碳水化合物')}
-                  </span>
+                {(
+                  [
+                    {
+                      key: 'carbs' as const,
+                      label: t('dietPlan.carbsShort', '碳水'),
+                      percent: carbsPercent,
+                      grams: calculatedMacros.carbsGrams,
+                      labelClass: 'text-carbs',
+                      trackClass: 'bg-carbs-subtle',
+                      barClass: 'bg-carbs',
+                    },
+                    {
+                      key: 'protein' as const,
+                      label: t('dietPlan.proteinShort', '蛋白質'),
+                      percent: proteinPercent,
+                      grams: calculatedMacros.proteinGrams,
+                      labelClass: 'text-protein',
+                      trackClass: 'bg-protein-subtle',
+                      barClass: 'bg-protein',
+                    },
+                    {
+                      key: 'fat' as const,
+                      label: t('dietPlan.fatShort', '脂肪'),
+                      percent: fatPercent,
+                      grams: calculatedMacros.fatGrams,
+                      labelClass: 'text-fat',
+                      trackClass: 'bg-fat-subtle',
+                      barClass: 'bg-fat',
+                    },
+                  ] as const
+                ).map((col) => {
+                  const pctWidth = Math.min(100, Math.max(0, col.percent));
+                  return (
+                    <div key={col.key} className="p-3 flex flex-col gap-1.5 text-left">
+                      <span className={cn('text-xs font-medium truncate', col.labelClass)}>
+                        {col.label}
+                      </span>
 
-                  {template === 'custom' ? (
-                    <button
-                      type="button"
-                      onClick={(e) => handleOpenKeypad('carbs', e.currentTarget)}
-                      className="h-7 px-2 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-0.5 transition-colors cursor-pointer active:scale-95 select-none"
-                      title={t('diet.clickToEnter', '點擊輸入數值')}
-                    >
-                      <span className="font-normal text-foreground">{carbsPercent}</span>
-                      <span className="text-muted-foreground text-2xs">%</span>
-                      <ChevronRight className="size-2.5 text-muted-foreground/60 shrink-0" />
-                    </button>
-                  ) : (
-                    <div className="h-7 flex items-baseline justify-center gap-0.5 select-none">
-                      <span className="font-mono text-xs font-normal text-foreground">{carbsPercent}</span>
-                      <span className="text-muted-foreground text-2xs font-mono">%</span>
+                      <div className="min-h-7 flex items-center">
+                        {template === 'custom' ? (
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenKeypad(col.key, e.currentTarget)}
+                            className="h-7 px-2 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs inline-flex items-center gap-0.5 transition-colors cursor-pointer active:scale-95 select-none"
+                            title={t('diet.clickToEnter', '點擊輸入數值')}
+                          >
+                            <span className="font-semibold text-foreground tabular-nums">
+                              {col.percent}
+                            </span>
+                            <span className="font-sans text-muted-foreground text-2xs">%</span>
+                            <ChevronRight className="size-2.5 text-muted-foreground/60 shrink-0" />
+                          </button>
+                        ) : (
+                          <span className="inline-flex items-baseline whitespace-nowrap">
+                            <span className="font-mono text-base font-semibold text-foreground tabular-nums">
+                              {col.percent}
+                            </span>
+                            <span className="font-sans text-2xs text-muted-foreground ml-0.5">
+                              %
+                            </span>
+                          </span>
+                        )}
+                      </div>
+
+                      <MetricValue
+                        value={col.grams}
+                        unit="g"
+                        className="text-2xs text-muted-foreground"
+                        unitClassName="text-3xs"
+                      />
+
+                      <div className={cn('h-1.5 w-full rounded-full overflow-hidden mt-0.5', col.trackClass)}>
+                        <div
+                          className={cn('h-full rounded-full transition-all duration-200', col.barClass)}
+                          style={{ width: `${pctWidth}%` }}
+                        />
+                      </div>
                     </div>
-                  )}
-
-                  <MetricValue
-                    value={calculatedMacros.carbsGrams}
-                    unit="g"
-                    className="text-2xs text-muted-foreground whitespace-nowrap"
-                    unitClassName="text-3xs"
-                  />
-                </div>
-
-                {/* 2. 蛋白質 (P) */}
-                <div className="p-2.5 flex flex-col items-center justify-center text-center gap-1.5 hover:bg-hover/10 transition-colors">
-                  <span className="text-[11px] font-semibold text-protein tracking-tight truncate max-w-full">
-                    {t('dietPlan.protein', '蛋白質')}
-                  </span>
-
-                  {template === 'custom' ? (
-                    <button
-                      type="button"
-                      onClick={(e) => handleOpenKeypad('protein', e.currentTarget)}
-                      className="h-7 px-2 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-0.5 transition-colors cursor-pointer active:scale-95 select-none"
-                      title={t('diet.clickToEnter', '點擊輸入數值')}
-                    >
-                      <span className="font-normal text-foreground">{proteinPercent}</span>
-                      <span className="text-muted-foreground text-2xs">%</span>
-                      <ChevronRight className="size-2.5 text-muted-foreground/60 shrink-0" />
-                    </button>
-                  ) : (
-                    <div className="h-7 flex items-baseline justify-center gap-0.5 select-none">
-                      <span className="font-mono text-xs font-normal text-foreground">{proteinPercent}</span>
-                      <span className="text-muted-foreground text-2xs font-mono">%</span>
-                    </div>
-                  )}
-
-                  <MetricValue
-                    value={calculatedMacros.proteinGrams}
-                    unit="g"
-                    className="text-2xs text-muted-foreground whitespace-nowrap"
-                    unitClassName="text-3xs"
-                  />
-                </div>
-
-                {/* 3. 脂肪 (F) */}
-                <div className="p-2.5 flex flex-col items-center justify-center text-center gap-1.5 hover:bg-hover/10 transition-colors">
-                  <span className="text-[11px] font-semibold text-fat tracking-tight truncate max-w-full">
-                    {t('dietPlan.fat', '脂肪')}
-                  </span>
-
-                  {template === 'custom' ? (
-                    <button
-                      type="button"
-                      onClick={(e) => handleOpenKeypad('fat', e.currentTarget)}
-                      className="h-7 px-2 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-0.5 transition-colors cursor-pointer active:scale-95 select-none"
-                      title={t('diet.clickToEnter', '點擊輸入數值')}
-                    >
-                      <span className="font-normal text-foreground">{fatPercent}</span>
-                      <span className="text-muted-foreground text-2xs">%</span>
-                      <ChevronRight className="size-2.5 text-muted-foreground/60 shrink-0" />
-                    </button>
-                  ) : (
-                    <div className="h-7 flex items-baseline justify-center gap-0.5 select-none">
-                      <span className="font-mono text-xs font-normal text-foreground">{fatPercent}</span>
-                      <span className="text-muted-foreground text-2xs font-mono">%</span>
-                    </div>
-                  )}
-
-                  <MetricValue
-                    value={calculatedMacros.fatGrams}
-                    unit="g"
-                    className="text-2xs text-muted-foreground whitespace-nowrap"
-                    unitClassName="text-3xs"
-                  />
-                </div>
+                  );
+                })}
               </div>
 
-              {/* 底部總和狀態行 (恆定高度 h-8，嚴格防抖無抖動) */}
-              <div className="h-8 px-3 bg-muted/20 border-t border-border flex items-center justify-between text-2xs font-mono">
-                <span className="text-muted-foreground font-sans">
-                  {t('dietPlan.ratioTotal', '配比總和')}
-                </span>
+              {/* 底部目標熱量與配比總和狀態行 */}
+              <div className="h-9 px-4 bg-muted/20 flex items-center justify-between text-2xs">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <span>{t('dietPlan.targetLabel', '目標')}</span>
+                  <MetricValue
+                    value={targetEnergyDisplay.value.toLocaleString()}
+                    unit={targetEnergyDisplay.unit}
+                    valueClassName="text-foreground font-medium"
+                    unitClassName="text-2xs"
+                  />
+                </div>
                 <span
-                  className={
-                    isRatioValid
-                      ? 'text-muted-foreground font-normal'
-                      : 'text-destructive font-normal'
-                  }
+                  className={cn(
+                    'font-mono tabular-nums',
+                    isRatioValid ? 'text-muted-foreground' : 'text-destructive font-medium'
+                  )}
                 >
-                  {ratioTotal}% {isRatioValid ? '' : `(${ratioTotal > 100 ? `+${ratioTotal - 100}%` : `-${100 - ratioTotal}%`})`}
+                  {ratioTotal}%
+                  {!isRatioValid &&
+                    ` (${ratioTotal > 100 ? `+${ratioTotal - 100}%` : `-${100 - ratioTotal}%`})`}
                 </span>
               </div>
-            </div>
+            </SectionCard>
 
-            {/* 供能比方案說明與描述卡片 */}
-            <div className="rounded-lg border border-border bg-muted/20 p-3 select-none">
-              <p className="text-2xs text-muted-foreground leading-relaxed">
-                {t(getTemplateDescKey(template))}
-              </p>
-            </div>
+            {/* 無框方案說明文字 */}
+            <p className="px-0.5 text-2xs text-muted-foreground leading-relaxed font-sans">
+              {t(getTemplateDescKey(template))}
+            </p>
           </div>
         </PrecisionDialogContent>
       </Dialog>

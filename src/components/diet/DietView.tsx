@@ -4,13 +4,6 @@ import { Activity, ChevronRight, Zap, Plus, History, PieChart } from 'lucide-rea
 import type { MealType, HydratedFoodLog, FoodRecipe, EnergyUnit, FoodWeightUnit, FoodVolumeUnit } from '@/types';
 import { MealBundleCard } from '@/components/food/MealBundleCard';
 import { MacroSquares } from '@/components/food/MacroSquares';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { MealEnergyPopover } from '@/components/diet/MealEnergyPopover';
 import { MealAddActionPopover, MealActionMenuContent } from '@/components/diet/MealAddActionPopover';
 import { MacroProgressGrid } from '@/components/diet/MacroProgressGrid';
@@ -95,7 +88,7 @@ export interface DietViewProps {
   interactive?: boolean;
   expandedMealPopover?: MealType;
   visibleMealTypes?: MealType[];
-  onQuickActivityChange?: (val: number) => void;
+  onOpenActivityModal?: () => void;
   onOpenPlanModal?: () => void;
   onOpenAddForMeal?: (type: MealType) => void;
   onOpenCopyForMeal?: (type: MealType) => void;
@@ -129,7 +122,7 @@ export function DietView({
   interactive = true,
   expandedMealPopover,
   visibleMealTypes,
-  onQuickActivityChange,
+  onOpenActivityModal,
   onOpenPlanModal,
   onOpenAddForMeal,
   onOpenCopyForMeal,
@@ -235,43 +228,31 @@ export function DietView({
         <div className="p-4 sm:p-5 relative space-y-3">
           {/* 頂部列：左側活動係數純膠囊、中間熱量統計標籤、右側目標純膠囊 */}
           <div ref={headerRowRef} className="relative flex items-center justify-between">
-            {/* 左側：活動係數純膠囊快捷切換 */}
+            {/* 左側：活動係數純膠囊 (點擊開啟活動係數與熱量計算明細彈窗) */}
             <div ref={leftSlotRef} className="shrink-0 z-10">
               {interactive ? (
-                <Select
-                  value={String(currentActivity)}
-                  onValueChange={(val) => val && onQuickActivityChange?.(parseFloat(val))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenActivityModal?.();
+                    triggerHaptic('light');
+                  }}
+                  aria-label={activityLabel}
+                  title={activityLabel}
+                  className={cn(
+                    'h-6 rounded-full border border-border/80 bg-muted/20 hover:bg-muted/50 text-xs text-muted-foreground hover:text-foreground flex items-center transition-colors cursor-pointer select-none active:scale-95',
+                    isCompact ? 'w-6 px-0 justify-center' : 'px-2.5 gap-1'
+                  )}
                 >
-                  <SelectTrigger
-                    size="custom"
-                    hideIcon={isCompact}
-                    aria-label={activityLabel}
-                    title={activityLabel}
-                    className={cn(
-                      'h-6 rounded-full border border-border/80 bg-muted/20 hover:bg-muted/50 text-xs text-muted-foreground hover:text-foreground flex items-center transition-colors cursor-pointer select-none active:scale-95',
-                      isCompact ? 'w-6 px-0 justify-center' : 'px-2.5 gap-1'
-                    )}
-                  >
-                    {isCompact ? (
-                      <Activity className="size-3.5 shrink-0" />
-                    ) : (
-                      <SelectValue className="flex-none">
-                        {activityLabel}
-                      </SelectValue>
-                    )}
-                  </SelectTrigger>
-                  <SelectContent align="start">
-                    <SelectItem value="1.2">{t('dietPlan.sedentary')}</SelectItem>
-                    <SelectItem value="1.375">{t('dietPlan.light')}</SelectItem>
-                    <SelectItem value="1.45">{t('dietPlan.lightExercise')}</SelectItem>
-                    <SelectItem value="1.55">{t('dietPlan.moderate')}</SelectItem>
-                    <SelectItem value="1.725">{t('dietPlan.heavy')}</SelectItem>
-                    <SelectItem value="1.8">{t('dietPlan.intenseExercise')}</SelectItem>
-                    <SelectItem value="1.9">{t('dietPlan.athlete')}</SelectItem>
-                    <SelectItem value="2.0">{t('dietPlan.extreme')}</SelectItem>
-                    <SelectItem value="999">{t('dietPlan.binge')}</SelectItem>
-                  </SelectContent>
-                </Select>
+                  {isCompact ? (
+                    <Activity className="size-3.5 shrink-0" />
+                  ) : (
+                    <>
+                      <span>{activityLabel}</span>
+                      <ChevronRight className="size-3 opacity-60 shrink-0" />
+                    </>
+                  )}
+                </button>
               ) : (
                 <div
                   title={activityLabel}

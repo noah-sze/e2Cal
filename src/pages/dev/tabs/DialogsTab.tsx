@@ -31,8 +31,9 @@ import { LocalImportDialog } from '@/components/welcome/LocalImportDialog';
 import { ImportStrategyModal } from '@/components/settings/dialogs/ImportStrategyModal';
 import { ClearDataModal } from '@/components/settings/ClearDataModal';
 import { DropboxSyncDialog } from '@/components/settings/dialogs/DropboxSyncDialog';
-import { DropboxConnectDialog } from '@/components/sync/DropboxConnectDialog';
+import { InitialSyncModal } from '@/components/sync/InitialSyncModal';
 import { CopyDailyDataDialog } from '@/components/common/CopyDailyDataDialog';
+import type { InitialSyncStep } from '@/services/sync/initialSyncManager';
 import { PwaInstallGuideDialog } from '@/components/pwa/PwaInstallGuideDialog';
 import { ResponsiveNumericKeypad } from '@/components/ui/ResponsiveNumericKeypad';
 
@@ -257,6 +258,8 @@ export const DialogsTab: React.FC = () => {
   const [clearDataOpen, setClearDataOpen] = useState(false);
   const [dropboxSyncOpen, setDropboxSyncOpen] = useState(false);
   const [dropboxConnectOpen, setDropboxConnectOpen] = useState(false);
+  const [initialSyncPreviewOpen, setInitialSyncPreviewOpen] = useState(false);
+  const [initialSyncPreviewStep, setInitialSyncPreviewStep] = useState<InitialSyncStep>('STRATEGY');
   const [copyDailyDataOpen, setCopyDailyDataOpen] = useState(false);
   const [pwaGuideOpen, setPwaGuideOpen] = useState(false);
   const [keypadOpen, setKeypadOpen] = useState(false);
@@ -285,7 +288,7 @@ export const DialogsTab: React.FC = () => {
             彈窗型錄
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5 font-sans">
-            全應用程式 25 個業務 Dialog 統一驗收矩陣，支援同組件多形態（新增/編輯）整合檢視。
+            全應用程式 25 個業務 Dialog 統一驗收矩陣，支援同組件多形態（新增/編輯、已連線/未連線）整合檢視。
           </p>
         </div>
         <div className="text-2xs font-mono text-muted-foreground tabular-nums">
@@ -376,7 +379,7 @@ export const DialogsTab: React.FC = () => {
           <DialogRowItem
             name="複製餐點"
             component="CopyMealDialog"
-            desc="複製過往餐點條目，整合日期選擇橫欄"
+            desc="複製過往餐點條目，四餐別切換與雙行食材清單"
             badge="Copy"
             onOpen={() => setCopyMealOpen(true)}
           />
@@ -495,7 +498,7 @@ export const DialogsTab: React.FC = () => {
           <DialogRowItem
             name="複製訓練"
             component="CopyWorkoutDialog"
-            desc="複製過往訓練組數與重量，支援同動作微調"
+            desc="複製過往訓練動作與組數，支援雙行容量預覽與微調"
             badge="Copy"
             onOpen={() => setCopyWorkoutOpen(true)}
           />
@@ -541,23 +544,68 @@ export const DialogsTab: React.FC = () => {
           <DialogRowItem
             name="出廠重置"
             component="ClearDataModal"
-            desc="輸入確認詞防止誤操作的高危出廠清庫"
+            desc="輸入確認詞並長按 0.5 秒確認的高危出廠清庫"
             badge="Destructive"
             onOpen={() => setClearDataOpen(true)}
           />
           <DialogRowItem
-            name="同步狀態"
+            name="Dropbox 同步"
             component="DropboxSyncDialog"
-            desc="狀態檢視、最後同步時間與手動觸發"
+            desc="統一連線授權說明、同步狀態檢視與長按中斷連線"
             badge="Sync"
-            onOpen={() => setDropboxSyncOpen(true)}
+            actions={[
+              {
+                label: '已連線',
+                onOpen: () => setDropboxSyncOpen(true),
+              },
+              {
+                label: '未連線',
+                onOpen: () => setDropboxConnectOpen(true),
+              },
+            ]}
           />
           <DialogRowItem
-            name="帳號連線"
-            component="DropboxConnectDialog"
-            desc="瀏覽器端直連 OAuth PKCE 授權確認"
-            badge="OAuth"
-            onOpen={() => setDropboxConnectOpen(true)}
+            name="同步過程"
+            component="InitialSyncModal"
+            desc="首次連線同步流程：連線中、衝突策略、下載、寫入與完成"
+            badge="Flow"
+            actions={[
+              {
+                label: '連線中',
+                onOpen: () => {
+                  setInitialSyncPreviewStep('AUTH');
+                  setInitialSyncPreviewOpen(true);
+                },
+              },
+              {
+                label: '策略',
+                onOpen: () => {
+                  setInitialSyncPreviewStep('STRATEGY');
+                  setInitialSyncPreviewOpen(true);
+                },
+              },
+              {
+                label: '下載',
+                onOpen: () => {
+                  setInitialSyncPreviewStep('DOWNLOADING');
+                  setInitialSyncPreviewOpen(true);
+                },
+              },
+              {
+                label: '寫入',
+                onOpen: () => {
+                  setInitialSyncPreviewStep('APPLYING');
+                  setInitialSyncPreviewOpen(true);
+                },
+              },
+              {
+                label: '完成',
+                onOpen: () => {
+                  setInitialSyncPreviewStep('COMPLETED');
+                  setInitialSyncPreviewOpen(true);
+                },
+              },
+            ]}
           />
           <DialogRowItem
             name="數據匯出"
@@ -604,7 +652,7 @@ export const DialogsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* ==================== 實際掛載 25 個 Dialog 實體 ==================== */}
+      {/* ==================== 實際掛載 24 個 Dialog 實體 ==================== */}
 
       {/* 飲食 1: 食材表單 */}
       <FoodFormDialog
@@ -848,11 +896,21 @@ export const DialogsTab: React.FC = () => {
         }}
       />
 
-      {/* 系統 6: Dropbox 連線授權確認 */}
-      <DropboxConnectDialog
+      {/* 系統 6: Dropbox 連線授權確認（未連線狀態） */}
+      <DropboxSyncDialog
         open={dropboxConnectOpen}
         onOpenChange={setDropboxConnectOpen}
-        onConfirm={() => toast.show('已授權')}
+        isAuthenticated={false}
+        onConnectDropbox={() => toast.show('已授權')}
+      />
+
+      {/* 系統 6b: Dropbox 首次同步過程預覽 */}
+      <InitialSyncModal
+        preview={{
+          open: initialSyncPreviewOpen,
+          step: initialSyncPreviewStep,
+          onClose: () => setInitialSyncPreviewOpen(false),
+        }}
       />
 
       {/* 系統 7: 每日數據匯出分享卡 */}

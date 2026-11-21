@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import {
@@ -11,6 +12,11 @@ import {
   ExerciseRoutineBrowser,
   type ExerciseSelectMode,
 } from '@/components/workout/ExerciseRoutineBrowser';
+import { ExerciseFormDialog, type ExerciseFormData } from '@/components/workout/ExerciseFormDialog';
+import { RoutineFormDialog, type RoutineFormData } from '@/components/workout/RoutineFormDialog';
+import { useExercises } from '@/hooks/useExercises';
+import { useRoutines } from '@/hooks/useRoutines';
+import { toast } from '@/components/ui/toast';
 import type { Exercise, WorkoutRoutine } from '@/types';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
@@ -50,6 +56,8 @@ export interface ExerciseSelectDialogProps {
   disabledIds?: string[];
   /** 自訂項目是否禁用的判斷函數 */
   isItemDisabled?: (item: Exercise | WorkoutRoutine, type: 'exercise' | 'routine') => boolean;
+  /** 是否允許在此彈窗中直接新增動作與訓練組合 @default true */
+  allowAdd?: boolean;
 }
 
 export function ExerciseSelectDialog({
@@ -62,8 +70,14 @@ export function ExerciseSelectDialog({
   zIndex = 70,
   disabledIds,
   isItemDisabled,
+  allowAdd = true,
 }: ExerciseSelectDialogProps) {
   const { t } = useTranslation();
+  const { addExercise } = useExercises();
+  const { addRoutine } = useRoutines();
+
+  const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false);
+  const [isAddRoutineOpen, setIsAddRoutineOpen] = useState(false);
 
   const defaultTitle =
     mode === 'exercises'
@@ -74,6 +88,7 @@ export function ExerciseSelectDialog({
 
   const resolvedTitle = title || defaultTitle;
   const zIndexClass = `z-[${zIndex}]`;
+  const secondaryZIndexClass = `z-[${zIndex + 10}]`;
 
   const handleItemSelect = (
     item: Exercise | WorkoutRoutine,
@@ -86,58 +101,104 @@ export function ExerciseSelectDialog({
     }
   };
 
+  const handleAddExerciseSubmit = async (formData: ExerciseFormData) => {
+    const newExercise = await addExercise({
+      ...formData,
+      isCustom: true,
+    });
+    triggerHaptic('success');
+    toast.show(t('common.saved'));
+    setIsAddExerciseOpen(false);
+    handleItemSelect(newExercise, 'exercise');
+  };
+
+  const handleAddRoutineSubmit = async (formData: RoutineFormData) => {
+    const newRoutine = await addRoutine({
+      ...formData,
+      isCustom: true,
+    });
+    triggerHaptic('success');
+    toast.show(t('common.saved'));
+    setIsAddRoutineOpen(false);
+    handleItemSelect(newRoutine, 'routine');
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton={false}
-        overlayClassName={zIndexClass}
-        className={cn(
-          zIndexClass,
-          'w-[400px] max-w-[calc(100vw-24px)] sm:w-[400px] sm:max-w-[400px] h-[85vh] sm:h-[80vh] flex flex-col p-4 sm:p-5 bg-card border border-border text-card-foreground overflow-hidden select-none shadow-none font-mono text-xs'
-        )}
-        initialFocus={false}
-      >
-        {/* 彈窗標頭 (復刻食物選擇彈窗) */}
-        <DialogHeader className="p-0 pb-2 shrink-0">
-          <div className="flex items-center justify-between w-full h-7">
-            {/* 左側純圖標：取消 (✕) */}
-            <DialogClose
-              render={
-                <button
-                  type="button"
-                  className="size-7 rounded-full flex items-center justify-center bg-muted text-muted-foreground hover:text-foreground hover:bg-border transition-all cursor-pointer shrink-0 active:scale-92"
-                  title={t('common.cancel')}
-                  aria-label={t('common.cancel')}
-                />
-              }
-            >
-              <X className="size-3.5 stroke-[2.2]" />
-            </DialogClose>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          showCloseButton={false}
+          overlayClassName={zIndexClass}
+          className={cn(
+            zIndexClass,
+            'w-[400px] max-w-[calc(100vw-24px)] sm:w-[400px] sm:max-w-[400px] h-[85vh] sm:h-[80vh] flex flex-col p-4 sm:p-5 bg-card border border-border text-card-foreground overflow-hidden select-none shadow-none text-xs'
+          )}
+          initialFocus={false}
+        >
+          {/* 彈窗標頭 (復刻食物選擇彈窗) */}
+          <DialogHeader className="p-0 pb-2 shrink-0">
+            <div className="flex items-center justify-between w-full h-7">
+              {/* 左側純圖標：取消 (✕) */}
+              <DialogClose
+                render={
+                  <button
+                    type="button"
+                    className="size-7 rounded-full flex items-center justify-center bg-muted text-muted-foreground hover:text-foreground hover:bg-border transition-all cursor-pointer shrink-0 active:scale-92"
+                    title={t('common.cancel')}
+                    aria-label={t('common.cancel')}
+                  />
+                }
+              >
+                <X className="size-3.5 stroke-[2.2]" />
+              </DialogClose>
 
-            {/* 中間標題 (置中對稱) */}
-            <DialogTitle className="text-foreground text-sm font-semibold tracking-tight font-sans flex items-center justify-center flex-1 truncate px-2 text-center">
-              <span className="truncate">{resolvedTitle}</span>
-            </DialogTitle>
+              {/* 中間標題 (置中對稱) */}
+              <DialogTitle className="text-foreground text-sm font-semibold tracking-tight font-sans flex items-center justify-center flex-1 truncate px-2 text-center">
+                <span className="truncate">{resolvedTitle}</span>
+              </DialogTitle>
 
-            {/* 右側佔位（與左側按鈕等寬，確保標題完美居中） */}
-            <div className="size-7 shrink-0 pointer-events-none" aria-hidden="true" />
+              {/* 右側佔位（與左側按鈕等寬，確保標題完美居中） */}
+              <div className="size-7 shrink-0 pointer-events-none" aria-hidden="true" />
+            </div>
+          </DialogHeader>
+
+          {/* 核心瀏覽與選擇區 (點擊即選擇，直達底部) */}
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden pt-1">
+            <ExerciseRoutineBrowser
+              key={mode}
+              mode={mode}
+              interactiveMode="select"
+              disabledIds={disabledIds}
+              isItemDisabled={isItemDisabled}
+              onItemClick={handleItemSelect}
+              onAddExercise={allowAdd ? () => setIsAddExerciseOpen(true) : undefined}
+              onAddRoutine={allowAdd && mode !== 'exercises' ? () => setIsAddRoutineOpen(true) : undefined}
+              className="flex-1 min-h-0"
+              listContainerClassName="flex-1 min-h-0"
+            />
           </div>
-        </DialogHeader>
+        </DialogContent>
+      </Dialog>
 
-        {/* 核心瀏覽與選擇區 (點擊即選擇，直達底部) */}
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden pt-1">
-          <ExerciseRoutineBrowser
-            key={mode}
-            mode={mode}
-            interactiveMode="select"
-            disabledIds={disabledIds}
-            isItemDisabled={isItemDisabled}
-            onItemClick={handleItemSelect}
-            className="flex-1 min-h-0"
-            listContainerClassName="flex-1 min-h-0"
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
+      {/* 次級彈窗：平鋪兄弟節點聲明 (No Nested Dialogs)，條件掛載徹底防止遞迴無限渲染 */}
+      {allowAdd && isAddExerciseOpen && (
+        <ExerciseFormDialog
+          open={isAddExerciseOpen}
+          onOpenChange={setIsAddExerciseOpen}
+          onSubmit={handleAddExerciseSubmit}
+          overlayClassName={secondaryZIndexClass}
+          className={secondaryZIndexClass}
+        />
+      )}
+      {allowAdd && isAddRoutineOpen && (
+        <RoutineFormDialog
+          open={isAddRoutineOpen}
+          onOpenChange={setIsAddRoutineOpen}
+          onSubmit={handleAddRoutineSubmit}
+          overlayClassName={secondaryZIndexClass}
+          className={secondaryZIndexClass}
+        />
+      )}
+    </>
   );
 }

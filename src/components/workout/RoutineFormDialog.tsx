@@ -28,6 +28,8 @@ export interface RoutineFormDialogProps {
   onOpenChange: (open: boolean) => void;
   initialData?: WorkoutRoutine | null;
   onSubmit: (data: RoutineFormData) => Promise<void> | void;
+  overlayClassName?: string;
+  className?: string;
 }
 
 export function RoutineFormDialog({
@@ -35,6 +37,8 @@ export function RoutineFormDialog({
   onOpenChange,
   initialData,
   onSubmit,
+  overlayClassName,
+  className,
 }: RoutineFormDialogProps) {
   const { t } = useTranslation();
   const formId = useId();
@@ -151,6 +155,8 @@ export function RoutineFormDialog({
           title={isEdit ? t('workout.editRoutine') : t('common.add')}
           form={formId}
           onClose={() => onOpenChange(false)}
+          overlayClassName={overlayClassName}
+          className={className}
         >
           <form
             id={formId}

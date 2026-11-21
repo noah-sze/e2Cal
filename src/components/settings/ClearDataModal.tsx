@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, PrecisionDialogContent } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { SectionCard } from '@/components/ui/section-card';
+import { HoldToDeleteButton } from '@/components/ui/HoldToDeleteButton';
 import { db } from '@/services/db/db';
 import { triggerHaptic } from '@/lib/haptics';
 import { toast } from '@/components/ui/toast';
-import { cn } from '@/lib/utils';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Trash2 } from 'lucide-react';
 
 export interface ClearDataModalProps {
   isOpen: boolean;
@@ -61,47 +61,43 @@ export function ClearDataModal({ isOpen, onClose }: ClearDataModalProps) {
         className="z-[70]"
         initialFocus={false}
       >
-        <div className="flex flex-col space-y-3 pt-3.5 select-none font-mono text-xs">
-          {/* 客觀警示卡片 */}
-          <div className="p-3 rounded-lg border border-destructive/40 bg-destructive/5 text-destructive space-y-1.5">
-            <div className="flex items-center gap-1.5 font-semibold text-xs">
-              <AlertTriangle className="size-4 shrink-0 text-destructive" />
-              <span>{t('settings.clearData', '清除本地資料')}</span>
-            </div>
-            <p className="text-[11px] leading-relaxed text-muted-foreground font-sans">
+        <div className="flex flex-col space-y-3.5 pt-3.5 pb-0 select-none">
+          {/* 1. 客觀警示卡片 */}
+          <div className="p-3.5 rounded-lg border border-destructive/40 bg-destructive-subtle flex items-start gap-2.5">
+            <AlertTriangle className="size-4 shrink-0 text-destructive mt-0.5" />
+            <p className="text-xs leading-relaxed text-foreground font-sans">
               {t('settings.clearDataWarning')}
             </p>
           </div>
 
-          {/* 輸入確認防呆引導 */}
-          <div className="space-y-1.5">
-            <span className="text-[11px] text-muted-foreground block font-sans">
-              {t('settings.clearDataInputPrompt', { phrase: confirmPhrase })}
-            </span>
-            <Input
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder={confirmPhrase}
-              className="h-8 text-xs font-mono bg-background border-border"
-              disabled={isClearing}
-              autoFocus={false}
-            />
-          </div>
-
-          {/* 破壞性高危確認按鈕 (Rule 4 實色紅底 + 純白文字) */}
-          <button
-            type="button"
-            disabled={!isMatch || isClearing}
-            onClick={handleConfirm}
-            className={cn(
-              'w-full h-9 rounded-md font-mono text-xs font-semibold transition-all select-none flex items-center justify-center',
-              isMatch && !isClearing
-                ? 'bg-destructive text-destructive-foreground hover:opacity-90 active:opacity-80 cursor-pointer'
-                : 'bg-muted text-muted-foreground opacity-50 cursor-not-allowed'
-            )}
+          {/* 2. 輸入確認防呆引導 (內嵌於 SectionCard，對齊 FoodFormDialog 輸入框規格) */}
+          <SectionCard
+            title={t('settings.clearDataInputPrompt', { phrase: confirmPhrase })}
+            bodyClassName="text-xs font-sans"
           >
-            {isClearing ? '...' : t('settings.clearDataButton', '清空')}
-          </button>
+            <div className="h-10 relative flex items-stretch min-w-0 rounded-b-lg focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground focus-within:z-[1] transition-shadow duration-100">
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder={confirmPhrase}
+                aria-label={confirmPhrase}
+                disabled={isClearing}
+                className="w-full h-full px-4 bg-transparent text-center text-xs font-sans text-foreground font-normal focus:outline-none placeholder:text-muted-foreground/40 disabled:opacity-50"
+              />
+            </div>
+          </SectionCard>
+
+          {/* 3. 底部長按蓄力清空按鈕（500ms 全背景蓄力防誤觸） */}
+          <HoldToDeleteButton
+            variant="destructive"
+            disabled={!isMatch || isClearing}
+            text={isClearing ? '...' : t('settings.holdToClearAction', '長按清空')}
+            icon={<Trash2 className="size-3.5 shrink-0" strokeWidth={1.8} />}
+            hintText={t('initialSync.holdHint', '長按 0.5 秒確認')}
+            onConfirm={handleConfirm}
+            className="rounded-lg"
+          />
         </div>
       </PrecisionDialogContent>
     </Dialog>

@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Edit2, Archive, MoreVertical } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Search, ChevronDown, ChevronRight, Plus, X, RotateCcw, Trash2, Edit2, Archive, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -53,6 +52,12 @@ export interface WorkoutManagementBrowserProps {
   onUnarchiveEquipment?: (equipment: Equipment) => void;
   /** 刪除器械回調 */
   onDeleteEquipment?: (equipment: Equipment) => void;
+  /** 新增動作回調 */
+  onAddExercise?: () => void;
+  /** 新增組合回調 */
+  onAddRoutine?: () => void;
+  /** 新增器械回調 */
+  onAddEquipment?: () => void;
   /** 自訂容器樣式 */
   className?: string;
 }
@@ -70,6 +75,9 @@ export function WorkoutManagementBrowser({
   onArchiveEquipment,
   onUnarchiveEquipment,
   onDeleteEquipment,
+  onAddExercise,
+  onAddRoutine,
+  onAddEquipment,
   className,
 }: WorkoutManagementBrowserProps) {
   const { t } = useTranslation();
@@ -275,144 +283,112 @@ export function WorkoutManagementBrowser({
   }, [equipmentBaseList, equipmentSearchQuery, getEquipmentDisplayName, t]);
 
   return (
-    <div className={cn('space-y-3 font-mono flex flex-col', className)}>
-      {/* 頂部三列指標卡 (動作 ➔ 組合 ➔ 器械，100% 對齊飲食管理設計) */}
-      <div
-        className="grid grid-cols-3 gap-2 sm:gap-2.5 font-mono select-none shrink-0"
-        role="tablist"
-        aria-label={t('settings.workoutSection')}
-      >
-        {/* 動作指標卡 */}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={viewTab === 'exercises'}
-          onClick={() => handleTabChange('exercises')}
-          className={cn(
-            'p-2.5 sm:p-3 rounded-xl text-left cursor-pointer transition-all flex flex-col justify-between h-[66px] outline-none',
-            viewTab === 'exercises'
-              ? 'border border-foreground bg-muted/30 shadow-none'
-              : 'border border-border hover:border-foreground/40 bg-card text-muted-foreground'
-          )}
+    <div className={cn('space-y-3 flex flex-col', className)}>
+      {/* 頂部三欄切換與搜尋一體卡（方案 D：3 等分格緊湊膠囊 + 搜尋框一體卡） */}
+      <div className="rounded-lg border border-border bg-card overflow-hidden divide-y divide-border shrink-0">
+        <div
+          className="grid grid-cols-3 h-12 divide-x divide-border items-stretch select-none"
+          role="tablist"
+          aria-label={t('settings.workoutSection')}
         >
-          <div className="flex items-center justify-between text-xs">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewTab === 'exercises'}
+            onClick={() => handleTabChange('exercises')}
+            className="w-full h-full px-2 flex items-center justify-center group cursor-pointer outline-none"
+          >
             <span
               className={cn(
-                'font-medium truncate',
-                viewTab === 'exercises' ? 'text-foreground' : 'text-muted-foreground'
+                'h-7 px-5 rounded-full text-xs font-sans transition-colors inline-flex items-center justify-center whitespace-nowrap',
+                viewTab === 'exercises'
+                  ? 'bg-foreground text-background font-semibold'
+                  : 'text-muted-foreground group-hover:text-foreground group-hover:bg-hover'
               )}
             >
               {t('settings.exercises', '動作')}
             </span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewTab === 'routines'}
+            onClick={() => handleTabChange('routines')}
+            className="w-full h-full px-2 flex items-center justify-center group cursor-pointer outline-none"
+          >
             <span
               className={cn(
-                'w-1.5 h-1.5 rounded-full transition-colors shrink-0',
-                viewTab === 'exercises' ? 'bg-foreground' : 'bg-transparent'
-              )}
-            />
-          </div>
-          <div className="flex items-baseline gap-1 sm:gap-1.5">
-            <span
-              className={cn(
-                'text-lg sm:text-xl font-semibold tracking-tight',
-                viewTab === 'exercises' ? 'text-foreground' : 'text-muted-foreground'
-              )}
-            >
-              {activeExercises.length}
-            </span>
-            <span className="text-[10px] text-muted-foreground truncate">
-              {t('workout.itemsUnit', '項動作')}
-            </span>
-          </div>
-        </button>
-
-        {/* 組合指標卡 */}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={viewTab === 'routines'}
-          onClick={() => handleTabChange('routines')}
-          className={cn(
-            'p-2.5 sm:p-3 rounded-xl text-left cursor-pointer transition-all flex flex-col justify-between h-[66px] outline-none',
-            viewTab === 'routines'
-              ? 'border border-foreground bg-muted/30 shadow-none'
-              : 'border border-border hover:border-foreground/40 bg-card text-muted-foreground'
-          )}
-        >
-          <div className="flex items-center justify-between text-xs">
-            <span
-              className={cn(
-                'font-medium truncate',
-                viewTab === 'routines' ? 'text-foreground' : 'text-muted-foreground'
+                'h-7 px-5 rounded-full text-xs font-sans transition-colors inline-flex items-center justify-center whitespace-nowrap',
+                viewTab === 'routines'
+                  ? 'bg-foreground text-background font-semibold'
+                  : 'text-muted-foreground group-hover:text-foreground group-hover:bg-hover'
               )}
             >
               {t('workout.routinesShort', '組合')}
             </span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewTab === 'equipments'}
+            onClick={() => handleTabChange('equipments')}
+            className="w-full h-full px-2 flex items-center justify-center group cursor-pointer outline-none"
+          >
             <span
               className={cn(
-                'w-1.5 h-1.5 rounded-full transition-colors shrink-0',
-                viewTab === 'routines' ? 'bg-foreground' : 'bg-transparent'
-              )}
-            />
-          </div>
-          <div className="flex items-baseline gap-1 sm:gap-1.5">
-            <span
-              className={cn(
-                'text-lg sm:text-xl font-semibold tracking-tight',
-                viewTab === 'routines' ? 'text-foreground' : 'text-muted-foreground'
-              )}
-            >
-              {activeRoutines.length}
-            </span>
-            <span className="text-[10px] text-muted-foreground truncate">
-              {t('workout.routinesUnit', '個組合')}
-            </span>
-          </div>
-        </button>
-
-        {/* 器械指標卡 */}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={viewTab === 'equipments'}
-          onClick={() => handleTabChange('equipments')}
-          className={cn(
-            'p-2.5 sm:p-3 rounded-xl text-left cursor-pointer transition-all flex flex-col justify-between h-[66px] outline-none',
-            viewTab === 'equipments'
-              ? 'border border-foreground bg-muted/30 shadow-none'
-              : 'border border-border hover:border-foreground/40 bg-card text-muted-foreground'
-          )}
-        >
-          <div className="flex items-center justify-between text-xs">
-            <span
-              className={cn(
-                'font-medium truncate',
-                viewTab === 'equipments' ? 'text-foreground' : 'text-muted-foreground'
+                'h-7 px-5 rounded-full text-xs font-sans transition-colors inline-flex items-center justify-center whitespace-nowrap',
+                viewTab === 'equipments'
+                  ? 'bg-foreground text-background font-semibold'
+                  : 'text-muted-foreground group-hover:text-foreground group-hover:bg-hover'
               )}
             >
               {t('settings.equipments', '器械')}
             </span>
-            <span
-              className={cn(
-                'w-1.5 h-1.5 rounded-full transition-colors shrink-0',
-                viewTab === 'equipments' ? 'bg-foreground' : 'bg-transparent'
-              )}
-            />
-          </div>
-          <div className="flex items-baseline gap-1 sm:gap-1.5">
-            <span
-              className={cn(
-                'text-lg sm:text-xl font-semibold tracking-tight',
-                viewTab === 'equipments' ? 'text-foreground' : 'text-muted-foreground'
-              )}
+          </button>
+        </div>
+        <div className="relative h-10 flex items-center rounded-b-lg focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground focus-within:z-[1] transition-shadow duration-100">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={
+              viewTab === 'exercises'
+                ? exerciseSearchQuery
+                : viewTab === 'routines'
+                  ? routineSearchQuery
+                  : equipmentSearchQuery
+            }
+            onChange={(e) => {
+              if (viewTab === 'exercises') setExerciseSearchQuery(e.target.value);
+              else if (viewTab === 'routines') setRoutineSearchQuery(e.target.value);
+              else setEquipmentSearchQuery(e.target.value);
+            }}
+            placeholder={
+              viewTab === 'exercises'
+                ? t('workout.searchExercisePlaceholder', '搜尋動作名稱或備註...')
+                : viewTab === 'routines'
+                  ? t('workout.searchRoutinePlaceholder', '搜尋組合名稱或備註...')
+                  : t('workout.searchEquipmentPlaceholder', '搜尋器械名稱...')
+            }
+            className="w-full h-full pl-9 pr-9 bg-transparent text-xs font-sans text-foreground placeholder:text-muted-foreground focus:outline-none"
+          />
+          {(viewTab === 'exercises'
+            ? exerciseSearchQuery
+            : viewTab === 'routines'
+              ? routineSearchQuery
+              : equipmentSearchQuery) && (
+            <button
+              type="button"
+              onClick={() => {
+                if (viewTab === 'exercises') setExerciseSearchQuery('');
+                else if (viewTab === 'routines') setRoutineSearchQuery('');
+                else setEquipmentSearchQuery('');
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
             >
-              {activeEquipments.length}
-            </span>
-            <span className="text-[10px] text-muted-foreground truncate">
-              {t('workout.equipmentsUnit', '項器械')}
-            </span>
-          </div>
-        </button>
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ========================================================================= */}
@@ -420,201 +396,162 @@ export function WorkoutManagementBrowser({
       {/* ========================================================================= */}
       {viewTab === 'exercises' && (
         <div className="space-y-2.5 flex-1 min-h-0 flex flex-col">
-          {/* 搜尋輸入框 */}
-          <div className="relative flex items-center shrink-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-            <Input
-              type="text"
-              value={exerciseSearchQuery}
-              onChange={(e) => setExerciseSearchQuery(e.target.value)}
-              placeholder={t('workout.searchExercisePlaceholder', '搜尋動作名稱或備註...')}
-              className="h-10 pl-9 pr-9 text-xs rounded-lg border-border bg-card text-foreground placeholder:text-muted-foreground focus-visible:border-foreground focus:ring-0 focus-visible:ring-0 shadow-none"
-            />
-            {exerciseSearchQuery && (
-              <button
-                type="button"
-                onClick={() => setExerciseSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                <X className="size-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* 篩選列：左側橫向滾動肌群膠囊 + 已歸檔，右側器械下拉選單 */}
-          <div className="flex items-center justify-between gap-1.5 py-0.5 shrink-0">
-            <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar">
-              <div className="flex items-center gap-1 shrink-0 pr-1">
-                {/* 狀態下拉膠囊：全部 vs 已歸檔 */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <button
-                        type="button"
-                        className={cn(
-                          'px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 shrink-0',
-                          showExerciseArchived || selectedMuscleGroup === 'all'
-                            ? 'bg-foreground text-background'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-hover'
-                        )}
-                      >
-                        <span>{showExerciseArchived ? t('common.archived', '已歸檔') : t('common.all', '全部')}</span>
-                        <span
-                          className={cn(
-                            'text-[10px] tabular-nums',
-                            showExerciseArchived || selectedMuscleGroup === 'all' ? 'opacity-60' : 'opacity-45'
-                          )}
-                        >
-                          {showExerciseArchived ? archivedExercises.length : activeExercises.length}
-                        </span>
-                        <ChevronDown className="size-3 opacity-60 shrink-0" />
-                      </button>
-                    }
-                  />
-                  <DropdownMenuContent align="start" className="w-[140px] font-mono text-xs">
-                    <DropdownMenuItem
-                      onClick={() => {
-                        triggerHaptic('selection');
-                        setShowExerciseArchived(false);
-                        setSelectedMuscleGroup('all');
-                      }}
-                      className={cn(
-                        'cursor-pointer flex items-center justify-between',
-                        !showExerciseArchived && selectedMuscleGroup === 'all' && 'font-semibold bg-muted'
-                      )}
-                    >
-                      <span>{t('common.all', '全部')}</span>
-                      <span className="text-[10px] opacity-60 tabular-nums">
-                        {activeExercises.length}
-                      </span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        triggerHaptic('selection');
-                        setShowExerciseArchived(true);
-                        setSelectedMuscleGroup('all');
-                      }}
-                      className={cn(
-                        'cursor-pointer flex items-center justify-between',
-                        showExerciseArchived && 'font-semibold bg-muted'
-                      )}
-                    >
-                      <span>{t('common.archived', '已歸檔')}</span>
-                      <span className="text-[10px] opacity-60 tabular-nums">
-                        {archivedExercises.length}
-                      </span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* 主肌群膠囊 */}
-                {MAJOR_MUSCLE_GROUPS.map((group) => {
-                  const isSelected = !showExerciseArchived && selectedMuscleGroup === group.id;
-                  const count = muscleGroupCounts[group.id] || 0;
-                  return (
+          {/* 篩選列：整合分類下拉、器械下拉與右側新增按鈕 */}
+          <div className="flex items-center gap-1.5 py-0.5 shrink-0">
+            {/* 肌群分類下拉按鈕（含全部與已歸檔） */}
+            <div
+              className={cn(
+                'inline-flex items-center rounded-full text-xs font-sans transition-all border shrink-0',
+                showExerciseArchived || selectedMuscleGroup !== 'all'
+                  ? 'bg-foreground text-background border-foreground font-medium'
+                  : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
+              )}
+            >
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
                     <button
-                      key={group.id}
                       type="button"
+                      className="flex items-center gap-1 py-1 pl-2.5 pr-2 cursor-pointer focus:outline-none whitespace-nowrap"
+                    >
+                      <span className="truncate">
+                        {showExerciseArchived
+                          ? t('common.archived', '已歸檔')
+                          : selectedMuscleGroup === 'all'
+                            ? t('workout.categoryFilter', '分類')
+                            : t(`workout.${selectedMuscleGroup}`)}
+                      </span>
+                      <ChevronDown className="size-3 opacity-60 shrink-0" />
+                    </button>
+                  }
+                />
+                <DropdownMenuContent align="start" className="w-[160px] text-xs font-sans">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      triggerHaptic('selection');
+                      setShowExerciseArchived(false);
+                      setSelectedMuscleGroup('all');
+                    }}
+                    className={cn(
+                      'cursor-pointer flex items-center justify-between',
+                      !showExerciseArchived && selectedMuscleGroup === 'all' && 'font-semibold bg-muted'
+                    )}
+                  >
+                    <span>{t('common.all', '全部')}</span>
+                    <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                      {activeExercises.length}
+                    </span>
+                  </DropdownMenuItem>
+                  {MAJOR_MUSCLE_GROUPS.map((group) => (
+                    <DropdownMenuItem
+                      key={group.id}
                       onClick={() => {
                         triggerHaptic('selection');
                         setShowExerciseArchived(false);
                         setSelectedMuscleGroup(group.id);
                       }}
                       className={cn(
-                        'px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer whitespace-nowrap shrink-0',
-                        isSelected
-                          ? 'bg-foreground text-background'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-hover'
+                        'cursor-pointer flex items-center justify-between',
+                        !showExerciseArchived && selectedMuscleGroup === group.id && 'font-semibold bg-muted'
                       )}
                     >
-                      {t(`workout.${group.id}`)}
-                      <span
-                        className={cn(
-                          'ml-1 text-[10px] tabular-nums',
-                          isSelected ? 'opacity-60' : 'opacity-45'
-                        )}
-                      >
-                        {count}
+                      <span>{t(`workout.${group.id}`)}</span>
+                      <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                        {muscleGroupCounts[group.id] || 0}
                       </span>
-                    </button>
-                  );
-                })}
-              </div>
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuItem
+                    onClick={() => {
+                      triggerHaptic('selection');
+                      setShowExerciseArchived(true);
+                      setSelectedMuscleGroup('all');
+                    }}
+                    className={cn(
+                      'cursor-pointer flex items-center justify-between',
+                      showExerciseArchived && 'font-semibold bg-muted'
+                    )}
+                  >
+                    <span>{t('common.archived', '已歸檔')}</span>
+                    <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                      {archivedExercises.length}
+                    </span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
-            {/* 右側：器械下拉選單 */}
-            <div className="shrink-0">
-              <div
-                className={cn(
-                  'inline-flex items-center rounded-full text-xs font-mono transition-all border',
-                  selectedEquipment !== 'all'
-                    ? 'bg-foreground text-background border-foreground font-medium'
-                    : 'border-border/60 bg-hover text-muted-foreground hover:text-foreground hover:border-border'
-                )}
-              >
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <button
-                        type="button"
-                        className="flex items-center gap-1 py-1.5 pl-3 pr-2 cursor-pointer focus:outline-none"
-                      >
-                        <span className="truncate max-w-[80px]">
-                          {selectedEquipment === 'all'
-                            ? t('workout.equipment', '器械')
-                            : getEquipmentDisplayName(selectedEquipment, t)}
-                        </span>
-                        <ChevronDown className="size-3 opacity-60" />
-                      </button>
-                    }
-                  />
-                  <DropdownMenuContent align="end" className="w-[180px] font-mono text-xs max-h-60 overflow-y-auto">
+            {/* 器械下拉按鈕 */}
+            <div
+              className={cn(
+                'inline-flex items-center rounded-full text-xs font-sans transition-all border shrink-0',
+                selectedEquipment !== 'all'
+                  ? 'bg-foreground text-background border-foreground font-medium'
+                  : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
+              )}
+            >
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 py-1 pl-2.5 pr-2 cursor-pointer focus:outline-none whitespace-nowrap max-w-[130px]"
+                    >
+                      <span className="truncate">
+                        {selectedEquipment === 'all'
+                          ? t('workout.equipment', '器械')
+                          : getEquipmentDisplayName(selectedEquipment, t)}
+                      </span>
+                      <ChevronDown className="size-3 opacity-60 shrink-0" />
+                    </button>
+                  }
+                />
+                <DropdownMenuContent align="start" className="w-[170px] max-h-64 overflow-y-auto text-xs font-sans">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      triggerHaptic('selection');
+                      setSelectedEquipment('all');
+                    }}
+                    className={cn(
+                      'cursor-pointer flex items-center justify-between',
+                      selectedEquipment === 'all' && 'font-semibold bg-muted'
+                    )}
+                  >
+                    <span>{t('common.all', '全部')}</span>
+                  </DropdownMenuItem>
+                  {activeEquipments.map((eq) => (
                     <DropdownMenuItem
+                      key={eq.id}
                       onClick={() => {
                         triggerHaptic('selection');
-                        setSelectedEquipment('all');
+                        setSelectedEquipment(eq.id);
                       }}
                       className={cn(
                         'cursor-pointer flex items-center justify-between',
-                        selectedEquipment === 'all' && 'font-semibold bg-muted'
+                        selectedEquipment === eq.id && 'font-semibold bg-muted'
                       )}
                     >
-                      <span>{t('common.all', '全部器械')}</span>
+                      <span className="truncate">{getEquipmentDisplayName(eq.id, t)}</span>
                     </DropdownMenuItem>
-                    {activeEquipments.map((eq) => (
-                      <DropdownMenuItem
-                        key={eq.id}
-                        onClick={() => {
-                          triggerHaptic('selection');
-                          setSelectedEquipment(eq.id);
-                        }}
-                        className={cn(
-                          'cursor-pointer flex items-center justify-between',
-                          selectedEquipment === eq.id && 'font-semibold bg-muted'
-                        )}
-                      >
-                        <span>{getEquipmentDisplayName(eq.id, t)}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {selectedEquipment !== 'all' && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      triggerHaptic('light');
-                      setSelectedEquipment('all');
-                    }}
-                    className="p-1 pr-2 hover:opacity-70 cursor-pointer"
-                    title={t('diet.resetFilter', '重設')}
-                  >
-                    <X className="size-3" />
-                  </button>
-                )}
-              </div>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
+
+            {/* 右側新增按鈕 */}
+            {onAddExercise && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('selection');
+                  onAddExercise();
+                }}
+                className="ml-auto shrink-0 inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-sans border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+              >
+                <Plus className="size-3" />
+                <span>{t('common.add', '新增')}</span>
+              </button>
+            )}
           </div>
 
           {/* 動作清單容器 */}
@@ -677,28 +614,7 @@ export function WorkoutManagementBrowser({
       {/* ========================================================================= */}
       {viewTab === 'routines' && (
         <div className="space-y-2.5 flex-1 min-h-0 flex flex-col">
-          {/* 搜尋輸入框 */}
-          <div className="relative flex items-center shrink-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-            <Input
-              type="text"
-              value={routineSearchQuery}
-              onChange={(e) => setRoutineSearchQuery(e.target.value)}
-              placeholder={t('workout.searchRoutinePlaceholder', '搜尋組合名稱或備註...')}
-              className="h-10 pl-9 pr-9 text-xs rounded-lg border-border bg-card text-foreground placeholder:text-muted-foreground focus-visible:border-foreground focus:ring-0 focus-visible:ring-0 shadow-none"
-            />
-            {routineSearchQuery && (
-              <button
-                type="button"
-                onClick={() => setRoutineSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                <X className="size-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* 篩選列：左側下拉膠囊整合「全部」與「已歸檔」 */}
+          {/* 篩選列：左側下拉膠囊整合「全部」與「已歸檔」，右側新增按鈕 */}
           <div className="flex items-center justify-between gap-1.5 py-0.5 shrink-0">
             <div className="flex items-center gap-1 shrink-0 pr-1">
               <DropdownMenu>
@@ -707,19 +623,18 @@ export function WorkoutManagementBrowser({
                     <button
                       type="button"
                       className={cn(
-                        'px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 shrink-0',
-                        'bg-foreground text-background'
+                        'px-3 py-1 rounded-full text-xs font-sans transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 shrink-0 border',
+                        showRoutineArchived
+                          ? 'bg-foreground text-background border-foreground font-medium'
+                          : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
                       )}
                     >
                       <span>{showRoutineArchived ? t('common.archived', '已歸檔') : t('common.all', '全部')}</span>
-                      <span className="text-[10px] tabular-nums opacity-60">
-                        {showRoutineArchived ? archivedRoutines.length : activeRoutines.length}
-                      </span>
                       <ChevronDown className="size-3 opacity-60 shrink-0" />
                     </button>
                   }
                 />
-                <DropdownMenuContent align="start" className="w-[140px] font-mono text-xs">
+                <DropdownMenuContent align="start" className="w-[150px] text-xs font-sans">
                   <DropdownMenuItem
                     onClick={() => {
                       triggerHaptic('selection');
@@ -731,7 +646,7 @@ export function WorkoutManagementBrowser({
                     )}
                   >
                     <span>{t('common.all', '全部')}</span>
-                    <span className="text-[10px] opacity-60 tabular-nums">
+                    <span className="font-mono text-[10px] opacity-60 tabular-nums">
                       {activeRoutines.length}
                     </span>
                   </DropdownMenuItem>
@@ -746,13 +661,26 @@ export function WorkoutManagementBrowser({
                     )}
                   >
                     <span>{t('common.archived', '已歸檔')}</span>
-                    <span className="text-[10px] opacity-60 tabular-nums">
+                    <span className="font-mono text-[10px] opacity-60 tabular-nums">
                       {archivedRoutines.length}
                     </span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+            {onAddRoutine && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('selection');
+                  onAddRoutine();
+                }}
+                className="ml-auto shrink-0 inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-sans border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+              >
+                <Plus className="size-3" />
+                <span>{t('common.add', '新增')}</span>
+              </button>
+            )}
           </div>
 
           {/* 組合清單容器 */}
@@ -816,28 +744,7 @@ export function WorkoutManagementBrowser({
       {/* ========================================================================= */}
       {viewTab === 'equipments' && (
         <div className="space-y-2.5 flex-1 min-h-0 flex flex-col">
-          {/* 搜尋輸入框 */}
-          <div className="relative flex items-center shrink-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-            <Input
-              type="text"
-              value={equipmentSearchQuery}
-              onChange={(e) => setEquipmentSearchQuery(e.target.value)}
-              placeholder={t('workout.searchEquipmentPlaceholder', '搜尋器械名稱...')}
-              className="h-10 pl-9 pr-9 text-xs rounded-lg border-border bg-card text-foreground placeholder:text-muted-foreground focus-visible:border-foreground focus:ring-0 focus-visible:ring-0 shadow-none"
-            />
-            {equipmentSearchQuery && (
-              <button
-                type="button"
-                onClick={() => setEquipmentSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                <X className="size-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* 篩選列：左側下拉膠囊整合「全部」與「已歸檔」 */}
+          {/* 篩選列：左側下拉膠囊整合「全部」與「已歸檔」，右側新增按鈕 */}
           <div className="flex items-center justify-between gap-1.5 py-0.5 shrink-0">
             <div className="flex items-center gap-1 shrink-0 pr-1">
               <DropdownMenu>
@@ -846,19 +753,18 @@ export function WorkoutManagementBrowser({
                     <button
                       type="button"
                       className={cn(
-                        'px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 shrink-0',
-                        'bg-foreground text-background'
+                        'px-3 py-1 rounded-full text-xs font-sans transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 shrink-0 border',
+                        showEquipmentArchived
+                          ? 'bg-foreground text-background border-foreground font-medium'
+                          : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
                       )}
                     >
                       <span>{showEquipmentArchived ? t('common.archived', '已歸檔') : t('common.all', '全部')}</span>
-                      <span className="text-[10px] tabular-nums opacity-60">
-                        {showEquipmentArchived ? archivedEquipments.length : activeEquipments.length}
-                      </span>
                       <ChevronDown className="size-3 opacity-60 shrink-0" />
                     </button>
                   }
                 />
-                <DropdownMenuContent align="start" className="w-[140px] font-mono text-xs">
+                <DropdownMenuContent align="start" className="w-[150px] text-xs font-sans">
                   <DropdownMenuItem
                     onClick={() => {
                       triggerHaptic('selection');
@@ -870,7 +776,7 @@ export function WorkoutManagementBrowser({
                     )}
                   >
                     <span>{t('common.all', '全部')}</span>
-                    <span className="text-[10px] opacity-60 tabular-nums">
+                    <span className="font-mono text-[10px] opacity-60 tabular-nums">
                       {activeEquipments.length}
                     </span>
                   </DropdownMenuItem>
@@ -885,13 +791,26 @@ export function WorkoutManagementBrowser({
                     )}
                   >
                     <span>{t('common.archived', '已歸檔')}</span>
-                    <span className="text-[10px] opacity-60 tabular-nums">
+                    <span className="font-mono text-[10px] opacity-60 tabular-nums">
                       {archivedEquipments.length}
                     </span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+            {onAddEquipment && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('selection');
+                  onAddEquipment();
+                }}
+                className="ml-auto shrink-0 inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-sans border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+              >
+                <Plus className="size-3" />
+                <span>{t('common.add', '新增')}</span>
+              </button>
+            )}
           </div>
 
           {/* 器械清單容器 */}

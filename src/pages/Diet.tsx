@@ -13,6 +13,7 @@ import {
   findMatchingTemplate,
 } from '@/constants/dietTemplates';
 import { DietPlanModal } from '@/components/diet/DietPlanModal';
+import { ActivityLevelDialog } from '@/components/diet/ActivityLevelDialog';
 import { EditFoodLogDialog } from '@/components/diet/EditFoodLogDialog';
 import { RecipeDialog } from '@/components/food/RecipeDialog';
 import { CopyMealDialog } from '@/components/diet/CopyMealDialog';
@@ -60,6 +61,7 @@ export default function Diet() {
   const { energyUnit, foodWeightUnit, foodVolumeUnit } = useUnitPreferences();
   const confirm = useConfirm();
 
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isRawWeightGuideOpen, setIsRawWeightGuideOpen] = useState(false);
   const [editingFoodLog, setEditingFoodLog] = useState<HydratedFoodLog | null>(null);
@@ -322,7 +324,7 @@ export default function Diet() {
         recipeMap={recipeMap}
         foodWeightUnit={foodWeightUnit}
         foodVolumeUnit={foodVolumeUnit}
-        onQuickActivityChange={handleQuickActivityChange}
+        onOpenActivityModal={() => setIsActivityModalOpen(true)}
         onOpenPlanModal={() => setIsPlanModalOpen(true)}
         onOpenAddForMeal={handleOpenAddForMeal}
         onOpenCopyForMeal={handleOpenCopyForMeal}
@@ -340,7 +342,16 @@ export default function Diet() {
         onDeleteBundle={handleDeleteBundle}
       />
 
-      {/* 完整飲食計劃設定彈窗 (包含活動係數與供能比微調) */}
+      {/* 活動係數與熱量消耗明細彈窗 */}
+      <ActivityLevelDialog
+        isOpen={isActivityModalOpen}
+        onClose={() => setIsActivityModalOpen(false)}
+        currentActivity={currentActivity}
+        profile={profile}
+        onSave={handleQuickActivityChange}
+      />
+
+      {/* 完整飲食計劃設定彈窗 (包含供能比微調) */}
       <DietPlanModal
         isOpen={isPlanModalOpen}
         onClose={() => setIsPlanModalOpen(false)}

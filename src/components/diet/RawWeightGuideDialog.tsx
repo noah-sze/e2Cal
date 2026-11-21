@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
 import { Dialog, PrecisionDialogContent } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { SectionCard } from '@/components/ui/section-card';
 import { MetricValue } from '@/components/ui/metric-value';
 import { triggerHaptic } from '@/lib/haptics';
 
@@ -72,7 +72,7 @@ export function RawWeightGuideDialog({
         submitAriaLabel={t('common.confirm', '確認')}
         cancelAriaLabel={t('common.cancel', '取消')}
       >
-        <div className="pt-3.5 space-y-3">
+        <div className="pt-3.5 pb-0 space-y-3.5 select-none">
           <p className="font-sans text-xs text-muted-foreground leading-relaxed">
             {t('diet.rawWeightGuide.introPrefix', '所有食材一律以「')}
             <span className="text-foreground font-medium">
@@ -84,17 +84,20 @@ export function RawWeightGuideDialog({
             )}
           </p>
 
-          {/* 動態烹飪手法對比卡片 */}
-          <div className="border border-border rounded-md p-3 space-y-3 bg-muted/20">
-            {/* 1. 白米動態輪播 */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-[11px] gap-2">
-                <div className="flex items-center gap-1 min-w-0">
-                  <span className="font-sans text-muted-foreground shrink-0">
+          {/* 1. 動態烹飪手法對比卡片 (共用 SectionCard 規格) */}
+          <SectionCard
+            title={t('diet.rawWeightGuide.comparisonTitle', '熟重漂移對比')}
+            bodyClassName="text-xs font-sans"
+          >
+            {/* 1a. 白米動態輪播 */}
+            <div className="px-4 py-2.5 space-y-1.5">
+              <div className="flex items-center justify-between text-xs gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-muted-foreground shrink-0">
                     {t('diet.rawWeightGuide.riceRaw', '白米 100g')}
                   </span>
                   <span className="text-border select-none">·</span>
-                  <span className="font-sans text-foreground font-medium truncate">
+                  <span className="text-foreground font-medium truncate">
                     {t(`diet.rawWeightGuide.${rice.methodKey}`, rice.methodFb)}
                   </span>
                 </div>
@@ -112,28 +115,28 @@ export function RawWeightGuideDialog({
                 />
                 <div className="relative h-full w-[30%] bg-foreground" />
               </div>
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground tabular-nums">
-                <span className="font-sans">
+              <div className="flex items-center justify-between text-2xs text-muted-foreground">
+                <span>
                   {t('diet.rawWeightGuide.riceDensityLabel', '每 100g 熟飯熱量')}
                 </span>
                 <MetricValue
                   value={rice.kcal}
                   unit="kcal"
                   className="text-telemetry-accent font-medium"
-                  unitClassName="text-xs"
+                  unitClassName="text-2xs"
                 />
               </div>
             </div>
 
-            {/* 2. 雞胸肉動態輪播 */}
-            <div className="pt-2.5 border-t border-border space-y-1.5">
-              <div className="flex items-center justify-between text-[11px] gap-2">
-                <div className="flex items-center gap-1 min-w-0">
-                  <span className="font-sans text-muted-foreground shrink-0">
+            {/* 1b. 雞胸肉動態輪播 */}
+            <div className="px-4 py-2.5 space-y-1.5">
+              <div className="flex items-center justify-between text-xs gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-muted-foreground shrink-0">
                     {t('diet.rawWeightGuide.meatRaw', '雞胸 100g')}
                   </span>
                   <span className="text-border select-none">·</span>
-                  <span className="font-sans text-foreground font-medium truncate">
+                  <span className="text-foreground font-medium truncate">
                     {t(`diet.rawWeightGuide.${meat.methodKey}`, meat.methodFb)}
                   </span>
                 </div>
@@ -150,22 +153,22 @@ export function RawWeightGuideDialog({
                   style={{ transform: `scaleX(${meat.scale})` }}
                 />
               </div>
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground tabular-nums">
-                <span className="font-sans">
+              <div className="flex items-center justify-between text-2xs text-muted-foreground">
+                <span>
                   {t('diet.rawWeightGuide.meatDensityLabel', '每 100g 熟肉熱量')}
                 </span>
                 <MetricValue
                   value={meat.kcal}
                   unit="kcal"
                   className="text-telemetry-accent font-medium"
-                  unitClassName="text-xs"
+                  unitClassName="text-2xs"
                 />
               </div>
             </div>
 
-            {/* 3. 烹調用油 */}
-            <div className="pt-2 border-t border-border flex items-center justify-between text-[11px] gap-2">
-              <span className="font-sans text-muted-foreground truncate">
+            {/* 1c. 烹調用油 */}
+            <div className="h-10 px-4 flex items-center justify-between text-xs gap-2">
+              <span className="text-muted-foreground truncate">
                 {t('diet.rawWeightGuide.oilRule', '烹調用油獨立計量')}
               </span>
               <MetricValue
@@ -175,20 +178,26 @@ export function RawWeightGuideDialog({
                 unitClassName="text-xs"
               />
             </div>
-          </div>
+          </SectionCard>
 
-          {/* 門檻輸入框（高度恆定，右側顯示即時字數校準進度） */}
-          <div className="space-y-1.5">
-            <label
-              htmlFor="raw-weight-confirm-input"
-              className="block font-sans text-[11px] text-muted-foreground"
-            >
-              {t('diet.rawWeightGuide.inputHintPrefix', '輸入「')}
-              <span className="font-mono font-semibold text-foreground">{keyword}</span>
-              {t('diet.rawWeightGuide.inputHintSuffix', '」後點擊右上角確認。')}
-            </label>
-            <div className="relative">
-              <Input
+          {/* 2. 門檻輸入框（內嵌於 SectionCard，表頭右側顯示即時字數校準進度） */}
+          <SectionCard
+            title={`${t('diet.rawWeightGuide.inputHintPrefix', '輸入「')}${keyword}${t('diet.rawWeightGuide.inputHintSuffix', '」後點擊右上角確認')}`}
+            action={
+              <span className="font-mono text-2xs tabular-nums flex items-center text-muted-foreground">
+                {isValid ? (
+                  <Check className="size-3.5 text-foreground" strokeWidth={2.5} />
+                ) : (
+                  <span>
+                    {currentLen}/{targetLen}
+                  </span>
+                )}
+              </span>
+            }
+            bodyClassName="text-xs font-sans"
+          >
+            <div className="h-10 relative flex items-stretch min-w-0 rounded-b-lg focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground focus-within:z-[1] transition-shadow duration-100">
+              <input
                 id="raw-weight-confirm-input"
                 type="text"
                 value={inputValue}
@@ -200,19 +209,11 @@ export function RawWeightGuideDialog({
                   }
                 }}
                 placeholder={keyword}
-                className="h-9 pr-10 rounded-md border-border bg-background text-xs font-sans placeholder:opacity-40"
+                aria-label={keyword}
+                className="w-full h-full px-4 bg-transparent text-center text-xs font-sans text-foreground font-normal focus:outline-none placeholder:text-muted-foreground/40"
               />
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 font-mono text-[11px] tabular-nums pointer-events-none flex items-center">
-                {isValid ? (
-                  <Check className="size-3.5 text-foreground stroke-[2.2]" />
-                ) : (
-                  <span className="text-muted-foreground">
-                    {currentLen}/{targetLen}
-                  </span>
-                )}
-              </span>
             </div>
-          </div>
+          </SectionCard>
         </div>
       </PrecisionDialogContent>
     </Dialog>

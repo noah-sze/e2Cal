@@ -114,7 +114,7 @@ export default function ProfileSettings() {
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto space-y-4 pb-20">
+    <div className="w-full max-w-md mx-auto space-y-4 pb-20">
       {/* 區塊 1：基本資料卡片 */}
       <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
         {/* 行 1：姓名 (收斂上下邊距，高度 h-16 64px，小屏幕防溢出防截斷 min-w-0) */}

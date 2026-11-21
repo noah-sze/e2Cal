@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Archive, RefreshCcw, Trash2 } from 'lucide-react';
 import { Dialog, PrecisionDialogContent } from '@/components/ui/dialog';
 import { HoldToDeleteButton } from '@/components/ui/HoldToDeleteButton';
-import { cn } from '@/lib/utils';
 
 export interface EntityConfirmSpec {
   /** 左側標籤（如：食物、食譜、動作、組合、器械） */
@@ -219,8 +218,8 @@ export function ConfirmDialog({
             />
           )}
 
-          {/* 實體刪除長按確認按鈕（紅色蓄力充能，完全復刻歸檔交互） */}
-          {isDestructive && usesEntitySpecCard && (
+          {/* 破壞性／刪除長按確認按鈕（統一紅色蓄力充能防誤觸） */}
+          {isDestructive && (
             <HoldToDeleteButton
               key={sessionKey}
               variant="destructive"
@@ -229,19 +228,6 @@ export function ConfirmDialog({
               hintText={t('common.holdToDeleteHint', '長按 1s 刪除')}
               onConfirm={handleConfirm}
             />
-          )}
-
-          {/* 其他破壞性確認按鈕（無實體規格卡時保留實色紅底確認鈕） */}
-          {isDestructive && !usesEntitySpecCard && (
-            <button
-              type="button"
-              onClick={handleConfirm}
-              className={cn(
-                'w-full h-9 rounded-md bg-destructive text-destructive-foreground hover:opacity-90 active:opacity-80 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center select-none'
-              )}
-            >
-              {confirmText || (typeof title === 'string' ? title : t('common.confirm'))}
-            </button>
           )}
         </div>
       </PrecisionDialogContent>

@@ -11,7 +11,7 @@ import { SetupProfileDialog } from '@/components/welcome/SetupProfileDialog';
 import { WelcomeTransitionOverlay } from '@/components/welcome/WelcomeTransitionOverlay';
 import { LaunchAppMenu } from '@/components/welcome/LaunchAppMenu';
 import { LocalImportDialog } from '@/components/welcome/LocalImportDialog';
-import { DropboxConnectDialog } from '@/components/sync/DropboxConnectDialog';
+import { DropboxSyncDialog } from '@/components/settings/dialogs/DropboxSyncDialog';
 import { InitialSyncModal } from '@/components/sync/InitialSyncModal';
 import { Toaster, toast } from '@/components/ui/toast';
 import { Logo, BrandWordmark, BrandText } from '@/components/ui/Logo';
@@ -1175,16 +1175,17 @@ export default function LandingPage() {
     }}
   />
 
-  <DropboxConnectDialog
+  <DropboxSyncDialog
     open={isCloudImportDialogOpen}
     onOpenChange={setIsCloudImportDialogOpen}
+    isAuthenticated={false}
     title={t('landing.launchMenu.cloudDialogTitle', '雲端導入')}
     description={t(
       'landing.launchMenu.cloudDialogDesc',
       '連線至個人 Dropbox，將既有飲食、訓練與體態資料還原至此裝置。'
     )}
     actionLabel={t('landing.launchMenu.cloudConnectAction', '連線 Dropbox')}
-    onConfirm={() => {
+    onConnectDropbox={() => {
       void handleConfirmCloudImport();
     }}
   />

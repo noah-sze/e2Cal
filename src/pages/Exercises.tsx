@@ -308,6 +308,9 @@ export default function Exercises({ isDetailOpen = false }: ExercisesProps) {
         onArchiveEquipment={handleArchiveEquipment}
         onUnarchiveEquipment={handleUnarchiveEquipment}
         onDeleteEquipment={handleDeleteEquipment}
+        onAddExercise={() => setIsAddExerciseOpen(true)}
+        onAddRoutine={() => setIsAddRoutineOpen(true)}
+        onAddEquipment={() => setIsAddEquipmentOpen(true)}
       />
 
       {/* ========================================================================= */}

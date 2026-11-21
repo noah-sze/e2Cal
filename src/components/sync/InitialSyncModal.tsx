@@ -17,10 +17,19 @@ import type {
   InitialSyncStep,
   SyncConflictStrategy,
 } from '@/services/sync/initialSyncManager';
+import type { UserBaseInfo } from '@/types';
+
+export interface InitialSyncPreviewConfig {
+  open: boolean;
+  step: InitialSyncStep;
+  onClose: () => void;
+}
 
 export interface InitialSyncModalProps {
   /** 自訂完成後行為（如落地頁雲端導入後銜接過場動畫或補填基本資料）；未傳入則預設重新載入 */
   onCompleted?: () => void | Promise<void>;
+  /** Dev 開發者後台預覽用：覆蓋同步流程狀態，不影響真實同步管理器 */
+  preview?: InitialSyncPreviewConfig;
 }
 
 function getStepNumber(step: InitialSyncStep): number {
@@ -40,25 +49,59 @@ function getStepNumber(step: InitialSyncStep): number {
   }
 }
 
-export function InitialSyncModal({ onCompleted }: InitialSyncModalProps = {}) {
+const PREVIEW_LOCAL_INFO: UserBaseInfo = {
+  id: 'preview-local',
+  name: 'Alex Chen',
+  gender: 'male',
+  birthDate: '1996-05-12',
+  heightCm: 178,
+  createdAt: 1,
+  updatedAt: 1,
+};
+
+const PREVIEW_REMOTE_INFO: UserBaseInfo = {
+  id: 'preview-remote',
+  name: 'Alex (雲端)',
+  gender: 'male',
+  birthDate: '1996-05-12',
+  heightCm: 178,
+  createdAt: 1,
+  updatedAt: 2,
+};
+
+export function InitialSyncModal({ onCompleted, preview }: InitialSyncModalProps = {}) {
   const { t } = useTranslation();
-  const {
-    isOpen,
-    step,
-    progressPercent,
-    downloadedFilesCount,
-    totalFilesCount,
-    localCount,
-    remoteCount,
-    localBaseInfo,
-    remoteBaseInfo,
-    isApplying,
-    summary,
-    error,
-    selectStrategy,
-    cancelInitialSync,
-    closeInitialSyncModal,
-  } = useInitialSync();
+  const realSync = useInitialSync();
+
+  const isPreview = Boolean(preview);
+  const isOpen = preview ? preview.open : realSync.isOpen;
+  const step = preview ? preview.step : realSync.step;
+  const progressPercent = preview ? (preview.step === 'COMPLETED' ? 100 : 64) : realSync.progressPercent;
+  const downloadedFilesCount = preview ? 18 : realSync.downloadedFilesCount;
+  const totalFilesCount = preview ? 28 : realSync.totalFilesCount;
+  const localCount = preview ? 14 : realSync.localCount;
+  const remoteCount = preview ? 28 : realSync.remoteCount;
+  const localBaseInfo = preview ? PREVIEW_LOCAL_INFO : realSync.localBaseInfo;
+  const remoteBaseInfo = preview ? PREVIEW_REMOTE_INFO : realSync.remoteBaseInfo;
+  const isApplying = preview ? false : realSync.isApplying;
+  const summary = preview
+    ? {
+        foodsCount: 12,
+        exercisesCount: 8,
+        foodLogsCount: 18,
+        workoutLogsCount: 6,
+        bodyMetricsCount: 4,
+      }
+    : realSync.summary;
+  const error = preview ? null : realSync.error;
+  const selectStrategy = preview
+    ? (s: SyncConflictStrategy) => {
+        toast.show(`預覽策略: ${s}`);
+        preview.onClose();
+      }
+    : realSync.selectStrategy;
+  const cancelInitialSync = preview ? preview.onClose : realSync.cancelInitialSync;
+  const closeInitialSyncModal = preview ? preview.onClose : realSync.closeInitialSyncModal;
 
   const [selectedStrategy, setSelectedStrategy] = useState<SyncConflictStrategy>('merge');
 
@@ -78,6 +121,7 @@ export function InitialSyncModal({ onCompleted }: InitialSyncModalProps = {}) {
 
   const handleComplete = () => {
     closeInitialSyncModal();
+    if (isPreview) return;
     if (onCompleted) {
       void onCompleted();
       return;

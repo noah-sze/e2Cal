@@ -7,7 +7,7 @@ import { useNetworkStatus, checkConnectivity } from '@/hooks/useNetworkStatus';
 import { useDropboxSync } from '@/hooks/useDropboxSync';
 import { formatSyncErrorMessage } from '@/services/sync/syncEngine';
 import { toast } from '@/components/ui/toast';
-import { DropboxConnectDialog } from '@/components/sync/DropboxConnectDialog';
+import { DropboxSyncDialog } from '@/components/settings/dialogs/DropboxSyncDialog';
 
 export function SyncStatusPill() {
   const { t } = useTranslation();
@@ -151,10 +151,11 @@ export function SyncStatusPill() {
       </button>
 
       {/* 連接 Dropbox 彈窗（全域共用元件） */}
-      <DropboxConnectDialog
+      <DropboxSyncDialog
         open={isConnectOpen}
         onOpenChange={setIsConnectOpen}
-        onConfirm={() => {
+        isAuthenticated={false}
+        onConnectDropbox={() => {
           void connectDropbox();
         }}
       />

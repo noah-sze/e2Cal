@@ -43,6 +43,8 @@ export interface ExerciseFormDialogProps {
   onOpenChange: (open: boolean) => void;
   initialData?: Exercise | null;
   onSubmit: (data: ExerciseFormData) => Promise<void> | void;
+  overlayClassName?: string;
+  className?: string;
 }
 
 // 扁平化所有細分肌群列表
@@ -70,6 +72,8 @@ export function ExerciseFormDialog({
   onOpenChange,
   initialData,
   onSubmit,
+  overlayClassName,
+  className,
 }: ExerciseFormDialogProps) {
   const { t } = useTranslation();
   const formId = useId();
@@ -217,8 +221,8 @@ export function ExerciseFormDialog({
           submitDisabled={!name.trim() || !equipment || !hasValidMuscles || isSubmitting}
           submitAriaLabel={isEdit ? t('common.save') : t('common.add')}
           cancelAriaLabel={t('common.cancel')}
-          overlayClassName="z-[70]"
-          className="z-[70] flex flex-col max-h-[85vh] overflow-hidden"
+          overlayClassName={overlayClassName || "z-[70]"}
+          className={cn("z-[70] flex flex-col max-h-[85vh] overflow-hidden", className)}
           initialFocus={false}
         >
           <form
