@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { MonthPicker } from '@/components/ui/month-picker';
+import { MonthPickerDialog } from '@/components/ui/month-picker';
 import { MetricValue } from '@/components/ui/metric-value';
 import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
 import { Logo, BrandText } from '@/components/ui/Logo';
@@ -43,7 +43,8 @@ export function SetupProfileDialog({
   const [displayHeight, setDisplayHeight] = useState('');
   const [displayWeight, setDisplayWeight] = useState('');
 
-  // 內置數字鍵盤次級彈窗狀態
+  // 內置出生年月選擇與數字鍵盤次級彈窗狀態
+  const [isBirthPickerOpen, setIsBirthPickerOpen] = useState(false);
   const [keypadConfig, setKeypadConfig] = useState<{
     type: 'height' | 'weight';
     title: string;
@@ -186,9 +187,16 @@ export function SetupProfileDialog({
     }
   };
 
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && (Boolean(keypadConfig) || isBirthPickerOpen)) {
+      return;
+    }
+    onOpenChange(nextOpen);
+  };
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <DialogContent
           size="standard"
           overlayClassName="z-[60]"
@@ -299,13 +307,13 @@ export function SetupProfileDialog({
               </div>
 
               {/* 右欄：出生年月 */}
-              <MonthPicker
-                value={birthDate}
-                onChange={(val) => {
-                  setBirthDate(val);
-                  triggerHaptic('selection');
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setIsBirthPickerOpen(true);
                 }}
-                className="h-10 pl-2.5 pr-3 flex items-center justify-between hover:bg-hover transition-colors overflow-hidden cursor-pointer w-full select-none"
+                className="h-10 pl-2.5 pr-3 flex items-center justify-between hover:bg-hover transition-colors overflow-hidden cursor-pointer w-full text-left select-none"
               >
                 <span className="text-xs font-normal text-muted-foreground font-mono truncate">
                   {t('welcome.birthDate', '出生年月')}
@@ -315,7 +323,7 @@ export function SetupProfileDialog({
                     {birthDate ? (calculatedAge > 0 ? `${calculatedAge} ${t('welcome.yearsOld', '歲')}` : birthDate) : '-'}
                   </span>
                 </div>
-              </MonthPicker>
+              </button>
             </div>
 
             {/* 分區 3：單位偏好 */}
@@ -462,6 +470,17 @@ export function SetupProfileDialog({
         </div>
       </DialogContent>
       </Dialog>
+
+      {/* 平級兄弟節點：出生年月次級彈窗 (Flat Sibling Portals 防巢狀與遮罩保護) */}
+      <MonthPickerDialog
+        open={isBirthPickerOpen}
+        onOpenChange={setIsBirthPickerOpen}
+        value={birthDate}
+        onChange={(val) => {
+          setBirthDate(val);
+          triggerHaptic('selection');
+        }}
+      />
 
       {/* 平級兄弟節點：數字鍵盤次級彈窗 (Flat Sibling Portals 防巢狀) */}
       {keypadConfig && (
