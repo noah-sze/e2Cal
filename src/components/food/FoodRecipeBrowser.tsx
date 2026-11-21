@@ -156,7 +156,6 @@ export function FoodRecipeBrowser({
     presetFoods,
     archivedCustomFoods,
     archivedPresetFoods,
-    isLoading: isFoodsLoading,
   } = useFoods();
 
   const isManage = interactiveMode === 'manage';
@@ -166,16 +165,11 @@ export function FoodRecipeBrowser({
   const { nutritionDisplayMode } = useAppStore();
   const { foodWeightUnit, foodVolumeUnit, energyUnit } = useUnitPreferences();
 
-  // 提取最近記錄與最後使用時間映射
+  // 提取最後使用時間映射（用於預設排序置頂）
   const {
-    recentFoodIds,
-    recentRecipeIds,
     foodLastUsedMap,
     recipeLastUsedMap,
-    isLoading: isRecentLoading,
   } = useRecentFoods();
-  const recentFoodIdSet = useMemo(() => new Set(recentFoodIds), [recentFoodIds]);
-  const recentRecipeIdSet = useMemo(() => new Set(recentRecipeIds), [recentRecipeIds]);
 
   // 穩定的選擇回調（100% 避免行內匿名函數參照抖動，啟動 React.memo）
   const handleSelectFood = useCallback(
@@ -192,9 +186,7 @@ export function FoodRecipeBrowser({
     [onItemClick]
   );
 
-  const [localCategory, setLocalCategory] = useState<'recent' | 'all' | FoodCategory>(() => {
-    return !isManage ? 'recent' : 'all';
-  });
+  const [localCategory, setLocalCategory] = useState<'all' | FoodCategory>('all');
   const [localNutritionTag, setLocalNutritionTag] = useState<'all' | NutritionTag>('all');
   const [localFoodSortBy, setLocalFoodSortBy] = useState<FoodSortOption>('default');
   const [localFoodSearchQuery, setLocalFoodSearchQuery] = useState('');
@@ -202,7 +194,7 @@ export function FoodRecipeBrowser({
 
   const selectedCategory = isManage ? foodBrowser.selectedCategory : localCategory;
   const setSelectedCategory = isManage
-    ? (cat: 'recent' | 'all' | FoodCategory) => setFoodBrowserState({ selectedCategory: cat })
+    ? (cat: 'all' | FoodCategory) => setFoodBrowserState({ selectedCategory: cat })
     : setLocalCategory;
 
   const selectedNutritionTag = isManage ? foodBrowser.selectedNutritionTag : localNutritionTag;
@@ -243,26 +235,8 @@ export function FoodRecipeBrowser({
     return totalArchivedFoods;
   }, [showFoodArchived, customFoods, presetFoods, totalArchivedFoods]);
 
-  const recentFoodsCount = useMemo(() => {
-    return tabBaseFoods.filter((f) => recentFoodIdSet.has(f.id)).length;
-  }, [tabBaseFoods, recentFoodIdSet]);
-
-  // 初次載入/打開定位決策：Dialog 模式下若最近為空且當前仍為 recent，自動定位至 'all'（useRef 確保後續手動切換不受影響）
-  const initialFoodCategoryResolvedRef = useRef(false);
-  useEffect(() => {
-    if (isManage) return;
-    if (initialFoodCategoryResolvedRef.current) return;
-    if (isRecentLoading || isFoodsLoading) return;
-
-    initialFoodCategoryResolvedRef.current = true;
-    if (recentFoodsCount === 0 && localCategory === 'recent') {
-      setLocalCategory('all');
-    }
-  }, [isManage, isRecentLoading, isFoodsLoading, recentFoodsCount, localCategory]);
-
   const categoryCounts = useMemo(() => {
-    const counts: Record<'recent' | 'all' | FoodCategory, number> = {
-      recent: recentFoodsCount,
+    const counts: Record<'all' | FoodCategory, number> = {
       all: tabBaseFoods.length,
       natural: 0,
       processed: 0,
@@ -277,7 +251,7 @@ export function FoodRecipeBrowser({
       }
     });
     return counts;
-  }, [tabBaseFoods, recentFoodsCount]);
+  }, [tabBaseFoods]);
 
   // 針對 tabBaseFoods 建立 O(1) 營養特徵標籤快取 Map，徹底避免每次選單切換或過濾時對 422 筆食材全量重複進行昂貴的浮點運算
   const foodNutritionTagMap = useMemo(() => {
@@ -311,12 +285,8 @@ export function FoodRecipeBrowser({
     let list = tabBaseFoods;
     const isSearching = Boolean(foodSearchQuery.trim());
 
-    if (!isSearching) {
-      if (selectedCategory === 'recent') {
-        list = list.filter((food) => recentFoodIdSet.has(food.id));
-      } else if (selectedCategory !== 'all') {
-        list = list.filter((food) => (food.category || 'natural') === selectedCategory);
-      }
+    if (!isSearching && selectedCategory !== 'all') {
+      list = list.filter((food) => (food.category || 'natural') === selectedCategory);
     }
 
     if (selectedNutritionTag !== 'all') {
@@ -373,7 +343,7 @@ export function FoodRecipeBrowser({
 
       return compareByRecentActivityThenName(a, b, foodLastUsedMap);
     });
-  }, [tabBaseFoods, selectedCategory, selectedNutritionTag, foodSearchQuery, foodSortBy, nutritionDisplayMode, recentFoodIdSet, foodLastUsedMap, foodNutritionTagMap]);
+  }, [tabBaseFoods, selectedCategory, selectedNutritionTag, foodSearchQuery, foodSortBy, nutritionDisplayMode, foodLastUsedMap, foodNutritionTagMap]);
 
   // ==========================================
   // 食材分批漸進加載 (Incremental Windowing)
@@ -437,15 +407,11 @@ export function FoodRecipeBrowser({
     archivedCustomRecipes,
     archivedPresetRecipes,
     getRecipeMacros,
-    isLoading: isRecipesLoading,
   } = useRecipes();
 
   const [localRecipeSearchQuery, setLocalRecipeSearchQuery] = useState('');
   const [localShowRecipeArchived, setLocalShowRecipeArchived] = useState(false);
   const [localSelectedRecipeNutritionTag, setLocalSelectedRecipeNutritionTag] = useState<'all' | NutritionTag>('all');
-  const [selectedRecipeCategory, setSelectedRecipeCategory] = useState<'recent' | 'all'>(() => {
-    return !isManage ? 'recent' : 'all';
-  });
 
   const recipeSearchQuery = isManage ? foodBrowser.recipeSearchQuery : localRecipeSearchQuery;
   const setRecipeSearchQuery = isManage
@@ -499,23 +465,6 @@ export function FoodRecipeBrowser({
     return showRecipeArchived ? totalArchivedRecipes : totalActiveRecipes;
   }, [showRecipeArchived, totalArchivedRecipes, totalActiveRecipes]);
 
-  const recentRecipesCount = useMemo(() => {
-    return tabBaseRecipes.filter((r) => recentRecipeIdSet.has(r.id)).length;
-  }, [tabBaseRecipes, recentRecipeIdSet]);
-
-  // 初次載入/打開定位決策：Dialog 模式下若食譜最近為空且當前仍為 recent，自動定位至 'all'（useRef 確保後續手動切換不受影響）
-  const initialRecipeCategoryResolvedRef = useRef(false);
-  useEffect(() => {
-    if (isManage) return;
-    if (initialRecipeCategoryResolvedRef.current) return;
-    if (isRecentLoading || isRecipesLoading) return;
-
-    initialRecipeCategoryResolvedRef.current = true;
-    if (recentRecipesCount === 0 && selectedRecipeCategory === 'recent') {
-      setSelectedRecipeCategory('all');
-    }
-  }, [isManage, isRecentLoading, isRecipesLoading, recentRecipesCount, selectedRecipeCategory]);
-
   // 針對 tabBaseRecipes 建立 O(1) 營養特徵標籤快取 Map
   const recipeNutritionTagMap = useMemo(() => {
     const map = new Map<string, NutritionTag[]>();
@@ -557,10 +506,6 @@ export function FoodRecipeBrowser({
   const filteredRecipes = useMemo(() => {
     let list = tabBaseRecipes;
     const isSearching = Boolean(recipeSearchQuery.trim());
-
-    if (!isSearching && selectedRecipeCategory === 'recent') {
-      list = list.filter((r) => recentRecipeIdSet.has(r.id));
-    }
 
     if (selectedRecipeNutritionTag !== 'all') {
       list = list.filter((recipe) => {
@@ -607,7 +552,7 @@ export function FoodRecipeBrowser({
 
       return compareByRecentActivityThenName(a, b, recipeLastUsedMap);
     });
-  }, [tabBaseRecipes, selectedRecipeCategory, selectedRecipeNutritionTag, recipeSearchQuery, recipeSortBy, recentRecipeIdSet, recipeLastUsedMap, recipeNutritionTagMap, getRecipeMacros]);
+  }, [tabBaseRecipes, selectedRecipeNutritionTag, recipeSearchQuery, recipeSortBy, recipeLastUsedMap, recipeNutritionTagMap, getRecipeMacros]);
 
   // ==========================================
   // 食譜分批漸進加載 (Incremental Windowing)
@@ -831,35 +776,6 @@ export function FoodRecipeBrowser({
             className="overflow-x-auto no-scrollbar shrink-0 py-0.5"
           >
             <div className="flex items-center gap-1 shrink-0 pr-1">
-              {/* 最近膠囊 (僅在選擇彈窗模式下顯示) */}
-              {!isManage && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    triggerHaptic('selection');
-                    setShowFoodArchived(false);
-                    setSelectedCategory('recent');
-                    handleScrollTabIntoView(e.currentTarget, true, false);
-                  }}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1',
-                    !showFoodArchived && selectedCategory === 'recent'
-                      ? 'bg-foreground text-background'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  )}
-                >
-                  <span>{t('common.recent', '最近')}</span>
-                  <span
-                    className={cn(
-                      'text-[10px] tabular-nums',
-                      !showFoodArchived && selectedCategory === 'recent' ? 'opacity-60' : 'opacity-45'
-                    )}
-                  >
-                    {recentFoodsCount}
-                  </span>
-                </button>
-              )}
-
               {/* 狀態下拉膠囊：全部 vs 已歸檔 (未選中全部時點擊直接切換，已選中全部時點擊才打開選擇) */}
               {showArchivedOption && (showFoodArchived || selectedCategory === 'all') ? (
                 <DropdownMenu>
@@ -1181,8 +1097,6 @@ export function FoodRecipeBrowser({
                     ? t('common.noResults', '無搜尋結果')
                     : showFoodArchived
                     ? t('settings.noArchivedFoods')
-                    : selectedCategory === 'recent'
-                    ? t('diet.noRecentFoods', '無最近記錄')
                     : t('settings.noCustomFoods')}
                 </div>
               ) : (
@@ -1247,36 +1161,8 @@ export function FoodRecipeBrowser({
           {/* 食譜分類橫向滾動列 (全寬滾動，不被右側按鈕擠壓) */}
           <div className="overflow-x-auto no-scrollbar shrink-0 py-0.5">
             <div className="flex items-center gap-1 shrink-0 pr-1">
-              {/* 最近食譜膠囊 (僅在選擇彈窗模式下顯示) */}
-              {!isManage && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('selection');
-                    setShowRecipeArchived(false);
-                    setSelectedRecipeCategory('recent');
-                  }}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1',
-                    !showRecipeArchived && selectedRecipeCategory === 'recent'
-                      ? 'bg-foreground text-background'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  )}
-                >
-                  <span>{t('common.recent', '最近')}</span>
-                  <span
-                    className={cn(
-                      'text-[10px] tabular-nums',
-                      !showRecipeArchived && selectedRecipeCategory === 'recent' ? 'opacity-60' : 'opacity-45'
-                    )}
-                  >
-                    {recentRecipesCount}
-                  </span>
-                </button>
-              )}
-
-              {/* 狀態下拉膠囊：全部 vs 已歸檔 (未選中全部時點擊直接切換，已選中全部時點擊才打開選擇) */}
-              {showArchivedOption && (showRecipeArchived || selectedRecipeCategory === 'all') ? (
+              {/* 狀態下拉膠囊：全部 vs 已歸檔 */}
+              {showArchivedOption ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
@@ -1297,11 +1183,10 @@ export function FoodRecipeBrowser({
                       onClick={() => {
                         triggerHaptic('selection');
                         setShowRecipeArchived(false);
-                        setSelectedRecipeCategory('all');
                       }}
                       className={cn(
                         'cursor-pointer flex items-center justify-between',
-                        !showRecipeArchived && selectedRecipeCategory === 'all' && 'font-semibold bg-muted'
+                        !showRecipeArchived && 'font-semibold bg-muted'
                       )}
                     >
                       <span>{t('diet.foodCategory.all', '全部')}</span>
@@ -1313,7 +1198,6 @@ export function FoodRecipeBrowser({
                       onClick={() => {
                         triggerHaptic('selection');
                         setShowRecipeArchived(true);
-                        setSelectedRecipeCategory('all');
                       }}
                       className={cn(
                         'cursor-pointer flex items-center justify-between',
@@ -1333,11 +1217,10 @@ export function FoodRecipeBrowser({
                   onClick={() => {
                     triggerHaptic('selection');
                     setShowRecipeArchived(false);
-                    setSelectedRecipeCategory('all');
                   }}
                   className={cn(
                     'px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 shrink-0',
-                    !showRecipeArchived && selectedRecipeCategory === 'all'
+                    !showRecipeArchived
                       ? 'bg-foreground text-background'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                   )}
@@ -1346,7 +1229,7 @@ export function FoodRecipeBrowser({
                   <span
                     className={cn(
                       'text-[10px] tabular-nums',
-                      !showRecipeArchived && selectedRecipeCategory === 'all' ? 'opacity-60' : 'opacity-45'
+                      !showRecipeArchived ? 'opacity-60' : 'opacity-45'
                     )}
                   >
                     {totalActiveRecipes.length}
@@ -1553,8 +1436,6 @@ export function FoodRecipeBrowser({
                     ? t('common.noResults', '無搜尋結果')
                     : showRecipeArchived
                     ? t('settings.noArchivedRecipes')
-                    : selectedRecipeCategory === 'recent'
-                    ? t('diet.noRecentFoods', '無最近記錄')
                     : t('diet.noRecipes')}
                 </div>
               ) : (

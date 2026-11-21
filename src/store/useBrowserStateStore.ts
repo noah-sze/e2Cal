@@ -13,7 +13,7 @@ export type FoodSortOption =
 
 export interface FoodBrowserState {
   activeTab: 'foods' | 'recipes';
-  selectedCategory: 'recent' | 'all' | FoodCategory;
+  selectedCategory: 'all' | FoodCategory;
   selectedNutritionTag: 'all' | NutritionTag;
   foodSortBy: FoodSortOption;
   foodSearchQuery: string;
