@@ -3,7 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { ChevronRight } from 'lucide-react';
 import { SectionCard } from '@/components/ui/section-card';
 import { NutritionBasisToggle } from '@/components/food/NutritionBasisToggle';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import {
+  SubNutrientsPopover,
+  buildCarbsSubRows,
+  buildFatSubRows,
+} from '@/components/food/SubNutrientsPopover';
 import { MetricValue } from '@/components/ui/metric-value';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { formatEnergy, formatFoodServing } from '@/utils/unitMath';
@@ -205,101 +209,56 @@ export function NutritionFactsCard({
 
       {/* 3. 碳水化合物行 (h-10) */}
       {hasCarbSub ? (
-        <Popover>
-          <PopoverTrigger
-            nativeButton={false}
-            render={(props, state) => (
+        <SubNutrientsPopover
+          align="start"
+          alignOffset={16}
+          positionerClassName="z-[70]"
+          rows={buildCarbsSubRows(t, sugarVal, fiberVal).map((row, idx) => ({
+            ...row,
+            renderValue: editable
+              ? (node) => editable.renderValue(idx === 0 ? 'sugar' : 'fiber', node)
+              : undefined,
+          }))}
+        >
+          {({ open }) => (
+            <div
+              className={cn(
+                "h-10 px-4 flex items-center justify-between transition-colors select-none cursor-pointer hover:bg-hover",
+                effectiveHighlights?.carbs && "bg-carbs-subtle-bg"
+              )}
+            >
+              <div className="flex items-center gap-1">
+                <span className="text-carbs text-xs font-medium">{t('diet.carbs')}</span>
+                <ChevronRight
+                  className={cn(
+                    "size-3 text-carbs/60 transition-transform duration-150",
+                    open && "rotate-90 text-carbs"
+                  )}
+                />
+              </div>
+
               <div
-                {...props}
-                role="button"
-                tabIndex={0}
-                className={cn(
-                  "h-10 px-4 flex items-center justify-between transition-colors select-none cursor-pointer hover:bg-hover",
-                  effectiveHighlights?.carbs && "bg-carbs-subtle-bg"
-                )}
+                onClick={(e) => {
+                  if (editable) {
+                    e.stopPropagation();
+                  }
+                }}
               >
-                <div className="flex items-center gap-1">
-                  <span className="text-carbs text-xs font-medium">{t('diet.carbs')}</span>
-                  <ChevronRight
-                    className={cn(
-                      "size-3 text-carbs/60 transition-transform duration-150",
-                      state.open && "rotate-90 text-carbs"
-                    )}
-                  />
-                </div>
-
-                <div
-                  onClick={(e) => {
-                    if (editable) {
-                      e.stopPropagation();
-                    }
-                  }}
-                >
-                  {(() => {
-                    const node = (
-                      <MetricValue
-                        value={carbs}
-                        unit="g"
-                        valueClassName="font-medium text-carbs text-xs"
-                        unitClassName="text-xs"
-                      />
-                    );
-                    return editable ? editable.renderValue('carbs', node) : node;
-                  })()}
-                </div>
-              </div>
-            )}
-          />
-          <PopoverContent
-            side="bottom"
-            align="start"
-            alignOffset={16}
-            sideOffset={4}
-            className="w-44 p-1 gap-0 bg-popover text-popover-foreground border border-border shadow-none rounded-lg select-none font-mono"
-          >
-            <div className="space-y-0.5 text-xs">
-              {/* 糖 */}
-              <div className="h-8 flex items-center justify-between px-2 rounded hover:bg-hover transition-colors">
-                <span className="text-muted-foreground font-sans text-xs">{t('diet.sugar')}</span>
-                <div onClick={(e) => e.stopPropagation()}>
-                  {(() => {
-                    const node = typeof sugarVal === 'number' ? (
-                      <MetricValue
-                        value={sugarVal}
-                        unit="g"
-                        valueClassName="text-foreground/80 text-xs"
-                        unitClassName="text-xs"
-                      />
-                    ) : (
-                      <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
-                    );
-                    return editable ? editable.renderValue('sugar', node) : node;
-                  })()}
-                </div>
-              </div>
-
-              {/* 膳食纖維 */}
-              <div className="h-8 flex items-center justify-between px-2 rounded hover:bg-hover transition-colors">
-                <span className="text-muted-foreground font-sans text-xs">{t('diet.fiber')}</span>
-                <div onClick={(e) => e.stopPropagation()}>
-                  {(() => {
-                    const node = typeof fiberVal === 'number' ? (
-                      <MetricValue
-                        value={fiberVal}
-                        unit="g"
-                        valueClassName="text-foreground/80 text-xs"
-                        unitClassName="text-xs"
-                      />
-                    ) : (
-                      <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
-                    );
-                    return editable ? editable.renderValue('fiber', node) : node;
-                  })()}
-                </div>
+                {(() => {
+                  const node = (
+                    <MetricValue
+                      value={carbs}
+                      unit="g"
+                      valueClassName="font-medium text-carbs text-xs"
+                      unitClassName="text-xs"
+                    />
+                  );
+                  return editable ? editable.renderValue('carbs', node) : node;
+                })()}
               </div>
             </div>
-          </PopoverContent>
-        </Popover>
+          )}
+        </SubNutrientsPopover>
       ) : (
         <div
           className={cn(
@@ -349,101 +308,56 @@ export function NutritionFactsCard({
 
       {/* 5. 脂肪行 (h-10) */}
       {hasFatSub ? (
-        <Popover>
-          <PopoverTrigger
-            nativeButton={false}
-            render={(props, state) => (
+        <SubNutrientsPopover
+          align="start"
+          alignOffset={16}
+          positionerClassName="z-[70]"
+          rows={buildFatSubRows(t, satFatVal, transFatVal).map((row, idx) => ({
+            ...row,
+            renderValue: editable
+              ? (node) => editable.renderValue(idx === 0 ? 'saturatedFat' : 'transFat', node)
+              : undefined,
+          }))}
+        >
+          {({ open }) => (
+            <div
+              className={cn(
+                "h-10 px-4 flex items-center justify-between transition-colors select-none cursor-pointer hover:bg-hover",
+                effectiveHighlights?.fat && "bg-fat-subtle-bg"
+              )}
+            >
+              <div className="flex items-center gap-1">
+                <span className="text-fat text-xs font-medium">{t('diet.fat')}</span>
+                <ChevronRight
+                  className={cn(
+                    "size-3 text-fat/60 transition-transform duration-150",
+                    open && "rotate-90 text-fat"
+                  )}
+                />
+              </div>
+
               <div
-                {...props}
-                role="button"
-                tabIndex={0}
-                className={cn(
-                  "h-10 px-4 flex items-center justify-between transition-colors select-none cursor-pointer hover:bg-hover",
-                  effectiveHighlights?.fat && "bg-fat-subtle-bg"
-                )}
+                onClick={(e) => {
+                  if (editable) {
+                    e.stopPropagation();
+                  }
+                }}
               >
-                <div className="flex items-center gap-1">
-                  <span className="text-fat text-xs font-medium">{t('diet.fat')}</span>
-                  <ChevronRight
-                    className={cn(
-                      "size-3 text-fat/60 transition-transform duration-150",
-                      state.open && "rotate-90 text-fat"
-                    )}
-                  />
-                </div>
-
-                <div
-                  onClick={(e) => {
-                    if (editable) {
-                      e.stopPropagation();
-                    }
-                  }}
-                >
-                  {(() => {
-                    const node = (
-                      <MetricValue
-                        value={fat}
-                        unit="g"
-                        valueClassName="font-medium text-fat text-xs"
-                        unitClassName="text-xs"
-                      />
-                    );
-                    return editable ? editable.renderValue('fat', node) : node;
-                  })()}
-                </div>
-              </div>
-            )}
-          />
-          <PopoverContent
-            side="bottom"
-            align="start"
-            alignOffset={16}
-            sideOffset={4}
-            className="w-44 p-1 gap-0 bg-popover text-popover-foreground border border-border shadow-none rounded-lg select-none font-mono"
-          >
-            <div className="space-y-0.5 text-xs">
-              {/* 飽和脂肪 */}
-              <div className="h-8 flex items-center justify-between px-2 rounded hover:bg-hover transition-colors">
-                <span className="text-muted-foreground font-sans text-xs">{t('diet.saturatedFat')}</span>
-                <div onClick={(e) => e.stopPropagation()}>
-                  {(() => {
-                    const node = typeof satFatVal === 'number' ? (
-                      <MetricValue
-                        value={satFatVal}
-                        unit="g"
-                        valueClassName="text-foreground/80 text-xs"
-                        unitClassName="text-xs"
-                      />
-                    ) : (
-                      <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
-                    );
-                    return editable ? editable.renderValue('saturatedFat', node) : node;
-                  })()}
-                </div>
-              </div>
-
-              {/* 反式脂肪 */}
-              <div className="h-8 flex items-center justify-between px-2 rounded hover:bg-hover transition-colors">
-                <span className="text-muted-foreground font-sans text-xs">{t('diet.transFat')}</span>
-                <div onClick={(e) => e.stopPropagation()}>
-                  {(() => {
-                    const node = typeof transFatVal === 'number' ? (
-                      <MetricValue
-                        value={transFatVal}
-                        unit="g"
-                        valueClassName="text-foreground/80 text-xs"
-                        unitClassName="text-xs"
-                      />
-                    ) : (
-                      <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
-                    );
-                    return editable ? editable.renderValue('transFat', node) : node;
-                  })()}
-                </div>
+                {(() => {
+                  const node = (
+                    <MetricValue
+                      value={fat}
+                      unit="g"
+                      valueClassName="font-medium text-fat text-xs"
+                      unitClassName="text-xs"
+                    />
+                  );
+                  return editable ? editable.renderValue('fat', node) : node;
+                })()}
               </div>
             </div>
-          </PopoverContent>
-        </Popover>
+          )}
+        </SubNutrientsPopover>
       ) : (
         <div
           className={cn(

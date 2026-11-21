@@ -4,6 +4,7 @@ import { triggerHaptic } from '@/lib/haptics';
 import { cn } from '@/lib/utils';
 import { WorkoutRecoveryDashboard } from '@/components/workout/WorkoutRecoveryDashboard';
 import { MetricValue } from '@/components/ui/metric-value';
+import { MacroProgressGrid } from '@/components/diet/MacroProgressGrid';
 import type { BodyRecoverySummary } from '@/utils/recoveryMath';
 
 export interface DashboardViewProps {
@@ -22,6 +23,10 @@ export interface DashboardViewProps {
     carbs: number;
     protein: number;
     fat: number;
+    sugar?: number;
+    fiber?: number;
+    saturatedFat?: number;
+    transFat?: number;
   };
   targetMacros: {
     carbsGrams: number;
@@ -187,116 +192,12 @@ export function DashboardView({
           </div>
         </div>
 
-        {/* 下半部：三大營養素 (碳水、蛋白質、脂肪) */}
-        <div className="grid grid-cols-3 divide-x divide-border border-t border-border">
-          {/* 1. 碳水化合物 */}
-          <div className="p-3 sm:p-4 space-y-1 overflow-hidden">
-            <div className="text-xs font-medium text-carbs truncate whitespace-nowrap">
-              {t('dietPlan.carbsShort', '碳水')}
-            </div>
-            <div className="text-sm sm:text-base tracking-tight flex items-baseline whitespace-nowrap">
-              <MetricValue
-                value={Math.round(totals.carbs)}
-                unit="g"
-                valueClassName="font-normal text-foreground"
-                unitClassName="text-[11px]"
-              />
-              <span className="text-[11px] sm:text-xs font-sans text-muted-foreground mx-0.5">/</span>
-              <MetricValue
-                value={targetMacros.carbsGrams}
-                unit="g"
-                className="text-[11px] sm:text-xs text-muted-foreground"
-                valueClassName="font-normal"
-                unitClassName="text-[10px]"
-              />
-            </div>
-            <div className="h-2 w-full bg-carbs-subtle rounded-full overflow-hidden mt-2">
-              <div
-                className="h-full bg-carbs"
-                style={{
-                  width: `${Math.min(
-                    100,
-                    targetMacros.carbsGrams > 0
-                      ? (totals.carbs / targetMacros.carbsGrams) * 100
-                      : 0
-                  )}%`,
-                }}
-              />
-            </div>
-          </div>
-
-          {/* 2. 蛋白質 */}
-          <div className="p-3 sm:p-4 space-y-1 overflow-hidden">
-            <div className="text-xs font-medium text-protein truncate whitespace-nowrap">
-              {t('dietPlan.proteinShort', '蛋白質')}
-            </div>
-            <div className="text-sm sm:text-base tracking-tight flex items-baseline whitespace-nowrap">
-              <MetricValue
-                value={Math.round(totals.protein)}
-                unit="g"
-                valueClassName="font-normal text-foreground"
-                unitClassName="text-[11px]"
-              />
-              <span className="text-[11px] sm:text-xs font-sans text-muted-foreground mx-0.5">/</span>
-              <MetricValue
-                value={targetMacros.proteinGrams}
-                unit="g"
-                className="text-[11px] sm:text-xs text-muted-foreground"
-                valueClassName="font-normal"
-                unitClassName="text-[10px]"
-              />
-            </div>
-            <div className="h-2 w-full bg-protein-subtle rounded-full overflow-hidden mt-2">
-              <div
-                className="h-full bg-protein"
-                style={{
-                  width: `${Math.min(
-                    100,
-                    targetMacros.proteinGrams > 0
-                      ? (totals.protein / targetMacros.proteinGrams) * 100
-                      : 0
-                  )}%`,
-                }}
-              />
-            </div>
-          </div>
-
-          {/* 3. 脂肪 */}
-          <div className="p-3 sm:p-4 space-y-1 overflow-hidden">
-            <div className="text-xs font-medium text-fat truncate whitespace-nowrap">
-              {t('dietPlan.fatShort', '脂肪')}
-            </div>
-            <div className="text-sm sm:text-base tracking-tight flex items-baseline whitespace-nowrap">
-              <MetricValue
-                value={Math.round(totals.fat)}
-                unit="g"
-                valueClassName="font-normal text-foreground"
-                unitClassName="text-[11px]"
-              />
-              <span className="text-[11px] sm:text-xs font-sans text-muted-foreground mx-0.5">/</span>
-              <MetricValue
-                value={targetMacros.fatGrams}
-                unit="g"
-                className="text-[11px] sm:text-xs text-muted-foreground"
-                valueClassName="font-normal"
-                unitClassName="text-[10px]"
-              />
-            </div>
-            <div className="h-2 w-full bg-fat-subtle rounded-full overflow-hidden mt-2">
-              <div
-                className="h-full bg-fat"
-                style={{
-                  width: `${Math.min(
-                    100,
-                    targetMacros.fatGrams > 0
-                      ? (totals.fat / targetMacros.fatGrams) * 100
-                      : 0
-                  )}%`,
-                }}
-              />
-            </div>
-          </div>
-        </div>
+        {/* 下半部：三大營養素 (共用通用 MacroProgressGrid) */}
+        <MacroProgressGrid
+          totals={totals}
+          targetMacros={targetMacros}
+          interactive={interactive}
+        />
       </div>
 
       {/* ========================================================================= */}
@@ -334,6 +235,10 @@ export function getDemoDashboardData(
       carbs: 305,
       protein: 152,
       fat: 58,
+      sugar: 42,
+      fiber: 28,
+      saturatedFat: 18,
+      transFat: 0.5,
     },
     targetMacros: {
       carbsGrams: 330,

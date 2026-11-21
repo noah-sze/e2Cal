@@ -1,9 +1,14 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { evaluateNutritionalHighlight } from '@/utils/nutritionEvaluation';
 import { useTranslation } from 'react-i18next';
 import { MetricValue } from '@/components/ui/metric-value';
 import { AutoMarquee } from '@/components/ui/AutoMarquee';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import {
+  SubNutrientsPopover,
+  buildCarbsSubRows,
+  buildFatSubRows,
+  type SubNutrientRowSpec,
+} from '@/components/food/SubNutrientsPopover';
 import { cn } from '@/lib/utils';
 
 export interface MacroHighlights {
@@ -26,11 +31,6 @@ export interface MacroSquaresProps {
   className?: string;
 }
 
-interface SubNutrientRow {
-  label: string;
-  value?: number | null;
-}
-
 interface MacroSquareCellProps {
   label: string;
   value: number;
@@ -38,7 +38,7 @@ interface MacroSquareCellProps {
   isSubtle: boolean;
   dashed: boolean;
   accent: 'carbs' | 'protein' | 'fat';
-  subRows?: SubNutrientRow[];
+  subRows?: SubNutrientRowSpec[];
 }
 
 const ACCENT_CLASSES = {
@@ -72,34 +72,7 @@ function MacroSquareCell({
   subRows,
 }: MacroSquareCellProps) {
   const hasSub = Boolean(subRows?.some((row) => typeof row.value === 'number'));
-  const [open, setOpen] = useState(false);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const styles = ACCENT_CLASSES[accent];
-
-  useEffect(() => {
-    return () => {
-      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-    };
-  }, []);
-
-  const clearCloseTimer = () => {
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
-    }
-  };
-
-  const handleMouseEnter = () => {
-    clearCloseTimer();
-    setOpen(true);
-  };
-
-  const handleMouseLeave = () => {
-    clearCloseTimer();
-    closeTimerRef.current = setTimeout(() => {
-      setOpen(false);
-    }, 90);
-  };
 
   const squareBody = (
     <div
@@ -143,74 +116,13 @@ function MacroSquareCell({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        nativeButton={false}
-        render={(props) => (
-          <div
-            {...props}
-            role="button"
-            tabIndex={0}
-            onPointerEnter={(e) => {
-              if (e.pointerType === 'mouse') handleMouseEnter();
-            }}
-            onPointerLeave={(e) => {
-              if (e.pointerType === 'mouse') handleMouseLeave();
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              clearCloseTimer();
-              setOpen((prev) => !prev);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                e.stopPropagation();
-                setOpen((prev) => !prev);
-              }
-            }}
-            className="outline-none"
-          >
-            {squareBody}
-          </div>
-        )}
-      />
-      <PopoverContent
-        side="bottom"
-        align="end"
-        sideOffset={4}
-        positionerClassName="z-[90]"
-        onPointerEnter={(e) => {
-          if (e.pointerType === 'mouse') handleMouseEnter();
-        }}
-        onPointerLeave={(e) => {
-          if (e.pointerType === 'mouse') handleMouseLeave();
-        }}
-        onClick={(e) => e.stopPropagation()}
-        className="w-44 p-1 gap-0 bg-popover text-popover-foreground border border-border shadow-none rounded-lg select-none font-mono"
-      >
-        <div className="space-y-0.5 text-xs">
-          {subRows.map((row) => (
-            <div
-              key={row.label}
-              className="h-8 flex items-center justify-between px-2 rounded hover:bg-hover transition-colors"
-            >
-              <span className="text-muted-foreground font-sans text-xs">{row.label}</span>
-              {typeof row.value === 'number' ? (
-                <MetricValue
-                  value={row.value}
-                  unit="g"
-                  valueClassName="text-foreground/80 text-xs"
-                  unitClassName="text-xs"
-                />
-              ) : (
-                <span className="text-muted-foreground/40 select-none font-mono text-xs">-</span>
-              )}
-            </div>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
+    <SubNutrientsPopover
+      rows={subRows}
+      align="end"
+      positionerClassName="z-[90]"
+    >
+      {squareBody}
+    </SubNutrientsPopover>
   );
 }
 
@@ -259,10 +171,7 @@ export const MacroSquares = React.memo(function MacroSquares({
         isSubtle={isSubtle}
         dashed={dashed}
         accent="carbs"
-        subRows={[
-          { label: t('diet.sugar', '糖'), value: sugar },
-          { label: t('diet.fiber', '膳食纖維'), value: fiber },
-        ]}
+        subRows={buildCarbsSubRows(t, sugar, fiber)}
       />
       <MacroSquareCell
         label={t('diet.macroMicro.protein', '蛋')}
@@ -279,10 +188,7 @@ export const MacroSquares = React.memo(function MacroSquares({
         isSubtle={isSubtle}
         dashed={dashed}
         accent="fat"
-        subRows={[
-          { label: t('diet.saturatedFat', '飽和脂肪'), value: saturatedFat },
-          { label: t('diet.transFat', '反式脂肪'), value: transFat },
-        ]}
+        subRows={buildFatSubRows(t, saturatedFat, transFat)}
       />
     </div>
   );

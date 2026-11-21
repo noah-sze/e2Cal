@@ -128,16 +128,33 @@ export function useFoodLogs(date: string) {
 
   const logs: HydratedFoodLog[] = queryResult?.hydratedLogs || [];
 
-  // 當日巨量營養素統計（動態計算值）
+  // 當日巨量與次要營養素統計（動態計算值）
   const totals = logs.reduce(
     (acc, item) => {
       acc.calories += item.calories || 0;
       acc.protein += item.protein || 0;
       acc.carbs += item.carbs || 0;
       acc.fat += item.fat || 0;
+      if (typeof item.sugar === 'number') acc.sugar = (acc.sugar ?? 0) + item.sugar;
+      if (typeof item.fiber === 'number') acc.fiber = (acc.fiber ?? 0) + item.fiber;
+      if (typeof item.saturatedFat === 'number') {
+        acc.saturatedFat = (acc.saturatedFat ?? 0) + item.saturatedFat;
+      }
+      if (typeof item.transFat === 'number') {
+        acc.transFat = (acc.transFat ?? 0) + item.transFat;
+      }
       return acc;
     },
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    {
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      sugar: undefined as number | undefined,
+      fiber: undefined as number | undefined,
+      saturatedFat: undefined as number | undefined,
+      transFat: undefined as number | undefined,
+    }
   );
 
   // 按餐別分組

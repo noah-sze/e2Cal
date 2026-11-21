@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MetricValue } from '@/components/ui/metric-value';
 import { SectionCard } from '@/components/ui/section-card';
 import { Badge } from '@/components/ui/badge';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { NutritionBasisToggle } from '@/components/food/NutritionBasisToggle';
 import { NutritionFactsCard, type NutritionFactsData } from '@/components/food/NutritionFactsCard';
+import {
+  SubNutrientsPopover,
+  buildCarbsSubRows,
+  buildFatSubRows,
+} from '@/components/food/SubNutrientsPopover';
 import type { BodyHighlighterGender } from '@/components/workout/BodyHighlighter';
 import { AdaptiveMuscleBadgeGroup } from '@/components/workout/AdaptiveMuscleBadgeGroup';
 import { TargetMusclesCard } from '@/components/workout/TargetMusclesCard';
@@ -47,6 +53,7 @@ const MOCK_ADAPTIVE_ENTRIES: [DetailedMuscle, MuscleRole | number][] = [
 ];
 
 export const ComponentsTab: React.FC = () => {
+  const { t } = useTranslation();
   // 人體解剖模型性別狀態
   const [highlighterGender, setHighlighterGender] = useState<BodyHighlighterGender>('male');
 
@@ -151,19 +158,53 @@ export const ComponentsTab: React.FC = () => {
           Nutrition & macro standards
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {/* NutritionBasisToggle */}
-          <div className="p-4 rounded-lg border border-border bg-card space-y-3">
-            <div className="flex items-center justify-between">
-              <CopySnippet variant="subtle" value="<NutritionBasisToggle />" className="text-xs font-medium text-foreground">
-                NutritionBasisToggle
-              </CopySnippet>
-              <span className="text-3xs font-mono text-muted-foreground">ZUSTAND SSOT</span>
+          {/* 左側欄：NutritionBasisToggle + SubNutrientsPopover */}
+          <div className="space-y-3">
+            {/* NutritionBasisToggle */}
+            <div className="p-4 rounded-lg border border-border bg-card space-y-3">
+              <div className="flex items-center justify-between">
+                <CopySnippet variant="subtle" value="<NutritionBasisToggle />" className="text-xs font-medium text-foreground">
+                  NutritionBasisToggle
+                </CopySnippet>
+                <span className="text-3xs font-mono text-muted-foreground">ZUSTAND SSOT</span>
+              </div>
+              <p className="text-2xs text-muted-foreground leading-normal">
+                全域基準切換微型膠囊（每份 vs 每 100g），即時穿透至全站營養素計算。
+              </p>
+              <div className="pt-2 flex justify-center">
+                <NutritionBasisToggle />
+              </div>
             </div>
-            <p className="text-2xs text-muted-foreground leading-normal">
-              全域基準切換微型膠囊（每份 vs 每 100g），即時穿透至全站營養素計算。
-            </p>
-            <div className="pt-2 flex justify-center">
-              <NutritionBasisToggle />
+
+            {/* SubNutrientsPopover */}
+            <div className="p-4 rounded-lg border border-border bg-card space-y-3">
+              <div className="flex items-center justify-between">
+                <CopySnippet variant="subtle" value="<SubNutrientsPopover />" className="text-xs font-medium text-foreground">
+                  SubNutrientsPopover
+                </CopySnippet>
+                <span className="text-3xs font-mono text-muted-foreground">CLICK POPOVER</span>
+              </div>
+              <p className="text-2xs text-muted-foreground leading-normal">
+                共用於進度條、方形膠囊與營養成分表之次要營養素純點擊浮層（含色塊圖例 Swatch）。
+              </p>
+              <div className="pt-1 flex items-center justify-center gap-2">
+                <SubNutrientsPopover
+                  align="start"
+                  rows={buildCarbsSubRows(t, 18.4, 12.6)}
+                >
+                  <span className="inline-flex items-center h-7 px-3 rounded-full border border-carbs-subtle-border bg-carbs-subtle-bg hover:bg-hover text-carbs font-mono text-xs cursor-pointer transition-colors">
+                    碳水次級
+                  </span>
+                </SubNutrientsPopover>
+                <SubNutrientsPopover
+                  align="end"
+                  rows={buildFatSubRows(t, 9.2, 0.4)}
+                >
+                  <span className="inline-flex items-center h-7 px-3 rounded-full border border-fat-subtle-border bg-fat-subtle-bg hover:bg-hover text-fat font-mono text-xs cursor-pointer transition-colors">
+                    脂肪次級
+                  </span>
+                </SubNutrientsPopover>
+              </div>
             </div>
           </div>
 
