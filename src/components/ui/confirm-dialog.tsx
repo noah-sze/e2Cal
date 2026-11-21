@@ -237,7 +237,7 @@ export function ConfirmDialog({
               type="button"
               onClick={handleConfirm}
               className={cn(
-                'w-full h-9 rounded-md bg-destructive text-destructive-foreground hover:opacity-90 active:opacity-80 font-mono text-xs font-semibold transition-all cursor-pointer flex items-center justify-center select-none'
+                'w-full h-9 rounded-md bg-destructive text-destructive-foreground hover:opacity-90 active:opacity-80 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center select-none'
               )}
             >
               {confirmText || (typeof title === 'string' ? title : t('common.confirm'))}

@@ -51,7 +51,7 @@ export function HoldToDeleteButton({
       {...handlers}
       disabled={disabled || isCompleted}
       className={cn(
-        'w-full h-9 rounded-md font-mono text-xs font-semibold cursor-pointer select-none relative overflow-hidden flex items-center justify-center outline-none active:scale-[0.985] transition-transform',
+        'w-full h-9 rounded-md text-xs font-semibold cursor-pointer select-none relative overflow-hidden flex items-center justify-center outline-none active:scale-[0.985] transition-transform',
         isPrimary
           ? 'bg-primary-subtle text-foreground border border-primary-subtle-border hover:border-foreground'
           : 'bg-destructive-subtle text-destructive border border-destructive/30 hover:border-destructive/50',

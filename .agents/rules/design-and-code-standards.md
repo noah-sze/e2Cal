@@ -65,7 +65,7 @@ trigger: always_on
   - **底層真理源**：所有表單與管理 Dialog 一律採用 `@/components/ui/dialog` 之 `<PrecisionDialogContent>`（或 `DialogContent size="standard"`）。
     - 寬度：`w-[320px] max-w-[calc(100vw-24px)] sm:w-[320px] sm:max-w-[320px]`。
     - 內邊距：全端恆定 `16px`（`p-4 sm:p-4`，杜絕桌面端洩漏 24px 大邊距）。
-    - 外觀：`font-mono text-xs select-none shadow-none bg-card border border-border`，原生級瞬時彈出（Instant Pop，禁慢速漸入動畫）。
+    - 外觀：`text-xs select-none shadow-none bg-card border border-border`（預設 `font-sans`，僅數值、單位與日期數字使用 `font-mono`），原生級瞬時彈出（Instant Pop，禁慢速漸入動畫）。
   - **外層 Flex 居中**：外層 `fixed inset-0 flex items-center justify-center p-4 pointer-events-none`，彈窗本體為普通 block。
   - **平鋪兄弟節點**：**絕對禁止彈窗巢狀聲明**（Dialog 內部寫 Dialog），次級彈窗遮罩與本體必須指定更高層級（如 `z-[70]` 對 `z-[60]`）。
   - **焦點管理**：彈窗掛載**嚴禁輸入框 `autoFocus` 或 JS 主動 `.focus()`**，避免鍵盤自動彈出遮擋。
@@ -100,8 +100,11 @@ trigger: always_on
   - **品牌命名與客觀計量**：品牌食品統一為「`品牌 · 名稱`」；固體一律以克 (`g`)、液體一律以毫升 (`ml`) 為唯一底層計量真理源，**嚴格禁止「1 勺」、「1 碗」、「中顆」等模糊量詞**。
 - **三大營養素全域統一排序契約 (Strict Macro Order: C -> P -> F)**：
   - 全應用程式（方塊矩陣、表單輸入列、HUD 看板、文字副標、過濾選單等）中涉及三大元素時，**嚴格統一固定為「碳水化合物 -> 蛋白質 -> 脂肪 (C -> P -> F)」**，絕對嚴禁顛倒順序。
-- **微量元素（鈉 Sodium）專屬水青電解質色彩契約**：
-  - 鈉作為調控體液滲透壓與電解質平衡之微量元素，全站唯一採用**水青湖綠 (Teal)** 色系（Token 為 `--sodium`，亮色 `#0d9488` / 深色 `#14b8a6`），嚴禁使用批判性警示紅黃色。
+- **微量元素（鈉 Sodium）專屬水青電解質色彩契約（僅供預留／歷史相容參考）**：
+  - 鈉作為調控體液滲透壓與電解質平衡之微量元素，若於內部相容邏輯引用色彩時採用**水青湖綠 (Teal)** 色系（Token 為 `--sodium`，亮色 `#0d9488` / 深色 `#14b8a6`），嚴禁使用批判性警示紅黃色；惟**使用者端介面不得展示**。
+- **預留營養屬性對外隱藏契約 (Reserved Nutrient Attributes — UI Hidden)**：
+  - **預留屬性清單**：`飽和脂肪 (saturatedFat)`、`反式脂肪 (transFat)`、`鈉 (sodium)` 均為領域模型之**預留屬性**，不得出現於使用者端介面（包含成分卡片、儀表板進度條、展開氣泡與表單輸入）。
+  - **心智減負與可移除性**：此類指標只會增加使用者記錄門檻與心智負擔；現階段僅於資料層保留結構相容性，**禁止於 UI 層新增或恢復其展示與輸入入口**，未來可視演進直接刪除相關代碼與欄位。
 - **純 ID 關聯正規化原則 (Strict Pure ID Association & Dynamic Hydration)**：
   - 專案所有資料庫實體（IndexedDB）、同步分卷與備份結構中，凡多對一或組合引用，**持久層僅允許儲存外鍵 ID 及物理事實量**。
   - **絕對嚴禁儲存反正規化快照欄位**（如 `foodName`, `exerciseName`, `calories` 等可變屬性）；展示指標於前端記憶體透過維度表即時 Join 動態解析裝載。
@@ -114,7 +117,7 @@ trigger: always_on
 ---
 
 ## 5. 違規紅線速查清單 (Strict Prohibitions Checklist)
-以下 34 項行為在專案中被**絕對禁止**：
+以下 35 項行為在專案中被**絕對禁止**：
 1. **不得進行主觀批判與行為干涉**：嚴禁指示「該吃什麼」、「超標了」、「少練了」等批判警示或紅色超標卡片。
 2. **不得 Copy-Paste JSX**：凡重複 2 次以上必須抽離為共用元件。
 3. **不得使用 Arbitrary 任意數值與魔術色碼**：嚴禁使用未經 Tokens 定義的臨時值。
@@ -149,3 +152,4 @@ trigger: always_on
 32. **不得在承載文字之容器上寫死固定高度 `h-*` 或濫用 `overflow-hidden`**：一律 `min-h-*` 自然撐開。
 33. **不得對核心客觀度量數據與確認操作按鈕附加 `truncate` 截斷**：客觀物理事實完整呈現。
 34. **不得在「數字 + 物理單位」間手寫字串空格**：一律由 `<MetricValue />` 輸出，嚴格落實 2px (`ml-0.5`) 微排版契約與雙字體分離。
+35. **不得於使用者端介面展示或提供記錄「飽和脂肪、反式脂肪、鈉」**：三者均屬預留屬性，禁止出現於前端任何組件與表單中。

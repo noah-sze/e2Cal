@@ -428,7 +428,7 @@ export function CopyMealDialog({
           size="standard"
           showCloseButton={false}
           initialFocus={false}
-          className="w-[320px] sm:w-[340px] max-w-[calc(100vw-24px)] sm:max-w-[340px] p-4 pb-5 sm:p-4 sm:pb-5 bg-card text-card-foreground border border-border shadow-none font-mono text-xs select-none flex flex-col overflow-hidden max-h-[85vh] max-h-[85dvh]"
+          className="w-[320px] sm:w-[340px] max-w-[calc(100vw-24px)] sm:max-w-[340px] p-4 pb-5 sm:p-4 sm:pb-5 bg-card text-card-foreground border border-border shadow-none text-xs select-none flex flex-col overflow-hidden max-h-[85vh] max-h-[85dvh]"
         >
           {/* 頂部標準標頭：左上角 ✕ 關閉，中間標題純粹「複製餐點」（去綴詞），右上角 ✓ 確認複製 */}
           <DialogPrecisionHeader
@@ -526,10 +526,10 @@ export function CopyMealDialog({
             <div className="flex-1 overflow-y-auto overscroll-contain">
               {items.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-1">
-                  <span className="text-xs text-muted-foreground font-mono">
+                  <span className="text-xs text-muted-foreground">
                     {t('diet.copyMeal.empty', '該餐別無歷史記錄')}
                   </span>
-                  <span className="text-2xs text-muted-foreground/60 font-mono">
+                  <span className="text-2xs text-muted-foreground/60">
                     {t('diet.copyMeal.emptyHint', '請選擇其他日期')}
                   </span>
                 </div>
@@ -609,7 +609,7 @@ export function CopyMealDialog({
           </div>
 
           {/* 底部單行彙總條（自然無縫留白，無分割線） */}
-          <div className="flex items-center justify-center px-1 pt-0 pb-0 text-xs font-mono text-muted-foreground shrink-0 select-none">
+          <div className="flex items-center justify-center px-1 pt-0 pb-0 text-xs text-muted-foreground shrink-0 select-none">
             <span>
               {t('diet.copyMeal.summary', {
                 count: selectedCount,

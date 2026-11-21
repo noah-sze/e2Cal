@@ -4,7 +4,6 @@ import { MetricValue } from '@/components/ui/metric-value';
 import {
   SubNutrientsPopover,
   buildCarbsSubRows,
-  buildFatSubRows,
   type SubNutrientRowSpec,
 } from '@/components/food/SubNutrientsPopover';
 import { cn } from '@/lib/utils';
@@ -170,14 +169,6 @@ export const MacroProgressGrid = React.memo(function MacroProgressGrid({
   const boundedFiber = Math.min(fiberVal, Math.max(0, totals.carbs - boundedSugar));
   const otherCarbs = Math.max(0, totals.carbs - boundedSugar - boundedFiber);
 
-  // 脂肪分段計算
-  const fatDenom = Math.max(targetMacros.fatGrams, totals.fat);
-  const satFatVal = typeof totals.saturatedFat === 'number' ? Math.max(0, totals.saturatedFat) : 0;
-  const transFatVal = typeof totals.transFat === 'number' ? Math.max(0, totals.transFat) : 0;
-  const boundedSatFat = Math.min(satFatVal, totals.fat);
-  const boundedTransFat = Math.min(transFatVal, Math.max(0, totals.fat - boundedSatFat));
-  const otherFat = Math.max(0, totals.fat - boundedSatFat - boundedTransFat);
-
   return (
     <div className={cn('grid grid-cols-3 divide-x divide-border border-t border-border', className)}>
       {/* 1. 碳水化合物 */}
@@ -227,24 +218,10 @@ export const MacroProgressGrid = React.memo(function MacroProgressGrid({
         current={totals.fat}
         target={targetMacros.fatGrams}
         trackClassName="bg-fat-subtle"
-        align="end"
         interactive={interactive}
         segments={[
-          {
-            key: 'satFat',
-            pct: toPct(boundedSatFat, fatDenom),
-            className: 'bg-fat-dark',
-            minWidthPx: boundedSatFat > 0 ? 4 : undefined,
-          },
-          {
-            key: 'transFat',
-            pct: toPct(boundedTransFat, fatDenom),
-            className: 'bg-trans-fat-bar',
-            minWidthPx: boundedTransFat > 0 ? 4 : undefined,
-          },
-          { key: 'other', pct: toPct(otherFat, fatDenom), className: 'bg-fat' },
+          { key: 'fat', pct: toPct(totals.fat, targetMacros.fatGrams), className: 'bg-fat' },
         ]}
-        subRows={buildFatSubRows(t, totals.saturatedFat, totals.transFat)}
       />
     </div>
   );

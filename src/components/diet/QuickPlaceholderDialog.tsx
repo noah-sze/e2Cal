@@ -758,13 +758,12 @@ export function QuickPlaceholderDialog({
               ))}
             </div>
 
-            {/* 3. 營養成分表（共用通用規格卡片，無表頭，支援 C/P/F、次要元素與鈉輸入） */}
+            {/* 3. 營養成分表（共用通用規格卡片，無表頭，支援 C/P/F 與次要元素輸入） */}
             <NutritionFactsCard
               showHeader={false}
               action={null}
               showServingRow={false}
               showCaloriesRow={false}
-              showSodiumRow={true}
               highlights={evalHighlights}
               data={{
                 calories,

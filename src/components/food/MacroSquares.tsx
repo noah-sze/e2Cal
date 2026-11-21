@@ -6,7 +6,6 @@ import { AutoMarquee } from '@/components/ui/AutoMarquee';
 import {
   SubNutrientsPopover,
   buildCarbsSubRows,
-  buildFatSubRows,
   type SubNutrientRowSpec,
 } from '@/components/food/SubNutrientsPopover';
 import { cn } from '@/lib/utils';
@@ -141,8 +140,6 @@ export const MacroSquares = React.memo(function MacroSquares({
   fat,
   sugar,
   fiber,
-  saturatedFat,
-  transFat,
   highlights,
   variant = 'default',
   dashed = false,
@@ -188,7 +185,6 @@ export const MacroSquares = React.memo(function MacroSquares({
         isSubtle={isSubtle}
         dashed={dashed}
         accent="fat"
-        subRows={buildFatSubRows(t, saturatedFat, transFat)}
       />
     </div>
   );

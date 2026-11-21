@@ -34,7 +34,7 @@ export function SectionCard({
       )}
     >
       {showHeader && (
-        <div className="h-10 px-4 bg-muted/40 border-b border-border flex items-center justify-between gap-2 text-xs font-mono text-muted-foreground shrink-0">
+        <div className="h-10 px-4 bg-muted/40 border-b border-border flex items-center justify-between gap-2 text-xs text-muted-foreground shrink-0">
           <span className="text-xs uppercase tracking-wider font-medium text-foreground truncate">
             {title}
           </span>

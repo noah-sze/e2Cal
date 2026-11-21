@@ -65,8 +65,10 @@ export interface NutritionFactsCardProps {
   showServingRow?: boolean;
   /** 是否顯示熱量行，預設為 true */
   showCaloriesRow?: boolean;
-  /** 是否顯示鈉指標行，預設為 true */
+  /** 是否顯示鈉指標行，預設為 false（減輕記錄心智負擔，預設隱藏鈉） */
   showSodiumRow?: boolean;
+  /** 是否顯示脂肪次級指標（飽和脂肪、反式脂肪），預設為 false */
+  showFatSub?: boolean;
   /** 碳水化合物次級指標初始展開狀態 */
   defaultCarbsExpanded?: boolean;
   /** 脂肪次級指標初始展開狀態 */
@@ -104,7 +106,8 @@ export function NutritionFactsCard({
   showHeader = true,
   showServingRow = true,
   showCaloriesRow = true,
-  showSodiumRow = true,
+  showSodiumRow = false,
+  showFatSub = false,
   editable,
   className,
 }: NutritionFactsCardProps) {
@@ -130,9 +133,10 @@ export function NutritionFactsCard({
     typeof fiberVal === 'number'
   );
   const hasFatSub = Boolean(
-    editable?.alwaysShowSubChevrons ||
-    typeof satFatVal === 'number' ||
-    typeof transFatVal === 'number'
+    showFatSub &&
+    (editable?.alwaysShowSubChevrons ||
+      typeof satFatVal === 'number' ||
+      typeof transFatVal === 'number')
   );
 
   // 智慧保底高亮狀態：若外部未顯式傳入 highlights，自動根據當前營養素推算客觀點亮狀態

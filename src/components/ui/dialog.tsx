@@ -43,8 +43,8 @@ function DialogOverlay({
 
 const dialogSizeClasses = {
   default: "max-w-[calc(100%-2rem)] max-h-[min(88vh,calc(100%-2rem))] max-h-[min(88dvh,calc(100%-2rem))] p-5 sm:p-6 text-sm sm:max-w-[400px]",
-  compact: "w-[320px] max-w-[calc(100vw-24px)] sm:w-[320px] sm:max-w-[320px] p-4 sm:p-4 font-mono text-xs select-none shadow-none",
-  standard: "w-[320px] max-w-[calc(100vw-24px)] sm:w-[320px] sm:max-w-[320px] p-4 sm:p-4 font-mono text-xs select-none shadow-none",
+  compact: "w-[320px] max-w-[calc(100vw-24px)] sm:w-[320px] sm:max-w-[320px] p-4 sm:p-4 text-xs select-none shadow-none",
+  standard: "w-[320px] max-w-[calc(100vw-24px)] sm:w-[320px] sm:max-w-[320px] p-4 sm:p-4 text-xs select-none shadow-none",
 }
 
 export interface DialogContentProps extends DialogPrimitive.Popup.Props {

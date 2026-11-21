@@ -125,14 +125,7 @@ export function RecipeIngredientsCard({
                   className="text-left min-w-0 flex-1 truncate text-xs font-normal text-foreground hover:opacity-75 transition-opacity cursor-pointer outline-none"
                   title={item.foodName}
                 >
-                  <div className="flex items-center gap-1.5 truncate">
-                    <span className="truncate">{item.foodName || t('common.unknown')}</span>
-                    {item.isOptional && (
-                      <span className="text-[10px] font-mono border border-dashed border-border px-1.5 py-0.5 rounded text-muted-foreground shrink-0">
-                        {t('diet.optionalBadge')}
-                      </span>
-                    )}
-                  </div>
+                  <span className="block truncate">{item.foodName || t('common.unknown')}</span>
                 </button>
 
                 {/* 右側：用量膠囊 + 刪除按鈕 */}
@@ -182,15 +175,8 @@ export function RecipeIngredientsCard({
               className="min-h-16 py-2.5 px-4 flex items-center justify-between hover:bg-hover transition-colors cursor-pointer group"
             >
               <div className="flex-1 min-w-0 pr-3 select-none">
-                <div className="flex items-center gap-1.5 truncate">
-                  <span className="truncate text-foreground font-medium text-sm">
-                    {item.foodName || t('common.unknown')}
-                  </span>
-                  {item.isOptional && (
-                    <span className="text-[10px] font-mono border border-dashed border-border px-1.5 py-0.5 rounded text-muted-foreground shrink-0">
-                      {t('diet.optionalBadge')}
-                    </span>
-                  )}
+                <div className="truncate text-foreground font-medium text-sm">
+                  {item.foodName || t('common.unknown')}
                 </div>
                 <div className="text-[11px] font-mono text-muted-foreground truncate mt-0.5 flex items-center gap-1.5">
                   <span>
