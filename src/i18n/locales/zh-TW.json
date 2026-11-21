@@ -611,7 +611,7 @@
       "customEquipment": "自定義器械",
       "equipmentName": "器械名稱",
       "equipmentPlaceholder": "例如：滑輪機",
-      "exerciseNamePlaceholder": "例如：槓鈴臥推",
+      "exerciseNamePlaceholder": "名稱",
       "searchEquipmentPlaceholder": "搜尋器械名稱...",
       "selectDateHint": "可套用現有組合或直接新增動作進行練後記錄"
     },

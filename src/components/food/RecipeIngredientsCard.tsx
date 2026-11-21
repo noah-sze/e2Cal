@@ -96,7 +96,7 @@ export function RecipeIngredientsCard({
       bodyClassName="text-sm"
     >
       {items.length === 0 ? (
-        <div className="py-6 px-4 text-center shrink-0">
+        <div className="min-h-12 py-2 px-3 sm:px-4 flex items-center justify-center shrink-0">
           {onAddIngredient ? (
             <button
               type="button"

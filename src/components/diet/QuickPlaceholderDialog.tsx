@@ -12,6 +12,10 @@ import { MetricValue } from '@/components/ui/metric-value';
 import { HoldToDeleteButton } from '@/components/ui/HoldToDeleteButton';
 import { NutritionFactsCard, type NutritionField } from '@/components/food/NutritionFactsCard';
 import { evaluateNutritionalHighlight } from '@/utils/nutritionEvaluation';
+import {
+  syncParentWithSubNutrients,
+  clampParentToSubNutrients,
+} from '@/utils/macroSubNutrientsMath';
 import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
 import { cn, formatDisplayAmount } from '@/lib/utils';
@@ -314,35 +318,35 @@ export function QuickPlaceholderDialog({
 
     if (initialData) {
       const initCarbs =
-        typeof initialData.carbs === 'number' && initialData.carbs > 0 ? initialData.carbs : null;
+        typeof initialData.carbs === 'number' && initialData.carbs >= 0 ? initialData.carbs : null;
       const initProtein =
-        typeof initialData.protein === 'number' && initialData.protein > 0
+        typeof initialData.protein === 'number' && initialData.protein >= 0
           ? initialData.protein
           : null;
       const initFat =
-        typeof initialData.fat === 'number' && initialData.fat > 0 ? initialData.fat : null;
+        typeof initialData.fat === 'number' && initialData.fat >= 0 ? initialData.fat : null;
 
       setCarbs(initCarbs);
       setProtein(initProtein);
       setFat(initFat);
       setSugar(
-        typeof initialData.sugar === 'number' && initialData.sugar > 0 ? initialData.sugar : null
+        typeof initialData.sugar === 'number' && initialData.sugar >= 0 ? initialData.sugar : null
       );
       setFiber(
-        typeof initialData.fiber === 'number' && initialData.fiber > 0 ? initialData.fiber : null
+        typeof initialData.fiber === 'number' && initialData.fiber >= 0 ? initialData.fiber : null
       );
       setSaturatedFat(
-        typeof initialData.saturatedFat === 'number' && initialData.saturatedFat > 0
+        typeof initialData.saturatedFat === 'number' && initialData.saturatedFat >= 0
           ? initialData.saturatedFat
           : null
       );
       setTransFat(
-        typeof initialData.transFat === 'number' && initialData.transFat > 0
+        typeof initialData.transFat === 'number' && initialData.transFat >= 0
           ? initialData.transFat
           : null
       );
       setSodium(
-        typeof initialData.sodium === 'number' && initialData.sodium > 0 ? initialData.sodium : null
+        typeof initialData.sodium === 'number' && initialData.sodium >= 0 ? initialData.sodium : null
       );
 
       const hasInitMacro = initCarbs !== null || initProtein !== null || initFat !== null;
@@ -382,14 +386,32 @@ export function QuickPlaceholderDialog({
     setActiveKeypad(null);
   }, [open, initialData, t]);
 
-  const applyNutrientField = (field: Exclude<EstimateKeypadField, 'calories'>, rawValue: number) => {
-    const safe1 = rawValue > 0 ? round1(rawValue) : null;
-    const safeInt = rawValue > 0 ? Math.round(rawValue) : null;
+  const applyNutrientField = (
+    field: Exclude<EstimateKeypadField, 'calories'>,
+    rawValue: number,
+    options?: {
+      baseCarbs?: number | null;
+      baseFat?: number | null;
+      clampParent?: boolean;
+    }
+  ) => {
+    const safe1 = rawValue >= 0 ? round1(rawValue) : null;
+    const safeInt = rawValue >= 0 ? Math.round(rawValue) : null;
 
     if (field === 'carbs' || field === 'protein' || field === 'fat') {
-      const nextCarbs = field === 'carbs' ? safe1 : carbs;
+      const nextCarbs =
+        field === 'carbs'
+          ? options?.clampParent
+            ? clampParentToSubNutrients(safe1, sugar, fiber)
+            : safe1
+          : carbs;
       const nextProtein = field === 'protein' ? safe1 : protein;
-      const nextFat = field === 'fat' ? safe1 : fat;
+      const nextFat =
+        field === 'fat'
+          ? options?.clampParent
+            ? clampParentToSubNutrients(safe1, saturatedFat, transFat)
+            : safe1
+          : fat;
       setCarbs(nextCarbs);
       setProtein(nextProtein);
       setFat(nextFat);
@@ -398,18 +420,38 @@ export function QuickPlaceholderDialog({
     }
 
     switch (field) {
-      case 'sugar':
+      case 'sugar': {
         setSugar(safe1);
+        const baseCarbs = options && 'baseCarbs' in options ? options.baseCarbs : carbs;
+        const nextCarbs = syncParentWithSubNutrients(baseCarbs, safe1, fiber);
+        setCarbs(nextCarbs);
+        setCalories(calcCaloriesFromMacros(nextCarbs, protein, fat));
         break;
-      case 'fiber':
+      }
+      case 'fiber': {
         setFiber(safe1);
+        const baseCarbs = options && 'baseCarbs' in options ? options.baseCarbs : carbs;
+        const nextCarbs = syncParentWithSubNutrients(baseCarbs, sugar, safe1);
+        setCarbs(nextCarbs);
+        setCalories(calcCaloriesFromMacros(nextCarbs, protein, fat));
         break;
-      case 'saturatedFat':
+      }
+      case 'saturatedFat': {
         setSaturatedFat(safe1);
+        const baseFat = options && 'baseFat' in options ? options.baseFat : fat;
+        const nextFat = syncParentWithSubNutrients(baseFat, safe1, transFat);
+        setFat(nextFat);
+        setCalories(calcCaloriesFromMacros(carbs, protein, nextFat));
         break;
-      case 'transFat':
+      }
+      case 'transFat': {
         setTransFat(safe1);
+        const baseFat = options && 'baseFat' in options ? options.baseFat : fat;
+        const nextFat = syncParentWithSubNutrients(baseFat, saturatedFat, safe1);
+        setFat(nextFat);
+        setCalories(calcCaloriesFromMacros(carbs, protein, nextFat));
         break;
+      }
       case 'sodium':
         setSodium(safeInt);
         break;
@@ -454,7 +496,11 @@ export function QuickPlaceholderDialog({
     if (activeKeypad.field === 'calories') {
       applyScaledCalories(activeKeypad.snapshot, safeVal);
     } else {
-      applyNutrientField(activeKeypad.field, safeVal);
+      applyNutrientField(activeKeypad.field, safeVal, {
+        baseCarbs: activeKeypad.snapshot.carbs,
+        baseFat: activeKeypad.snapshot.fat,
+        clampParent: false,
+      });
     }
   };
 
@@ -464,7 +510,11 @@ export function QuickPlaceholderDialog({
     if (activeKeypad.field === 'calories') {
       applyScaledCalories(activeKeypad.snapshot, safeVal);
     } else {
-      applyNutrientField(activeKeypad.field, safeVal);
+      applyNutrientField(activeKeypad.field, safeVal, {
+        baseCarbs: activeKeypad.snapshot.carbs,
+        baseFat: activeKeypad.snapshot.fat,
+        clampParent: true,
+      });
     }
     setActiveKeypad(null);
   };
@@ -509,13 +559,13 @@ export function QuickPlaceholderDialog({
         carbs: finalCarbs,
         protein: finalProtein,
         fat: finalFat,
-        ...(sugar !== null && sugar > 0 ? { sugar: round1(sugar) } : {}),
-        ...(fiber !== null && fiber > 0 ? { fiber: round1(fiber) } : {}),
-        ...(saturatedFat !== null && saturatedFat > 0
+        ...(sugar !== null && sugar >= 0 ? { sugar: round1(sugar) } : {}),
+        ...(fiber !== null && fiber >= 0 ? { fiber: round1(fiber) } : {}),
+        ...(saturatedFat !== null && saturatedFat >= 0
           ? { saturatedFat: round1(saturatedFat) }
           : {}),
-        ...(transFat !== null && transFat > 0 ? { transFat: round1(transFat) } : {}),
-        ...(sodium !== null && sodium > 0 ? { sodium: Math.round(sodium) } : {}),
+        ...(transFat !== null && transFat >= 0 ? { transFat: round1(transFat) } : {}),
+        ...(sodium !== null && sodium >= 0 ? { sodium: Math.round(sodium) } : {}),
       });
       triggerHaptic('success');
       toast.show(t('diet.placeholder.successToast', '已記錄估算'));
@@ -729,6 +779,7 @@ export function QuickPlaceholderDialog({
               }}
               editable={{
                 alwaysShowSubChevrons: true,
+                lockSubPopover: Boolean(activeKeypad),
                 renderValue: (field: NutritionField) => {
                   if (field === 'serving' || field === 'calories') {
                     return null;

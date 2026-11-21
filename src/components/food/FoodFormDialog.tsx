@@ -19,6 +19,10 @@ import { cn, formatDisplayAmount } from '@/lib/utils';
 import { useFoods } from '@/hooks/useFoods';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { normalizeFoodInputToMetric } from '@/utils/nutritionMath';
+import {
+  syncParentWithSubNutrients,
+  clampParentToSubNutrients,
+} from '@/utils/macroSubNutrientsMath';
 import { convertFoodWeight, convertFoodVolume, kcalToKj } from '@/utils/unitMath';
 import { matchesAutocomplete } from '@/utils/multilingualSearch';
 import { ChevronRight } from 'lucide-react';
@@ -268,12 +272,19 @@ export function FoodFormDialog({
   const formatNum2 = (val: number) => (typeof val === 'number' && !Number.isNaN(val) && val >= 0 ? String(roundTo2(val)) : '');
   const formatInt = (val: number) => (typeof val === 'number' && !Number.isNaN(val) && val >= 0 ? String(Math.round(val)) : '');
 
-  // 記錄開啟鍵盤時的初始狀態，供取消時安全回滾 (Revert)
+  const parseOptionalStr = (str: string): number | null => {
+    if (str === '' || Number.isNaN(Number(str))) return null;
+    return Math.max(0, parseFloat(str));
+  };
+
+  // 記錄開啟鍵盤時的初始狀態，供取消時安全回滾 (Revert) 與次級聯動基準計算
   const initialKeypadValueRef = useRef<{ value: string; unit: string } | null>(null);
+  const initialParentRef = useRef<{ carbs: string; fat: string } | null>(null);
 
   // 打開懸浮/吸附精密數字鍵盤
   const openKeypad = (field: KeypadField, targetEl?: HTMLElement | null) => {
     triggerHaptic('selection');
+    initialParentRef.current = { carbs, fat };
     switch (field) {
       case 'serving': {
         const prefUnit = category === 'beverage' ? foodVolumeUnit : foodWeightUnit;
@@ -467,18 +478,34 @@ export function FoodFormDialog({
       case 'fat':
         setFat(formatNum2(val));
         break;
-      case 'sugar':
+      case 'sugar': {
         setSugar(formatNum2(val));
+        const baseC = parseOptionalStr(initialParentRef.current?.carbs ?? carbs);
+        const nextC = syncParentWithSubNutrients(baseC, val, parsedFiber);
+        setCarbs(nextC !== null ? formatNum2(nextC) : '');
         break;
-      case 'fiber':
+      }
+      case 'fiber': {
         setFiber(formatNum2(val));
+        const baseC = parseOptionalStr(initialParentRef.current?.carbs ?? carbs);
+        const nextC = syncParentWithSubNutrients(baseC, parsedSugar, val);
+        setCarbs(nextC !== null ? formatNum2(nextC) : '');
         break;
-      case 'saturatedFat':
+      }
+      case 'saturatedFat': {
         setSaturatedFat(formatNum2(val));
+        const baseF = parseOptionalStr(initialParentRef.current?.fat ?? fat);
+        const nextF = syncParentWithSubNutrients(baseF, val, parsedTransFat);
+        setFat(nextF !== null ? formatNum2(nextF) : '');
         break;
-      case 'transFat':
+      }
+      case 'transFat': {
         setTransFat(formatNum2(val));
+        const baseF = parseOptionalStr(initialParentRef.current?.fat ?? fat);
+        const nextF = syncParentWithSubNutrients(baseF, parsedSaturatedFat, val);
+        setFat(nextF !== null ? formatNum2(nextF) : '');
         break;
+      }
       case 'sodium':
         setSodium(formatInt(val));
         break;
@@ -516,15 +543,19 @@ export function FoodFormDialog({
         break;
       case 'sugar':
         setSugar(prevVal);
+        if (initialParentRef.current) setCarbs(initialParentRef.current.carbs);
         break;
       case 'fiber':
         setFiber(prevVal);
+        if (initialParentRef.current) setCarbs(initialParentRef.current.carbs);
         break;
       case 'saturatedFat':
         setSaturatedFat(prevVal);
+        if (initialParentRef.current) setFat(initialParentRef.current.fat);
         break;
       case 'transFat':
         setTransFat(prevVal);
+        if (initialParentRef.current) setFat(initialParentRef.current.fat);
         break;
       case 'sodium':
         setSodium(prevVal);
@@ -551,24 +582,44 @@ export function FoodFormDialog({
       case 'protein':
         setProtein(formatNum2(val));
         break;
-      case 'carbs':
-        setCarbs(formatNum2(val));
+      case 'carbs': {
+        const clampedC = clampParentToSubNutrients(val, parsedSugar, parsedFiber);
+        setCarbs(clampedC !== null ? formatNum2(clampedC) : formatNum2(val));
         break;
-      case 'fat':
-        setFat(formatNum2(val));
+      }
+      case 'fat': {
+        const clampedF = clampParentToSubNutrients(val, parsedSaturatedFat, parsedTransFat);
+        setFat(clampedF !== null ? formatNum2(clampedF) : formatNum2(val));
         break;
-      case 'sugar':
+      }
+      case 'sugar': {
         setSugar(formatNum2(val));
+        const baseC = parseOptionalStr(initialParentRef.current?.carbs ?? carbs);
+        const nextC = syncParentWithSubNutrients(baseC, val, parsedFiber);
+        setCarbs(nextC !== null ? formatNum2(nextC) : '');
         break;
-      case 'fiber':
+      }
+      case 'fiber': {
         setFiber(formatNum2(val));
+        const baseC = parseOptionalStr(initialParentRef.current?.carbs ?? carbs);
+        const nextC = syncParentWithSubNutrients(baseC, parsedSugar, val);
+        setCarbs(nextC !== null ? formatNum2(nextC) : '');
         break;
-      case 'saturatedFat':
+      }
+      case 'saturatedFat': {
         setSaturatedFat(formatNum2(val));
+        const baseF = parseOptionalStr(initialParentRef.current?.fat ?? fat);
+        const nextF = syncParentWithSubNutrients(baseF, val, parsedTransFat);
+        setFat(nextF !== null ? formatNum2(nextF) : '');
         break;
-      case 'transFat':
+      }
+      case 'transFat': {
         setTransFat(formatNum2(val));
+        const baseF = parseOptionalStr(initialParentRef.current?.fat ?? fat);
+        const nextF = syncParentWithSubNutrients(baseF, parsedSaturatedFat, val);
+        setFat(nextF !== null ? formatNum2(nextF) : '');
         break;
+      }
       case 'sodium':
         setSodium(formatInt(val));
         break;
@@ -858,6 +909,7 @@ export function FoodFormDialog({
             defaultFatExpanded={Boolean(saturatedFat !== '' || transFat !== '')}
             editable={{
               alwaysShowSubChevrons: true,
+              lockSubPopover: Boolean(keypadConfig),
               renderValue: (field) => {
                 switch (field) {
                   case 'serving':

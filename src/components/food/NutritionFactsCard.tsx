@@ -79,6 +79,8 @@ export interface NutritionFactsCardProps {
     renderValue: (field: NutritionField, defaultContent: React.ReactNode) => React.ReactNode;
     /** 在表單中即使次級指標為空也始終顯示 > 圖標以供展開填寫 */
     alwaysShowSubChevrons?: boolean;
+    /** 次級編輯鍵盤開啟期間鎖定 Popover 不隨外部點擊關閉 */
+    lockSubPopover?: boolean;
   };
   className?: string;
 }
@@ -213,6 +215,7 @@ export function NutritionFactsCard({
           align="start"
           alignOffset={16}
           positionerClassName="z-[70]"
+          lockOpen={Boolean(editable?.lockSubPopover)}
           rows={buildCarbsSubRows(t, sugarVal, fiberVal).map((row, idx) => ({
             ...row,
             renderValue: editable
@@ -312,6 +315,7 @@ export function NutritionFactsCard({
           align="start"
           alignOffset={16}
           positionerClassName="z-[70]"
+          lockOpen={Boolean(editable?.lockSubPopover)}
           rows={buildFatSubRows(t, satFatVal, transFatVal).map((row, idx) => ({
             ...row,
             renderValue: editable

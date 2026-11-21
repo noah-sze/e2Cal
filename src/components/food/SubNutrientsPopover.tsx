@@ -23,6 +23,8 @@ export interface SubNutrientsPopoverProps {
   sideOffset?: number;
   positionerClassName?: string;
   triggerClassName?: string;
+  /** 鎖定開啟狀態（例如開啟次級數字鍵盤時防止外部點擊／失焦誤關 Popover） */
+  lockOpen?: boolean;
 }
 
 const round1 = (val: number) => Math.round(val * 10) / 10;
@@ -62,9 +64,37 @@ export function SubNutrientsPopover({
   sideOffset = 4,
   positionerClassName = 'z-[70]',
   triggerClassName,
+  lockOpen = false,
 }: SubNutrientsPopoverProps) {
+  const [open, setOpen] = React.useState(false);
+  const unlockGraceUntilRef = React.useRef(0);
+  const prevLockOpenRef = React.useRef(lockOpen);
+
+  React.useEffect(() => {
+    if (prevLockOpenRef.current && !lockOpen) {
+      unlockGraceUntilRef.current = performance.now() + 150;
+    }
+    prevLockOpenRef.current = lockOpen;
+  }, [lockOpen]);
+
+  const handleOpenChange: React.ComponentProps<typeof Popover>['onOpenChange'] = (
+    nextOpen,
+    eventDetails
+  ) => {
+    if (!nextOpen) {
+      const reason = eventDetails?.reason;
+      if (lockOpen && reason !== 'trigger-press') {
+        return;
+      }
+      if (reason === 'focus-out' && performance.now() < unlockGraceUntilRef.current) {
+        return;
+      }
+    }
+    setOpen(nextOpen);
+  };
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         nativeButton={false}
         render={(props, state) => (

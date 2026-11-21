@@ -46,7 +46,7 @@ export interface ResponsiveNumericKeypadProps {
   maxDecimals?: number
   /** 是否允許負數 (預設: false) */
   allowNegative?: boolean
-  /** 是否允許確認送出 0 或空值 (預設: false) */
+  /** 是否允許確認送出 0 或空值 (預設: true) */
   allowZero?: boolean
 
   /** 確認回調 */
@@ -104,7 +104,7 @@ export function ResponsiveNumericKeypad({
   allowDecimals = true,
   maxDecimals = 2,
   allowNegative = false,
-  allowZero = false,
+  allowZero = true,
   onConfirm,
   onCancel,
   onDelete,

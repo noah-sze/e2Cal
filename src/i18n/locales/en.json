@@ -611,7 +611,7 @@
       "customEquipment": "Custom Equipment",
       "equipmentName": "Equipment Name",
       "equipmentPlaceholder": "e.g. Cable Machine",
-      "exerciseNamePlaceholder": "e.g. Barbell Bench Press",
+      "exerciseNamePlaceholder": "Name",
       "searchEquipmentPlaceholder": "Search equipment...",
       "selectDateHint": "Apply a routine or add an exercise to log"
     },

@@ -107,6 +107,8 @@ export function muscleRoleToNumericWeight(role: MuscleRole | unknown): number {
 export function getMuscleRoleBadgeClasses(role: MuscleRole): {
   container: string;
   text: string;
+  bg: string;
+  bar: string;
 } {
   switch (role) {
     case 'primary':
@@ -114,12 +116,16 @@ export function getMuscleRoleBadgeClasses(role: MuscleRole): {
         container:
           'bg-[var(--muscle-badge-high-bg)] border-[var(--muscle-badge-high-border)] text-[var(--muscle-badge-high-text)]',
         text: 'text-[var(--muscle-badge-high-text)]',
+        bg: 'bg-[var(--muscle-badge-high-bg)]',
+        bar: 'before:bg-[var(--muscle-badge-high-text)]',
       };
     case 'secondary':
       return {
         container:
           'bg-[var(--muscle-badge-med-bg)] border-[var(--muscle-badge-med-border)] text-[var(--muscle-badge-med-text)]',
         text: 'text-[var(--muscle-badge-med-text)]',
+        bg: 'bg-[var(--muscle-badge-med-bg)]',
+        bar: 'before:bg-[var(--muscle-badge-med-text)]',
       };
     case 'stabilizer':
     default:
@@ -127,6 +133,8 @@ export function getMuscleRoleBadgeClasses(role: MuscleRole): {
         container:
           'bg-[var(--muscle-badge-low-bg)] border-[var(--muscle-badge-low-border)] text-[var(--muscle-badge-low-text)]',
         text: 'text-[var(--muscle-badge-low-text)]',
+        bg: 'bg-[var(--muscle-badge-low-bg)]',
+        bar: 'before:bg-[var(--muscle-badge-low-text)]',
       };
   }
 }

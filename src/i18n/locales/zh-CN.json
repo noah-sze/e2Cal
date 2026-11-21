@@ -611,7 +611,7 @@
       "customEquipment": "自定义器械",
       "equipmentName": "器械名称",
       "equipmentPlaceholder": "例如：滑轮机",
-      "exerciseNamePlaceholder": "例如：杠铃卧推",
+      "exerciseNamePlaceholder": "名称",
       "searchEquipmentPlaceholder": "搜索器械名称...",
       "selectDateHint": "可套用现有组合或直接新增动作进行练后记录"
     },

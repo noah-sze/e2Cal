@@ -78,10 +78,10 @@ export function ExerciseFormDialog({
   const isEdit = Boolean(initialData);
 
   const [name, setName] = useState('');
-  const [equipment, setEquipment] = useState<EquipmentType>('barbell');
-  const [muscles, setMuscles] = useState<{ muscle: DetailedMuscle; role: MuscleRole }[]>([
-    { muscle: 'mid_lower_chest', role: 'primary' },
-  ]);
+  const [equipment, setEquipment] = useState<EquipmentType | ''>('');
+  const [muscles, setMuscles] = useState<
+    { muscle: DetailedMuscle | null; role: MuscleRole | null }[]
+  >([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 新增自定義器械平級兄弟彈窗
@@ -93,26 +93,22 @@ export function ExerciseFormDialog({
     if (!prevOpenRef.current && open) {
       if (initialData) {
         setName(initialData.name || '');
-        setEquipment(initialData.equipment || 'barbell');
+        setEquipment(initialData.equipment || '');
         const entries = Object.entries(initialData.targetMuscles || {});
-        if (entries.length > 0) {
-          setMuscles(
-            entries.map(([m, r]) => ({
-              muscle: m as DetailedMuscle,
-              role: normalizeMuscleRole(r),
-            }))
-          );
-        } else {
-          setMuscles([{ muscle: 'mid_lower_chest', role: 'primary' }]);
-        }
+        setMuscles(
+          entries.map(([m, r]) => ({
+            muscle: m as DetailedMuscle,
+            role: normalizeMuscleRole(r),
+          }))
+        );
       } else {
         setName('');
-        setEquipment(activeEquipments[0]?.id || 'barbell');
-        setMuscles([{ muscle: 'mid_lower_chest', role: 'primary' }]);
+        setEquipment('');
+        setMuscles([]);
       }
     }
     prevOpenRef.current = open;
-  }, [open, initialData, activeEquipments]);
+  }, [open, initialData]);
 
   // 取得肌群本地化翻譯名稱
   const getMuscleLabel = (muscle: DetailedMuscle): string => {
@@ -124,18 +120,25 @@ export function ExerciseFormDialog({
   };
 
   // 當前已選肌群集合
-  const usedMuscles = useMemo(() => new Set(muscles.map((m) => m.muscle)), [muscles]);
+  const usedMuscles = useMemo(
+    () =>
+      new Set(
+        muscles
+          .map((m) => m.muscle)
+          .filter((m): m is DetailedMuscle => m !== null)
+      ),
+    [muscles]
+  );
   const canAddMoreMuscle = muscles.length < ALL_DETAILED_MUSCLES.length;
 
-  // 新增肌群（線性搜尋第一個未選的肌群，預設為協同肌 secondary）
+  // 新增肌群條目（預設數據為空，由使用者自行選擇角色與肌群）
   const handleAddMuscle = () => {
-    const nextMuscle = ALL_DETAILED_MUSCLES.find((m) => !usedMuscles.has(m));
-    if (!nextMuscle) {
+    if (!canAddMoreMuscle) {
       toast.show(t('workout.allMusclesAdded', '已包含所有肌群'));
       return;
     }
     triggerHaptic('selection');
-    setMuscles([...muscles, { muscle: nextMuscle, role: 'secondary' }]);
+    setMuscles([...muscles, { muscle: null, role: null }]);
   };
 
   const handleUpdateMuscle = (index: number, newMuscle: DetailedMuscle) => {
@@ -151,10 +154,6 @@ export function ExerciseFormDialog({
   };
 
   const handleRemoveMuscle = (index: number) => {
-    if (muscles.length <= 1) {
-      toast.show(t('workout.atLeastOneMuscle', '至少需設定一個目標肌群'));
-      return;
-    }
     setMuscles(muscles.filter((_, i) => i !== index));
   };
 
@@ -173,18 +172,23 @@ export function ExerciseFormDialog({
     onOpenChange(nextOpen);
   };
 
+  const hasValidMuscles =
+    muscles.length > 0 && muscles.every((m) => m.muscle !== null && m.role !== null);
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) {
       e.preventDefault();
     }
     const trimmed = name.trim();
-    if (!trimmed || muscles.length === 0 || isSubmitting) return;
+    if (!trimmed || !equipment || !hasValidMuscles || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
       const targetMuscles: Partial<Record<DetailedMuscle, MuscleRole>> = {};
       for (const item of muscles) {
-        targetMuscles[item.muscle] = item.role;
+        if (item.muscle && item.role) {
+          targetMuscles[item.muscle] = item.role;
+        }
       }
 
       await onSubmit({
@@ -210,7 +214,7 @@ export function ExerciseFormDialog({
         <PrecisionDialogContent
           title={isEdit ? t('common.edit') : t('common.add')}
           form={formId}
-          submitDisabled={!name.trim() || muscles.length === 0 || isSubmitting}
+          submitDisabled={!name.trim() || !equipment || !hasValidMuscles || isSubmitting}
           submitAriaLabel={isEdit ? t('common.save') : t('common.add')}
           cancelAriaLabel={t('common.cancel')}
           overlayClassName="z-[70]"
@@ -235,7 +239,7 @@ export function ExerciseFormDialog({
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder={t('workout.exerciseNamePlaceholder', '例如：槓鈴臥推')}
+                    placeholder={t('workout.exerciseNamePlaceholder', '名稱')}
                     aria-label={t('workout.exerciseName')}
                     className="w-full h-full px-4 bg-transparent text-center text-xs font-sans text-foreground font-normal focus:outline-none placeholder:text-muted-foreground/40"
                     maxLength={50}
@@ -248,7 +252,7 @@ export function ExerciseFormDialog({
                     {t('workout.equipment')}
                   </span>
                   <Select
-                    value={equipment}
+                    value={equipment || null}
                     onValueChange={(val) => {
                       if (val === '__add_custom__') {
                         setIsAddEquipmentOpen(true);
@@ -263,10 +267,16 @@ export function ExerciseFormDialog({
                     <SelectTrigger
                       size="custom"
                       iconClassName="size-3 text-muted-foreground/60"
-                      className="h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-muted font-sans text-xs flex items-center gap-1.5 transition-colors cursor-pointer text-foreground active:scale-95"
+                      className="h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-sans text-xs flex items-center gap-1.5 transition-colors cursor-pointer text-foreground active:scale-95"
                     >
-                      <SelectValue className="font-bold text-foreground">
-                        {getEquipmentDisplayName(equipment, t)}
+                      <SelectValue
+                        className={cn(
+                          equipment
+                            ? 'font-normal text-foreground'
+                            : 'font-normal font-mono text-label-tertiary select-none'
+                        )}
+                      >
+                        {equipment ? getEquipmentDisplayName(equipment, t) : '-'}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent align="end" className="min-w-44 max-h-56 font-mono text-xs">
@@ -286,40 +296,90 @@ export function ExerciseFormDialog({
                 </div>
               </SectionCard>
 
-              {/* 表格段落 2: 目標肌群 (Vercel Usage List) */}
-              <div className="space-y-1.5 shrink-0">
-                <div className="flex items-center justify-between px-0">
-                  <div className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">
-                    {t('workout.targetMuscles')} ({muscles.length})
-                  </div>
-
-                  {/* 微型膠囊按鈕：新增肌群 (1:1 對齊 RecipeFormDialog) */}
+              {/* 表格段落 2: 目標肌群 (復刻 RecipeIngredientsCard 風格) */}
+              <SectionCard
+                title={`${t('workout.targetMuscles')} (${muscles.length})`}
+                className="shrink-0"
+                bodyClassName="text-sm"
+                action={
                   <button
                     type="button"
                     onClick={handleAddMuscle}
                     disabled={!canAddMoreMuscle}
-                    className="h-6 px-2.5 rounded-full border border-border/80 bg-background hover:bg-muted font-mono text-[11px] flex items-center gap-1 transition-colors cursor-pointer text-foreground active:scale-95 select-none disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="h-6 px-2.5 rounded-full border border-border/80 bg-card hover:bg-hover font-mono text-xs flex items-center gap-1 transition-colors cursor-pointer text-muted-foreground hover:text-foreground active:scale-95 select-none disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Plus className="size-3 text-muted-foreground" />
                     <span>{t('common.add')}</span>
                   </button>
-                </div>
-
-                {/* 肌群列表卡片 */}
-                <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border text-sm">
-                  {muscles.map((item, idx) => {
-                    const roleClasses = getMuscleRoleBadgeClasses(item.role);
-                    const roleLabel = getMuscleRoleLabel(item.role, t);
+                }
+              >
+                {muscles.length === 0 ? (
+                  <div className="min-h-12 py-2 px-3 sm:px-4 flex items-center justify-center shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleAddMuscle}
+                      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none font-mono"
+                    >
+                      <Plus className="size-3.5" />
+                      <span>{t('common.add')}</span>
+                    </button>
+                  </div>
+                ) : (
+                  muscles.map((item, idx) => {
+                    const roleClasses = item.role ? getMuscleRoleBadgeClasses(item.role) : null;
+                    const roleLabel = item.role ? getMuscleRoleLabel(item.role, t) : '-';
 
                     return (
                       <div
                         key={idx}
-                        className="h-11 px-3 flex items-center justify-between gap-1.5 bg-card shrink-0"
+                        className="min-h-12 py-2 px-3 sm:px-4 flex items-center justify-between gap-2 bg-card shrink-0"
                       >
-                        {/* 左側：肌群選單 (膠囊風格，佔滿剩餘寬度) */}
-                        <div className="flex-1 min-w-0">
+                        {/* 左側：機能學角色膠囊 + 肌群標準膠囊（靠左對齊並排） */}
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
                           <Select
-                            value={item.muscle}
+                            value={item.role || null}
+                            onValueChange={(val) => {
+                              if (val) {
+                                triggerHaptic('selection');
+                                handleUpdateRole(idx, val as MuscleRole);
+                              }
+                            }}
+                          >
+                            <SelectTrigger
+                              size="custom"
+                              iconClassName={cn(
+                                'size-3 shrink-0',
+                                roleClasses ? cn('opacity-70', roleClasses.text) : 'text-muted-foreground/60'
+                              )}
+                              className="h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-sans text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none shrink-0"
+                            >
+                              <SelectValue
+                                className={cn(
+                                  'flex-none font-normal truncate',
+                                  roleClasses
+                                    ? roleClasses.text
+                                    : 'font-mono text-label-tertiary select-none'
+                                )}
+                              >
+                                {roleLabel}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent align="start" className="min-w-32 font-mono text-xs">
+                              {MUSCLE_ROLES.map(({ role, nameKey }) => {
+                                const badgeClasses = getMuscleRoleBadgeClasses(role);
+                                return (
+                                  <SelectItem key={role} value={role}>
+                                    <span className={cn('text-xs font-medium', badgeClasses.text)}>
+                                      {t(nameKey)}
+                                    </span>
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+
+                          <Select
+                            value={item.muscle || null}
                             onValueChange={(v) => {
                               if (v) {
                                 triggerHaptic('selection');
@@ -330,13 +390,20 @@ export function ExerciseFormDialog({
                             <SelectTrigger
                               size="custom"
                               iconClassName="size-3 text-muted-foreground/60 shrink-0"
-                              className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-muted font-sans text-xs flex items-center gap-1 transition-colors cursor-pointer text-foreground active:scale-95 w-full justify-between"
+                              className="h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-sans text-xs flex items-center gap-1.5 transition-colors cursor-pointer text-foreground active:scale-95 min-w-0 max-w-[148px]"
                             >
-                              <SelectValue className="font-medium text-foreground truncate text-left">
-                                {getMuscleLabel(item.muscle)}
+                              <SelectValue
+                                className={cn(
+                                  'flex-none font-normal truncate',
+                                  item.muscle
+                                    ? 'text-foreground'
+                                    : 'font-mono text-label-tertiary select-none'
+                                )}
+                              >
+                                {item.muscle ? getMuscleLabel(item.muscle) : '-'}
                               </SelectValue>
                             </SelectTrigger>
-                            <SelectContent className="max-h-56 font-mono text-xs" align="start">
+                            <SelectContent className="max-h-96 font-mono text-xs" align="start">
                               {MAJOR_MUSCLE_GROUPS.map((group) => (
                                 <SelectGroup key={group.id}>
                                   <SelectLabel className="px-2 py-0.5 text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
@@ -366,70 +433,24 @@ export function ExerciseFormDialog({
                           </Select>
                         </div>
 
-                        {/* 中右側：機能學角色下拉選單 (主動肌/協同肌/穩定肌) */}
-                        <Select
-                          value={item.role}
-                          onValueChange={(val) => {
-                            if (val) {
-                              triggerHaptic('selection');
-                              handleUpdateRole(idx, val as MuscleRole);
-                            }
-                          }}
-                        >
-                          <SelectTrigger
-                            size="custom"
-                            iconClassName="size-3 text-current opacity-80 shrink-0"
-                            className={cn(
-                              'h-7 px-2.5 rounded-full border text-[11px] font-mono flex items-center gap-1 transition-colors cursor-pointer shrink-0 active:scale-95 select-none',
-                              roleClasses.container
-                            )}
-                          >
-                            <SelectValue className="font-semibold text-current truncate">
-                              {roleLabel}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent align="end" className="min-w-32 font-mono text-xs">
-                            {MUSCLE_ROLES.map(({ role, nameKey }) => {
-                              const badgeClasses = getMuscleRoleBadgeClasses(role);
-                              return (
-                                <SelectItem key={role} value={role}>
-                                  <span
-                                    className={cn(
-                                      'px-1.5 py-0.5 rounded text-[10px] font-mono border',
-                                      badgeClasses.container
-                                    )}
-                                  >
-                                    {t(nameKey)}
-                                  </span>
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectContent>
-                        </Select>
-
-                        {/* 刪除按鈕 (少於等於 1 個時禁用防誤刪並維持幾何對齊防抖) */}
+                        {/* 右側：圓形膠囊刪除按鈕 */}
                         <button
                           type="button"
-                          disabled={muscles.length <= 1}
                           onClick={() => {
                             triggerHaptic('selection');
                             handleRemoveMuscle(idx);
                           }}
-                          className={cn(
-                            'size-7 rounded-full flex items-center justify-center transition-colors shrink-0',
-                            muscles.length <= 1
-                              ? 'opacity-20 cursor-not-allowed text-muted-foreground'
-                              : 'text-muted-foreground hover:text-destructive hover:bg-muted cursor-pointer active:scale-95'
-                          )}
+                          className="size-7 rounded-full border border-border/80 bg-background flex items-center justify-center transition-colors shrink-0 text-muted-foreground hover:text-destructive hover:bg-hover cursor-pointer active:scale-95"
                           title={t('common.delete')}
+                          aria-label={t('common.delete')}
                         >
                           <Trash2 className="size-3.5" />
                         </button>
                       </div>
                     );
-                  })}
-                </div>
-              </div>
+                  })
+                )}
+              </SectionCard>
             </div>
           </form>
         </PrecisionDialogContent>
