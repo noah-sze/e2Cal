@@ -247,6 +247,7 @@ export const BodyHighlighter = memo(function BodyHighlighter({
       <g key={`${group.slug}-${group.side || 'c'}-${idx}`}>
         <path
           d={d}
+          data-muscle={!isNonMuscle && primaryMuscle ? primaryMuscle : undefined}
           fill={style.fill}
           fillOpacity={style.fillOpacity}
           stroke={style.stroke}

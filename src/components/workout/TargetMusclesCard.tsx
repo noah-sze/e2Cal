@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DetailedMuscle, MuscleRole } from '@/types';
 import type { BodyHighlighterGender } from './BodyHighlighter';
@@ -30,6 +30,7 @@ export const TargetMusclesCard = memo(function TargetMusclesCard({
   const { t } = useTranslation();
   const [selectedMuscle, setSelectedMuscle] = useState<DetailedMuscle | null>(null);
   const [anchorEl, setAnchorEl] = useState<Element | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
 
   const getMuscleLabel = (m: DetailedMuscle) => {
     const key = `workout.muscle${m
@@ -77,8 +78,14 @@ export const TargetMusclesCard = memo(function TargetMusclesCard({
 
   const handleBadgeClick = (muscle: DetailedMuscle) => {
     triggerHaptic('selection');
-    setAnchorEl(null);
-    setSelectedMuscle((prev) => (prev === muscle ? null : muscle));
+    if (selectedMuscle === muscle) {
+      setSelectedMuscle(null);
+      setAnchorEl(null);
+      return;
+    }
+    const pathEl = mapContainerRef.current?.querySelector(`[data-muscle="${muscle}"]`) ?? null;
+    setSelectedMuscle(muscle);
+    setAnchorEl(pathEl);
   };
 
   const handleClearSelection = () => {
@@ -90,111 +97,127 @@ export const TargetMusclesCard = memo(function TargetMusclesCard({
   const selectedRole: MuscleRole | null =
     selectedRawRole !== undefined ? normalizeMuscleRole(selectedRawRole) : null;
 
+  const getRoleDotClass = (role: MuscleRole) => {
+    switch (role) {
+      case 'primary':
+        return 'bg-[var(--muscle-badge-high-text)]';
+      case 'secondary':
+        return 'bg-[var(--muscle-badge-med-text)]';
+      case 'stabilizer':
+      default:
+        return 'bg-muted-foreground';
+    }
+  };
+
   return (
     <>
-      <div className="border border-border rounded-lg bg-card p-3.5 sm:p-5 space-y-4">
+      <div className="border border-border rounded-lg bg-card overflow-hidden">
         {/* 一體化人體解剖地圖 (與首頁一致：關閉頂部 HUD，改以點擊 Popover 瀏覽) */}
-          <div className="flex justify-center py-1">
-            <BodyHighlighter
-              gender={gender}
-              muscles={muscles}
-              selectedMuscle={selectedMuscle}
-              onMuscleClick={handleMapMuscleClick}
-              onClearSelection={handleClearSelection}
-              view="both"
-              size="md"
-              interactive
-              showLabels
-              showOutline
-            />
+        <div ref={mapContainerRef} className="flex justify-center p-3.5 sm:p-5">
+          <BodyHighlighter
+            gender={gender}
+            muscles={muscles}
+            selectedMuscle={selectedMuscle}
+            onMuscleClick={handleMapMuscleClick}
+            onClearSelection={handleClearSelection}
+            view="both"
+            size="md"
+            interactive
+            showLabels
+            showOutline
+          />
+        </div>
+
+        {/* 精密機能學量表 (方案 B3：表頭雙欄 + 彈性膠囊池，無冗餘角色文本) */}
+        {muscleEntries.length === 0 ? (
+          <div className="border-t border-border px-4 py-4 text-xs font-mono text-muted-foreground text-center">
+            {t('workout.noTargetMuscles', '無肌群')}
           </div>
-
-          {/* 精密機能學量表 (Functional Hierarchy) */}
-          {muscleEntries.length === 0 ? (
-            <div className="text-xs font-mono text-muted-foreground text-center py-2">
-              {t('workout.noTargetMuscles', '無肌群')}
+        ) : (
+          <div className="border-t border-border">
+            {/* 雙欄表頭 */}
+            <div className="grid grid-cols-2 divide-x divide-border bg-muted/40 border-b border-border text-2xs font-sans text-muted-foreground">
+              <div className="px-3 py-2 flex items-center justify-between gap-2">
+                <span className="truncate">{t('workout.primaryMover', '主要發力')}</span>
+                <span className="font-mono tabular-nums">{primaryEntries.length}</span>
+              </div>
+              <div className="px-3 py-2 flex items-center justify-between gap-2">
+                <span className="truncate">{t('workout.synergistsAndStabilizers', '協同與穩定')}</span>
+                <span className="font-mono tabular-nums">{supportEntries.length}</span>
+              </div>
             </div>
-          ) : (
-            <div className="space-y-3.5 pt-2 border-t border-border/60">
-              {/* 1. 核心發力層 (Hero / Prime Mover) */}
-              {primaryEntries.length > 0 && (
-                <div className="space-y-1.5">
-                  <div className="text-[10px] font-mono tracking-widest uppercase text-muted-foreground">
-                    {t('workout.primaryMover', '主要發力')}
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {primaryEntries.map(([m, rawRole]) => {
-                      const role = normalizeMuscleRole(rawRole);
-                      const badgeStyle = getMuscleRoleBadgeClasses(role);
-                      const roleLabel = getMuscleRoleLabel(role, t);
-                      const isSelected = selectedMuscle === m;
 
-                      return (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => handleBadgeClick(m)}
+            {/* 雙欄彈性膠囊池 */}
+            <div className="grid grid-cols-2 divide-x divide-border">
+              {/* 左欄：主要發力 */}
+              <div className="p-2.5 sm:p-3 flex flex-wrap gap-1.5 content-start">
+                {primaryEntries.length === 0 ? (
+                  <span className="text-xs font-mono text-muted-foreground/60 px-1">-</span>
+                ) : (
+                  primaryEntries.map(([m]) => {
+                    const isSelected = selectedMuscle === m;
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => handleBadgeClick(m)}
+                        className={cn(
+                          'min-h-7 px-2.5 py-1 rounded-full border text-xs font-sans inline-flex items-center gap-1.5 transition-colors cursor-pointer select-none active:scale-95',
+                          isSelected
+                            ? 'bg-foreground text-background border-foreground font-medium'
+                            : 'bg-card border-border text-foreground hover:bg-hover'
+                        )}
+                      >
+                        <span
+                          aria-hidden="true"
                           className={cn(
-                            'w-full p-3 rounded-lg border font-mono transition-all flex items-center justify-between text-left cursor-pointer group shadow-none',
-                            badgeStyle.container,
-                            isSelected && 'ring-1 ring-foreground'
+                            'size-1.5 rounded-full shrink-0',
+                            getRoleDotClass('primary')
                           )}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="size-2 rounded-full bg-[var(--muscle-badge-high-text)] opacity-90" />
-                            <span className="text-sm font-semibold tracking-tight">
-                              {getMuscleLabel(m)}
-                            </span>
-                          </div>
-                          <span className="text-xs font-mono px-2 py-0.5 rounded border border-[var(--muscle-badge-high-border)] bg-card text-[var(--muscle-badge-high-text)] shrink-0 font-medium">
-                            {roleLabel}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                        />
+                        <span className="whitespace-nowrap">{getMuscleLabel(m)}</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
 
-              {/* 2. 協同與穩定層 (Synergists & Stabilizers - 通透機能學膠囊群) */}
-              {supportEntries.length > 0 && (
-                <div className="space-y-1.5">
-                  <div className="text-[10px] font-mono tracking-widest uppercase text-muted-foreground">
-                    {t('workout.synergistsAndStabilizers', '協同與穩定')}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {supportEntries.map(([m, rawRole]) => {
-                      const role = normalizeMuscleRole(rawRole);
-                      const badgeStyle = getMuscleRoleBadgeClasses(role);
-                      const roleLabel = getMuscleRoleLabel(role, t);
-                      const isSelected = selectedMuscle === m;
-
-                      return (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => handleBadgeClick(m)}
+              {/* 右欄：協同與穩定（無額外文本說明，純色點區分） */}
+              <div className="p-2.5 sm:p-3 flex flex-wrap gap-1.5 content-start">
+                {supportEntries.length === 0 ? (
+                  <span className="text-xs font-mono text-muted-foreground/60 px-1">-</span>
+                ) : (
+                  supportEntries.map(([m, rawRole]) => {
+                    const role = normalizeMuscleRole(rawRole);
+                    const isSelected = selectedMuscle === m;
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => handleBadgeClick(m)}
+                        className={cn(
+                          'min-h-7 px-2.5 py-1 rounded-full border text-xs font-sans inline-flex items-center gap-1.5 transition-colors cursor-pointer select-none active:scale-95',
+                          isSelected
+                            ? 'bg-foreground text-background border-foreground font-medium'
+                            : 'bg-card border-border text-foreground hover:bg-hover'
+                        )}
+                      >
+                        <span
+                          aria-hidden="true"
                           className={cn(
-                            'inline-flex items-center gap-2 px-3 py-1.5 rounded-md border font-mono text-xs transition-all text-left cursor-pointer shadow-none',
-                            badgeStyle.container,
-                            isSelected && 'ring-1 ring-foreground'
+                            'size-1.5 rounded-full shrink-0',
+                            getRoleDotClass(role)
                           )}
-                        >
-                          <span className="font-medium whitespace-nowrap">
-                            {getMuscleLabel(m)}
-                          </span>
-                          <span className="opacity-40 text-[10px]">·</span>
-                          <span className="text-[11px] opacity-90 whitespace-nowrap">
-                            {roleLabel}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                        />
+                        <span className="whitespace-nowrap">{getMuscleLabel(m)}</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
             </div>
-          )}
+          </div>
+        )}
       </div>
 
       {/* 肌群詳情 Popover 浮層提示 (平級兄弟節點宣告) */}
