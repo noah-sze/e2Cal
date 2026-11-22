@@ -32,6 +32,7 @@ import { usePwaInstall } from '@/hooks/usePwaInstall';
 import { DropboxSyncDialog } from '@/components/settings/dialogs/DropboxSyncDialog';
 import { ClearDataModal } from '@/components/settings/ClearDataModal';
 import { ImportStrategyModal } from '@/components/settings/dialogs/ImportStrategyModal';
+import { AISettingsCard } from '@/components/settings/AISettingsCard';
 import { BrandWordmark } from '@/components/ui/Logo';
 import type {
   UnitSystemPreset,
@@ -607,6 +608,15 @@ export default function Settings() {
           </div>
         </div>
       </section>
+
+      {/* 分割線 */}
+      <div className="border-t border-border/60" />
+
+      {/* 區塊：AI 助手設定 (BYO-AI) */}
+      <AISettingsCard />
+
+      {/* 分割線 */}
+      <div className="border-t border-border/60" />
 
       {/* 分割線 */}
       <div className="border-t border-border/60" />

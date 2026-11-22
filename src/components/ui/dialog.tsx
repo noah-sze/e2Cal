@@ -56,6 +56,12 @@ export interface DialogContentProps extends DialogPrimitive.Popup.Props {
   container?: HTMLElement | null
   fullscreen?: boolean
   commandDeck?: boolean
+  /** 外部掛載插槽（例如外部 AI 助手），懸浮於彈窗卡片外部且完全隔離於原生卡片之外 */
+  externalTopSlot?: React.ReactNode
+  /** 是否由外部助手接管視窗中央焦點（啟用時原生彈窗絲滑下移退讓變淡並鎖定，點擊可喚回） */
+  externalFocusActive?: boolean
+  /** 點擊退讓中的原生彈窗時觸發，將焦點交還給原生彈窗 */
+  onExternalFocusDismiss?: () => void
 }
 
 function DialogContent({
@@ -68,6 +74,9 @@ function DialogContent({
   container,
   fullscreen = false,
   commandDeck = false,
+  externalTopSlot,
+  externalFocusActive = false,
+  onExternalFocusDismiss,
   initialFocus,
   ...props
 }: DialogContentProps) {
@@ -115,37 +124,96 @@ function DialogContent({
           extractedZIndex,
           wrapperClassName
         )}>
-          <DialogPrimitive.Popup
-            ref={contentRef}
-            initialFocus={initialFocus ?? false}
-            data-slot="dialog-content"
-            className={cn(
-              "pointer-events-auto relative flex flex-col w-full overflow-hidden overscroll-contain rounded-lg bg-card text-card-foreground border border-border shadow-none outline-none data-closed:hidden",
-              dialogSizeClasses[size] || dialogSizeClasses.default,
-              "[&>*:not([data-slot=dialog-header]):not([data-slot=dialog-footer]):not(form)]:flex-1 [&>*:not([data-slot=dialog-header]):not([data-slot=dialog-footer]):not(form)]:min-h-0 [&>*:not([data-slot=dialog-header]):not([data-slot=dialog-footer]):not(form)]:overflow-y-auto [&>*:not([data-slot=dialog-header]):not([data-slot=dialog-footer]):not(form)]:overflow-x-hidden [&>*:not([data-slot=dialog-header]):not([data-slot=dialog-footer]):not(form)]:overscroll-contain",
-              "[&>form]:flex [&>form]:flex-col [&>form]:flex-1 [&>form]:min-h-0 [&>form]:overflow-hidden",
-              "[&>form>*:not([data-slot=dialog-footer])]:flex-1 [&>form>*:not([data-slot=dialog-footer])]:min-h-0 [&>form>*:not([data-slot=dialog-footer])]:overflow-y-auto [&>form>*:not([data-slot=dialog-footer])]:overflow-x-hidden [&>form>*:not([data-slot=dialog-footer])]:overscroll-contain",
-              className
-            )}
-            {...props}
-          >
-            {children}
-            {shouldShowCloseButton && (
-              <DialogPrimitive.Close
-                data-slot="dialog-close"
-                render={
-                  <Button
-                    variant="ghost"
-                    className="absolute top-4 right-4 h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer z-10"
-                    size="icon-sm"
-                  />
-                }
+          {externalTopSlot ? (
+            <>
+              {/* AI 窗口專屬次級遮罩：純合成層透明遮罩（無動態 blur 重繪），點擊即可喚回焦點 */}
+              <div
+                aria-hidden="true"
+                onClick={externalFocusActive ? onExternalFocusDismiss : undefined}
+                className={cn(
+                  "fixed inset-0 z-[85] bg-white/50 dark:bg-black/50 transition-opacity duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity]",
+                  externalFocusActive
+                    ? "opacity-100 pointer-events-auto cursor-pointer"
+                    : "opacity-0 pointer-events-none"
+                )}
+              />
+              <DialogPrimitive.Popup
+                ref={contentRef}
+                initialFocus={initialFocus ?? false}
+                data-slot="dialog-popup-group"
+                className="relative w-fit max-w-full max-h-full pointer-events-none outline-none data-closed:hidden"
+                {...props}
               >
-                <XIcon className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </DialogPrimitive.Close>
-            )}
-          </DialogPrimitive.Popup>
+                <div className="pointer-events-none absolute inset-0 z-[90]">
+                  {externalTopSlot}
+                </div>
+                <div
+                  data-slot="dialog-content"
+                  className={cn(
+                    "pointer-events-auto relative z-10 flex flex-col w-full overflow-hidden overscroll-contain rounded-lg bg-card text-card-foreground border border-border shadow-none outline-none origin-top",
+                    "transition-transform duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
+                    dialogSizeClasses[size] || dialogSizeClasses.default,
+                    "[&>*:not([data-slot=dialog-header]):not([data-slot=dialog-footer]):not(form)]:flex-1 [&>*:not([data-slot=dialog-header]):not([data-slot=dialog-footer]):not(form)]:min-h-0 [&>*:not([data-slot=dialog-header]):not([data-slot=dialog-footer]):not(form)]:overflow-y-auto [&>*:not([data-slot=dialog-header]):not([data-slot=dialog-footer]):not(form)]:overflow-x-hidden [&>*:not([data-slot=dialog-header]):not([data-slot=dialog-footer]):not(form)]:overscroll-contain",
+                    "[&>form]:flex [&>form]:flex-col [&>form]:flex-1 [&>form]:min-h-0 [&>form]:overflow-hidden",
+                    "[&>form>*:not([data-slot=dialog-footer])]:flex-1 [&>form>*:not([data-slot=dialog-footer])]:min-h-0 [&>form>*:not([data-slot=dialog-footer])]:overflow-y-auto [&>form>*:not([data-slot=dialog-footer])]:overflow-x-hidden [&>form>*:not([data-slot=dialog-footer])]:overscroll-contain",
+                    className,
+                    externalFocusActive
+                      ? "translate-y-[calc(50%+20px)] scale-[0.96] [&>*]:pointer-events-none"
+                      : "translate-y-0 scale-100"
+                  )}
+                >
+                  {children}
+                  {shouldShowCloseButton && (
+                    <DialogPrimitive.Close
+                      data-slot="dialog-close"
+                      render={
+                        <Button
+                          variant="ghost"
+                          className="absolute top-4 right-4 h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer z-10"
+                          size="icon-sm"
+                        />
+                      }
+                    >
+                      <XIcon className="h-4 w-4" />
+                      <span className="sr-only">Close</span>
+                    </DialogPrimitive.Close>
+                  )}
+                </div>
+              </DialogPrimitive.Popup>
+            </>
+          ) : (
+            <DialogPrimitive.Popup
+              ref={contentRef}
+              initialFocus={initialFocus ?? false}
+              data-slot="dialog-content"
+              className={cn(
+                "pointer-events-auto relative flex flex-col w-full overflow-hidden overscroll-contain rounded-lg bg-card text-card-foreground border border-border shadow-none outline-none data-closed:hidden",
+                dialogSizeClasses[size] || dialogSizeClasses.default,
+                "[&>*:not([data-slot=dialog-header]):not([data-slot=dialog-footer]):not(form)]:flex-1 [&>*:not([data-slot=dialog-header]):not([data-slot=dialog-footer]):not(form)]:min-h-0 [&>*:not([data-slot=dialog-header]):not([data-slot=dialog-footer]):not(form)]:overflow-y-auto [&>*:not([data-slot=dialog-header]):not([data-slot=dialog-footer]):not(form)]:overflow-x-hidden [&>*:not([data-slot=dialog-header]):not([data-slot=dialog-footer]):not(form)]:overscroll-contain",
+                "[&>form]:flex [&>form]:flex-col [&>form]:flex-1 [&>form]:min-h-0 [&>form]:overflow-hidden",
+                "[&>form>*:not([data-slot=dialog-footer])]:flex-1 [&>form>*:not([data-slot=dialog-footer])]:min-h-0 [&>form>*:not([data-slot=dialog-footer])]:overflow-y-auto [&>form>*:not([data-slot=dialog-footer])]:overflow-x-hidden [&>form>*:not([data-slot=dialog-footer])]:overscroll-contain",
+                className
+              )}
+              {...props}
+            >
+              {children}
+              {shouldShowCloseButton && (
+                <DialogPrimitive.Close
+                  data-slot="dialog-close"
+                  render={
+                    <Button
+                      variant="ghost"
+                      className="absolute top-4 right-4 h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer z-10"
+                      size="icon-sm"
+                    />
+                  }
+                >
+                  <XIcon className="h-4 w-4" />
+                  <span className="sr-only">Close</span>
+                </DialogPrimitive.Close>
+              )}
+            </DialogPrimitive.Popup>
+          )}
         </div>
       )}
     </DialogPortal>

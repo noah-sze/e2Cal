@@ -29,6 +29,8 @@ import { ChevronRight } from 'lucide-react';
 import { SectionCard } from '@/components/ui/section-card';
 import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
 import { MetricValue } from '@/components/ui/metric-value';
+import { ExternalAIAssistant } from '@/components/ai/ExternalAIAssistant';
+import type { NutritionLabelParseResult } from '@/types/ai';
 
 type KeypadField =
   | 'serving'
@@ -72,6 +74,9 @@ export interface FoodFormDialogProps {
   className?: string;
   /** 自訂彈窗層級數值 (例如 80) */
   zIndex?: number;
+  /** Dev 測試專用：模擬外部 AI 請求 */
+  aiMockMode?: boolean;
+  aiMockScenario?: 'success' | 'error';
 }
 
 /**
@@ -90,6 +95,8 @@ export function FoodFormDialog({
   overlayClassName,
   className,
   zIndex,
+  aiMockMode,
+  aiMockScenario,
 }: FoodFormDialogProps) {
   const { t } = useTranslation();
   const { foodWeightUnit, foodVolumeUnit, energyUnit } = useUnitPreferences();
@@ -723,6 +730,47 @@ export function FoodFormDialog({
   };
 
   const formId = useId();
+  const [isAiFocused, setIsAiFocused] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setIsAiFocused(false);
+    }
+  }, [open]);
+
+  // 接收外部 AI 助手單向注入之營養標籤解析結果
+  const handleInjectFoodLabel = (parsed: NutritionLabelParseResult) => {
+    if (parsed.name && !name.trim()) {
+      setName(parsed.name.trim());
+    }
+    if (parsed.brand && !brand.trim()) {
+      setBrand(parsed.brand.trim());
+    }
+    if (typeof parsed.servingSize === 'number' && parsed.servingSize > 0) {
+      setServingSize(formatNum2(parsed.servingSize));
+    }
+    if (parsed.servingUnit) {
+      setServingUnit(parsed.servingUnit);
+    }
+    if (typeof parsed.calories === 'number') {
+      setCalories(formatNum2(parsed.calories));
+    }
+    if (typeof parsed.carbs === 'number') {
+      setCarbs(formatNum2(parsed.carbs));
+    }
+    if (typeof parsed.protein === 'number') {
+      setProtein(formatNum2(parsed.protein));
+    }
+    if (typeof parsed.fat === 'number') {
+      setFat(formatNum2(parsed.fat));
+    }
+    if (typeof parsed.sugar === 'number' && parsed.sugar >= 0) {
+      setSugar(formatNum2(parsed.sugar));
+    }
+    if (typeof parsed.fiber === 'number' && parsed.fiber >= 0) {
+      setFiber(formatNum2(parsed.fiber));
+    }
+  };
 
   return (
     <>
@@ -735,6 +783,19 @@ export function FoodFormDialog({
           cancelAriaLabel={t('common.cancel')}
           overlayClassName={overlayClassName || (zIndex ? `z-[${zIndex}]` : "z-[70]")}
           className={cn(zIndex ? `z-[${zIndex}]` : "z-[70]", className)}
+          externalFocusActive={isAiFocused}
+          onExternalFocusDismiss={() => setIsAiFocused(false)}
+          externalTopSlot={
+            <ExternalAIAssistant
+              mode="foodLabel"
+              dialogOpen={open}
+              focused={isAiFocused}
+              onFocusedChange={setIsAiFocused}
+              onInjectFoodLabel={handleInjectFoodLabel}
+              mockMode={aiMockMode}
+              mockScenario={aiMockScenario}
+            />
+          }
         >
 
           <form id={formId} onSubmit={handleSubmit} className="space-y-3.5 pt-3.5 pb-0">

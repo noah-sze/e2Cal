@@ -11,10 +11,11 @@ import { PrimitivesTab } from './tabs/PrimitivesTab';
 import { ComponentsTab } from './tabs/ComponentsTab';
 import { DialogsTab } from './tabs/DialogsTab';
 import { BodyMapTab } from './tabs/BodyMapTab';
+import { AITab } from './tabs/AITab';
 
 export default function DevShowcasePage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'tokens' | 'primitives' | 'components' | 'dialogs' | 'bodymap'>('tokens');
+  const [activeTab, setActiveTab] = useState<'tokens' | 'primitives' | 'components' | 'dialogs' | 'bodymap' | 'ai'>('tokens');
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
   const { tokens, updateToken, resetTokens, exportCss, hasModifications } = useDevTokens();
@@ -91,6 +92,9 @@ export default function DevShowcasePage() {
               <TabsTrigger value="bodymap" className="text-xs font-mono px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-none">
                 BodyMap
               </TabsTrigger>
+              <TabsTrigger value="ai" className="text-xs font-mono px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-none">
+                AI
+              </TabsTrigger>
             </TabsList>
             <div className="text-2xs font-mono text-muted-foreground hidden sm:block">
               <BrandText text="e2Cal UI System" />
@@ -122,6 +126,10 @@ export default function DevShowcasePage() {
 
             <TabsContent value="bodymap" className="m-0 focus-visible:outline-none">
               <BodyMapTab />
+            </TabsContent>
+
+            <TabsContent value="ai" className="m-0 focus-visible:outline-none">
+              <AITab />
             </TabsContent>
           </div>
         </Tabs>

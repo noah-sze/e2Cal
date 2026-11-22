@@ -27,6 +27,8 @@ import {
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { formatEnergy } from '@/utils/unitMath';
 import { matchesAutocomplete } from '@/utils/multilingualSearch';
+import { ExternalAIAssistant } from '@/components/ai/ExternalAIAssistant';
+import type { MealEstimateResult } from '@/types/ai';
 import type { MealType } from '@/types';
 import {
   type DiningScenarioId,
@@ -79,6 +81,9 @@ export interface QuickPlaceholderDialogProps {
     sodium?: number;
   } | null;
   onDelete?: (id: string) => Promise<void>;
+  /** Dev 測試專用：模擬外部 AI 請求 */
+  aiMockMode?: boolean;
+  aiMockScenario?: 'success' | 'error';
 }
 
 type EstimateKeypadField =
@@ -169,6 +174,8 @@ export function QuickPlaceholderDialog({
   onConfirm,
   initialData,
   onDelete,
+  aiMockMode,
+  aiMockScenario,
 }: QuickPlaceholderDialogProps) {
   const { t } = useTranslation();
   const { energyUnit } = useUnitPreferences();
@@ -679,6 +686,39 @@ export function QuickPlaceholderDialog({
   };
 
   const keypadMeta = activeKeypad ? getKeypadMeta(activeKeypad.field) : null;
+  const [isAiFocused, setIsAiFocused] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setIsAiFocused(false);
+    }
+  }, [open]);
+
+  // 接收外部 AI 助手單向注入之餐點估算結果
+  const handleInjectMeal = (result: MealEstimateResult) => {
+    if (result.title && !customTitle.trim()) {
+      setCustomTitle(result.title.trim());
+    }
+    const newC = typeof result.totalCarbs === 'number' ? round1(result.totalCarbs) : null;
+    const newP = typeof result.totalProtein === 'number' ? round1(result.totalProtein) : null;
+    const newF = typeof result.totalFat === 'number' ? round1(result.totalFat) : null;
+
+    setCarbs(newC);
+    setProtein(newP);
+    setFat(newF);
+    setCalories(
+      typeof result.totalCalories === 'number' && result.totalCalories > 0
+        ? Math.round(result.totalCalories)
+        : calcCaloriesFromMacros(newC, newP, newF)
+    );
+
+    if (typeof result.totalSugar === 'number' && result.totalSugar >= 0) {
+      setSugar(round1(result.totalSugar));
+    }
+    if (typeof result.totalFiber === 'number' && result.totalFiber >= 0) {
+      setFiber(round1(result.totalFiber));
+    }
+  };
 
   return (
     <>
@@ -693,6 +733,19 @@ export function QuickPlaceholderDialog({
           overlayClassName="z-[70]"
           className="z-[70]"
           initialFocus={false}
+          externalFocusActive={isAiFocused}
+          onExternalFocusDismiss={() => setIsAiFocused(false)}
+          externalTopSlot={
+            <ExternalAIAssistant
+              mode="meal"
+              dialogOpen={open}
+              focused={isAiFocused}
+              onFocusedChange={setIsAiFocused}
+              onInjectMeal={handleInjectMeal}
+              mockMode={aiMockMode}
+              mockScenario={aiMockScenario}
+            />
+          }
         >
           <div className="pt-3.5 space-y-3">
             {/* 1. Hero 熱量讀數（未輸入任一三大元素前鎖定不可調，解鎖後點擊可依比例縮放） */}
