@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -77,9 +77,31 @@ export function FoodRecipeSelectDialog({
   const { addFood } = useFoods();
   const { addRecipe } = useRecipes();
 
-  // 內部新增食材與新增食譜次級彈窗狀態
+  // 內部 Tab 狀態與新增食材/食譜次級彈窗狀態
+  const [activeTab, setActiveTab] = useState<'foods' | 'recipes'>(
+    mode === 'recipes' ? 'recipes' : 'foods'
+  );
   const [isAddFoodOpen, setIsAddFoodOpen] = useState(false);
   const [isAddRecipeOpen, setIsAddRecipeOpen] = useState(false);
+
+  const effectiveTab: 'foods' | 'recipes' =
+    mode === 'foods' ? 'foods' : mode === 'recipes' ? 'recipes' : activeTab;
+
+  const handleOpenAdd = () => {
+    triggerHaptic('light');
+    if (effectiveTab === 'recipes') {
+      setIsAddRecipeOpen(true);
+    } else {
+      setIsAddFoodOpen(true);
+    }
+  };
+
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && (isAddFoodOpen || isAddRecipeOpen)) {
+      return;
+    }
+    onOpenChange(nextOpen);
+  };
 
   const defaultTitle =
     mode === 'foods'
@@ -127,7 +149,7 @@ export function FoodRecipeSelectDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <DialogContent
           showCloseButton={false}
           overlayClassName={zIndexClass}
@@ -159,8 +181,20 @@ export function FoodRecipeSelectDialog({
                 <span className="truncate">{resolvedTitle}</span>
               </DialogTitle>
 
-              {/* 右側佔位（與左側按鈕等寬，確保標題完美居中） */}
-              <div className="size-7 shrink-0 pointer-events-none" aria-hidden="true" />
+              {/* 右側操作：允許新增時顯示 + 圓鈕，否則維持等寬佔位確保標題置中 */}
+              {allowAdd ? (
+                <button
+                  type="button"
+                  onClick={handleOpenAdd}
+                  className="size-7 rounded-full flex items-center justify-center bg-muted text-muted-foreground hover:text-foreground hover:bg-border transition-all cursor-pointer shrink-0 active:scale-92"
+                  title={effectiveTab === 'recipes' ? t('diet.addRecipe', '新增食譜') : t('settings.addCustomFood', '新增食材')}
+                  aria-label={effectiveTab === 'recipes' ? t('diet.addRecipe', '新增食譜') : t('settings.addCustomFood', '新增食材')}
+                >
+                  <Plus className="size-3.5 stroke-[2.2]" />
+                </button>
+              ) : (
+                <div className="size-7 shrink-0 pointer-events-none" aria-hidden="true" />
+              )}
             </div>
           </DialogHeader>
 
@@ -168,13 +202,13 @@ export function FoodRecipeSelectDialog({
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden pt-1">
             <FoodRecipeBrowser
               mode={mode}
+              activeTab={effectiveTab}
+              onTabChange={setActiveTab}
               interactiveMode="select"
               showArchivedOption={allowArchived}
               disabledIds={disabledIds}
               isItemDisabled={isItemDisabled}
               onItemClick={handleItemClick}
-              onAddFood={allowAdd ? () => setIsAddFoodOpen(true) : undefined}
-              onAddRecipe={allowAdd ? () => setIsAddRecipeOpen(true) : undefined}
               className="flex-1 min-h-0"
               listContainerClassName="flex-1 min-h-0"
             />

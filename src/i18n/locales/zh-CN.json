@@ -350,7 +350,7 @@
       "bmrLabel": "基础代谢",
       "factorLabel": "系数",
       "tdeeLabel": "最终消耗",
-      "bmrFormulaNote": "基础代谢依 Mifflin-St Jeor 公式推算",
+      "bmrFormulaNote": "Mifflin-St Jeor 公式",
       "bingeNote": "放纵日模式不设热量上限",
       "macroSplit": "供能比",
       "ratio": "比例",

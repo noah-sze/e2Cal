@@ -350,7 +350,7 @@
       "bmrLabel": "BMR",
       "factorLabel": "Factor",
       "tdeeLabel": "TDEE",
-      "bmrFormulaNote": "BMR estimated via Mifflin-St Jeor",
+      "bmrFormulaNote": "Mifflin-St Jeor",
       "bingeNote": "No calorie cap on binge day",
       "macroSplit": "Macro Split",
       "ratio": "Ratio",

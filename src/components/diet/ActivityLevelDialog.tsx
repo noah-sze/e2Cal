@@ -217,7 +217,7 @@ export function ActivityLevelDialog({
                   {t('dietPlan.factorLabel', '係數')}
                 </span>
                 <span className="font-mono text-sm font-semibold text-foreground tabular-nums">
-                  {isBinge ? '999x' : selectedLevel}
+                  {selectedLevel}
                 </span>
               </div>
 
@@ -255,7 +255,7 @@ export function ActivityLevelDialog({
               <span className="leading-snug">
                 {isBinge
                   ? t('dietPlan.bingeNote', '放縱日模式不設熱量上限')
-                  : t('dietPlan.bmrFormulaNote', '基礎代謝依 Mifflin-St Jeor 公式推算')}
+                  : t('dietPlan.bmrFormulaNote', 'Mifflin-St Jeor 公式')}
               </span>
               {bodySpecSummary && (
                 <span className="font-mono tabular-nums shrink-0 text-muted-foreground/80">
@@ -273,7 +273,6 @@ export function ActivityLevelDialog({
           >
             {ACTIVITY_OPTIONS.map((opt) => {
               const isSelected = selectedLevel === opt.value;
-              const isOptBinge = opt.value === 999;
               return (
                 <button
                   key={opt.value}
@@ -302,7 +301,7 @@ export function ActivityLevelDialog({
                           : 'text-muted-foreground'
                       )}
                     >
-                      {isOptBinge ? '999x' : `×${opt.value}`}
+                      {`×${opt.value}`}
                     </span>
                     <span
                       aria-hidden="true"

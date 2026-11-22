@@ -16,6 +16,7 @@ import { CopyMealDatePickerDialog } from '@/components/diet/CopyMealDatePickerDi
 import { QuickPlaceholderDialog } from '@/components/diet/QuickPlaceholderDialog';
 import { RawWeightGuideDialog } from '@/components/diet/RawWeightGuideDialog';
 import { DietPlanModal } from '@/components/diet/DietPlanModal';
+import { ActivityLevelDialog } from '@/components/diet/ActivityLevelDialog';
 
 // 訓練模組 Dialogs
 import { ExerciseFormDialog } from '@/components/workout/ExerciseFormDialog';
@@ -36,6 +37,7 @@ import { CopyDailyDataDialog } from '@/components/common/CopyDailyDataDialog';
 import type { InitialSyncStep } from '@/services/sync/initialSyncManager';
 import { PwaInstallGuideDialog } from '@/components/pwa/PwaInstallGuideDialog';
 import { ResponsiveNumericKeypad } from '@/components/ui/ResponsiveNumericKeypad';
+import { MonthPickerDialog } from '@/components/ui/month-picker';
 
 import type {
   FoodItem,
@@ -236,6 +238,8 @@ export const DialogsTab: React.FC = () => {
   const [quickPlaceholderOpen, setQuickPlaceholderOpen] = useState(false);
   const [rawWeightGuideOpen, setRawWeightGuideOpen] = useState(false);
   const [dietPlanOpen, setDietPlanOpen] = useState(false);
+  const [activityLevelOpen, setActivityLevelOpen] = useState(false);
+  const [activityLevelVal, setActivityLevelVal] = useState(1.55);
 
   // 訓練模組 State (6 項獨立組件)
   const [exerciseFormOpen, setExerciseFormOpen] = useState(false);
@@ -264,6 +268,8 @@ export const DialogsTab: React.FC = () => {
   const [pwaGuideOpen, setPwaGuideOpen] = useState(false);
   const [keypadOpen, setKeypadOpen] = useState(false);
   const [keypadVal, setKeypadVal] = useState(150);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [monthPickerVal, setMonthPickerVal] = useState('1997-11');
 
   // 極簡 Toast 回應：嚴格遵守規則 68 條法則 4「對象 + 結果，2～4 個字結束」
   const handleTestConfirm = async (variant: 'default' | 'destructive' | 'archive') => {
@@ -288,11 +294,11 @@ export const DialogsTab: React.FC = () => {
             彈窗型錄
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5 font-sans">
-            全應用程式 25 個業務 Dialog 統一驗收矩陣，支援同組件多形態（新增/編輯、已連線/未連線）整合檢視。
+            全應用程式 27 個業務 Dialog 統一驗收矩陣，支援同組件多形態（新增/編輯、已連線/未連線）整合檢視。
           </p>
         </div>
         <div className="text-2xs font-mono text-muted-foreground tabular-nums">
-          25 項元件
+          27 項元件
         </div>
       </div>
 
@@ -300,7 +306,7 @@ export const DialogsTab: React.FC = () => {
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-mono text-muted-foreground">
-            飲食與營養 (9)
+            飲食與營養 (10)
           </h3>
         </div>
         <div className="divide-y divide-border rounded-lg border border-border bg-card overflow-hidden shadow-none">
@@ -411,6 +417,13 @@ export const DialogsTab: React.FC = () => {
             badge="Plan"
             onOpen={() => setDietPlanOpen(true)}
           />
+          <DialogRowItem
+            name="活動係數"
+            component="ActivityLevelDialog"
+            desc="Mifflin-St Jeor 基礎代謝 × 活動係數計算明細與強度選擇"
+            badge="PAL"
+            onOpen={() => setActivityLevelOpen(true)}
+          />
         </div>
       </div>
 
@@ -516,7 +529,7 @@ export const DialogsTab: React.FC = () => {
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-mono text-muted-foreground">
-            設定、同步與通用 (10)
+            設定、同步與通用 (11)
           </h3>
         </div>
         <div className="divide-y divide-border rounded-lg border border-border bg-card overflow-hidden shadow-none">
@@ -627,6 +640,13 @@ export const DialogsTab: React.FC = () => {
             desc="高對比虛擬數字鍵盤，帶小數與單位切換"
             badge="Keypad"
             onOpen={() => setKeypadOpen(true)}
+          />
+          <DialogRowItem
+            name="出生年月"
+            component="MonthPickerDialog"
+            desc="十年矩陣與 4×3 月份全顯網格，即時換算歲數"
+            badge="Picker"
+            onOpen={() => setMonthPickerOpen(true)}
           />
           <DialogRowItem
             name="確認彈窗"
@@ -777,6 +797,18 @@ export const DialogsTab: React.FC = () => {
         onSave={async (_updates) => {
           toast.show('已儲存');
           setDietPlanOpen(false);
+        }}
+      />
+
+      {/* 飲食 11: 活動係數與熱量消耗明細 */}
+      <ActivityLevelDialog
+        isOpen={activityLevelOpen}
+        onClose={() => setActivityLevelOpen(false)}
+        currentActivity={activityLevelVal}
+        profile={MOCK_USER_PROFILE}
+        onSave={(val) => {
+          setActivityLevelVal(val);
+          toast.show('已更新');
         }}
       />
 
@@ -939,6 +971,17 @@ export const DialogsTab: React.FC = () => {
         onUnitChange={(u) => toast.show(`單位: ${u}`)}
         onConfirm={(val) => {
           setKeypadVal(Number(val) || 0);
+          toast.show('已變更');
+        }}
+      />
+
+      {/* 系統 10: 出生年月選擇器 */}
+      <MonthPickerDialog
+        open={monthPickerOpen}
+        onOpenChange={setMonthPickerOpen}
+        value={monthPickerVal}
+        onChange={(val) => {
+          setMonthPickerVal(val);
           toast.show('已變更');
         }}
       />

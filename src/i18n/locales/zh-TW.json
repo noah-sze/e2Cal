@@ -350,7 +350,7 @@
       "bmrLabel": "基礎代謝",
       "factorLabel": "係數",
       "tdeeLabel": "最終消耗",
-      "bmrFormulaNote": "基礎代謝依 Mifflin-St Jeor 公式推算",
+      "bmrFormulaNote": "Mifflin-St Jeor 公式",
       "bingeNote": "放縱日模式不設熱量上限",
       "macroSplit": "供能比",
       "ratio": "比例",

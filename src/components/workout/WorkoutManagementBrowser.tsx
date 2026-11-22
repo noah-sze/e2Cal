@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, ChevronDown, ChevronRight, Plus, X, RotateCcw, Trash2, Edit2, Archive, MoreVertical } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, Plus, X, RotateCcw, Trash2, Edit2, Archive, MoreVertical, LayoutGrid, Dumbbell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -397,7 +397,7 @@ export function WorkoutManagementBrowser({
       {viewTab === 'exercises' && (
         <div className="space-y-2.5 flex-1 min-h-0 flex flex-col">
           {/* 篩選列：整合分類下拉、器械下拉與右側新增按鈕 */}
-          <div className="flex items-center gap-1.5 py-0.5 shrink-0">
+          <div className="flex items-center gap-1.5 py-0.5 shrink-0 overflow-x-auto no-scrollbar min-w-0 -mx-4 px-4 md:mx-0 md:px-0">
             {/* 肌群分類下拉按鈕（含全部與已歸檔） */}
             <div
               className={cn(
@@ -412,8 +412,12 @@ export function WorkoutManagementBrowser({
                   render={
                     <button
                       type="button"
-                      className="flex items-center gap-1 py-1 pl-2.5 pr-2 cursor-pointer focus:outline-none whitespace-nowrap"
+                      className={cn(
+                        'flex items-center gap-1.5 py-1 pl-2.5 cursor-pointer focus:outline-none whitespace-nowrap',
+                        showExerciseArchived || selectedMuscleGroup !== 'all' ? 'pr-1' : 'pr-2'
+                      )}
                     >
+                      <LayoutGrid className="size-3 opacity-60 shrink-0" />
                       <span className="truncate">
                         {showExerciseArchived
                           ? t('common.archived', '已歸檔')
@@ -421,7 +425,9 @@ export function WorkoutManagementBrowser({
                             ? t('workout.categoryFilter', '分類')
                             : t(`workout.${selectedMuscleGroup}`)}
                       </span>
-                      <ChevronDown className="size-3 opacity-60 shrink-0" />
+                      {!(showExerciseArchived || selectedMuscleGroup !== 'all') && (
+                        <ChevronDown className="size-3 opacity-60 shrink-0" />
+                      )}
                     </button>
                   }
                 />
@@ -479,6 +485,21 @@ export function WorkoutManagementBrowser({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              {(showExerciseArchived || selectedMuscleGroup !== 'all') && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerHaptic('light');
+                    setShowExerciseArchived(false);
+                    setSelectedMuscleGroup('all');
+                  }}
+                  className="p-1 pr-2 hover:opacity-70 cursor-pointer shrink-0"
+                  title={t('diet.resetFilter', '重設')}
+                >
+                  <X className="size-3" />
+                </button>
+              )}
             </div>
 
             {/* 器械下拉按鈕 */}
@@ -495,14 +516,20 @@ export function WorkoutManagementBrowser({
                   render={
                     <button
                       type="button"
-                      className="flex items-center gap-1 py-1 pl-2.5 pr-2 cursor-pointer focus:outline-none whitespace-nowrap max-w-[130px]"
+                      className={cn(
+                        'flex items-center gap-1.5 py-1 pl-2.5 cursor-pointer focus:outline-none whitespace-nowrap max-w-[140px]',
+                        selectedEquipment !== 'all' ? 'pr-1' : 'pr-2'
+                      )}
                     >
+                      <Dumbbell className="size-3 opacity-60 shrink-0" />
                       <span className="truncate">
                         {selectedEquipment === 'all'
                           ? t('workout.equipment', '器械')
                           : getEquipmentDisplayName(selectedEquipment, t)}
                       </span>
-                      <ChevronDown className="size-3 opacity-60 shrink-0" />
+                      {selectedEquipment === 'all' && (
+                        <ChevronDown className="size-3 opacity-60 shrink-0" />
+                      )}
                     </button>
                   }
                 />
@@ -536,6 +563,20 @@ export function WorkoutManagementBrowser({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
+              {selectedEquipment !== 'all' && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerHaptic('light');
+                    setSelectedEquipment('all');
+                  }}
+                  className="p-1 pr-2 hover:opacity-70 cursor-pointer shrink-0"
+                  title={t('diet.resetFilter', '重設')}
+                >
+                  <X className="size-3" />
+                </button>
+              )}
             </div>
 
             {/* 右側新增按鈕 */}
@@ -546,7 +587,7 @@ export function WorkoutManagementBrowser({
                   triggerHaptic('selection');
                   onAddExercise();
                 }}
-                className="ml-auto shrink-0 inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-sans border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                className="ml-auto shrink-0 hidden md:inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-sans border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer active:scale-95 whitespace-nowrap"
               >
                 <Plus className="size-3" />
                 <span>{t('common.add', '新增')}</span>
@@ -615,22 +656,28 @@ export function WorkoutManagementBrowser({
       {viewTab === 'routines' && (
         <div className="space-y-2.5 flex-1 min-h-0 flex flex-col">
           {/* 篩選列：左側下拉膠囊整合「全部」與「已歸檔」，右側新增按鈕 */}
-          <div className="flex items-center justify-between gap-1.5 py-0.5 shrink-0">
-            <div className="flex items-center gap-1 shrink-0 pr-1">
+          <div className="flex items-center justify-between gap-1.5 py-0.5 shrink-0 overflow-x-auto no-scrollbar min-w-0 -mx-4 px-4 md:mx-0 md:px-0">
+            <div
+              className={cn(
+                'inline-flex items-center rounded-full text-xs font-sans transition-all border shrink-0',
+                showRoutineArchived
+                  ? 'bg-foreground text-background border-foreground font-medium'
+                  : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
+              )}
+            >
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
                     <button
                       type="button"
                       className={cn(
-                        'px-3 py-1 rounded-full text-xs font-sans transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 shrink-0 border',
-                        showRoutineArchived
-                          ? 'bg-foreground text-background border-foreground font-medium'
-                          : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
+                        'py-1 pl-2.5 cursor-pointer whitespace-nowrap flex items-center gap-1.5 focus:outline-none',
+                        showRoutineArchived ? 'pr-1' : 'pr-2'
                       )}
                     >
+                      <LayoutGrid className="size-3 opacity-60 shrink-0" />
                       <span>{showRoutineArchived ? t('common.archived', '已歸檔') : t('common.all', '全部')}</span>
-                      <ChevronDown className="size-3 opacity-60 shrink-0" />
+                      {!showRoutineArchived && <ChevronDown className="size-3 opacity-60 shrink-0" />}
                     </button>
                   }
                 />
@@ -667,6 +714,20 @@ export function WorkoutManagementBrowser({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              {showRoutineArchived && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerHaptic('light');
+                    setShowRoutineArchived(false);
+                  }}
+                  className="p-1 pr-2 hover:opacity-70 cursor-pointer shrink-0"
+                  title={t('diet.resetFilter', '重設')}
+                >
+                  <X className="size-3" />
+                </button>
+              )}
             </div>
             {onAddRoutine && (
               <button
@@ -675,7 +736,7 @@ export function WorkoutManagementBrowser({
                   triggerHaptic('selection');
                   onAddRoutine();
                 }}
-                className="ml-auto shrink-0 inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-sans border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                className="ml-auto shrink-0 hidden md:inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-sans border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer active:scale-95 whitespace-nowrap"
               >
                 <Plus className="size-3" />
                 <span>{t('common.add', '新增')}</span>
@@ -745,22 +806,28 @@ export function WorkoutManagementBrowser({
       {viewTab === 'equipments' && (
         <div className="space-y-2.5 flex-1 min-h-0 flex flex-col">
           {/* 篩選列：左側下拉膠囊整合「全部」與「已歸檔」，右側新增按鈕 */}
-          <div className="flex items-center justify-between gap-1.5 py-0.5 shrink-0">
-            <div className="flex items-center gap-1 shrink-0 pr-1">
+          <div className="flex items-center justify-between gap-1.5 py-0.5 shrink-0 overflow-x-auto no-scrollbar min-w-0 -mx-4 px-4 md:mx-0 md:px-0">
+            <div
+              className={cn(
+                'inline-flex items-center rounded-full text-xs font-sans transition-all border shrink-0',
+                showEquipmentArchived
+                  ? 'bg-foreground text-background border-foreground font-medium'
+                  : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
+              )}
+            >
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
                     <button
                       type="button"
                       className={cn(
-                        'px-3 py-1 rounded-full text-xs font-sans transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 shrink-0 border',
-                        showEquipmentArchived
-                          ? 'bg-foreground text-background border-foreground font-medium'
-                          : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
+                        'py-1 pl-2.5 cursor-pointer whitespace-nowrap flex items-center gap-1.5 focus:outline-none',
+                        showEquipmentArchived ? 'pr-1' : 'pr-2'
                       )}
                     >
+                      <LayoutGrid className="size-3 opacity-60 shrink-0" />
                       <span>{showEquipmentArchived ? t('common.archived', '已歸檔') : t('common.all', '全部')}</span>
-                      <ChevronDown className="size-3 opacity-60 shrink-0" />
+                      {!showEquipmentArchived && <ChevronDown className="size-3 opacity-60 shrink-0" />}
                     </button>
                   }
                 />
@@ -797,6 +864,20 @@ export function WorkoutManagementBrowser({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              {showEquipmentArchived && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerHaptic('light');
+                    setShowEquipmentArchived(false);
+                  }}
+                  className="p-1 pr-2 hover:opacity-70 cursor-pointer shrink-0"
+                  title={t('diet.resetFilter', '重設')}
+                >
+                  <X className="size-3" />
+                </button>
+              )}
             </div>
             {onAddEquipment && (
               <button
@@ -805,7 +886,7 @@ export function WorkoutManagementBrowser({
                   triggerHaptic('selection');
                   onAddEquipment();
                 }}
-                className="ml-auto shrink-0 inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-sans border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                className="ml-auto shrink-0 hidden md:inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-sans border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer active:scale-95 whitespace-nowrap"
               >
                 <Plus className="size-3" />
                 <span>{t('common.add', '新增')}</span>

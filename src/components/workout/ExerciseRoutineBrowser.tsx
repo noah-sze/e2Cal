@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, Plus, X, LayoutGrid, Dumbbell } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
@@ -569,7 +569,7 @@ export function ExerciseRoutineBrowser({
 
           {/* 選擇彈窗模式工具列：分類過濾、器械過濾與右側新增按鈕 */}
           {interactiveMode !== 'manage' && (
-            <div className="flex items-center gap-1.5 shrink-0 py-0.5">
+            <div className="flex items-center gap-1.5 shrink-0 py-0.5 overflow-x-auto no-scrollbar max-w-full min-w-0">
               {/* 肌群分類下拉按鈕 */}
               <div
                 className={cn(
@@ -584,14 +584,20 @@ export function ExerciseRoutineBrowser({
                     render={
                       <button
                         type="button"
-                        className="flex items-center gap-1 py-1 pl-2.5 pr-2 cursor-pointer focus:outline-none whitespace-nowrap"
+                        className={cn(
+                          'flex items-center gap-1.5 py-1 pl-2.5 cursor-pointer focus:outline-none whitespace-nowrap',
+                          selectedMuscleFilter !== 'all' ? 'pr-1' : 'pr-2'
+                        )}
                       >
+                        <LayoutGrid className="size-3 opacity-60 shrink-0" />
                         <span className="truncate">
                           {selectedMuscleFilter === 'all'
                             ? t('workout.categoryFilter', '分類')
                             : t(`workout.${selectedMuscleFilter}`)}
                         </span>
-                        <ChevronDown className="size-3 opacity-60 shrink-0" />
+                        {selectedMuscleFilter === 'all' && (
+                          <ChevronDown className="size-3 opacity-60 shrink-0" />
+                        )}
                       </button>
                     }
                   />
@@ -631,6 +637,20 @@ export function ExerciseRoutineBrowser({
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                {selectedMuscleFilter !== 'all' && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      triggerHaptic('light');
+                      setSelectedMuscleFilter('all');
+                    }}
+                    className="p-1 pr-2 hover:opacity-70 cursor-pointer shrink-0"
+                    title={t('diet.resetFilter', '重設')}
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
               </div>
 
               {/* 器械過濾下拉按鈕 */}
@@ -647,14 +667,20 @@ export function ExerciseRoutineBrowser({
                     render={
                       <button
                         type="button"
-                        className="flex items-center gap-1 py-1 pl-2.5 pr-2 cursor-pointer focus:outline-none whitespace-nowrap max-w-[130px]"
+                        className={cn(
+                          'flex items-center gap-1.5 py-1 pl-2.5 cursor-pointer focus:outline-none whitespace-nowrap max-w-[140px]',
+                          selectedEquipmentFilter !== 'all' ? 'pr-1' : 'pr-2'
+                        )}
                       >
+                        <Dumbbell className="size-3 opacity-60 shrink-0" />
                         <span className="truncate">
                           {selectedEquipmentFilter === 'all'
                             ? t('workout.equipment', '器械')
                             : getEquipmentDisplayName(selectedEquipmentFilter, t)}
                         </span>
-                        <ChevronDown className="size-3 opacity-60 shrink-0" />
+                        {selectedEquipmentFilter === 'all' && (
+                          <ChevronDown className="size-3 opacity-60 shrink-0" />
+                        )}
                       </button>
                     }
                   />
@@ -694,6 +720,20 @@ export function ExerciseRoutineBrowser({
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                {selectedEquipmentFilter !== 'all' && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      triggerHaptic('light');
+                      setSelectedEquipmentFilter('all');
+                    }}
+                    className="p-1 pr-2 hover:opacity-70 cursor-pointer shrink-0"
+                    title={t('diet.resetFilter', '重設')}
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
               </div>
 
               {/* 右側快速新增動作按鈕 */}

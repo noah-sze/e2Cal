@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, ChevronDown, X, SlidersHorizontal, ArrowUpDown, Plus } from 'lucide-react';
+import { Search, ChevronDown, X, SlidersHorizontal, ArrowUpDown, Plus, LayoutGrid } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
@@ -689,7 +689,12 @@ export function FoodRecipeBrowser({
           )}
 
           {/* 工具過濾與排序列 */}
-          <div className="flex items-center gap-1.5 shrink-0 py-0.5">
+          <div
+            className={cn(
+              'flex items-center gap-1.5 shrink-0 py-0.5 overflow-x-auto no-scrollbar min-w-0',
+              interactiveMode === 'manage' && '-mx-4 px-4 md:mx-0 md:px-0'
+            )}
+          >
             {/* 整合分類下拉按鈕（置於營養特徵左側） */}
             <div
               className={cn(
@@ -704,8 +709,12 @@ export function FoodRecipeBrowser({
                     render={
                       <button
                         type="button"
-                        className="flex items-center gap-1 py-1 pl-2.5 pr-2 cursor-pointer focus:outline-none whitespace-nowrap"
+                        className={cn(
+                          'flex items-center gap-1.5 py-1 pl-2.5 cursor-pointer focus:outline-none whitespace-nowrap',
+                          showFoodArchived || selectedCategory !== 'all' ? 'pr-1' : 'pr-2'
+                        )}
                       >
+                        <LayoutGrid className="size-3 opacity-60 shrink-0" />
                         <span className="truncate">
                           {showFoodArchived
                             ? t('common.archived', '已歸檔')
@@ -713,7 +722,9 @@ export function FoodRecipeBrowser({
                               ? t('diet.foodCategory.title', '分類')
                               : t(`diet.foodCategory.${selectedCategory}`)}
                         </span>
-                        <ChevronDown className="size-3 opacity-60 shrink-0" />
+                        {!(showFoodArchived || selectedCategory !== 'all') && (
+                          <ChevronDown className="size-3 opacity-60 shrink-0" />
+                        )}
                       </button>
                     }
                   />
@@ -781,12 +792,27 @@ export function FoodRecipeBrowser({
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                {(showFoodArchived || selectedCategory !== 'all') && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      triggerHaptic('light');
+                      setShowFoodArchived(false);
+                      setSelectedCategory('all');
+                    }}
+                    className="p-1 pr-2 hover:opacity-70 cursor-pointer shrink-0"
+                    title={t('diet.resetFilter', '重設')}
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
               </div>
 
             {/* 營養特徵選單 */}
             <div
               className={cn(
-                'inline-flex items-center rounded-full text-xs font-mono transition-all border',
+                'inline-flex items-center rounded-full text-xs font-mono transition-all border shrink-0',
                 selectedNutritionTag !== 'all'
                   ? 'bg-foreground text-background border-foreground font-medium'
                   : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
@@ -797,15 +823,20 @@ export function FoodRecipeBrowser({
                   render={
                     <button
                       type="button"
-                      className="flex items-center gap-1.5 py-1 pl-2.5 pr-2 cursor-pointer focus:outline-none"
+                      className={cn(
+                        'flex items-center gap-1.5 py-1 pl-2.5 cursor-pointer focus:outline-none whitespace-nowrap',
+                        selectedNutritionTag !== 'all' ? 'pr-1' : 'pr-2'
+                      )}
                     >
-                      <SlidersHorizontal className="size-3 opacity-60" />
+                      <SlidersHorizontal className="size-3 opacity-60 shrink-0" />
                       <span className="truncate">
                         {selectedNutritionTag === 'all'
                           ? t('diet.nutritionTags.title', '營養特徵')
                           : t(`diet.nutritionTags.${selectedNutritionTag}`)}
                       </span>
-                      <ChevronDown className="size-3 opacity-60" />
+                      {selectedNutritionTag === 'all' && (
+                        <ChevronDown className="size-3 opacity-60 shrink-0" />
+                      )}
                     </button>
                   }
                 />
@@ -874,7 +905,7 @@ export function FoodRecipeBrowser({
             {/* 排序功能選單 */}
             <div
               className={cn(
-                'inline-flex items-center rounded-full text-xs font-mono transition-all border',
+                'inline-flex items-center rounded-full text-xs font-mono transition-all border shrink-0',
                 foodSortBy !== 'default'
                   ? 'bg-foreground text-background border-foreground font-medium'
                   : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
@@ -885,15 +916,20 @@ export function FoodRecipeBrowser({
                   render={
                     <button
                       type="button"
-                      className="flex items-center gap-1.5 py-1 pl-2.5 pr-2 cursor-pointer focus:outline-none"
+                      className={cn(
+                        'flex items-center gap-1.5 py-1 pl-2.5 cursor-pointer focus:outline-none whitespace-nowrap',
+                        foodSortBy !== 'default' ? 'pr-1' : 'pr-2'
+                      )}
                     >
-                      <ArrowUpDown className="size-3 opacity-60" />
+                      <ArrowUpDown className="size-3 opacity-60 shrink-0" />
                       <span className="truncate">
                         {foodSortBy === 'default'
                           ? t('diet.sort.title', '排序')
                           : sortOptions.find((o) => o.id === foodSortBy)?.label ?? t('diet.sort.title', '排序')}
                       </span>
-                      <ChevronDown className="size-3 opacity-60" />
+                      {foodSortBy === 'default' && (
+                        <ChevronDown className="size-3 opacity-60 shrink-0" />
+                      )}
                     </button>
                   }
                 />
@@ -944,7 +980,10 @@ export function FoodRecipeBrowser({
                     onAdd('food');
                   }
                 }}
-                className="ml-auto inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-mono border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer shrink-0 active:scale-95"
+                className={cn(
+                  'ml-auto items-center gap-1 py-1 px-2.5 rounded-full text-xs font-mono border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer shrink-0 active:scale-95 whitespace-nowrap',
+                  interactiveMode === 'manage' ? 'hidden md:inline-flex' : 'inline-flex'
+                )}
                 title={t('common.add', '新增')}
                 aria-label={t('common.add', '新增')}
               >
@@ -1040,7 +1079,12 @@ export function FoodRecipeBrowser({
           )}
 
           {/* 工具過濾與排序列 */}
-          <div className="flex items-center gap-1.5 shrink-0 py-0.5">
+          <div
+            className={cn(
+              'flex items-center gap-1.5 shrink-0 py-0.5 overflow-x-auto no-scrollbar min-w-0',
+              interactiveMode === 'manage' && '-mx-4 px-4 md:mx-0 md:px-0'
+            )}
+          >
             {/* 狀態下拉膠囊：全部 vs 已歸檔（有歸檔選項時置於營養特徵左側） */}
             {showArchivedOption && (
               <div
@@ -1056,14 +1100,20 @@ export function FoodRecipeBrowser({
                     render={
                       <button
                         type="button"
-                        className="flex items-center gap-1 py-1 pl-2.5 pr-2 cursor-pointer focus:outline-none whitespace-nowrap"
+                        className={cn(
+                          'flex items-center gap-1.5 py-1 pl-2.5 cursor-pointer focus:outline-none whitespace-nowrap',
+                          showRecipeArchived ? 'pr-1' : 'pr-2'
+                        )}
                       >
+                        <LayoutGrid className="size-3 opacity-60 shrink-0" />
                         <span className="truncate">
                           {showRecipeArchived
                             ? t('common.archived', '已歸檔')
                             : t('diet.foodCategory.all', '全部')}
                         </span>
-                        <ChevronDown className="size-3 opacity-60 shrink-0" />
+                        {!showRecipeArchived && (
+                          <ChevronDown className="size-3 opacity-60 shrink-0" />
+                        )}
                       </button>
                     }
                   />
@@ -1100,13 +1150,27 @@ export function FoodRecipeBrowser({
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                {showRecipeArchived && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      triggerHaptic('light');
+                      setShowRecipeArchived(false);
+                    }}
+                    className="p-1 pr-2 hover:opacity-70 cursor-pointer shrink-0"
+                    title={t('diet.resetFilter', '重設')}
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
               </div>
             )}
 
             {/* 營養特徵選單 */}
             <div
               className={cn(
-                'inline-flex items-center rounded-full text-xs font-mono transition-all border',
+                'inline-flex items-center rounded-full text-xs font-mono transition-all border shrink-0',
                 selectedRecipeNutritionTag !== 'all'
                   ? 'bg-foreground text-background border-foreground font-medium'
                   : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
@@ -1117,15 +1181,20 @@ export function FoodRecipeBrowser({
                   render={
                     <button
                       type="button"
-                      className="flex items-center gap-1.5 py-1 pl-2.5 pr-2 cursor-pointer focus:outline-none"
+                      className={cn(
+                        'flex items-center gap-1.5 py-1 pl-2.5 cursor-pointer focus:outline-none whitespace-nowrap',
+                        selectedRecipeNutritionTag !== 'all' ? 'pr-1' : 'pr-2'
+                      )}
                     >
-                      <SlidersHorizontal className="size-3 opacity-60" />
+                      <SlidersHorizontal className="size-3 opacity-60 shrink-0" />
                       <span className="truncate">
                         {selectedRecipeNutritionTag === 'all'
                           ? t('diet.nutritionTags.title', '營養特徵')
                           : t(`diet.nutritionTags.${selectedRecipeNutritionTag}`)}
                       </span>
-                      <ChevronDown className="size-3 opacity-60" />
+                      {selectedRecipeNutritionTag === 'all' && (
+                        <ChevronDown className="size-3 opacity-60 shrink-0" />
+                      )}
                     </button>
                   }
                 />
@@ -1194,7 +1263,7 @@ export function FoodRecipeBrowser({
             {/* 排序功能選單 */}
             <div
               className={cn(
-                'inline-flex items-center rounded-full text-xs font-mono transition-all border',
+                'inline-flex items-center rounded-full text-xs font-mono transition-all border shrink-0',
                 recipeSortBy !== 'default'
                   ? 'bg-foreground text-background border-foreground font-medium'
                   : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
@@ -1205,15 +1274,20 @@ export function FoodRecipeBrowser({
                   render={
                     <button
                       type="button"
-                      className="flex items-center gap-1.5 py-1 pl-2.5 pr-2 cursor-pointer focus:outline-none"
+                      className={cn(
+                        'flex items-center gap-1.5 py-1 pl-2.5 cursor-pointer focus:outline-none whitespace-nowrap',
+                        recipeSortBy !== 'default' ? 'pr-1' : 'pr-2'
+                      )}
                     >
-                      <ArrowUpDown className="size-3 opacity-60" />
+                      <ArrowUpDown className="size-3 opacity-60 shrink-0" />
                       <span className="truncate">
                         {recipeSortBy === 'default'
                           ? t('diet.sort.title', '排序')
                           : sortOptions.find((o) => o.id === recipeSortBy)?.label ?? t('diet.sort.title', '排序')}
                       </span>
-                      <ChevronDown className="size-3 opacity-60" />
+                      {recipeSortBy === 'default' && (
+                        <ChevronDown className="size-3 opacity-60 shrink-0" />
+                      )}
                     </button>
                   }
                 />
@@ -1264,7 +1338,10 @@ export function FoodRecipeBrowser({
                     onAdd('recipe');
                   }
                 }}
-                className="ml-auto inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-mono border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer shrink-0 active:scale-95"
+                className={cn(
+                  'ml-auto items-center gap-1 py-1 px-2.5 rounded-full text-xs font-mono border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer shrink-0 active:scale-95 whitespace-nowrap',
+                  interactiveMode === 'manage' ? 'hidden md:inline-flex' : 'inline-flex'
+                )}
                 title={t('common.add', '新增')}
                 aria-label={t('common.add', '新增')}
               >
