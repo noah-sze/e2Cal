@@ -16,6 +16,7 @@ import { ExerciseFormDialog, type ExerciseFormData } from '@/components/workout/
 import { RoutineFormDialog, type RoutineFormData } from '@/components/workout/RoutineFormDialog';
 import { useExercises } from '@/hooks/useExercises';
 import { useRoutines } from '@/hooks/useRoutines';
+import { touchRecentExercise, touchRecentRoutine } from '@/hooks/useRecentExercises';
 import { toast } from '@/components/ui/toast';
 import type { Exercise, WorkoutRoutine } from '@/types';
 import { cn } from '@/lib/utils';
@@ -116,6 +117,11 @@ export function ExerciseSelectDialog({
     item: Exercise | WorkoutRoutine,
     type: 'exercise' | 'routine'
   ) => {
+    if (type === 'exercise') {
+      touchRecentExercise(item.id);
+    } else {
+      touchRecentRoutine(item.id);
+    }
     triggerHaptic('selection');
     onSelect(item, type);
     if (autoCloseOnSelect) {
@@ -207,6 +213,7 @@ export function ExerciseSelectDialog({
               disabledIds={disabledIds}
               isItemDisabled={isItemDisabled}
               onItemClick={handleItemSelect}
+              freezeSort={open}
               className="flex-1 min-h-0"
               listContainerClassName="flex-1 min-h-0"
             />

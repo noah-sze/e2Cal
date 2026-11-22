@@ -47,10 +47,17 @@ export function calculateMacroPercentages(carbs: number, protein: number, fat: n
   };
 }
 
+const evaluationCache = new WeakMap<NutritionEvaluationInput, NutritionEvaluationResult>();
+
 /**
- * 客觀營養角色多標籤與數值點亮評估函數 (純函數，無副作用)
+ * 客觀營養角色多標籤與數值點亮評估函數 (純函數，無副作用；以 WeakMap 依物件參照快取結果)
  */
 export function evaluateNutritionalHighlight(food: NutritionEvaluationInput): NutritionEvaluationResult {
+  const cached = evaluationCache.get(food);
+  if (cached) {
+    return cached;
+  }
+
   const calories = Math.max(0, food.calories || 0);
   const carbs = Math.max(0, food.carbs || 0);
   const protein = Math.max(0, food.protein || 0);
@@ -187,9 +194,11 @@ export function evaluateNutritionalHighlight(food: NutritionEvaluationInput): Nu
     labels.push('high-calorie');
   }
 
-  return {
+  const result: NutritionEvaluationResult = {
     labels,
     highlights,
     macroPercentages: { proteinPct, carbsPct, fatPct },
   };
+  evaluationCache.set(food, result);
+  return result;
 }

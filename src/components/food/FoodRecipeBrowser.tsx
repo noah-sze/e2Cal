@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback, useDeferredValue } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, ChevronDown, X, SlidersHorizontal, ArrowUpDown, Plus, LayoutGrid } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -58,6 +58,8 @@ export interface FoodRecipeBrowserProps {
   onUnarchiveFood?: (food: FoodItem) => void;
   onDeleteRecipe?: (recipe: FoodRecipe) => void;
   onUnarchiveRecipe?: (recipe: FoodRecipe) => void;
+  /** 是否凍結最近使用排序快照（用於彈窗開啟期間防止重排跳動） */
+  freezeSort?: boolean;
   /** 自訂容器類名 */
   className?: string;
   /** 自訂列表滾動容器類名 */
@@ -81,6 +83,7 @@ export function FoodRecipeBrowser({
   onUnarchiveFood: _onUnarchiveFood,
   onDeleteRecipe: _onDeleteRecipe,
   onUnarchiveRecipe: _onUnarchiveRecipe,
+  freezeSort = false,
   className,
   listContainerClassName,
 }: FoodRecipeBrowserProps) {
@@ -108,6 +111,16 @@ export function FoodRecipeBrowser({
   
   const currentTab = controlledTab ?? internalTab;
   const viewTab = mode === 'all' ? currentTab : mode;
+
+  // 雙 Tab 惰性掛載 + 保活隱藏（切換食譜 ⇄ 食材時不銷毀重建 DOM，消除切回卡頓）
+  const [hasMountedFoods, setHasMountedFoods] = useState(viewTab === 'foods');
+  const [hasMountedRecipes, setHasMountedRecipes] = useState(viewTab === 'recipes');
+  if (viewTab === 'foods' && !hasMountedFoods) {
+    setHasMountedFoods(true);
+  }
+  if (viewTab === 'recipes' && !hasMountedRecipes) {
+    setHasMountedRecipes(true);
+  }
 
   const handleTabChange = (tab: 'foods' | 'recipes') => {
     triggerHaptic('selection');
@@ -139,7 +152,7 @@ export function FoodRecipeBrowser({
   const {
     foodLastUsedMap,
     recipeLastUsedMap,
-  } = useRecentFoods();
+  } = useRecentFoods(freezeSort);
 
   // 穩定的選擇回調（100% 避免行內匿名函數參照抖動，啟動 React.memo）
   const handleSelectFood = useCallback(
@@ -251,9 +264,12 @@ export function FoodRecipeBrowser({
     return counts;
   }, [foodNutritionTagMap]);
 
+  const deferredFoodSearch = useDeferredValue(foodSearchQuery);
+  const effectiveFoodSearch = foodSearchQuery === '' ? '' : deferredFoodSearch;
+
   const filteredFoods = useMemo(() => {
     let list = tabBaseFoods;
-    const isSearching = Boolean(foodSearchQuery.trim());
+    const isSearching = Boolean(effectiveFoodSearch.trim());
 
     if (!isSearching && selectedCategory !== 'all') {
       list = list.filter((food) => (food.category || 'natural') === selectedCategory);
@@ -269,7 +285,7 @@ export function FoodRecipeBrowser({
     if (isSearching) {
       list = list.filter((food) =>
         matchesMultilingual(
-          foodSearchQuery,
+          effectiveFoodSearch,
           { id: food.id, name: food.name, brand: food.brand },
           'food'
         )
@@ -313,14 +329,14 @@ export function FoodRecipeBrowser({
 
       return compareByRecentActivityThenName(a, b, foodLastUsedMap);
     });
-  }, [tabBaseFoods, selectedCategory, selectedNutritionTag, foodSearchQuery, foodSortBy, nutritionDisplayMode, foodLastUsedMap, foodNutritionTagMap]);
+  }, [tabBaseFoods, selectedCategory, selectedNutritionTag, effectiveFoodSearch, foodSortBy, nutritionDisplayMode, foodLastUsedMap, foodNutritionTagMap]);
 
   // ==========================================
   // 食材分批漸進加載 (Incremental Windowing)
-  // 首屏渲染 40 筆，滾動觸底無感追加，消除 400+ DOM 節點一次性渲染卡頓
+  // 首屏渲染 20 筆，滾動觸底無感追加，消除大量 DOM 節點一次性渲染卡頓
   // 使用 Callback Ref 確保在 Tab 切換或 DOM 重新掛載時 100% 重新綁定 Observer
   // ==========================================
-  const FOOD_BATCH_SIZE = 40;
+  const FOOD_BATCH_SIZE = 20;
   const [visibleFoodCount, setVisibleFoodCount] = useState(FOOD_BATCH_SIZE);
   const foodObserverRef = useRef<IntersectionObserver | null>(null);
   const filteredFoodsLengthRef = useRef(filteredFoods.length);
@@ -473,9 +489,12 @@ export function FoodRecipeBrowser({
     return counts;
   }, [recipeNutritionTagMap]);
 
+  const deferredRecipeSearch = useDeferredValue(recipeSearchQuery);
+  const effectiveRecipeSearch = recipeSearchQuery === '' ? '' : deferredRecipeSearch;
+
   const filteredRecipes = useMemo(() => {
     let list = tabBaseRecipes;
-    const isSearching = Boolean(recipeSearchQuery.trim());
+    const isSearching = Boolean(effectiveRecipeSearch.trim());
 
     if (selectedRecipeNutritionTag !== 'all') {
       list = list.filter((recipe) => {
@@ -487,7 +506,7 @@ export function FoodRecipeBrowser({
     if (isSearching) {
       list = list.filter((recipe) =>
         matchesMultilingual(
-          recipeSearchQuery,
+          effectiveRecipeSearch,
           { id: recipe.id, name: recipe.name },
           'food'
         )
@@ -522,13 +541,13 @@ export function FoodRecipeBrowser({
 
       return compareByRecentActivityThenName(a, b, recipeLastUsedMap);
     });
-  }, [tabBaseRecipes, selectedRecipeNutritionTag, recipeSearchQuery, recipeSortBy, recipeLastUsedMap, recipeNutritionTagMap, getRecipeMacros]);
+  }, [tabBaseRecipes, selectedRecipeNutritionTag, effectiveRecipeSearch, recipeSortBy, recipeLastUsedMap, recipeNutritionTagMap, getRecipeMacros]);
 
   // ==========================================
   // 食譜分批漸進加載 (Incremental Windowing)
   // 使用 Callback Ref 確保在 Tab 切換或 DOM 重新掛載時 100% 重新綁定 Observer
   // ==========================================
-  const RECIPE_BATCH_SIZE = 40;
+  const RECIPE_BATCH_SIZE = 20;
   const [visibleRecipeCount, setVisibleRecipeCount] = useState(RECIPE_BATCH_SIZE);
   const recipeObserverRef = useRef<IntersectionObserver | null>(null);
   const filteredRecipesLengthRef = useRef(filteredRecipes.length);
@@ -663,8 +682,8 @@ export function FoodRecipeBrowser({
       {/* ========================================================================= */}
       {/* 視圖 1：單品食材 (Foods) */}
       {/* ========================================================================= */}
-      {viewTab === 'foods' && (
-        <div className="space-y-2.5 flex-1 min-h-0 flex flex-col">
+      {hasMountedFoods && (
+        <div className={cn('space-y-2.5 flex-1 min-h-0 flex flex-col', viewTab !== 'foods' && 'hidden')}>
           {/* 搜尋輸入框 (僅單 Tab 模式時獨立渲染) */}
           {mode !== 'all' && (
             <div className="relative flex items-center shrink-0">
@@ -1053,8 +1072,8 @@ export function FoodRecipeBrowser({
       {/* ========================================================================= */}
       {/* 視圖 2：食譜配方 (Recipes) */}
       {/* ========================================================================= */}
-      {viewTab === 'recipes' && (
-        <div className="space-y-2.5 flex-1 min-h-0 flex flex-col">
+      {hasMountedRecipes && (
+        <div className={cn('space-y-2.5 flex-1 min-h-0 flex flex-col', viewTab !== 'recipes' && 'hidden')}>
           {/* 搜尋輸入框 (僅單 Tab 模式時獨立渲染) */}
           {mode !== 'all' && (
             <div className="relative flex items-center shrink-0">

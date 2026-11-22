@@ -45,6 +45,8 @@ export interface ExerciseRoutineBrowserProps {
   onAddExercise?: () => void;
   /** 選擇模式下點擊「+ 新增」訓練組合回調 */
   onAddRoutine?: () => void;
+  /** 是否凍結最近使用排序快照（用於彈窗開啟期間防止重排跳動） */
+  freezeSort?: boolean;
   /** 自訂容器類名 */
   className?: string;
   /** 自訂列表滾動容器類名 */
@@ -61,6 +63,7 @@ export function ExerciseRoutineBrowser({
   isItemDisabled,
   onAddExercise,
   onAddRoutine,
+  freezeSort = false,
   className,
   listContainerClassName,
 }: ExerciseRoutineBrowserProps) {
@@ -106,7 +109,7 @@ export function ExerciseRoutineBrowser({
   };
 
   // 最近使用時間提取（用於預設活躍度排序：最近使用／添加／修改優先，其次依名稱升序）
-  const { exerciseLastUsedMap, routineLastUsedMap } = useRecentExercises();
+  const { exerciseLastUsedMap, routineLastUsedMap } = useRecentExercises(freezeSort);
 
   // 分類導航列橫向自動平滑滾動對齊
   const categoryScrollRef = useRef<HTMLDivElement>(null);

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/services/db/db';
 import type { WorkoutLog } from '@/types';
@@ -56,7 +57,40 @@ export function extractRecentExerciseAndRoutineIds(workoutLogs: WorkoutLog[]): {
 
 const EMPTY_LAST_USED_MAP = new Map<string, number>();
 
-export function useRecentExercises() {
+/**
+ * 樂觀同步更新記憶體中的最近動作使用時間映射（於選擇彈窗關閉期間靜默完成排序，避免下次開啟時才重排閃跳）
+ */
+export function touchRecentExercise(exerciseId: string): void {
+  const now = Date.now();
+  const nextMap = new Map(inMemoryExerciseLastUsedMap ?? EMPTY_LAST_USED_MAP);
+  nextMap.set(exerciseId, now);
+  inMemoryExerciseLastUsedMap = nextMap;
+
+  const prevIds = inMemoryRecentExerciseIds ?? [];
+  inMemoryRecentExerciseIds = [exerciseId, ...prevIds.filter((id) => id !== exerciseId)];
+}
+
+/**
+ * 樂觀同步更新記憶體中的最近組合使用時間映射
+ */
+export function touchRecentRoutine(routineId: string): void {
+  const now = Date.now();
+  const nextMap = new Map(inMemoryRoutineLastUsedMap ?? EMPTY_LAST_USED_MAP);
+  nextMap.set(routineId, now);
+  inMemoryRoutineLastUsedMap = nextMap;
+
+  const prevIds = inMemoryRecentRoutineIds ?? [];
+  inMemoryRecentRoutineIds = [routineId, ...prevIds.filter((id) => id !== routineId)];
+}
+
+interface RecentExercisesSnapshot {
+  recentExerciseIds: string[];
+  recentRoutineIds: string[];
+  exerciseLastUsedMap: Map<string, number>;
+  routineLastUsedMap: Map<string, number>;
+}
+
+export function useRecentExercises(freezeSort = false) {
   const result = useLiveQuery(
     async () => {
       if (typeof indexedDB === 'undefined') {
@@ -82,18 +116,46 @@ export function useRecentExercises() {
     []
   );
 
-  const recentExerciseIds = result?.recentExerciseIds ?? inMemoryRecentExerciseIds ?? [];
-  const recentRoutineIds = result?.recentRoutineIds ?? inMemoryRecentRoutineIds ?? [];
-  const exerciseLastUsedMap =
+  const liveExerciseLastUsedMap =
     result?.exerciseLastUsedMap ?? inMemoryExerciseLastUsedMap ?? EMPTY_LAST_USED_MAP;
-  const routineLastUsedMap =
+  const liveRoutineLastUsedMap =
     result?.routineLastUsedMap ?? inMemoryRoutineLastUsedMap ?? EMPTY_LAST_USED_MAP;
+  const liveRecentExerciseIds = result?.recentExerciseIds ?? inMemoryRecentExerciseIds ?? [];
+  const liveRecentRoutineIds = result?.recentRoutineIds ?? inMemoryRecentRoutineIds ?? [];
+
+  const [prevFreeze, setPrevFreeze] = useState(freezeSort);
+  const [frozenSnapshot, setFrozenSnapshot] = useState<RecentExercisesSnapshot | null>(() =>
+    freezeSort
+      ? {
+          recentExerciseIds: liveRecentExerciseIds,
+          recentRoutineIds: liveRecentRoutineIds,
+          exerciseLastUsedMap: liveExerciseLastUsedMap,
+          routineLastUsedMap: liveRoutineLastUsedMap,
+        }
+      : null
+  );
+
+  if (freezeSort !== prevFreeze) {
+    setPrevFreeze(freezeSort);
+    if (freezeSort) {
+      setFrozenSnapshot({
+        recentExerciseIds: inMemoryRecentExerciseIds ?? liveRecentExerciseIds,
+        recentRoutineIds: inMemoryRecentRoutineIds ?? liveRecentRoutineIds,
+        exerciseLastUsedMap: inMemoryExerciseLastUsedMap ?? liveExerciseLastUsedMap,
+        routineLastUsedMap: inMemoryRoutineLastUsedMap ?? liveRoutineLastUsedMap,
+      });
+    } else {
+      setFrozenSnapshot(null);
+    }
+  }
+
+  const active = freezeSort && frozenSnapshot ? frozenSnapshot : null;
 
   return {
-    recentExerciseIds,
-    recentRoutineIds,
-    exerciseLastUsedMap,
-    routineLastUsedMap,
+    recentExerciseIds: active ? active.recentExerciseIds : liveRecentExerciseIds,
+    recentRoutineIds: active ? active.recentRoutineIds : liveRecentRoutineIds,
+    exerciseLastUsedMap: active ? active.exerciseLastUsedMap : liveExerciseLastUsedMap,
+    routineLastUsedMap: active ? active.routineLastUsedMap : liveRoutineLastUsedMap,
     isLoading: result === undefined && inMemoryRecentExerciseIds === null,
   };
 }

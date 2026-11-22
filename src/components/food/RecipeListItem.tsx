@@ -104,7 +104,7 @@ export const RecipeListItem = React.memo(function RecipeListItem({
     <div
       onClick={handleClick}
       className={cn(
-        'min-h-16 py-2.5 flex items-center justify-between px-4 transition-colors',
+        'min-h-16 py-2.5 flex items-center justify-between px-4 transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_64px]',
         disabled
           ? 'opacity-40 select-none bg-muted/10 cursor-not-allowed'
           : selected

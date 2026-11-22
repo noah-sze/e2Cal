@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/services/db/db';
 import type { DailyDietLog } from '@/types';
@@ -56,7 +57,40 @@ export function extractRecentFoodAndRecipeIds(dailyLogs: DailyDietLog[]): {
 
 const EMPTY_LAST_USED_MAP = new Map<string, number>();
 
-export function useRecentFoods() {
+/**
+ * 樂觀同步更新記憶體中的最近使用時間映射（於選擇彈窗關閉期間靜默完成排序，避免下次開啟時才重排閃跳）
+ */
+export function touchRecentFood(foodId: string): void {
+  const now = Date.now();
+  const nextMap = new Map(inMemoryFoodLastUsedMap ?? EMPTY_LAST_USED_MAP);
+  nextMap.set(foodId, now);
+  inMemoryFoodLastUsedMap = nextMap;
+
+  const prevIds = inMemoryRecentFoodIds ?? [];
+  inMemoryRecentFoodIds = [foodId, ...prevIds.filter((id) => id !== foodId)];
+}
+
+/**
+ * 樂觀同步更新記憶體中的最近食譜使用時間映射
+ */
+export function touchRecentRecipe(recipeId: string): void {
+  const now = Date.now();
+  const nextMap = new Map(inMemoryRecipeLastUsedMap ?? EMPTY_LAST_USED_MAP);
+  nextMap.set(recipeId, now);
+  inMemoryRecipeLastUsedMap = nextMap;
+
+  const prevIds = inMemoryRecentRecipeIds ?? [];
+  inMemoryRecentRecipeIds = [recipeId, ...prevIds.filter((id) => id !== recipeId)];
+}
+
+interface RecentFoodsSnapshot {
+  recentFoodIds: string[];
+  recentRecipeIds: string[];
+  foodLastUsedMap: Map<string, number>;
+  recipeLastUsedMap: Map<string, number>;
+}
+
+export function useRecentFoods(freezeSort = false) {
   const result = useLiveQuery(
     async () => {
       if (typeof indexedDB === 'undefined') {
@@ -82,17 +116,47 @@ export function useRecentFoods() {
     []
   );
 
-  const recentFoodIds = result?.recentFoodIds ?? inMemoryRecentFoodIds ?? [];
-  const recentRecipeIds = result?.recentRecipeIds ?? inMemoryRecentRecipeIds ?? [];
-  const foodLastUsedMap = result?.foodLastUsedMap ?? inMemoryFoodLastUsedMap ?? EMPTY_LAST_USED_MAP;
-  const recipeLastUsedMap =
-    result?.recipeLastUsedMap ?? inMemoryRecipeLastUsedMap ?? EMPTY_LAST_USED_MAP;
+  // 關閉或背景時優先使用已同步更新之 inMemory 快取或最新查詢結果
+  const liveFoodLastUsedMap = result?.foodLastUsedMap ?? inMemoryFoodLastUsedMap ?? EMPTY_LAST_USED_MAP;
+  const liveRecipeLastUsedMap = result?.recipeLastUsedMap ?? inMemoryRecipeLastUsedMap ?? EMPTY_LAST_USED_MAP;
+  const liveRecentFoodIds = result?.recentFoodIds ?? inMemoryRecentFoodIds ?? [];
+  const liveRecentRecipeIds = result?.recentRecipeIds ?? inMemoryRecentRecipeIds ?? [];
+
+  // 彈窗開啟瞬間鎖定快照，開啟期間完全凍結順序，防止選取或背景同步導致當場重排跳動
+  const [prevFreeze, setPrevFreeze] = useState(freezeSort);
+  const [frozenSnapshot, setFrozenSnapshot] = useState<RecentFoodsSnapshot | null>(() =>
+    freezeSort
+      ? {
+          recentFoodIds: liveRecentFoodIds,
+          recentRecipeIds: liveRecentRecipeIds,
+          foodLastUsedMap: liveFoodLastUsedMap,
+          recipeLastUsedMap: liveRecipeLastUsedMap,
+        }
+      : null
+  );
+
+  if (freezeSort !== prevFreeze) {
+    setPrevFreeze(freezeSort);
+    if (freezeSort) {
+      // 開啟時優先採用最新的記憶體快取（可能剛被 touchRecent* 樂觀更新）
+      setFrozenSnapshot({
+        recentFoodIds: inMemoryRecentFoodIds ?? liveRecentFoodIds,
+        recentRecipeIds: inMemoryRecentRecipeIds ?? liveRecentRecipeIds,
+        foodLastUsedMap: inMemoryFoodLastUsedMap ?? liveFoodLastUsedMap,
+        recipeLastUsedMap: inMemoryRecipeLastUsedMap ?? liveRecipeLastUsedMap,
+      });
+    } else {
+      setFrozenSnapshot(null);
+    }
+  }
+
+  const active = freezeSort && frozenSnapshot ? frozenSnapshot : null;
 
   return {
-    recentFoodIds,
-    recentRecipeIds,
-    foodLastUsedMap,
-    recipeLastUsedMap,
+    recentFoodIds: active ? active.recentFoodIds : liveRecentFoodIds,
+    recentRecipeIds: active ? active.recentRecipeIds : liveRecentRecipeIds,
+    foodLastUsedMap: active ? active.foodLastUsedMap : liveFoodLastUsedMap,
+    recipeLastUsedMap: active ? active.recipeLastUsedMap : liveRecipeLastUsedMap,
     isLoading: result === undefined && inMemoryRecentFoodIds === null,
   };
 }

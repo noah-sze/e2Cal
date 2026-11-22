@@ -16,6 +16,7 @@ import { FoodFormDialog, type FoodFormData } from '@/components/food/FoodFormDia
 import { RecipeDialog, type RecipeFormData } from '@/components/food/RecipeDialog';
 import { useFoods } from '@/hooks/useFoods';
 import { useRecipes } from '@/hooks/useRecipes';
+import { touchRecentFood, touchRecentRecipe } from '@/hooks/useRecentFoods';
 import { toast } from '@/components/ui/toast';
 import type { FoodItem, FoodRecipe } from '@/types';
 import { cn } from '@/lib/utils';
@@ -116,8 +117,13 @@ export function FoodRecipeSelectDialog({
   const secondaryZIndex = zIndex + 10;
   const secondaryZIndexClass = `z-[${secondaryZIndex}]`;
 
-  // 點擊即選擇：觸發觸覺反饋、回傳選中物件並依設定決定是否關閉彈窗
+  // 點擊即選擇：樂觀更新靜默排序映射、觸發觸覺反饋、回傳選中物件並依設定決定是否關閉彈窗
   const handleItemClick = (item: FoodItem | FoodRecipe, type: 'food' | 'recipe') => {
+    if (type === 'food') {
+      touchRecentFood(item.id);
+    } else {
+      touchRecentRecipe(item.id);
+    }
     triggerHaptic('selection');
     onSelect(item, type);
     if (autoCloseOnSelect) {
@@ -209,6 +215,7 @@ export function FoodRecipeSelectDialog({
               disabledIds={disabledIds}
               isItemDisabled={isItemDisabled}
               onItemClick={handleItemClick}
+              freezeSort={open}
               className="flex-1 min-h-0"
               listContainerClassName="flex-1 min-h-0"
             />
