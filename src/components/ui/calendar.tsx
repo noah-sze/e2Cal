@@ -1,5 +1,5 @@
 import * as React from "react"
-import { ChevronLeft, ChevronRight, X } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "react-i18next"
 import {
@@ -18,7 +18,6 @@ import {
   subDays
 } from "date-fns"
 import { zhTW, zhCN, enUS } from "date-fns/locale"
-import { Button } from "@/components/ui/button"
 
 export type CalendarProps = {
   selected?: Date
@@ -114,48 +113,27 @@ export function Calendar({ selected, onSelect, onClose, className }: CalendarPro
         className
       )}
     >
-      {/* 1. Header: Month & Year, Nav Controls, Close Button */}
-      <div className="px-3.5 py-2.5 border-b border-border flex items-center justify-between bg-muted/10">
-        <div className="text-sm font-medium tracking-tight text-foreground select-none">
+      {/* 1. Header: 滿寬三欄月份步進器（比照 CopyMealDialog 設計，刪除 × 按鈕） */}
+      <div className="h-11 bg-muted/40 border-b border-border grid grid-cols-[44px_1fr_44px] divide-x divide-border items-stretch select-none">
+        <button
+          type="button"
+          onClick={handlePreviousMonth}
+          aria-label={t("calendar.previousMonth", "上個月")}
+          className="w-full h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-hover transition-colors cursor-pointer"
+        >
+          <ChevronLeft className="size-3.5" />
+        </button>
+        <div className="w-full h-full px-3 font-mono text-xs font-medium text-foreground flex items-center justify-center truncate">
           {format(currentMonth, t("calendar.monthYearFormat", "yyyy 年 M 月"), { locale: currentLocale })}
         </div>
-
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="size-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-            onClick={handlePreviousMonth}
-          >
-            <ChevronLeft className="size-3.5" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="size-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-            onClick={handleNextMonth}
-          >
-            <ChevronRight className="size-3.5" />
-          </Button>
-
-          {onClose && (
-            <>
-              <div className="h-3.5 w-px bg-border mx-0.5" />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="size-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                onClick={onClose}
-                title={t("calendar.close", "關閉")}
-              >
-                <X className="size-4" />
-              </Button>
-            </>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={handleNextMonth}
+          aria-label={t("calendar.nextMonth", "下個月")}
+          className="w-full h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-hover transition-colors cursor-pointer"
+        >
+          <ChevronRight className="size-3.5" />
+        </button>
       </div>
 
       {/* 2. Weekdays Header */}

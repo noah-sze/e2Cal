@@ -38,6 +38,9 @@ import type { InitialSyncStep } from '@/services/sync/initialSyncManager';
 import { PwaInstallGuideDialog } from '@/components/pwa/PwaInstallGuideDialog';
 import { ResponsiveNumericKeypad } from '@/components/ui/ResponsiveNumericKeypad';
 import { MonthPickerDialog } from '@/components/ui/month-picker';
+import { Calendar } from '@/components/ui/calendar';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { format } from 'date-fns';
 
 import type {
   FoodItem,
@@ -270,6 +273,8 @@ export const DialogsTab: React.FC = () => {
   const [keypadVal, setKeypadVal] = useState(150);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [monthPickerVal, setMonthPickerVal] = useState('1997-11');
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarDate, setCalendarDate] = useState<Date>(() => new Date());
 
   // 極簡 Toast 回應：嚴格遵守規則 68 條法則 4「對象 + 結果，2～4 個字結束」
   const handleTestConfirm = async (variant: 'default' | 'destructive' | 'archive') => {
@@ -294,11 +299,11 @@ export const DialogsTab: React.FC = () => {
             彈窗型錄
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5 font-sans">
-            全應用程式 27 個業務 Dialog 統一驗收矩陣，支援同組件多形態（新增/編輯、已連線/未連線）整合檢視。
+            全應用程式 28 個業務 Dialog 統一驗收矩陣，支援同組件多形態（新增/編輯、已連線/未連線）整合檢視。
           </p>
         </div>
         <div className="text-2xs font-mono text-muted-foreground tabular-nums">
-          27 項元件
+          28 項元件
         </div>
       </div>
 
@@ -529,7 +534,7 @@ export const DialogsTab: React.FC = () => {
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-mono text-muted-foreground">
-            設定、同步與通用 (11)
+            設定、同步與通用 (12)
           </h3>
         </div>
         <div className="divide-y divide-border rounded-lg border border-border bg-card overflow-hidden shadow-none">
@@ -647,6 +652,13 @@ export const DialogsTab: React.FC = () => {
             desc="十年矩陣與 4×3 月份全顯網格，即時換算歲數"
             badge="Picker"
             onOpen={() => setMonthPickerOpen(true)}
+          />
+          <DialogRowItem
+            name="日曆選擇"
+            component="Calendar"
+            desc="頂部全域日期切換日曆，支援今天／昨天快捷與月曆選取"
+            badge="Calendar"
+            onOpen={() => setCalendarOpen(true)}
           />
           <DialogRowItem
             name="確認彈窗"
@@ -985,6 +997,25 @@ export const DialogsTab: React.FC = () => {
           toast.show('已變更');
         }}
       />
+
+      {/* 系統 11: 全域日期日曆選擇器 */}
+      <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
+        <DialogContent
+          showCloseButton={false}
+          initialFocus={false}
+          className="w-auto max-w-[calc(100vw-24px)] sm:max-w-none p-0 sm:p-0 border-0 bg-transparent shadow-none"
+        >
+          <Calendar
+            selected={calendarDate}
+            onSelect={(date) => {
+              setCalendarDate(date);
+              setCalendarOpen(false);
+              toast.show(format(date, 'yyyy-MM-dd'));
+            }}
+            onClose={() => setCalendarOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
