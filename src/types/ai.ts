@@ -8,9 +8,24 @@ export type AIProtocol = 'gemini' | 'openai' | 'anthropic';
 /** 使用者選擇之服務提供商（三大官方直連 + 泛用自訂端點） */
 export type AIProvider = 'gemini' | 'openai' | 'anthropic' | 'custom';
 
+/** 使用者預先設定並保存的 AI 供應商設定檔 */
+export interface AIProviderProfile {
+  id: string;
+  name: string;
+  provider?: AIProvider;
+  protocol: AIProtocol;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+}
+
 export interface AISettings {
   provider: AIProvider;
-  // 官方直連設定
+  /** 當前保存的多組供應商設定檔 */
+  profiles?: AIProviderProfile[];
+  /** 當前選定作為預設 AI 助手的供應商設定檔 ID */
+  activeProfileId?: string;
+  // 官方直連設定（向下相容保留）
   geminiApiKey: string;
   geminiModel: string;
   openaiApiKey: string;

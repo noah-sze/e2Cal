@@ -1,17 +1,29 @@
 import { useState } from 'react';
 import { AISettingsCard } from '@/components/settings/AISettingsCard';
+import { AIProviderManagerDialog } from '@/components/settings/AIProviderManagerDialog';
+import { AIProviderDialog } from '@/components/settings/AIProviderDialog';
 import { ExternalAIAssistant } from '@/components/ai/ExternalAIAssistant';
 import { QuickPlaceholderDialog } from '@/components/diet/QuickPlaceholderDialog';
 import { FoodFormDialog } from '@/components/food/FoodFormDialog';
 import { useAISettings, resolveActiveEndpoint } from '@/hooks/useAISettings';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { MealEstimateResult, NutritionLabelParseResult } from '@/types/ai';
+import { toast } from '@/components/ui/toast';
+import type { AIProviderProfile, MealEstimateResult, NutritionLabelParseResult } from '@/types/ai';
 
 type RequestMode = 'mock-success' | 'mock-error' | 'live';
 
 export function AITab() {
-  const { settings, isConfigured } = useAISettings();
+  const {
+    settings,
+    profiles,
+    activeProfile,
+    setActiveProfile,
+    addProfile,
+    updateProfile,
+    deleteProfile,
+    isConfigured,
+  } = useAISettings();
   const active = resolveActiveEndpoint(settings);
 
   const [requestMode, setRequestMode] = useState<RequestMode>('mock-success');
@@ -22,6 +34,9 @@ export function AITab() {
 
   const [isQuickOpen, setIsQuickOpen] = useState(false);
   const [isFoodOpen, setIsFoodOpen] = useState(false);
+  const [isManagerOpen, setIsManagerOpen] = useState(false);
+  const [isProviderOpen, setIsProviderOpen] = useState(false);
+  const [editingProfile, setEditingProfile] = useState<AIProviderProfile | null>(null);
 
   const isMock = requestMode !== 'live';
   const mockScenario: 'success' | 'error' = requestMode === 'mock-error' ? 'error' : 'success';
@@ -76,7 +91,7 @@ export function AITab() {
           </div>
           <div>
             <div className="text-muted-foreground text-[11px]">PROVIDER</div>
-            <div className="font-medium mt-0.5">{settings.provider}</div>
+            <div className="font-medium mt-0.5 truncate">{activeProfile?.name ?? '-'}</div>
           </div>
           <div>
             <div className="text-muted-foreground text-[11px]">PROTOCOL</div>
@@ -131,22 +146,16 @@ export function AITab() {
         </div>
 
         <div className="border border-border rounded-lg bg-muted/20 p-6 flex flex-col items-center gap-4">
-          {!isMock && !isConfigured ? (
-            <div className="text-xs font-mono text-muted-foreground text-center py-2">
-              真實 API 模式下尚未配置 API Key，依規範 ExternalAIAssistant 自動隱形。請切換回「模擬成功」或於下方填入 Key。
-            </div>
-          ) : (
-            <div className="w-[320px] max-w-full">
-              <ExternalAIAssistant
-                mode={sandboxMode}
-                dialogOpen={true}
-                mockMode={isMock}
-                mockScenario={mockScenario}
-                onInjectMeal={(res) => setLastInjectedPayload(res)}
-                onInjectFoodLabel={(res) => setLastInjectedPayload(res)}
-              />
-            </div>
-          )}
+          <div className="w-[320px] max-w-full">
+            <ExternalAIAssistant
+              mode={sandboxMode}
+              dialogOpen={true}
+              mockMode={isMock}
+              mockScenario={mockScenario}
+              onInjectMeal={(res) => setLastInjectedPayload(res)}
+              onInjectFoodLabel={(res) => setLastInjectedPayload(res)}
+            />
+          </div>
 
           {lastInjectedPayload && (
             <div className="w-full border border-border rounded-lg bg-card p-3 space-y-1.5">
@@ -184,6 +193,31 @@ export function AITab() {
           <Button variant="outline" size="sm" onClick={() => setIsFoodOpen(true)} className="font-mono text-xs">
             開啟 FoodFormDialog (新增食物)
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setIsManagerOpen(true)} className="font-mono text-xs">
+            開啟 AIProviderManagerDialog (供應商管理)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setEditingProfile(null);
+              setIsProviderOpen(true);
+            }}
+            className="font-mono text-xs"
+          >
+            開啟 AIProviderDialog (新增供應商)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setEditingProfile(activeProfile);
+              setIsProviderOpen(true);
+            }}
+            className="font-mono text-xs"
+          >
+            開啟 AIProviderDialog (編輯預設)
+          </Button>
         </div>
       </section>
 
@@ -212,6 +246,41 @@ export function AITab() {
         aiMockScenario={mockScenario}
         onSubmit={async (data) => {
           setLastInjectedPayload(data as unknown as NutritionLabelParseResult);
+        }}
+      />
+
+      <AIProviderManagerDialog
+        open={isManagerOpen}
+        onOpenChange={setIsManagerOpen}
+        profiles={profiles}
+        activeProfileId={activeProfile?.id ?? ''}
+        onSelectDefault={setActiveProfile}
+        onAdd={() => {
+          setEditingProfile(null);
+          setIsProviderOpen(true);
+        }}
+        onEdit={(p) => {
+          setEditingProfile(p);
+          setIsProviderOpen(true);
+        }}
+      />
+
+      <AIProviderDialog
+        open={isProviderOpen}
+        onOpenChange={setIsProviderOpen}
+        profile={editingProfile}
+        canDelete={true}
+        onSave={(data) => {
+          if (editingProfile) {
+            updateProfile(editingProfile.id, data);
+          } else {
+            addProfile(data, true);
+          }
+          toast.show('已儲存');
+        }}
+        onDelete={(id) => {
+          deleteProfile(id);
+          toast.show('已刪除');
         }}
       />
     </div>

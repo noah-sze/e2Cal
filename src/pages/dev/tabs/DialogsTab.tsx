@@ -36,6 +36,9 @@ import { InitialSyncModal } from '@/components/sync/InitialSyncModal';
 import { CopyDailyDataDialog } from '@/components/common/CopyDailyDataDialog';
 import type { InitialSyncStep } from '@/services/sync/initialSyncManager';
 import { PwaInstallGuideDialog } from '@/components/pwa/PwaInstallGuideDialog';
+import { AIProviderManagerDialog } from '@/components/settings/AIProviderManagerDialog';
+import { AIProviderDialog } from '@/components/settings/AIProviderDialog';
+import { useAISettings } from '@/hooks/useAISettings';
 import { ResponsiveNumericKeypad } from '@/components/ui/ResponsiveNumericKeypad';
 import { MonthPickerDialog } from '@/components/ui/month-picker';
 import { Calendar } from '@/components/ui/calendar';
@@ -52,6 +55,7 @@ import type {
   UserProfile,
   UserBaseInfo,
 } from '@/types';
+import type { AIProviderProfile } from '@/types/ai';
 
 // ==================== 符合設計標準之 Mock 數據源 ====================
 // 嚴格遵守規範第 16、29、156 條：食物名稱無「生」字前綴、無「生重」後綴、無烹飪手法形容詞
@@ -275,6 +279,17 @@ export const DialogsTab: React.FC = () => {
   const [monthPickerVal, setMonthPickerVal] = useState('1997-11');
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarDate, setCalendarDate] = useState<Date>(() => new Date());
+  const {
+    profiles: aiProfiles,
+    activeProfile: aiActiveProfile,
+    setActiveProfile: setAiActiveProfile,
+    addProfile: addAiProfile,
+    updateProfile: updateAiProfile,
+    deleteProfile: deleteAiProfile,
+  } = useAISettings();
+  const [aiManagerOpen, setAiManagerOpen] = useState(false);
+  const [aiProviderOpen, setAiProviderOpen] = useState(false);
+  const [aiEditingProfile, setAiEditingProfile] = useState<AIProviderProfile | null>(null);
 
   // 極簡 Toast 回應：嚴格遵守規則 68 條法則 4「對象 + 結果，2～4 個字結束」
   const handleTestConfirm = async (variant: 'default' | 'destructive' | 'archive') => {
@@ -661,6 +676,35 @@ export const DialogsTab: React.FC = () => {
             onOpen={() => setCalendarOpen(true)}
           />
           <DialogRowItem
+            name="AI 供應商管理"
+            component="AIProviderManagerDialog"
+            desc="預設供應商清單檢視、切換預設與進入單一供應商編輯"
+            badge="AI"
+            onOpen={() => setAiManagerOpen(true)}
+          />
+          <DialogRowItem
+            name="AI 供應商設定"
+            component="AIProviderDialog"
+            desc="新增或編輯單一 AI 供應商（官方直連或自定義 API）"
+            badge="AI"
+            actions={[
+              {
+                label: '新增',
+                onOpen: () => {
+                  setAiEditingProfile(null);
+                  setAiProviderOpen(true);
+                },
+              },
+              {
+                label: '編輯',
+                onOpen: () => {
+                  setAiEditingProfile(aiActiveProfile);
+                  setAiProviderOpen(true);
+                },
+              },
+            ]}
+          />
+          <DialogRowItem
             name="確認彈窗"
             component="ConfirmDialog (useConfirm)"
             desc="全站通用防呆二次確認，支援普通確認、毀滅性操作與歸檔形態"
@@ -1016,6 +1060,43 @@ export const DialogsTab: React.FC = () => {
           />
         </DialogContent>
       </Dialog>
+
+      {/* 系統 12: AI 供應商管理 */}
+      <AIProviderManagerDialog
+        open={aiManagerOpen}
+        onOpenChange={setAiManagerOpen}
+        profiles={aiProfiles}
+        activeProfileId={aiActiveProfile?.id ?? ''}
+        onSelectDefault={setAiActiveProfile}
+        onAdd={() => {
+          setAiEditingProfile(null);
+          setAiProviderOpen(true);
+        }}
+        onEdit={(p) => {
+          setAiEditingProfile(p);
+          setAiProviderOpen(true);
+        }}
+      />
+
+      {/* 系統 13: AI 供應商新增 / 編輯 */}
+      <AIProviderDialog
+        open={aiProviderOpen}
+        onOpenChange={setAiProviderOpen}
+        profile={aiEditingProfile}
+        canDelete={true}
+        onSave={(data) => {
+          if (aiEditingProfile) {
+            updateAiProfile(aiEditingProfile.id, data);
+          } else {
+            addAiProfile(data, true);
+          }
+          toast.show('已儲存');
+        }}
+        onDelete={(id) => {
+          deleteAiProfile(id);
+          toast.show('已刪除');
+        }}
+      />
     </div>
   );
 };

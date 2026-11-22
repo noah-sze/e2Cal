@@ -1,6 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { XIcon } from 'lucide-react';
+import { Check, XIcon } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { AIProviderDialog } from '@/components/settings/AIProviderDialog';
+import { MetricValue } from '@/components/ui/metric-value';
 import { useAISettings } from '@/hooks/useAISettings';
 import { compressImage } from '@/utils/imageCompress';
 import { estimateMeal, parseNutritionLabel, formatAiErrorMessage } from '@/services/ai/aiClient';
@@ -129,7 +138,9 @@ export function ExternalAIAssistant({
   mockScenario = 'success',
 }: ExternalAIAssistantProps) {
   const { t } = useTranslation();
-  const { settings, isConfigured } = useAISettings();
+  const { settings, profiles, activeProfile, setActiveProfile, addProfile, isConfigured } =
+    useAISettings();
+  const [addProviderOpen, setAddProviderOpen] = useState(false);
 
   const isSpatialMode = focused !== undefined;
   const [internalFocused, setInternalFocused] = useState(false);
@@ -154,6 +165,7 @@ export function ExternalAIAssistant({
   const [elapsedMs, setElapsedMs] = useState(0);
   const [lockedLoadingHeight, setLockedLoadingHeight] = useState<number | null>(null);
   const [mealResult, setMealResult] = useState<MealEstimateResult | null>(null);
+  const [excludedComponentIndices, setExcludedComponentIndices] = useState<number[]>([]);
   const [foodResult, setFoodResult] = useState<NutritionLabelParseResult | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -171,6 +183,7 @@ export function ExternalAIAssistant({
       setPromptText('');
       setAttachedImage(null);
       setMealResult(null);
+      setExcludedComponentIndices([]);
       setFoodResult(null);
     }
   }, [dialogOpen]);
@@ -193,10 +206,6 @@ export function ExternalAIAssistant({
     return () => window.clearInterval(timer);
   }, [workPhase]);
 
-  if (!isConfigured && !mockMode) {
-    return null;
-  }
-
   const canSubmit = Boolean(attachedImage || promptText.trim());
   const hasDraft = Boolean(promptText.trim() || attachedImage || workPhase === 'done');
 
@@ -204,6 +213,17 @@ export function ExternalAIAssistant({
     const cleanText = promptText.trim();
     const imageBase64 = attachedImage?.base64;
     if (!imageBase64 && !cleanText) return;
+
+    if (!isConfigured && !mockMode) {
+      if (profiles.length === 0) {
+        triggerHaptic('selection');
+        setAddProviderOpen(true);
+        return;
+      }
+      triggerHaptic('error');
+      toast.show(formatAiErrorMessage('MISSING_API_KEY'));
+      return;
+    }
 
     abortControllerRef.current?.abort();
     const controller = new AbortController();
@@ -214,6 +234,7 @@ export function ExternalAIAssistant({
     setElapsedMs(0);
     setWorkPhase('loading');
     setMealResult(null);
+    setExcludedComponentIndices([]);
     setFoodResult(null);
 
     try {
@@ -375,13 +396,82 @@ export function ExternalAIAssistant({
     setPromptText('');
     setAttachedImage(null);
     setMealResult(null);
+    setExcludedComponentIndices([]);
     setFoodResult(null);
   };
 
+  const toggleMealComponent = (idx: number) => {
+    triggerHaptic('selection');
+    setExcludedComponentIndices((prev) =>
+      prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx]
+    );
+  };
+
+  const activeMealSummary = (() => {
+    if (!mealResult) {
+      return {
+        includedComponents: [],
+        totalCalories: 0,
+        totalCarbs: 0,
+        totalProtein: 0,
+        totalFat: 0,
+        totalSugar: 0,
+        totalFiber: 0,
+        canInjectMeal: false,
+      };
+    }
+    const components = mealResult.components || [];
+    if (components.length === 0) {
+      return {
+        includedComponents: [],
+        totalCalories: Math.round(mealResult.totalCalories || 0),
+        totalCarbs: Math.round((mealResult.totalCarbs || 0) * 10) / 10,
+        totalProtein: Math.round((mealResult.totalProtein || 0) * 10) / 10,
+        totalFat: Math.round((mealResult.totalFat || 0) * 10) / 10,
+        totalSugar: Math.round((mealResult.totalSugar || 0) * 10) / 10,
+        totalFiber: Math.round((mealResult.totalFiber || 0) * 10) / 10,
+        canInjectMeal: true,
+      };
+    }
+    const includedComponents = components.filter(
+      (_, idx) => !excludedComponentIndices.includes(idx)
+    );
+    return {
+      includedComponents,
+      totalCalories: Math.round(includedComponents.reduce((s, c) => s + (c.calories || 0), 0)),
+      totalCarbs:
+        Math.round(includedComponents.reduce((s, c) => s + (c.carbs || 0), 0) * 10) / 10,
+      totalProtein:
+        Math.round(includedComponents.reduce((s, c) => s + (c.protein || 0), 0) * 10) / 10,
+      totalFat:
+        Math.round(includedComponents.reduce((s, c) => s + (c.fat || 0), 0) * 10) / 10,
+      totalSugar:
+        Math.round(includedComponents.reduce((s, c) => s + (c.sugar || 0), 0) * 10) / 10,
+      totalFiber:
+        Math.round(includedComponents.reduce((s, c) => s + (c.fiber || 0), 0) * 10) / 10,
+      canInjectMeal: includedComponents.length > 0,
+    };
+  })();
+
   const handleInject = () => {
+    if (mode === 'meal' && !activeMealSummary.canInjectMeal) return;
     triggerHaptic('success');
     if (mode === 'meal' && mealResult && onInjectMeal) {
-      onInjectMeal(mealResult);
+      const hasExcluded = excludedComponentIndices.length > 0;
+      onInjectMeal({
+        ...mealResult,
+        totalCalories: activeMealSummary.totalCalories,
+        totalCarbs: activeMealSummary.totalCarbs,
+        totalProtein: activeMealSummary.totalProtein,
+        totalFat: activeMealSummary.totalFat,
+        totalSugar: activeMealSummary.totalSugar,
+        totalFiber: activeMealSummary.totalFiber,
+        components: activeMealSummary.includedComponents,
+        title:
+          hasExcluded && activeMealSummary.includedComponents.length > 0
+            ? activeMealSummary.includedComponents.map((c) => c.name).join(' + ')
+            : mealResult.title,
+      });
       toast.show(t('diet.aiInjected', '已填入'));
     } else if (mode === 'foodLabel' && foodResult && onInjectFoodLabel) {
       onInjectFoodLabel(foodResult);
@@ -392,6 +482,7 @@ export function ExternalAIAssistant({
     setPromptText('');
     setAttachedImage(null);
     setMealResult(null);
+    setExcludedComponentIndices([]);
     setFoodResult(null);
   };
 
@@ -448,11 +539,11 @@ export function ExternalAIAssistant({
             })}
           </svg>
 
-          {/* 左側：左上角 PIXEL_AI 標頭（與輸入框卡片一致）+ 左下角估算中與時間 */}
+          {/* 左側：左上角供應商標頭（與輸入框卡片一致）+ 左下角估算中與時間 */}
           <div className="relative z-10 h-full flex flex-col justify-between min-w-0">
             <div className="flex items-center gap-1.5 px-0.5 text-[11px] font-mono text-foreground">
               <PixelSpriteIcon />
-              <span>PIXEL_AI</span>
+              <span className="truncate">{activeProfile?.name ?? 'PIXEL_AI'}</span>
             </div>
             <div className="flex items-center gap-2 px-0.5 font-mono text-xs">
               <span className="text-foreground font-medium">{statusLabel}</span>
@@ -477,69 +568,205 @@ export function ExternalAIAssistant({
     }
 
     if (workPhase === 'done' && (mealResult || foodResult)) {
+      const foodTitle =
+        foodResult &&
+        ([foodResult.brand, foodResult.name].filter(Boolean).join(' · ') ||
+          t('diet.aiLabelParsed', '標籤已解析'));
+
       return (
         <div className="w-full rounded-xl border border-border bg-card text-card-foreground p-3 space-y-2.5 text-xs">
-          <div className="flex items-center justify-between pb-1.5 border-b border-border">
-            <span className="flex items-center gap-1.5 font-mono font-medium text-foreground">
+          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border">
+            <span className="flex items-center gap-1.5 font-mono font-medium text-foreground min-w-0">
               <PixelSpriteIcon />
-              <span>
-                {mode === 'meal' && mealResult
-                  ? `${Math.round(mealResult.totalCalories)} kcal`
-                  : t('diet.aiLabelParsed', '標籤已解析')}
-              </span>
+              {mode === 'meal' && mealResult ? (
+                <MetricValue
+                  value={activeMealSummary.totalCalories}
+                  unit="kcal"
+                  valueClassName="font-semibold text-foreground"
+                />
+              ) : (
+                <span className="truncate">
+                  {foodTitle || t('diet.aiLabelParsed', '標籤已解析')}
+                </span>
+              )}
             </span>
             <button
               type="button"
               onClick={handleClearAndCollapse}
-              className="text-[11px] font-mono text-muted-foreground hover:text-foreground cursor-pointer"
+              className="text-[11px] font-mono text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
             >
               {t('common.clear', '清除')}
             </button>
           </div>
 
           {mode === 'meal' && mealResult && (
-            <div className="space-y-1 text-[11px] font-mono max-h-36 overflow-y-auto">
-              {mealResult.components && mealResult.components.length > 0 ? (
-                mealResult.components.map((c, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-2">
-                    <span className="text-foreground truncate">
-                      {c.name}
-                      {c.estimatedWeightGrams ? ` · ${c.estimatedWeightGrams} g` : ''}
-                    </span>
-                    <span className="text-muted-foreground tabular-nums shrink-0">
-                      {Math.round(c.calories)} kcal
-                    </span>
+            <div className="space-y-2.5">
+              {/* 方案 3：與標籤頁統一的 C → P → F 迷你營養三格 */}
+              <div className="grid grid-cols-3 divide-x divide-border border border-border rounded-lg text-center bg-card">
+                <div className="py-1.5 px-1">
+                  <div className="text-[10px] text-muted-foreground">
+                    {t('nutrients.carbs', '碳水')}
                   </div>
-                ))
+                  <div className="mt-0.5 flex justify-center">
+                    <MetricValue
+                      value={activeMealSummary.totalCarbs}
+                      unit="g"
+                      valueClassName="text-[11px] font-semibold text-[var(--carbs)]"
+                    />
+                  </div>
+                </div>
+                <div className="py-1.5 px-1">
+                  <div className="text-[10px] text-muted-foreground">
+                    {t('nutrients.protein', '蛋白質')}
+                  </div>
+                  <div className="mt-0.5 flex justify-center">
+                    <MetricValue
+                      value={activeMealSummary.totalProtein}
+                      unit="g"
+                      valueClassName="text-[11px] font-semibold text-[var(--protein)]"
+                    />
+                  </div>
+                </div>
+                <div className="py-1.5 px-1">
+                  <div className="text-[10px] text-muted-foreground">
+                    {t('nutrients.fat', '脂肪')}
+                  </div>
+                  <div className="mt-0.5 flex justify-center">
+                    <MetricValue
+                      value={activeMealSummary.totalFat}
+                      unit="g"
+                      valueClassName="text-[11px] font-semibold text-[var(--fat)]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 可手動剔除/恢復的食材清單 */}
+              {mealResult.components && mealResult.components.length > 0 ? (
+                <div className="border border-border rounded-lg overflow-hidden divide-y divide-border max-h-36 overflow-y-auto">
+                  {mealResult.components.map((c, idx) => {
+                    const isExcluded = excludedComponentIndices.includes(idx);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => toggleMealComponent(idx)}
+                        className="w-full min-h-8 px-3 py-1 flex items-center justify-between gap-2 text-left hover:bg-hover transition-colors cursor-pointer"
+                      >
+                        <span className="flex items-center gap-2 min-w-0">
+                          <span
+                            className={cn(
+                              'size-3.5 rounded-full border flex items-center justify-center shrink-0 transition-colors',
+                              !isExcluded
+                                ? 'bg-foreground border-foreground text-background'
+                                : 'border-border text-transparent'
+                            )}
+                          >
+                            <Check className="size-2.5 stroke-[3]" />
+                          </span>
+                          <span
+                            className={cn(
+                              'text-[11px] font-mono truncate flex items-center gap-1',
+                              isExcluded ? 'line-through text-muted-foreground/50' : 'text-foreground'
+                            )}
+                          >
+                            <span className="truncate">{c.name}</span>
+                            {c.estimatedWeightGrams ? (
+                              <>
+                                <span>·</span>
+                                <MetricValue value={c.estimatedWeightGrams} unit="g" />
+                              </>
+                            ) : null}
+                          </span>
+                        </span>
+                        <MetricValue
+                          value={Math.round(c.calories)}
+                          unit="kcal"
+                          className="shrink-0 text-[11px]"
+                          valueClassName={
+                            isExcluded ? 'line-through text-muted-foreground/40' : 'text-muted-foreground'
+                          }
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
               ) : (
-                <div className="text-muted-foreground">{mealResult.summary || mealResult.title}</div>
+                <div className="text-[11px] font-mono text-muted-foreground">
+                  {mealResult.summary || mealResult.title}
+                </div>
               )}
             </div>
           )}
 
           {mode === 'foodLabel' && foodResult && (
-            <div className="space-y-1 text-[11px] font-mono">
-              <div className="flex items-center justify-between gap-2 text-foreground font-medium">
-                <span className="truncate">
-                  {[foodResult.brand, foodResult.name].filter(Boolean).join(' · ') || '-'}
+            <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
+              <div className="h-8 px-3 bg-muted/30 flex items-center justify-between text-[11px]">
+                <span className="flex items-center gap-1 text-muted-foreground">
+                  <span>{t('diet.per', '每')}</span>
+                  <MetricValue
+                    value={foodResult.servingSize ?? '-'}
+                    unit={foodResult.servingUnit || 'g'}
+                    valueClassName="text-foreground"
+                  />
                 </span>
-                {foodResult.servingSize && (
-                  <span className="text-muted-foreground shrink-0">
-                    {foodResult.servingSize} {foodResult.servingUnit || 'g'}
-                  </span>
-                )}
+                <MetricValue
+                  value={foodResult.calories ?? '-'}
+                  unit="kcal"
+                  valueClassName="font-semibold text-foreground"
+                />
               </div>
-              <div className="text-muted-foreground tabular-nums">
-                {foodResult.calories ?? '-'} kcal · C {foodResult.carbs ?? '-'} · P{' '}
-                {foodResult.protein ?? '-'} · F {foodResult.fat ?? '-'}
+              <div className="grid grid-cols-3 divide-x divide-border text-center bg-card">
+                <div className="py-2 px-1">
+                  <div className="text-[10px] text-muted-foreground">
+                    {t('nutrients.carbs', '碳水')}
+                  </div>
+                  <div className="mt-0.5 flex justify-center">
+                    <MetricValue
+                      value={foodResult.carbs ?? '-'}
+                      unit="g"
+                      valueClassName="font-semibold text-[var(--carbs)]"
+                    />
+                  </div>
+                </div>
+                <div className="py-2 px-1">
+                  <div className="text-[10px] text-muted-foreground">
+                    {t('nutrients.protein', '蛋白質')}
+                  </div>
+                  <div className="mt-0.5 flex justify-center">
+                    <MetricValue
+                      value={foodResult.protein ?? '-'}
+                      unit="g"
+                      valueClassName="font-semibold text-[var(--protein)]"
+                    />
+                  </div>
+                </div>
+                <div className="py-2 px-1">
+                  <div className="text-[10px] text-muted-foreground">
+                    {t('nutrients.fat', '脂肪')}
+                  </div>
+                  <div className="mt-0.5 flex justify-center">
+                    <MetricValue
+                      value={foodResult.fat ?? '-'}
+                      unit="g"
+                      valueClassName="font-semibold text-[var(--fat)]"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
           <button
             type="button"
+            disabled={mode === 'meal' && !activeMealSummary.canInjectMeal}
             onClick={handleInject}
-            className="w-full h-8 rounded-lg bg-foreground text-background hover:opacity-90 text-xs font-mono font-medium cursor-pointer transition-transform active:scale-[0.98] flex items-center justify-center gap-1"
+            className={cn(
+              'w-full h-8 rounded-lg text-xs font-mono font-medium transition-all flex items-center justify-center gap-1',
+              mode === 'meal' && !activeMealSummary.canInjectMeal
+                ? 'bg-muted text-muted-foreground opacity-40 cursor-not-allowed'
+                : 'bg-foreground text-background hover:opacity-90 cursor-pointer active:scale-[0.98]'
+            )}
           >
             <span>{t('diet.aiInjectToForm', '填入表單')}</span>
             <span>↓</span>
@@ -555,10 +782,51 @@ export function ExternalAIAssistant({
         className="w-full rounded-xl border border-border bg-card text-card-foreground p-2.5 space-y-2"
       >
         <div className="flex items-center justify-between px-0.5 text-[11px] font-mono text-muted-foreground">
-          <span className="flex items-center gap-1.5 text-foreground">
-            <PixelSpriteIcon />
-            <span>PIXEL_AI</span>
-          </span>
+          {profiles.length === 0 ? (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('selection');
+                setAddProviderOpen(true);
+              }}
+              className="flex items-center gap-1.5 text-foreground hover:opacity-80 cursor-pointer transition-opacity"
+            >
+              <PixelSpriteIcon />
+              <span>{t('common.add', '新增')}</span>
+            </button>
+          ) : (
+            <Select
+              value={activeProfile?.id ?? ''}
+              onValueChange={(val) => {
+                if (!val) return;
+                triggerHaptic('selection');
+                if (val === '__add__') {
+                  setAddProviderOpen(true);
+                  return;
+                }
+                setActiveProfile(val);
+              }}
+            >
+              <SelectTrigger
+                size="custom"
+                iconClassName="size-3 text-muted-foreground/60"
+                className="flex items-center gap-1.5 text-[11px] font-mono text-foreground hover:opacity-80 cursor-pointer transition-opacity max-w-[200px]"
+              >
+                <PixelSpriteIcon />
+                <SelectValue className="flex-none truncate">
+                  {activeProfile?.name ?? '-'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent align="start" className="min-w-40 z-[105]">
+                {profiles.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+                <SelectItem value="__add__">+ {t('common.add', '新增')}</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <button
             type="button"
             onClick={handleCollapsePreserveDraft}
@@ -701,6 +969,19 @@ export function ExternalAIAssistant({
         >
           {renderWorkingCard()}
         </div>
+
+        <AIProviderDialog
+          open={addProviderOpen}
+          onOpenChange={setAddProviderOpen}
+          profile={null}
+          canDelete={false}
+          overlayClassName="z-[100]"
+          dialogClassName="z-[100]"
+          onSave={(data) => {
+            addProfile(data, true);
+            toast.show(t('common.saved', '已儲存'));
+          }}
+        />
       </div>
     );
   }
@@ -717,6 +998,19 @@ export function ExternalAIAssistant({
         onChange={handleFileChange}
       />
       {!isFocused ? <div className="flex justify-center">{pillButton}</div> : renderWorkingCard()}
+
+      <AIProviderDialog
+        open={addProviderOpen}
+        onOpenChange={setAddProviderOpen}
+        profile={null}
+        canDelete={false}
+        overlayClassName="z-[100]"
+        dialogClassName="z-[100]"
+        onSave={(data) => {
+          addProfile(data, true);
+          toast.show(t('common.saved', '已儲存'));
+        }}
+      />
     </div>
   );
 }
