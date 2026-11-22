@@ -278,50 +278,52 @@ export function getMuscleHighlightStyle(
     if (highlightColor) {
       return {
         fill: highlightColor,
-        fillOpacity: isActive ? Math.max(0.35, getIntensityAlpha(intensity)) : getIntensityAlpha(intensity),
+        fillOpacity: isActive ? 1 : getIntensityAlpha(intensity),
         stroke: highlightColor,
-        strokeOpacity: isActive ? 0.75 : 0.4,
-        strokeWidth: isActive ? 'var(--muscle-active-stroke-width)' : 'var(--muscle-intensity-high-stroke-width)',
+        strokeOpacity: 0.4,
+        strokeWidth: 'var(--muscle-intensity-high-stroke-width)',
       };
     }
 
-    // 2.2 全域 Design Tokens 體系 (支援淺深雙模式獨立線寬與描邊 Token)
+    // 2.2 全域 Design Tokens 體系（選中／懸停採獨立填充色高亮，描邊維持原階梯設定）
     const tier = getMuscleIntensityTier(intensity);
     switch (tier) {
       case 'high':
         return {
-          fill: 'var(--muscle-intensity-high-bg)',
+          fill: isActive ? 'var(--muscle-active-bg)' : 'var(--muscle-intensity-high-bg)',
           fillOpacity: 1,
           stroke: 'var(--muscle-intensity-high-stroke)',
           strokeOpacity: 1,
-          strokeWidth: isActive ? 'var(--muscle-active-stroke-width)' : 'var(--muscle-intensity-high-stroke-width)',
+          strokeWidth: 'var(--muscle-intensity-high-stroke-width)',
         };
       case 'med':
         return {
-          fill: 'var(--muscle-intensity-med-bg)',
+          fill: isActive ? 'var(--muscle-active-bg)' : 'var(--muscle-intensity-med-bg)',
           fillOpacity: 1,
           stroke: 'var(--muscle-intensity-med-stroke)',
           strokeOpacity: 1,
-          strokeWidth: isActive ? 'var(--muscle-active-stroke-width)' : 'var(--muscle-intensity-med-stroke-width)',
+          strokeWidth: 'var(--muscle-intensity-med-stroke-width)',
         };
       case 'low':
       default:
         return {
-          fill: 'var(--muscle-intensity-low-bg)',
+          fill: isActive ? 'var(--muscle-active-bg)' : 'var(--muscle-intensity-low-bg)',
           fillOpacity: 1,
           stroke: 'var(--muscle-intensity-low-stroke)',
           strokeOpacity: 1,
-          strokeWidth: isActive ? 'var(--muscle-active-stroke-width)' : 'var(--muscle-intensity-low-stroke-width)',
+          strokeWidth: 'var(--muscle-intensity-low-stroke-width)',
         };
     }
   }
 
-  // 3. 未激活肌肉部位 (intensity === 0：引用全域 Token，選中放大至 0.4px 邊框)
+  // 3. 未激活肌肉部位 (intensity === 0：選中／懸停採獨立填充色高亮，描邊維持原未選中設定)
   return {
-    fill: baseColor || (isActive ? 'currentColor' : 'var(--muscle-unselected-bg)'),
-    fillOpacity: baseColor ? (isActive ? 0.22 : 0.09) : isActive ? 0.22 : 1,
-    stroke: isActive ? 'currentColor' : 'var(--muscle-unselected-stroke)',
-    strokeOpacity: isActive ? 0.45 : 1,
-    strokeWidth: isActive ? 'var(--muscle-active-stroke-width)' : 'var(--muscle-unselected-stroke-width)',
+    fill: isActive
+      ? 'var(--muscle-active-bg)'
+      : baseColor || 'var(--muscle-unselected-bg)',
+    fillOpacity: isActive ? 1 : baseColor ? 0.09 : 1,
+    stroke: 'var(--muscle-unselected-stroke)',
+    strokeOpacity: 1,
+    strokeWidth: 'var(--muscle-unselected-stroke-width)',
   };
 }

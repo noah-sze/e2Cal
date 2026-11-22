@@ -221,34 +221,34 @@
     --muscle-intensity-high-bg: rgba(255, 36, 83, 0.75);
     --muscle-intensity-high-text: #000000;
     --muscle-intensity-high-border: rgba(225, 29, 72, 0.30);
-    --muscle-intensity-high-stroke: rgba(255, 36, 83, 1.00);
-    --muscle-intensity-high-stroke-width: 0.2px;
+    --muscle-intensity-high-stroke: #ff2453;
+    --muscle-intensity-high-stroke-width: 0px;
 
     --muscle-intensity-med-bg: rgba(255, 149, 92, 0.75);
     --muscle-intensity-med-text: #000000;
     --muscle-intensity-med-border: rgba(255, 146, 87, 0.30);
-    --muscle-intensity-med-stroke: rgba(255, 149, 92, 1.00);
-    --muscle-intensity-med-stroke-width: 0.2px;
+    --muscle-intensity-med-stroke: #ff955c;
+    --muscle-intensity-med-stroke-width: 0px;
 
     --muscle-intensity-low-bg: rgba(221, 169, 141, 0.70);
     --muscle-intensity-low-text: #000000;
     --muscle-intensity-low-border: rgba(233, 233, 233, 0.30);
-    --muscle-intensity-low-stroke: rgba(221, 169, 141, 1.00);
-    --muscle-intensity-low-stroke-width: 0.2px;
+    --muscle-intensity-low-stroke: #dda98d;
+    --muscle-intensity-low-stroke-width: 0px;
 
     --muscle-unselected-bg: rgba(9, 9, 11, 0.13);
     --muscle-unselected-stroke: rgba(9, 9, 11, 0.22);
-    --muscle-unselected-stroke-width: 0.2px;
-    --muscle-active-stroke-width: 0.5px;
+    --muscle-unselected-stroke-width: 0px;
+    --muscle-active-bg: rgba(9, 9, 11, 0.82);
 
-    --muscle-non-color: rgb(9, 9, 11);
+    --muscle-non-color: #09090b;
     --muscle-non-opacity: 0.04;
     --muscle-non-bg: rgba(9, 9, 11, 0.04);
     --muscle-non-stroke: rgba(9, 9, 11, 0.00);
     --muscle-non-stroke-width: 0px;
 
     --muscle-outline-stroke: rgba(9, 9, 11, 0.50);
-    --muscle-outline-stroke-width: 2.50px;
+    --muscle-outline-stroke-width: 3px;
 
     /* 肌群角色膠囊按鈕系統 - 亮色模式 */
     --muscle-badge-high-bg: rgba(225, 29, 72, 0.14);
@@ -329,37 +329,37 @@
     --sodium-subtle-bg: rgba(20, 184, 166, 0.05);
 
     /* 肌群刺激強度與人體地圖系統 - 深色模式 */
-    --muscle-intensity-high-bg: rgba(251, 113, 133, 0.24);
+    --muscle-intensity-high-bg: rgba(251, 113, 133, 0.72);
     --muscle-intensity-high-text: #fda4af;
     --muscle-intensity-high-border: rgba(251, 113, 133, 0.44);
-    --muscle-intensity-high-stroke: rgba(253, 164, 175, 1.00);
-    --muscle-intensity-high-stroke-width: 0.2px;
+    --muscle-intensity-high-stroke: #fda4af;
+    --muscle-intensity-high-stroke-width: 0px;
 
-    --muscle-intensity-med-bg: rgba(251, 146, 60, 0.16);
+    --muscle-intensity-med-bg: rgba(251, 146, 60, 0.65);
     --muscle-intensity-med-text: #fdba74;
     --muscle-intensity-med-border: rgba(251, 146, 60, 0.35);
-    --muscle-intensity-med-stroke: rgba(253, 186, 116, 0.95);
-    --muscle-intensity-med-stroke-width: 0.2px;
+    --muscle-intensity-med-stroke: #fdba74;
+    --muscle-intensity-med-stroke-width: 0px;
 
-    --muscle-intensity-low-bg: rgba(148, 163, 184, 0.16);
+    --muscle-intensity-low-bg: rgba(148, 163, 184, 0.45);
     --muscle-intensity-low-text: #cbd5e1;
     --muscle-intensity-low-border: rgba(148, 163, 184, 0.34);
-    --muscle-intensity-low-stroke: rgba(203, 213, 225, 0.85);
-    --muscle-intensity-low-stroke-width: 0.2px;
+    --muscle-intensity-low-stroke: #cbd5e1;
+    --muscle-intensity-low-stroke-width: 0px;
 
-    --muscle-unselected-bg: rgba(250, 250, 250, 0.13);
+    --muscle-unselected-bg: rgba(250, 250, 250, 0.18);
     --muscle-unselected-stroke: rgba(250, 250, 250, 0.18);
-    --muscle-unselected-stroke-width: 0.2px;
-    --muscle-active-stroke-width: 0.5px;
+    --muscle-unselected-stroke-width: 0px;
+    --muscle-active-bg: rgba(250, 250, 250, 0.85);
 
-    --muscle-non-color: rgb(250, 250, 250);
-    --muscle-non-opacity: 0.08;
-    --muscle-non-bg: rgba(250, 250, 250, 0.08);
+    --muscle-non-color: #fafafa;
+    --muscle-non-opacity: 0.07;
+    --muscle-non-bg: rgba(250, 250, 250, 0.07);
     --muscle-non-stroke: rgba(250, 250, 250, 0.00);
     --muscle-non-stroke-width: 0px;
 
-    --muscle-outline-stroke: rgba(250, 250, 250, 0.28);
-    --muscle-outline-stroke-width: 2.50px;
+    --muscle-outline-stroke: rgba(250, 250, 250, 0.48);
+    --muscle-outline-stroke-width: 3px;
 
     /* 肌群角色膠囊按鈕系統 - 深色模式 */
     --muscle-badge-high-bg: rgba(251, 113, 133, 0.22);
