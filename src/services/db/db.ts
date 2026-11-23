@@ -1359,6 +1359,35 @@ export class E2CalDatabase extends Dexie {
       }
       clearFoodsCache();
     });
+
+    this.version(27).upgrade(async (tx) => {
+      // 升級至版本 27：自愈修復歷史同步漏洞，全量還原系統預設食材次級營養素（sugar, fiber, saturatedFat, transFat, sodium）
+      const foodsTable = tx.table('foods');
+      const allFoods = await foodsTable.toArray();
+      const defaultFoodMap = new Map<string, Record<string, unknown>>();
+      for (const defFood of DEFAULT_FOODS) {
+        defaultFoodMap.set(defFood.id, defFood as Record<string, unknown>);
+      }
+
+      for (const food of allFoods) {
+        if (!food.isCustom && defaultFoodMap.has(food.id)) {
+          const defaults = defaultFoodMap.get(food.id);
+          if (!defaults) continue;
+          let changed = false;
+          const updated: Record<string, unknown> = { ...food };
+          for (const key of ['sugar', 'saturatedFat', 'transFat', 'sodium', 'fiber'] as const) {
+            if (defaults[key] !== undefined && updated[key] !== defaults[key]) {
+              updated[key] = defaults[key];
+              changed = true;
+            }
+          }
+          if (changed) {
+            await foodsTable.put(updated);
+          }
+        }
+      }
+      clearFoodsCache();
+    });
   }
 
   async seedDefaultData() {

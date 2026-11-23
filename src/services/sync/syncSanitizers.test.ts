@@ -389,5 +389,56 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
       expect('labelBasisSize' in cleaned).toBe(false);
       expect('labelBasisUnit' in cleaned).toBe(false);
     });
+
+    it('應完整保留自訂食材次級營養素（sugar, fiber, saturatedFat, transFat, sodium）', () => {
+      const foodWithSub = {
+        id: 'food_custom_sub',
+        name: '特製燕麥棒',
+        category: 'processed',
+        servingSize: 50,
+        servingUnit: 'g',
+        calories: 200,
+        carbs: 30,
+        protein: 10,
+        fat: 5,
+        sugar: 12.5,
+        fiber: 4.2,
+        saturatedFat: 1.1,
+        transFat: 0,
+        sodium: 80,
+        isCustom: true,
+      };
+
+      const cleaned = sanitizeFoodItem(foodWithSub);
+      expect(cleaned.sugar).toBe(12.5);
+      expect(cleaned.fiber).toBe(4.2);
+      expect(cleaned.saturatedFat).toBe(1.1);
+      expect(cleaned.transFat).toBe(0);
+      expect(cleaned.sodium).toBe(80);
+    });
+
+    it('當系統預設食材 (!isCustom) 次級營養素缺失時，應能自動自愈從預設庫補齊', () => {
+      // 假設從遠端舊版同步回來的雞蛋（缺少 sugar, saturatedFat 等）
+      const eggFromOldSync = {
+        id: 'f57cb780-a0b1-4d41-bb80-8750fd9361cc', // whole_egg
+        name: '雞蛋',
+        category: 'natural',
+        servingSize: 50,
+        servingUnit: 'g',
+        calories: 72,
+        carbs: 0.4,
+        protein: 6.3,
+        fat: 4.8,
+        fiber: 0,
+        // sugar 缺失
+        isCustom: false,
+      };
+
+      const cleaned = sanitizeFoodItem(eggFromOldSync);
+      expect(cleaned.sugar).toBe(0.2); // 應自動補齊雞蛋的 0.2g sugar
+      expect(cleaned.saturatedFat).toBe(1.6);
+      expect(cleaned.transFat).toBe(0);
+      expect(cleaned.sodium).toBe(71);
+    });
   });
 });

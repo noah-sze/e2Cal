@@ -31,6 +31,7 @@ import {
   sanitizeUserBaseInfo,
 } from './syncSanitizers';
 import { isDropboxConnected } from './dropboxAuth';
+import { clearFoodsCache } from '@/hooks/useFoods';
 
 export { getSyncErrorReasonKey, formatSyncErrorMessage, type SyncErrorReasonKey };
 
@@ -762,7 +763,10 @@ export async function executeSync(
           ]);
 
           if (baseInfos?.length) await db.user_base_info.bulkPut(baseInfos.map(sanitizeUserBaseInfo));
-          if (foods?.length) await db.foods.bulkPut(foods.map(sanitizeFoodItem));
+          if (foods?.length) {
+            await db.foods.bulkPut(foods.map(sanitizeFoodItem));
+            clearFoodsCache();
+          }
           if (recipes?.length) await db.recipes.bulkPut(recipes.map(sanitizeRecipe));
           if (dedupedDailyDietLogs.length) await db.daily_diet_logs.bulkPut(dedupedDailyDietLogs);
           if (exercises?.length) await db.exercises.bulkPut(exercises);
@@ -826,6 +830,7 @@ export async function executeSync(
       const m = mergeEntities(localList, remoteList);
       if (m.hasLocalChanges) {
         await db.foods.bulkPut(m.merged);
+        clearFoodsCache();
         hasLocalModified = true;
       }
       if (m.hasRemoteChanges) hasRemoteModified = true;

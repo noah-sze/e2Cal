@@ -502,7 +502,10 @@ async function executeAtomicCommit(): Promise<void> {
           ]);
 
           if (staged.baseInfos.length) await db.user_base_info.bulkPut(staged.baseInfos);
-          if (staged.foods.length) await db.foods.bulkPut(staged.foods);
+          if (staged.foods.length) {
+            await db.foods.bulkPut(staged.foods);
+            clearFoodsCache();
+          }
           if (staged.recipes.length) await db.recipes.bulkPut(staged.recipes);
           if (staged.dailyDietLogs.length) {
             const dedupedDietMap = new Map<string, DailyDietLog>();
@@ -577,7 +580,10 @@ async function executeAtomicCommit(): Promise<void> {
           const mMetrics = mergeEntities(localMetrics, staged.bodyMetrics);
 
           if (mBase.merged.length) await db.user_base_info.bulkPut(mBase.merged);
-          if (mFood.merged.length) await db.foods.bulkPut(mFood.merged);
+          if (mFood.merged.length) {
+            await db.foods.bulkPut(mFood.merged);
+            clearFoodsCache();
+          }
           if (mRecipe.merged.length) await db.recipes.bulkPut(mRecipe.merged);
           if (mDiet.merged.length) await db.daily_diet_logs.bulkPut(mDiet.merged);
           if (mEx.merged.length) await db.exercises.bulkPut(mEx.merged);

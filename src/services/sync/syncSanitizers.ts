@@ -11,8 +11,16 @@ import type {
   UserBaseInfo,
 } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { PRIMARY_USER_ID } from '@/services/db/defaultData';
+import { PRIMARY_USER_ID, DEFAULT_FOODS } from '@/services/db/defaultData';
 import { normalizeServingToMetric } from '@/utils/nutritionMath';
+
+let defaultFoodMapCache: Map<string, Omit<FoodItem, 'createdAt' | 'updatedAt'>> | null = null;
+function getDefaultFoodMap() {
+  if (!defaultFoodMapCache) {
+    defaultFoodMapCache = new Map(DEFAULT_FOODS.map((f) => [f.id, f]));
+  }
+  return defaultFoodMapCache;
+}
 
 function asRecord(input: unknown): Record<string, unknown> {
   return typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
@@ -20,6 +28,7 @@ function asRecord(input: unknown): Record<string, unknown> {
 
 /**
  * 清洗單品食材：強制收斂為純淨公制 SI（g / ml、kcal），徹底剔除歷史殘留的 rawNutrition / labelBasisSize / labelBasisUnit
+ * 同步完整保留各次級營養素（sugar, fiber, saturatedFat, transFat, sodium），預設食材具備自愈兜底機制
  */
 export function sanitizeFoodItem(rawInput: unknown): FoodItem {
   const raw = asRecord(rawInput);
@@ -33,6 +42,16 @@ export function sanitizeFoodItem(rawInput: unknown): FoodItem {
     category
   );
 
+  const isCustom = Boolean(raw.isCustom);
+  const defFood = !isCustom ? getDefaultFoodMap().get(rawId) : undefined;
+
+  const rawSugar = raw.sugar !== undefined ? Number(raw.sugar) : defFood?.sugar;
+  const rawFiber = raw.fiber !== undefined ? Number(raw.fiber) : defFood?.fiber;
+  const rawSaturatedFat =
+    raw.saturatedFat !== undefined ? Number(raw.saturatedFat) : defFood?.saturatedFat;
+  const rawTransFat = raw.transFat !== undefined ? Number(raw.transFat) : defFood?.transFat;
+  const rawSodium = raw.sodium !== undefined ? Number(raw.sodium) : defFood?.sodium;
+
   return {
     id: rawId,
     name: String(raw.name || '').trim(),
@@ -44,8 +63,16 @@ export function sanitizeFoodItem(rawInput: unknown): FoodItem {
     protein: Math.max(0, Number(raw.protein) || 0),
     carbs: Math.max(0, Number(raw.carbs) || 0),
     fat: Math.max(0, Number(raw.fat) || 0),
-    ...(raw.fiber !== undefined ? { fiber: Number(raw.fiber) } : {}),
-    isCustom: Boolean(raw.isCustom),
+    ...(rawSugar !== undefined && !Number.isNaN(rawSugar) ? { sugar: Math.max(0, rawSugar) } : {}),
+    ...(rawFiber !== undefined && !Number.isNaN(rawFiber) ? { fiber: Math.max(0, rawFiber) } : {}),
+    ...(rawSaturatedFat !== undefined && !Number.isNaN(rawSaturatedFat)
+      ? { saturatedFat: Math.max(0, rawSaturatedFat) }
+      : {}),
+    ...(rawTransFat !== undefined && !Number.isNaN(rawTransFat)
+      ? { transFat: Math.max(0, rawTransFat) }
+      : {}),
+    ...(rawSodium !== undefined && !Number.isNaN(rawSodium) ? { sodium: Math.max(0, rawSodium) } : {}),
+    isCustom,
     isArchived: Boolean(raw.isArchived),
     createdAt: Number(raw.createdAt) || Date.now(),
     updatedAt: Number(raw.updatedAt) || Date.now(),
@@ -143,6 +170,11 @@ export function sanitizeFoodLog(logInput: unknown): FoodLog {
     if (typeof log.carbs === 'number' && !isNaN(log.carbs)) sanitized.carbs = log.carbs;
     if (typeof log.protein === 'number' && !isNaN(log.protein)) sanitized.protein = log.protein;
     if (typeof log.fat === 'number' && !isNaN(log.fat)) sanitized.fat = log.fat;
+    if (typeof log.sugar === 'number' && !isNaN(log.sugar)) sanitized.sugar = log.sugar;
+    if (typeof log.fiber === 'number' && !isNaN(log.fiber)) sanitized.fiber = log.fiber;
+    if (typeof log.saturatedFat === 'number' && !isNaN(log.saturatedFat)) sanitized.saturatedFat = log.saturatedFat;
+    if (typeof log.transFat === 'number' && !isNaN(log.transFat)) sanitized.transFat = log.transFat;
+    if (typeof log.sodium === 'number' && !isNaN(log.sodium)) sanitized.sodium = log.sodium;
   } else if (entryType === 'estimate') {
     sanitized.isPlaceholder = true;
     if (log.scenario) {
@@ -166,6 +198,11 @@ export function sanitizeFoodLog(logInput: unknown): FoodLog {
     if (typeof log.carbs === 'number' && !isNaN(log.carbs)) sanitized.carbs = log.carbs;
     if (typeof log.protein === 'number' && !isNaN(log.protein)) sanitized.protein = log.protein;
     if (typeof log.fat === 'number' && !isNaN(log.fat)) sanitized.fat = log.fat;
+    if (typeof log.sugar === 'number' && !isNaN(log.sugar)) sanitized.sugar = log.sugar;
+    if (typeof log.fiber === 'number' && !isNaN(log.fiber)) sanitized.fiber = log.fiber;
+    if (typeof log.saturatedFat === 'number' && !isNaN(log.saturatedFat)) sanitized.saturatedFat = log.saturatedFat;
+    if (typeof log.transFat === 'number' && !isNaN(log.transFat)) sanitized.transFat = log.transFat;
+    if (typeof log.sodium === 'number' && !isNaN(log.sodium)) sanitized.sodium = log.sodium;
   }
 
   if (log.rev !== undefined) sanitized.rev = Number(log.rev);
