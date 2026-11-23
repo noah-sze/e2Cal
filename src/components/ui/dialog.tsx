@@ -6,6 +6,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { XIcon, CheckIcon } from "lucide-react"
+import { AutoMarquee } from "@/components/ui/AutoMarquee"
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
@@ -283,18 +284,23 @@ function DialogPrecisionHeader({
           </DialogClose>
         )}
 
-        {/* 中間純標題 */}
-        <DialogTitle className="text-foreground text-sm font-semibold tracking-tight font-sans flex items-center justify-center flex-1 truncate px-2">
+        {/* 中間純標題 (支援長文本自動平滑跑馬燈滾動) */}
+        <DialogTitle className="text-foreground text-sm font-semibold tracking-tight font-sans flex items-center justify-center flex-1 min-w-0 px-1 overflow-hidden">
           {onTitleClick ? (
             <button
               type="button"
               onClick={onTitleClick}
-              className="max-w-full truncate px-2 py-0.5 rounded-full border border-transparent hover:border-border/80 hover:bg-hover transition-all cursor-pointer select-none active:scale-95"
+              className="max-w-full min-w-0 px-2 py-0.5 rounded-full border border-transparent hover:border-border/80 hover:bg-hover transition-all cursor-pointer select-none active:scale-95 flex items-center justify-center overflow-hidden"
+              title={typeof title === 'string' ? title : undefined}
             >
-              {title}
+              <AutoMarquee align="center">
+                {title}
+              </AutoMarquee>
             </button>
           ) : (
-            <span className="truncate">{title}</span>
+            <AutoMarquee align="center">
+              {title}
+            </AutoMarquee>
           )}
         </DialogTitle>
 

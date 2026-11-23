@@ -8,6 +8,7 @@ import { formatFoodDisplayName } from '@/utils/foodNaming';
 import { ensureDailyDietMeta } from './useDietPlan';
 import { getInMemoryFoodsCache, setInMemoryFoodsCache } from './useFoods';
 import { sortFoodLogsByWeightDesc } from '@/utils/dietSorting';
+import { roundTo, ozToG, gToOz, flOzToMl, mlToFlOz } from '@/utils/unitMath';
 
 /**
  * 模組級每日飲食日誌記憶體注水快取 (In-Memory Hydration Cache)
@@ -191,10 +192,49 @@ export function useFoodLogs(date: string) {
     const targetDate = data.date || date;
     const dailyLog = await getOrCreateDailyLog(targetDate);
     const now = Date.now();
-    const newLogId = uuidv4();
     const entryType: FoodLogEntryType =
       data.entryType ||
       (data.isAsPlanned ? 'as_planned' : data.isPlaceholder ? 'estimate' : 'item');
+
+    // 同一餐、同一食材重複添加時，自動疊加重量而非獨立為兩個條目
+    const isStandaloneItem = entryType === 'item' && Boolean(data.foodId) && !data.bundleId;
+    if (isStandaloneItem) {
+      const existingEntry = dailyLog.entries.find(
+        (entry) =>
+          entry.mealType === data.mealType &&
+          entry.foodId === data.foodId &&
+          !entry.bundleId &&
+          (entry.entryType === 'item' || (!entry.entryType && !entry.isPlaceholder && !entry.isAsPlanned))
+      );
+
+      if (existingEntry) {
+        const incomingQty = data.quantity ?? 100;
+        const incomingUnit = data.unit ?? existingEntry.unit ?? 'g';
+        const targetUnit = existingEntry.unit ?? incomingUnit;
+
+        let addedQty = incomingQty;
+        if (targetUnit !== incomingUnit) {
+          if (targetUnit === 'g' && incomingUnit === 'oz') {
+            addedQty = ozToG(incomingQty);
+          } else if (targetUnit === 'oz' && incomingUnit === 'g') {
+            addedQty = gToOz(incomingQty);
+          } else if (targetUnit === 'ml' && incomingUnit === 'fl oz') {
+            addedQty = flOzToMl(incomingQty);
+          } else if (targetUnit === 'fl oz' && incomingUnit === 'ml') {
+            addedQty = mlToFlOz(incomingQty);
+          }
+        }
+
+        existingEntry.quantity = roundTo((existingEntry.quantity ?? 0) + addedQty, 2);
+        existingEntry.updatedAt = now;
+        dailyLog.updatedAt = now;
+        await db.daily_diet_logs.put(dailyLog);
+        upsertInMemoryDailyDietLog(dailyLog);
+        return existingEntry.id;
+      }
+    }
+
+    const newLogId = uuidv4();
     const newEntry: FoodLog = {
       id: newLogId,
       date: targetDate,

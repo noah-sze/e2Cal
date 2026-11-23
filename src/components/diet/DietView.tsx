@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, ChevronRight, Zap, Plus, History, PieChart } from 'lucide-react';
+import { Activity, ChevronRight, ChevronDown, Zap, Plus, History, PieChart } from 'lucide-react';
 import type { MealType, HydratedFoodLog, FoodRecipe, EnergyUnit, FoodWeightUnit, FoodVolumeUnit } from '@/types';
 import { MealBundleCard } from '@/components/food/MealBundleCard';
 import { MacroSquares } from '@/components/food/MacroSquares';
@@ -18,6 +18,8 @@ import {
   sortGroupedMealEntriesByWeightDesc,
   type GroupedMealEntry,
 } from '@/utils/dietSorting';
+import { getDefaultCollapsedMeals } from '@/utils/dietMealPeriod';
+import { getPhysicalToday } from '@/utils/dateSession';
 
 export function groupMealLogs(
   logs: HydratedFoodLog[],
@@ -58,6 +60,8 @@ export function groupMealLogs(
 }
 
 export interface DietViewProps {
+  selectedDate?: string;
+  isToday?: boolean;
   currentActivity?: number;
   consumedEnergy: number;
   targetEnergy: number;
@@ -105,6 +109,8 @@ export interface DietViewProps {
 }
 
 export function DietView({
+  selectedDate,
+  isToday,
   currentActivity = 1.2,
   consumedEnergy,
   targetEnergy,
@@ -136,6 +142,76 @@ export function DietView({
 }: DietViewProps) {
   const { t } = useTranslation();
   const mealTypes: MealType[] = visibleMealTypes ?? ['breakfast', 'lunch', 'dinner', 'snack'];
+
+  const effectiveIsToday =
+    isToday ?? (selectedDate ? selectedDate === getPhysicalToday() : true);
+
+  const [collapsedMeals, setCollapsedMeals] = useState<Record<MealType, boolean>>(() =>
+    !interactive
+      ? { breakfast: false, lunch: false, dinner: false, snack: false }
+      : getDefaultCollapsedMeals(effectiveIsToday)
+  );
+
+  useEffect(() => {
+    if (!interactive) return;
+    setCollapsedMeals(getDefaultCollapsedMeals(effectiveIsToday));
+  }, [selectedDate, effectiveIsToday, interactive]);
+
+  // 監聽各餐別數據變化：當往摺疊的區塊添加記錄後，自動展開該區塊
+  const prevMealGroupsRef = useRef<Record<MealType, { count: number; calories: number }>>(undefined);
+  const prevDateRef = useRef<string | undefined>(selectedDate);
+
+  useEffect(() => {
+    const sumCalories = (logs?: HydratedFoodLog[]) =>
+      (logs || []).reduce((acc, cur) => acc + (cur.calories || 0), 0);
+
+    const currentSummary: Record<MealType, { count: number; calories: number }> = {
+      breakfast: { count: mealGroups.breakfast?.length || 0, calories: sumCalories(mealGroups.breakfast) },
+      lunch: { count: mealGroups.lunch?.length || 0, calories: sumCalories(mealGroups.lunch) },
+      dinner: { count: mealGroups.dinner?.length || 0, calories: sumCalories(mealGroups.dinner) },
+      snack: { count: mealGroups.snack?.length || 0, calories: sumCalories(mealGroups.snack) },
+    };
+
+    // 若日期切換或初次水合，僅同步快照，不觸發自動展開（維護時段預設摺疊規則）
+    if (prevDateRef.current !== selectedDate || !prevMealGroupsRef.current) {
+      prevDateRef.current = selectedDate;
+      prevMealGroupsRef.current = currentSummary;
+      return;
+    }
+
+    const prevSummary = prevMealGroupsRef.current;
+    const toExpand: Partial<Record<MealType, boolean>> = {};
+    let shouldUpdate = false;
+
+    mealTypes.forEach((type) => {
+      const prev = prevSummary[type];
+      const curr = currentSummary[type];
+      // 條目數量增加或熱量/重量增加（如疊加重量），代表剛新增了記錄
+      if (curr && prev && (curr.count > prev.count || curr.calories > prev.calories)) {
+        if (collapsedMeals[type]) {
+          toExpand[type] = false;
+          shouldUpdate = true;
+        }
+      }
+    });
+
+    if (shouldUpdate) {
+      setCollapsedMeals((prev) => ({
+        ...prev,
+        ...toExpand,
+      }));
+    }
+
+    prevMealGroupsRef.current = currentSummary;
+  }, [mealGroups, selectedDate, mealTypes, collapsedMeals]);
+
+  const toggleMealCollapse = (mealType: MealType) => {
+    triggerHaptic('light');
+    setCollapsedMeals((prev) => ({
+      ...prev,
+      [mealType]: !prev[mealType],
+    }));
+  };
 
   const getActivityShortLabel = (level: number) => {
     switch (level) {
@@ -380,6 +456,7 @@ export function DietView({
         });
 
         const isPopoverExpanded = expandedMealPopover === type;
+        const isCollapsed = Boolean(collapsedMeals[type]) && !isPopoverExpanded;
 
         return (
           <div
@@ -389,28 +466,55 @@ export function DietView({
               isPopoverExpanded ? "overflow-visible relative z-30" : "overflow-hidden"
             )}
           >
-            {/* 灰底表頭橫欄 (單行 40px 高度：左側餐別名稱 + 3C-2 供能微線微箭頭 Popover，右側圓形「+」圖標按鈕) */}
-            <div className="h-10 px-4 bg-muted/40 border-b border-border flex items-center justify-between gap-3 text-xs font-mono text-muted-foreground shrink-0 relative">
-              <div className="flex items-center gap-2 min-w-0">
+            {/* 灰底表頭橫欄 (單行 40px 高度：左側摺疊指示 + 餐別名稱 + 3C-2 供能微線微箭頭 Popover，右側圓形「+」圖標按鈕，點擊表頭摺疊卡片) */}
+            <div
+              role="button"
+              tabIndex={0}
+              aria-expanded={!isCollapsed}
+              onClick={() => toggleMealCollapse(type)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  toggleMealCollapse(type);
+                }
+              }}
+              className={cn(
+                "h-10 px-4 bg-muted/40 flex items-center justify-between gap-3 text-xs font-mono text-muted-foreground shrink-0 relative cursor-pointer select-none hover:bg-muted/60 transition-colors focus:outline-hidden",
+                !isCollapsed && "border-b border-border"
+              )}
+            >
+              <div className="flex items-center gap-1.5 min-w-0">
+                <ChevronDown
+                  className={cn(
+                    "size-3 text-muted-foreground/60 transition-transform duration-200 shrink-0",
+                    isCollapsed && "-rotate-90"
+                  )}
+                  aria-hidden="true"
+                />
                 <span className="font-semibold text-sm tracking-tight text-foreground shrink-0">
                   {t(`diet.${type}`)}
                 </span>
                 {items.length > 0 && groupCalories > 0 && (
                   <>
                     <span className="text-border select-none shrink-0">·</span>
-                    <MealEnergyPopover
-                      formattedEnergy={formatEnergy(groupCalories, energyUnit).formatted}
-                      calories={groupCalories}
-                      carbs={groupCarbs}
-                      protein={groupProtein}
-                      fat={groupFat}
-                    />
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <MealEnergyPopover
+                        formattedEnergy={formatEnergy(groupCalories, energyUnit).formatted}
+                        calories={groupCalories}
+                        carbs={groupCarbs}
+                        protein={groupProtein}
+                        fat={groupFat}
+                      />
+                    </div>
                   </>
                 )}
               </div>
 
               {/* 右側唯一標準交互為「+」按鈕 (與真實 APP 100% 一致) */}
-              <div className="relative shrink-0 flex items-center">
+              <div
+                className="relative shrink-0 flex items-center"
+                onClick={(e) => e.stopPropagation()}
+              >
                 {interactive ? (
                   <MealAddActionPopover
                     mealType={type}
@@ -418,7 +522,10 @@ export function DietView({
                     onOpenAddFood={onOpenAddForMeal || (() => {})}
                     onOpenCopyMeal={onOpenCopyForMeal || (() => {})}
                     onOpenQuickPlaceholder={onOpenPlaceholderForMeal || (() => {})}
-                    onLogAsPlanned={onLogAsPlanned || (() => {})}
+                    onLogAsPlanned={(mealType, budgetOverride) => {
+                      setCollapsedMeals((prev) => ({ ...prev, [mealType]: false }));
+                      onLogAsPlanned?.(mealType, budgetOverride);
+                    }}
                   />
                 ) : (
                   <>
@@ -448,8 +555,9 @@ export function DietView({
               </div>
             </div>
 
-            {/* 食物條目列表 (沿用食物管理頁面 MacroSquares 矩陣) */}
-            {items.length > 0 ? (
+            {/* 食物條目列表 (未摺疊時呈現) */}
+            {!isCollapsed && (
+              items.length > 0 ? (
               <div className="divide-y divide-border">
                 {groupMealLogs(items, recipeMap).map((entry) => {
                   if (entry.type === 'bundle') {
@@ -500,7 +608,7 @@ export function DietView({
                     >
                       {/* 左側：品名與份量熱量副標 (系統推算條目維持與實秤食物一致的左緣對齊) */}
                       <div className="flex-1 min-w-0 pr-3 select-none">
-                        <div className="truncate text-foreground font-medium text-sm">
+                        <div className="truncate text-foreground font-normal text-sm">
                           {resolveFoodLogTitle(item, t)}
                         </div>
                         <div className="text-[11px] font-mono tabular-nums text-muted-foreground truncate mt-0.5 flex items-center gap-1.5">
@@ -582,7 +690,7 @@ export function DietView({
               <div className="py-6 text-center text-xs font-mono text-muted-foreground/60 select-none">
                 {t('diet.noFoodLogs', '無記錄')}
               </div>
-            )}
+            ))}
           </div>
         );
       })}

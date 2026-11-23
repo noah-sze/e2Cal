@@ -18,6 +18,7 @@ import { useExercises } from '@/hooks/useExercises';
 import { useRoutines } from '@/hooks/useRoutines';
 import { touchRecentExercise, touchRecentRoutine } from '@/hooks/useRecentExercises';
 import { toast } from '@/components/ui/toast';
+import { AutoMarquee } from '@/components/ui/AutoMarquee';
 import type { Exercise, WorkoutRoutine } from '@/types';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
@@ -180,9 +181,9 @@ export function ExerciseSelectDialog({
                 <X className="size-3.5 stroke-[2.2]" />
               </DialogClose>
 
-              {/* 中間標題 (置中對稱) */}
-              <DialogTitle className="text-foreground text-sm font-semibold tracking-tight font-sans flex items-center justify-center flex-1 truncate px-2 text-center">
-                <span className="truncate">{resolvedTitle}</span>
+              {/* 中間標題 (置中對稱，支援超長文本平滑跑馬燈滾動) */}
+              <DialogTitle className="text-foreground text-sm font-semibold tracking-tight font-sans flex items-center justify-center flex-1 min-w-0 px-2 text-center overflow-hidden">
+                <AutoMarquee align="center">{resolvedTitle}</AutoMarquee>
               </DialogTitle>
 
               {/* 右側操作：允許新增時顯示 + 圓鈕，否則維持等寬佔位確保標題置中 */}

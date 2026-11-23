@@ -311,6 +311,7 @@ export default function Diet() {
   return (
     <>
       <DietView
+        selectedDate={selectedDate}
         currentActivity={currentActivity}
         consumedEnergy={consumedEnergy}
         targetEnergy={targetEnergy}

@@ -102,7 +102,7 @@ export function MealBundleCard({
       >
         <div className="flex-1 min-w-0 pr-3">
           {/* 標題 (刪除旁邊的膠囊) */}
-          <div className="truncate text-foreground font-medium text-sm">
+          <div className="truncate text-foreground font-normal text-sm">
             {bundleTitle}
           </div>
 
@@ -192,7 +192,7 @@ export function MealBundleCard({
                 className="py-2.5 flex items-center justify-between text-xs hover:bg-muted/20 transition-colors"
               >
                 <div className="flex-1 min-w-0 pr-3">
-                  <div className="font-medium text-foreground truncate text-xs">
+                  <div className="font-normal text-foreground truncate text-xs">
                     {item.foodName}
                   </div>
                   <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">

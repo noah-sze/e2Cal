@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { X, Delete, Check, Equal, ChevronDown } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { HoldToDeleteButton } from "@/components/ui/HoldToDeleteButton"
+import { AutoMarquee } from "@/components/ui/AutoMarquee"
 import { cn, evaluateAmountExpression, formatDisplayAmount } from "@/lib/utils"
 import { triggerHaptic } from "@/lib/haptics"
 
@@ -520,16 +521,18 @@ export function ResponsiveNumericKeypad({
               <X className="size-3.5 stroke-[2.2]" />
             </button>
 
-            {/* 中間欄位標題：絕對水平居中，永遠鎖定在卡片中心線，不受兩側寬度增減影響 */}
-            <div className="absolute inset-x-16 flex items-center justify-center pointer-events-none">
-              <span
-                className={cn(
-                  "text-xs font-semibold tracking-tight whitespace-nowrap text-center truncate pointer-events-auto",
+            {/* 中間欄位標題：絕對水平居中，永遠鎖定在卡片中心線，不受兩側寬度增減影響 (支援超長文本自動平滑跑馬燈滾動) */}
+            <div className="absolute inset-x-16 flex items-center justify-center pointer-events-none overflow-hidden">
+              <AutoMarquee
+                align="center"
+                className="pointer-events-auto"
+                contentClassName={cn(
+                  "text-xs font-semibold tracking-tight",
                   titleClassName || valueClassName || "text-foreground"
                 )}
               >
                 {title}
-              </span>
+              </AutoMarquee>
             </div>
 
             {/* 右側單位切換膠囊 (若無單位則渲染透明佔位保持佈局) */}

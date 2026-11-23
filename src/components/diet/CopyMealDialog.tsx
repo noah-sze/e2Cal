@@ -13,7 +13,7 @@ import { db } from '@/services/db/db';
 import { ensureDailyDietMeta } from '@/hooks/useDietPlan';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { getInMemoryFoodsCache, setInMemoryFoodsCache } from '@/hooks/useFoods';
-import { formatEnergy } from '@/utils/unitMath';
+import { formatEnergy, roundTo } from '@/utils/unitMath';
 import { calculateFoodLogNutrients } from '@/utils/nutritionMath';
 import { resolveFoodLogTitle } from '@/utils/foodNaming';
 import { cn, formatDisplayAmount } from '@/lib/utils';
@@ -359,7 +359,9 @@ export function CopyMealDialog({
 
       // 若原歷史項目具備 bundleId，為當前目標建立全新 mapping，維護分組完整性
       const bundleIdMap = new Map<string, string>();
-      const newEntries: FoodLog[] = itemsToCopy.map((item) => {
+      const newEntries: FoodLog[] = [];
+
+      itemsToCopy.forEach((item) => {
         let newBundleId: string | undefined = undefined;
         if (item.bundleId) {
           if (!bundleIdMap.has(item.bundleId)) {
@@ -370,7 +372,7 @@ export function CopyMealDialog({
 
         const isSystem = item.entryType === 'estimate' || item.entryType === 'as_planned' || item.isPlaceholder || item.isAsPlanned;
         if (isSystem) {
-          return {
+          newEntries.push({
             id: uuidv4(),
             date: targetDate,
             mealType: targetMealType,
@@ -385,10 +387,27 @@ export function CopyMealDialog({
             isAsPlanned: item.isAsPlanned,
             createdAt: now,
             updatedAt: now,
-          };
+          });
+          return;
         }
 
-        return {
+        // 實體食材：同一餐、同一食材重複時疊加重量，避免獨立為兩個條目
+        if (!newBundleId && item.foodId) {
+          const existing = dailyLog.entries.find(
+            (e) =>
+              e.mealType === targetMealType &&
+              e.foodId === item.foodId &&
+              !e.bundleId &&
+              (e.entryType === 'item' || (!e.entryType && !e.isPlaceholder && !e.isAsPlanned))
+          );
+          if (existing) {
+            existing.quantity = roundTo((existing.quantity ?? 0) + (item.quantity ?? 0), 2);
+            existing.updatedAt = now;
+            return;
+          }
+        }
+
+        newEntries.push({
           id: uuidv4(),
           date: targetDate,
           mealType: targetMealType,
@@ -399,10 +418,12 @@ export function CopyMealDialog({
           bundleId: newBundleId,
           createdAt: now,
           updatedAt: now,
-        };
+        });
       });
 
-      dailyLog.entries.push(...newEntries);
+      if (newEntries.length > 0) {
+        dailyLog.entries.push(...newEntries);
+      }
       dailyLog.updatedAt = now;
       await db.daily_diet_logs.put(dailyLog);
 

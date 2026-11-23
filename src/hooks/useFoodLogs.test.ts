@@ -175,6 +175,36 @@ describe('useFoodLogs 系統分類條目 (System Entry Archetype) 合約測試',
       expect(entry.quantity).toBeUndefined();
       expect(entry.unit).toBeUndefined();
     });
+
+    it('同一餐、同一食材重複添加時，應自動疊加重量而非獨立為兩個條目', async () => {
+      const { addFoodLog } = useFoodLogs('2026-11-11');
+
+      await addFoodLog({
+        date: '2026-11-11',
+        mealType: 'lunch',
+        entryType: 'item',
+        foodId: 'food-beef',
+        quantity: 100,
+        unit: 'g',
+      });
+
+      // 同一餐再次添加 150g 同一牛肉
+      await addFoodLog({
+        date: '2026-11-11',
+        mealType: 'lunch',
+        entryType: 'item',
+        foodId: 'food-beef',
+        quantity: 150,
+        unit: 'g',
+      });
+
+      // 應只有 1 個條目，且重量疊加為 250g
+      const lunchEntries = mockDailyLogs[0].entries.filter(
+        (e) => e.mealType === 'lunch' && e.foodId === 'food-beef'
+      );
+      expect(lunchEntries.length).toBe(1);
+      expect(lunchEntries[0].quantity).toBe(250);
+    });
   });
 
   describe('updateFoodLog (修改已記錄條目)', () => {

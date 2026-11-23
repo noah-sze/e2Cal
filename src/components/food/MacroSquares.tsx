@@ -28,6 +28,12 @@ export interface MacroSquaresProps {
   variant?: 'default' | 'subtle';
   dashed?: boolean;
   className?: string;
+  /**
+   * 是否啟用手機端自適應緊湊堆疊（方案 H）
+   * @default true
+   * 當為 true 時，在手機版 (< 768px / md) 自動渲染垂直三階微堆疊，桌面版 (>= 768px / md) 渲染等寬方塊矩陣
+   */
+  responsive?: boolean;
 }
 
 interface MacroSquareCellProps {
@@ -38,6 +44,13 @@ interface MacroSquareCellProps {
   dashed: boolean;
   accent: 'carbs' | 'protein' | 'fat';
   subRows?: SubNutrientRowSpec[];
+}
+
+interface MacroStackRowProps {
+  label: string;
+  value: number;
+  isHighlighted?: boolean;
+  accent: 'carbs' | 'protein' | 'fat';
 }
 
 const ACCENT_CLASSES = {
@@ -60,6 +73,46 @@ const ACCENT_CLASSES = {
     defaultText: 'text-fat font-semibold',
   },
 } as const;
+
+function MacroStackRow({
+  label,
+  value,
+  isHighlighted,
+  accent,
+}: MacroStackRowProps) {
+  const styles = ACCENT_CLASSES[accent];
+
+  return (
+    <div
+      title={`${label}: ${value}g`}
+      aria-label={`${label}: ${value}g`}
+      className="flex items-center justify-between w-full gap-1 leading-tight select-none"
+    >
+      <div className="w-2 flex items-center justify-center shrink-0">
+        <span
+          className={cn(
+            'size-1.5 rounded-full',
+            accent === 'carbs' && 'bg-carbs',
+            accent === 'protein' && 'bg-protein',
+            accent === 'fat' && 'bg-fat'
+          )}
+          aria-hidden="true"
+        />
+      </div>
+      <div className="flex-1 flex items-baseline justify-end">
+        <MetricValue
+          value={value}
+          unit="g"
+          valueClassName={cn(
+            'text-[10px] font-mono tabular-nums',
+            isHighlighted ? styles.defaultText : 'text-muted-foreground'
+          )}
+          unitClassName="text-[8px]"
+        />
+      </div>
+    </div>
+  );
+}
 
 function MacroSquareCell({
   label,
@@ -144,6 +197,7 @@ export const MacroSquares = React.memo(function MacroSquares({
   variant = 'default',
   dashed = false,
   className,
+  responsive = true,
 }: MacroSquaresProps) {
   const { t } = useTranslation();
   const isSubtle = variant === 'subtle';
@@ -159,33 +213,74 @@ export const MacroSquares = React.memo(function MacroSquares({
     }).highlights;
   }, [highlights, carbs, protein, fat]);
 
+  const carbsSubRows = useMemo(
+    () => buildCarbsSubRows(t, sugar, fiber),
+    [t, sugar, fiber]
+  );
+
   return (
-    <div className={cn('shrink-0 flex items-center gap-2 font-mono text-center', className)}>
-      <MacroSquareCell
-        label={t('diet.macroMicro.carbs', '碳')}
-        value={carbs}
-        isHighlighted={resolvedHighlights?.carbs}
-        isSubtle={isSubtle}
-        dashed={dashed}
-        accent="carbs"
-        subRows={buildCarbsSubRows(t, sugar, fiber)}
-      />
-      <MacroSquareCell
-        label={t('diet.macroMicro.protein', '蛋')}
-        value={protein}
-        isHighlighted={resolvedHighlights?.protein}
-        isSubtle={isSubtle}
-        dashed={dashed}
-        accent="protein"
-      />
-      <MacroSquareCell
-        label={t('diet.macroMicro.fat', '脂')}
-        value={fat}
-        isHighlighted={resolvedHighlights?.fat}
-        isSubtle={isSubtle}
-        dashed={dashed}
-        accent="fat"
-      />
+    <div className={cn('shrink-0 flex items-center font-mono', className)}>
+      {/* 手機版：方案 H 垂直三階微堆疊 (僅於 < 768px / md 呈現) */}
+      <div
+        className={cn(
+          'flex-col items-end justify-center font-mono text-[10px] leading-tight shrink-0 py-0.5 select-none gap-0.5 w-[50px]',
+          responsive ? 'flex md:hidden' : 'hidden'
+        )}
+        aria-label={`${t('diet.macroMicro.carbs', '碳')}: ${carbs}g, ${t('diet.macroMicro.protein', '蛋')}: ${protein}g, ${t('diet.macroMicro.fat', '脂')}: ${fat}g`}
+      >
+        <MacroStackRow
+          label={t('diet.macroMicro.carbs', '碳')}
+          value={carbs}
+          isHighlighted={resolvedHighlights?.carbs}
+          accent="carbs"
+        />
+        <MacroStackRow
+          label={t('diet.macroMicro.protein', '蛋')}
+          value={protein}
+          isHighlighted={resolvedHighlights?.protein}
+          accent="protein"
+        />
+        <MacroStackRow
+          label={t('diet.macroMicro.fat', '脂')}
+          value={fat}
+          isHighlighted={resolvedHighlights?.fat}
+          accent="fat"
+        />
+      </div>
+
+      {/* 桌面版：傳統三大等寬方塊矩陣 (>= 768px / md 呈現) */}
+      <div
+        className={cn(
+          'items-center gap-2 font-mono text-center',
+          responsive ? 'hidden md:flex' : 'flex'
+        )}
+      >
+        <MacroSquareCell
+          label={t('diet.macroMicro.carbs', '碳')}
+          value={carbs}
+          isHighlighted={resolvedHighlights?.carbs}
+          isSubtle={isSubtle}
+          dashed={dashed}
+          accent="carbs"
+          subRows={carbsSubRows}
+        />
+        <MacroSquareCell
+          label={t('diet.macroMicro.protein', '蛋')}
+          value={protein}
+          isHighlighted={resolvedHighlights?.protein}
+          isSubtle={isSubtle}
+          dashed={dashed}
+          accent="protein"
+        />
+        <MacroSquareCell
+          label={t('diet.macroMicro.fat', '脂')}
+          value={fat}
+          isHighlighted={resolvedHighlights?.fat}
+          isSubtle={isSubtle}
+          dashed={dashed}
+          accent="fat"
+        />
+      </div>
     </div>
   );
 });
