@@ -10,6 +10,39 @@ export type NutritionTag =
   | 'low-calorie'
   | 'high-calorie';
 
+export type AuthoritySource = 'USDA' | 'CFCT' | 'TFDA' | 'MEXT';
+
+export interface FoodDataSource {
+  authority: AuthoritySource;
+  sourceId: string;
+  sourceName?: string;
+  verifiedAt?: string;
+}
+
+export interface FoodMicronutrients {
+  potassium?: number; // 鉀 (mg)
+  calcium?: number; // 鈣 (mg)
+  magnesium?: number; // 鎂 (mg)
+  iron?: number; // 鐵 (mg)
+  zinc?: number; // 鋅 (mg)
+  selenium?: number; // 硒 (mcg)
+  vitaminA?: number; // 維生素 A (mcg RAE)
+  vitaminC?: number; // 維生素 C (mg)
+  vitaminD?: number; // 維生素 D (mcg)
+  vitaminE?: number; // 維生素 E (mg)
+  vitaminB1?: number; // 硫胺素 B1 (mg)
+  vitaminB2?: number; // 核黃素 B2 (mg)
+  vitaminB3?: number; // 煙鹼酸 B3 (mg)
+  vitaminB6?: number; // 吡哆醇 B6 (mg)
+  vitaminB12?: number; // 鈷胺素 B12 (mcg)
+  folate?: number; // 葉酸 B9 (mcg DFE)
+  cholesterol?: number; // 膽固醇 (mg)
+  omega3EPA?: number; // EPA (g)
+  omega3DHA?: number; // DHA (g)
+  omega3ALA?: number; // ALA (g)
+  leucine?: number; // 亮氨酸 (mg)
+}
+
 export interface FoodItem {
   id: string;
   name: string;
@@ -28,6 +61,18 @@ export interface FoodItem {
   sodium?: number;
   isCustom: boolean;
   isArchived?: boolean;
+
+  // 稱重形態與物理廢棄率 (Refuse / Edible Rate)
+  refuseRate?: number; // 廢棄率 (0 ~ 1.0)，例如 0.21 (21% 骨重)
+  edibleRate?: number; // 標準可食率 (1.0 - refuseRate)，例如 0.79
+  refuseDescription?: string; // 廢棄物說明，如 "bone 21%"
+
+  // 權威資料庫溯源
+  dataSource?: FoodDataSource;
+
+  // 微量元素儲備庫
+  micros?: FoodMicronutrients;
+
   createdAt: number;
   updatedAt: number;
   rev?: number;
@@ -66,7 +111,8 @@ export interface FoodLog {
 
   // 實體食材 (entryType === 'item')
   foodId?: string;
-  quantity?: number;
+  quantity?: number; // 淨食用量（SSOT：純可食部重量）
+  grossQuantity?: number; // 實際毛重輸入憑證（若使用者以毛重模式秤量）
   unit?: string;
   bundleId?: string; // 所屬菜餚 ID (Recipe ID)
 

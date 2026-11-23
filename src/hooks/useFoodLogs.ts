@@ -226,6 +226,11 @@ export function useFoodLogs(date: string) {
         }
 
         existingEntry.quantity = roundTo((existingEntry.quantity ?? 0) + addedQty, 2);
+        if (typeof data.grossQuantity === 'number' || typeof existingEntry.grossQuantity === 'number') {
+          const existingGross = existingEntry.grossQuantity ?? existingEntry.quantity ?? 0;
+          const incomingGross = data.grossQuantity ?? incomingQty;
+          existingEntry.grossQuantity = roundTo(existingGross + incomingGross, 2);
+        }
         existingEntry.updatedAt = now;
         dailyLog.updatedAt = now;
         await db.daily_diet_logs.put(dailyLog);
@@ -244,6 +249,9 @@ export function useFoodLogs(date: string) {
       ...(entryType === 'item'
         ? {
             quantity: data.quantity ?? 100,
+            ...(typeof data.grossQuantity === 'number' && data.grossQuantity > 0
+              ? { grossQuantity: data.grossQuantity }
+              : {}),
             unit: data.unit ?? 'g',
             ...(data.bundleId ? { bundleId: data.bundleId } : {}),
           }
@@ -383,6 +391,9 @@ export function useFoodLogs(date: string) {
       mealType: item.mealType,
       foodId: item.foodId,
       quantity: item.quantity,
+      ...(typeof item.grossQuantity === 'number' && item.grossQuantity > 0
+        ? { grossQuantity: item.grossQuantity }
+        : {}),
       unit: item.unit,
       bundleId,
       createdAt: now,
@@ -411,11 +422,15 @@ export function useFoodLogs(date: string) {
     }
     if (!dailyLog || idx === -1) return;
     const now = Date.now();
-    dailyLog.entries[idx] = {
+    const updatedEntry: FoodLog = {
       ...dailyLog.entries[idx],
       ...updates,
       updatedAt: now,
     };
+    if (updates.grossQuantity === undefined && 'grossQuantity' in updates) {
+      delete updatedEntry.grossQuantity;
+    }
+    dailyLog.entries[idx] = updatedEntry;
     dailyLog.updatedAt = now;
     await db.daily_diet_logs.put(dailyLog);
     upsertInMemoryDailyDietLog(dailyLog);

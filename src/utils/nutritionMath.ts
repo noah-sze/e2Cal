@@ -640,3 +640,32 @@ export function calculateUnsaturatedFat(
   return roundTo(Math.max(0, safeFat - safeSat - safeTrans), 2);
 }
 
+/**
+ * 稱重形態 (Weighing Form):
+ * - 'net': 可食淨重 (純肉/純果肉，100% 可食部)
+ * - 'gross': 毛重 (盤中或秤上稱得總重，含骨、殼、皮等不可食殘渣)
+ */
+export type WeighingForm = 'net' | 'gross';
+
+/**
+ * 純函數：根據稱重形態與食材可食率，計算出實際記入日誌的有效可食淨重 (g)
+ * @param inputGrams 使用者輸入的克數 (>= 0)
+ * @param form 稱重形態 ('net' | 'gross')
+ * @param edibleRate 食材可食率 (0 < edibleRate <= 1.0，預設 1.0)
+ * @returns 折算後的有效可食淨重 (g)
+ */
+export function calculateEffectiveGrams(
+  inputGrams: number,
+  form: WeighingForm = 'net',
+  edibleRate?: number
+): number {
+  const safeInput = Math.max(0, typeof inputGrams === 'number' && Number.isFinite(inputGrams) ? inputGrams : 0);
+  const safeRate = typeof edibleRate === 'number' && Number.isFinite(edibleRate) && edibleRate > 0 && edibleRate <= 1
+    ? edibleRate
+    : 1.0;
+
+  if (form === 'gross') {
+    return roundTo(safeInput * safeRate, 2);
+  }
+  return roundTo(safeInput, 2);
+}

@@ -2,8 +2,14 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus } from 'lucide-react';
+import { Plus, Database, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useFoods } from '@/hooks/useFoods';
 import { useRecipes } from '@/hooks/useRecipes';
 import type { FoodItem, FoodRecipe } from '@/types';
@@ -12,6 +18,7 @@ import { triggerHaptic } from '@/lib/haptics';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { FoodFormDialog, type FoodFormData } from '@/components/food/FoodFormDialog';
 import { RecipeDialog, type RecipeFormData } from '@/components/food/RecipeDialog';
+import { AuthorityFoodSearchDialog } from '@/components/food/AuthorityFoodSearchDialog';
 import { FoodRecipeBrowser } from '@/components/food/FoodRecipeBrowser';
 import { formatFoodDisplayName } from '@/utils/foodNaming';
 import { useBrowserStateStore } from '@/store/useBrowserStateStore';
@@ -39,6 +46,7 @@ export default function Categories({ isDetailOpen = false }: CategoriesProps) {
 
   // 單品新增彈窗狀態
   const [isAddFoodOpen, setIsAddFoodOpen] = useState(false);
+  const [isAuthoritySearchOpen, setIsAuthoritySearchOpen] = useState(false);
 
   // 食譜庫
   const {
@@ -143,22 +151,70 @@ export default function Categories({ isDetailOpen = false }: CategoriesProps) {
       {/* 頂部操作按鈕 (Portal 映射至 AppLayout 頂部標頭右側，依當前 Tab 動態映射) */}
       {headerActionEl && !isDetailOpen &&
         createPortal(
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => {
-              if (viewTab === 'foods') {
-                setIsAddFoodOpen(true);
-              } else {
-                handleOpenAddRecipe();
-              }
-            }}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer"
-            title={viewTab === 'foods' ? t('settings.addCustomFood') : t('diet.addRecipe')}
-            aria-label={viewTab === 'foods' ? t('settings.addCustomFood') : t('diet.addRecipe')}
-          >
-            <Plus className="h-5 w-5" />
-          </Button>,
+          viewTab === 'foods' ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer"
+                    title={t('common.add', '新增')}
+                    aria-label={t('common.add', '新增')}
+                  >
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end" className="w-[230px] p-1 font-sans">
+                <DropdownMenuItem
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setIsAuthoritySearchOpen(true);
+                  }}
+                  className="flex items-start gap-2.5 p-2 cursor-pointer rounded-md"
+                >
+                  <Database className="size-4 mt-0.5 text-primary shrink-0" />
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="font-medium text-xs text-foreground">
+                      {t('diet.addAuthorityFood', '權威科研庫搜索添加')}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {t('diet.addAuthorityFoodDesc', 'USDA / TFDA / CDC（1.1 萬條）')}
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setIsAddFoodOpen(true);
+                  }}
+                  className="flex items-start gap-2.5 p-2 cursor-pointer rounded-md"
+                >
+                  <PenLine className="size-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="font-medium text-xs text-foreground">
+                      {t('diet.addManualFood', '手動添加')}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {t('diet.addManualFoodDesc', '自行填寫營養素與自定義食材')}
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleOpenAddRecipe}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer"
+              title={t('diet.addRecipe')}
+              aria-label={t('diet.addRecipe')}
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+          ),
           headerActionEl
         )}
 
@@ -183,12 +239,19 @@ export default function Categories({ isDetailOpen = false }: CategoriesProps) {
         onDeleteRecipe={handleDeleteRecipe}
         onUnarchiveRecipe={handleUnarchiveRecipe}
         onAddFood={() => setIsAddFoodOpen(true)}
+        onAddAuthorityFood={() => setIsAuthoritySearchOpen(true)}
         onAddRecipe={handleOpenAddRecipe}
       />
 
       {/* ========================================================================= */}
       {/* 彈窗區域：平鋪兄弟節點聲明 (No Nested Dialogs, Instant Pop) */}
       {/* ========================================================================= */}
+
+      {/* 權威科研庫搜索添加 Dialog */}
+      <AuthorityFoodSearchDialog
+        open={isAuthoritySearchOpen}
+        onOpenChange={setIsAuthoritySearchOpen}
+      />
 
       {/* 新增單品食物 Dialog */}
       <FoodFormDialog

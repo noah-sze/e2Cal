@@ -8,6 +8,7 @@ import {
   normalizeFoodInputToMetric,
   calculateNetCarbs,
   calculateUnsaturatedFat,
+  calculateEffectiveGrams,
   MEAL_RATIOS,
 } from './nutritionMath';
 
@@ -760,6 +761,38 @@ describe('nutritionMath - 次級營養素擴充與純函數推算', () => {
     expect(calculateUnsaturatedFat(10)).toBe(10);
     // 總脂肪小於飽和脂肪時防護為 0
     expect(calculateUnsaturatedFat(5, 6, 0)).toBe(0);
+  });
+});
+
+describe('nutritionMath - calculateEffectiveGrams (稱重形態折算)', () => {
+  it('可食淨重 (net)：無論可食率為多少，一律 1:1 返回精確淨重', () => {
+    expect(calculateEffectiveGrams(150, 'net', 0.79)).toBe(150);
+    expect(calculateEffectiveGrams(200, 'net', 0.52)).toBe(200);
+    expect(calculateEffectiveGrams(100, 'net')).toBe(100);
+  });
+
+  it('毛重 (gross)：依可食率 (edibleRate) 精確折算為有效可食淨重', () => {
+    // 帶骨雞腿 (edibleRate: 0.79, refuse 21%)，毛重 200g -> 可食 158g
+    expect(calculateEffectiveGrams(200, 'gross', 0.79)).toBe(158);
+
+    // 帶殼鮮蝦 (edibleRate: 0.52, refuse 48%)，毛重 200g -> 可食 104g
+    expect(calculateEffectiveGrams(200, 'gross', 0.52)).toBe(104);
+
+    // 香蕉 (edibleRate: 0.65, refuse 35%)，毛重 150g -> 可食 97.5g
+    expect(calculateEffectiveGrams(150, 'gross', 0.65)).toBe(97.5);
+
+    // 文蛤 (edibleRate: 0.22, refuse 78%)，毛重 500g -> 可食 110g
+    expect(calculateEffectiveGrams(500, 'gross', 0.22)).toBe(110);
+  });
+
+  it('邊界異常防護：負數、NaN、非數字或無效可食率安全回退', () => {
+    expect(calculateEffectiveGrams(-50, 'gross', 0.79)).toBe(0);
+    expect(calculateEffectiveGrams(NaN, 'gross', 0.79)).toBe(0);
+    // 未傳入可食率時預設視為 100% 可食 (edibleRate = 1.0)
+    expect(calculateEffectiveGrams(120, 'gross')).toBe(120);
+    expect(calculateEffectiveGrams(120, 'gross', 0)).toBe(120);
+    expect(calculateEffectiveGrams(120, 'gross', -0.5)).toBe(120);
+    expect(calculateEffectiveGrams(120, 'gross', 1.5)).toBe(120);
   });
 });
 

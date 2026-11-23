@@ -98,33 +98,33 @@ export const LEGACY_ID_TO_UUID_MAP: Record<string, string> = {
 };
 
 export const DEFAULT_OILS: Omit<FoodItem, 'createdAt' | 'updatedAt'>[] = [
-  { id: DEFAULT_FOOD_IDS.olive_oil, name: '橄欖油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.4, transFat: 0, sodium: 0, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.corn_oil, name: '玉米油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 90, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.3, transFat: 0, sodium: 0, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.rapeseed_oil, name: '菜籽油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 90, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 0.7, transFat: 0, sodium: 0, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.sunflower_oil, name: '葵花籽油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.0, transFat: 0, sodium: 0, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.soybean_oil, name: '大豆油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.5, transFat: 0, sodium: 0, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.sesame_oil, name: '芝麻油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.4, transFat: 0, sodium: 0, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.coconut_oil, name: '椰子油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 89, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 8.7, transFat: 0, sodium: 0, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.avocado_oil, name: '酪梨油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.2, transFat: 0, sodium: 0, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.lard, name: '豬油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 90, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 3.9, transFat: 0, sodium: 0, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.butter, name: '奶油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 72, protein: 0.1, carbs: 0, fat: 8.1, fiber: 0, sugar: 0, saturatedFat: 5.1, transFat: 0.3, sodium: 60, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.olive_oil, name: '橄欖油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.4, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171413', sourceName: 'Oil, olive, salad or cooking', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.corn_oil, name: '玉米油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 90, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.3, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171414', sourceName: 'Oil, corn, industrial and retail', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.rapeseed_oil, name: '菜籽油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 90, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 0.7, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171411', sourceName: 'Oil, canola', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.sunflower_oil, name: '葵花籽油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.0, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171428', sourceName: 'Oil, sunflower, linoleic', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.soybean_oil, name: '大豆油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.5, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171427', sourceName: 'Oil, soybean, salad or cooking', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.sesame_oil, name: '芝麻油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.4, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171426', sourceName: 'Oil, sesame, salad or cooking', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.coconut_oil, name: '椰子油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 89, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 8.7, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171412', sourceName: 'Oil, coconut', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.avocado_oil, name: '酪梨油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.2, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '173586', sourceName: 'Oil, avocado', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.lard, name: '豬油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 90, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 3.9, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171400', sourceName: 'Lard', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.butter, name: '奶油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 72, protein: 0.1, carbs: 0, fat: 8.1, fiber: 0, sugar: 0, saturatedFat: 5.1, transFat: 0.3, sodium: 60, dataSource: { authority: 'USDA', sourceId: '173410', sourceName: 'Butter, without salt', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
 ];
 
 export const DEFAULT_FOODS: Omit<FoodItem, 'createdAt' | 'updatedAt'>[] = [
-  { id: DEFAULT_FOOD_IDS.chicken_breast, name: '雞胸肉', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 110, protein: 23, carbs: 0, fat: 1.2, fiber: 0.0, sugar: 0.0, saturatedFat: 0.3, transFat: 0.0, sodium: 65, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.whole_egg, name: '雞蛋', category: 'natural', servingSize: 50, servingUnit: 'g', calories: 72, protein: 6.3, carbs: 0.4, fat: 4.8, fiber: 0.0, sugar: 0.2, saturatedFat: 1.6, transFat: 0.0, sodium: 71, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.white_rice, name: '白米', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 358, protein: 6.8, carbs: 79.2, fat: 0.7, fiber: 1.3, sugar: 0.1, saturatedFat: 0.2, transFat: 0.0, sodium: 2, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.sweet_potato, name: '地瓜', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 86, protein: 1.6, carbs: 20, fat: 0.1, fiber: 3.0, sugar: 4.2, saturatedFat: 0.0, transFat: 0.0, sodium: 55, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.whey_protein, name: '乳清蛋白粉', category: 'processed', servingSize: 30, servingUnit: 'g', calories: 120, protein: 24, carbs: 2, fat: 1.5, fiber: 0.0, sugar: 1.5, saturatedFat: 0.9, transFat: 0.0, sodium: 140, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.rolled_oats, name: '大燕麥片', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 389, protein: 16.9, carbs: 66, fat: 6.9, fiber: 10.6, sugar: 1.0, saturatedFat: 1.2, transFat: 0.0, sodium: 4, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.beef_flank, name: '牛板腱', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 180, protein: 24, carbs: 0, fat: 9, fiber: 0.0, sugar: 0.0, saturatedFat: 3.6, transFat: 0.3, sodium: 54, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.greek_yogurt, name: '無糖希臘優格', category: 'processed', servingSize: 100, servingUnit: 'g', calories: 60, protein: 10, carbs: 3.5, fat: 0.5, fiber: 0.0, sugar: 3.5, saturatedFat: 0.3, transFat: 0.0, sodium: 36, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.salmon, name: '鮭魚', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 208, protein: 20, carbs: 0, fat: 13, fiber: 0.0, sugar: 0.0, saturatedFat: 3.1, transFat: 0.0, sodium: 59, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.soy_milk, name: '無糖豆漿', category: 'beverage', servingSize: 250, servingUnit: 'ml', calories: 85, protein: 8.5, carbs: 4.5, fat: 3.5, fiber: 1.0, sugar: 1.5, saturatedFat: 0.5, transFat: 0.0, sodium: 30, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.tomato, name: '牛番茄', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 18, protein: 0.9, carbs: 3.9, fat: 0.2, fiber: 1.2, sugar: 2.6, saturatedFat: 0.0, transFat: 0.0, sodium: 5, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.cooking_oil, name: '花生油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 90, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.7, transFat: 0, sodium: 0, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.chicken_breast, name: '雞胸肉', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 120, protein: 22.5, carbs: 0, fat: 2.6, fiber: 0.0, sugar: 0.0, saturatedFat: 0.6, transFat: 0.0, sodium: 65, dataSource: { authority: 'USDA', sourceId: '171077', sourceName: 'Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.whole_egg, name: '雞蛋', category: 'natural', servingSize: 50, servingUnit: 'g', calories: 72, protein: 6.3, carbs: 0.4, fat: 4.8, fiber: 0.0, sugar: 0.2, saturatedFat: 1.6, transFat: 0.0, sodium: 71, refuseRate: 0.12, edibleRate: 0.88, refuseDescription: 'shell 12%', dataSource: { authority: 'USDA', sourceId: '171287', sourceName: 'Egg, whole, raw, fresh', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.white_rice, name: '白米', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 358, protein: 6.8, carbs: 79.2, fat: 0.7, fiber: 1.3, sugar: 0.1, saturatedFat: 0.2, transFat: 0.0, sodium: 2, dataSource: { authority: 'USDA', sourceId: '169756', sourceName: 'Rice, white, long-grain, regular, raw, unenriched', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.sweet_potato, name: '地瓜', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 86, protein: 1.6, carbs: 20, fat: 0.1, fiber: 3.0, sugar: 4.2, saturatedFat: 0.0, transFat: 0.0, sodium: 55, refuseRate: 0.28, edibleRate: 0.72, refuseDescription: 'peel 28%', dataSource: { authority: 'USDA', sourceId: '168482', sourceName: 'Sweet potato, raw, unprepared', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.whey_protein, name: '乳清蛋白粉', category: 'processed', servingSize: 30, servingUnit: 'g', calories: 120, protein: 24, carbs: 2, fat: 1.5, fiber: 0.0, sugar: 1.5, saturatedFat: 0.9, transFat: 0.0, sodium: 140, dataSource: { authority: 'USDA', sourceId: '173177', sourceName: 'Beverages, whey protein powder concentrate', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.rolled_oats, name: '大燕麥片', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 389, protein: 16.9, carbs: 66, fat: 6.9, fiber: 10.6, sugar: 1.0, saturatedFat: 1.2, transFat: 0.0, sodium: 4, dataSource: { authority: 'USDA', sourceId: '169705', sourceName: 'Cereals, oats, regular and quick, not fortified, dry', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.beef_flank, name: '牛板腱', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 180, protein: 24, carbs: 0, fat: 9, fiber: 0.0, sugar: 0.0, saturatedFat: 3.6, transFat: 0.3, sodium: 54, dataSource: { authority: 'USDA', sourceId: '170258', sourceName: 'Beef, chuck, top blade, steak, separable lean only, raw', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.greek_yogurt, name: '無糖希臘優格', category: 'processed', servingSize: 100, servingUnit: 'g', calories: 60, protein: 10, carbs: 3.5, fat: 0.5, fiber: 0.0, sugar: 3.5, saturatedFat: 0.3, transFat: 0.0, sodium: 36, dataSource: { authority: 'USDA', sourceId: '170886', sourceName: 'Yogurt, Greek, plain, nonfat', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.salmon, name: '鮭魚', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 208, protein: 20, carbs: 0, fat: 13, fiber: 0.0, sugar: 0.0, saturatedFat: 3.1, transFat: 0.0, sodium: 59, refuseRate: 0.32, edibleRate: 0.68, refuseDescription: 'skin and bones 32%', dataSource: { authority: 'USDA', sourceId: '173686', sourceName: 'Fish, salmon, Atlantic, wild, raw', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.soy_milk, name: '無糖豆漿', category: 'beverage', servingSize: 250, servingUnit: 'ml', calories: 85, protein: 8.5, carbs: 4.5, fat: 3.5, fiber: 1.0, sugar: 1.5, saturatedFat: 0.5, transFat: 0.0, sodium: 30, dataSource: { authority: 'TFDA', sourceId: 'C0100401', sourceName: '無糖豆漿', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.tomato, name: '牛番茄', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 18, protein: 0.9, carbs: 3.9, fat: 0.2, fiber: 1.2, sugar: 2.6, saturatedFat: 0.0, transFat: 0.0, sodium: 5, refuseRate: 0.09, edibleRate: 0.91, refuseDescription: 'stem and core 9%', dataSource: { authority: 'USDA', sourceId: '170457', sourceName: 'Tomatoes, red, ripe, raw, year round average', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.cooking_oil, name: '花生油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 90, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.7, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171424', sourceName: 'Oil, peanut, salad or cooking', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
   ...DEFAULT_OILS,
-  { id: DEFAULT_FOOD_IDS.black_pepper, name: '黑胡椒粒', category: 'condiment', servingSize: 5, servingUnit: 'g', calories: 13, protein: 0.5, carbs: 3.2, fat: 0.2, fiber: 1.3, sugar: 0.0, saturatedFat: 0.1, transFat: 0.0, sodium: 1, isCustom: false, isArchived: false },
+  { id: DEFAULT_FOOD_IDS.black_pepper, name: '黑胡椒粒', category: 'condiment', servingSize: 5, servingUnit: 'g', calories: 13, protein: 0.5, carbs: 3.2, fat: 0.2, fiber: 1.3, sugar: 0.0, saturatedFat: 0.1, transFat: 0.0, sodium: 1, dataSource: { authority: 'USDA', sourceId: '171320', sourceName: 'Spices, pepper, black', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
   ...DEFAULT_NATURAL_FOODS,
 ];
 
@@ -161,6 +161,36 @@ export async function restoreMissingDefaultData(db: E2CalDatabase): Promise<{
     if (!existingById && !existingByName) {
       await db.foods.add({ ...f, createdAt: now, updatedAt: now });
       foodsRestored += 1;
+    } else {
+      // 若預設食材存在但缺失最新權威與損耗率欄位，進行無害補齊
+      const target = existingById || existingByName;
+      if (target && !target.isCustom) {
+        let needsUpdate = false;
+        const patch: Partial<FoodItem> = {};
+        if (f.refuseRate !== undefined && target.refuseRate !== f.refuseRate) {
+          patch.refuseRate = f.refuseRate;
+          needsUpdate = true;
+        }
+        if (f.edibleRate !== undefined && target.edibleRate !== f.edibleRate) {
+          patch.edibleRate = f.edibleRate;
+          needsUpdate = true;
+        }
+        if (f.refuseDescription !== undefined && target.refuseDescription !== f.refuseDescription) {
+          patch.refuseDescription = f.refuseDescription;
+          needsUpdate = true;
+        }
+        if (f.dataSource && (!target.dataSource || target.dataSource.sourceId !== f.dataSource.sourceId)) {
+          patch.dataSource = f.dataSource;
+          needsUpdate = true;
+        }
+        if (f.micros && !target.micros) {
+          patch.micros = f.micros;
+          needsUpdate = true;
+        }
+        if (needsUpdate) {
+          await db.foods.update(target.id, { ...patch, updatedAt: now });
+        }
+      }
     }
   }
 

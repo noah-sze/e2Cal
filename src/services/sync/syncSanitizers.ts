@@ -150,6 +150,9 @@ export function sanitizeFoodLog(logInput: unknown): FoodLog {
   if (entryType === 'item') {
     if (log.foodId) sanitized.foodId = String(log.foodId);
     sanitized.quantity = Number(log.quantity) || 0;
+    if (typeof log.grossQuantity === 'number' && !isNaN(log.grossQuantity) && log.grossQuantity > 0) {
+      sanitized.grossQuantity = log.grossQuantity;
+    }
     sanitized.unit = String(log.unit || 'g');
     if (log.bundleId) sanitized.bundleId = String(log.bundleId);
   } else if (entryType === 'as_planned') {

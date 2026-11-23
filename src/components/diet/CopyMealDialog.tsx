@@ -404,6 +404,11 @@ export function CopyMealDialog({
           );
           if (existing) {
             existing.quantity = roundTo((existing.quantity ?? 0) + (item.quantity ?? 0), 2);
+            if (typeof item.grossQuantity === 'number' || typeof existing.grossQuantity === 'number') {
+              const existingGross = existing.grossQuantity ?? existing.quantity ?? 0;
+              const incomingGross = item.grossQuantity ?? item.quantity ?? 0;
+              existing.grossQuantity = roundTo(existingGross + incomingGross, 2);
+            }
             existing.updatedAt = now;
             return;
           }
@@ -416,6 +421,9 @@ export function CopyMealDialog({
           entryType: 'item',
           foodId: item.foodId,
           quantity: item.quantity,
+          ...(typeof item.grossQuantity === 'number' && item.grossQuantity > 0
+            ? { grossQuantity: item.grossQuantity }
+            : {}),
           unit: item.unit,
           bundleId: newBundleId,
           createdAt: now,

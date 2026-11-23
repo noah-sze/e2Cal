@@ -26,11 +26,11 @@ import { FoodRecipeSelectDialog } from '@/components/food/FoodRecipeSelectDialog
 import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
 import { calculateIngredientMacros } from '@/utils/recipeMath';
 import { formatFoodDisplayName } from '@/utils/foodNaming';
-import { calculateMealBudget } from '@/utils/nutritionMath';
+import { calculateMealBudget, calculateEffectiveGrams, type WeighingForm } from '@/utils/nutritionMath';
 import { triggerHaptic } from '@/lib/haptics';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { formatEnergy } from '@/utils/unitMath';
-import { evaluateAmountExpression } from '@/lib/utils';
+import { evaluateAmountExpression, cn } from '@/lib/utils';
 
 export default function Diet() {
   const { t } = useTranslation();
@@ -76,6 +76,7 @@ export default function Diet() {
   const [isSelectDialogOpen, setIsSelectDialogOpen] = useState(false);
   const [selectedFoodForAdd, setSelectedFoodForAdd] = useState<FoodItem | null>(null);
   const [foodQuantityForAdd, setFoodQuantityForAdd] = useState<number>(100);
+  const [weighingForm, setWeighingForm] = useState<WeighingForm>('net');
   const [selectedRecipeForStaging, setSelectedRecipeForStaging] = useState<FoodRecipe | null>(null);
 
   // 複製餐點流程專用狀態
@@ -144,6 +145,7 @@ export default function Diet() {
     id: string,
     updates: {
       quantity?: number;
+      grossQuantity?: number;
       calories?: number;
       carbs?: number;
       protein?: number;
@@ -287,6 +289,7 @@ export default function Diet() {
       const initialQty = food.servingSize || (foodWeightUnit === 'oz' ? 1 : 100);
       setSelectedFoodForAdd(food);
       setFoodQuantityForAdd(initialQty);
+      setWeighingForm('net');
     } else {
       const recipe = item as FoodRecipe;
       setSelectedRecipeForStaging(recipe);
@@ -298,8 +301,12 @@ export default function Diet() {
     if (!selectedFoodForAdd || !targetMealTypeForAdd) return;
     const foodToAdd = selectedFoodForAdd;
     const mealType = targetMealTypeForAdd;
-    const finalQuantity = val > 0 ? val : (foodToAdd.servingSize || 100);
+    const inputQuantity = val > 0 ? val : (foodToAdd.servingSize || 100);
+    const finalQuantity = calculateEffectiveGrams(inputQuantity, weighingForm, foodToAdd.edibleRate);
     const finalUnit = unit || foodToAdd.servingUnit || foodWeightUnit;
+    const isGrossRecorded =
+      weighingForm === 'gross' &&
+      Boolean(foodToAdd.edibleRate && foodToAdd.edibleRate < 1);
 
     // 立即同步關閉彈窗，0 延遲消失，絕不等待 DB I/O
     setSelectedFoodForAdd(null);
@@ -312,6 +319,7 @@ export default function Diet() {
       mealType,
       foodId: foodToAdd.id,
       quantity: finalQuantity,
+      ...(isGrossRecorded ? { grossQuantity: inputQuantity } : {}),
       unit: finalUnit,
     });
   };
@@ -463,20 +471,76 @@ export default function Diet() {
             if (/[+-]/.test(valStr.replace(/^[+-]/, ''))) {
               finalValStr = evaluateAmountExpression(valStr, false);
             }
-            const qty = parseFloat(finalValStr) || 0;
-            const macros = calculateIngredientMacros(selectedFoodForAdd, qty);
+            const rawQty = parseFloat(finalValStr) || 0;
+            const effectiveQty = calculateEffectiveGrams(rawQty, weighingForm, selectedFoodForAdd.edibleRate);
+            const macros = calculateIngredientMacros(selectedFoodForAdd, effectiveQty);
+            const hasRefuse = Boolean(selectedFoodForAdd.refuseRate && selectedFoodForAdd.refuseRate > 0);
+
             return (
-              <div className="h-10 px-3 rounded-lg bg-muted/50 border border-border/50 flex items-center justify-between">
-                <span className="text-calories font-bold font-mono text-xs">
-                  {formatEnergy(macros.calories, energyUnit).formatted}
-                </span>
-                <div className="flex items-baseline gap-1 font-mono">
-                  <span className="text-xl font-bold tracking-tight text-foreground">
-                    {valStr || '0'}
+              <div className="flex flex-col gap-2">
+                {selectedFoodForAdd.dataSource && (
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground/80 px-0.5">
+                    <span>
+                      數據來自：{selectedFoodForAdd.dataSource.authority === 'CFCT' ? '中國 CDC' : selectedFoodForAdd.dataSource.authority}
+                      {selectedFoodForAdd.dataSource.sourceId ? ` (${selectedFoodForAdd.dataSource.sourceId})` : ''}
+                    </span>
+                    {hasRefuse && (
+                      <span className="font-mono text-[10px]">
+                        不可食損耗：{Math.round((selectedFoodForAdd.refuseRate || 0) * 100)}%
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {hasRefuse && (
+                  <div className="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-muted/40 border border-border/40 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setWeighingForm('net')}
+                      className={cn(
+                        'py-1 px-2 rounded-md font-medium text-xs transition-all',
+                        weighingForm === 'net'
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                      )}
+                    >
+                      {t('diet.netWeightLabel', '可食淨重')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWeighingForm('gross')}
+                      className={cn(
+                        'py-1 px-2 rounded-md font-medium text-xs transition-all',
+                        weighingForm === 'gross'
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                      )}
+                    >
+                      {t('diet.grossWeightLabel', '毛重')}
+                    </button>
+                  </div>
+                )}
+
+                <div className="min-h-10 px-3 py-1.5 rounded-lg bg-muted/50 border border-border/50 flex items-center justify-between">
+                  <span className="text-calories font-bold font-mono text-xs">
+                    {formatEnergy(macros.calories, energyUnit).formatted}
                   </span>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    {currentU}
-                  </span>
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-baseline gap-1 font-mono">
+                      <span className="text-xl font-bold tracking-tight text-foreground">
+                        {valStr || '0'}
+                      </span>
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {currentU}
+                        {hasRefuse && weighingForm === 'gross' ? ' (毛重)' : ''}
+                      </span>
+                    </div>
+                    {hasRefuse && weighingForm === 'gross' && (
+                      <span className="text-[11px] text-muted-foreground/80 font-mono">
+                        可食淨重 ~ {effectiveQty} {currentU}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             );

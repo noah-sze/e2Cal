@@ -126,6 +126,32 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
       expect((cleaned as any).notes).toBeUndefined();
     });
 
+    it('完整保留實際毛重憑證 (grossQuantity) 並消毒非法數值', () => {
+      const validGrossLog = {
+        id: 'log-gross-1',
+        date: '2026-11-24',
+        mealType: 'dinner',
+        foodId: DEFAULT_FOOD_IDS.chicken_thigh_with_skin,
+        quantity: 130, // 淨重
+        grossQuantity: 200, // 毛重
+        unit: 'g',
+        createdAt: 2000,
+        updatedAt: 2000,
+      };
+
+      const cleaned = sanitizeFoodLog(validGrossLog);
+      expect(cleaned.quantity).toBe(130);
+      expect(cleaned.grossQuantity).toBe(200);
+
+      // 非法或小於等於 0 的毛重應被過濾
+      const invalidGrossLog = {
+        ...validGrossLog,
+        grossQuantity: -50,
+      };
+      const cleanedInvalid = sanitizeFoodLog(invalidGrossLog);
+      expect(cleanedInvalid.grossQuantity).toBeUndefined();
+    });
+
     it('完整支援系統分類條目原型 (System Entry Archetype) 並徹底移除虛構的 quantity 與 unit', () => {
       const placeholderLog = {
         id: 'p-1',

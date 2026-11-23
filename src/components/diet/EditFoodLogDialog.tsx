@@ -11,9 +11,10 @@ import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
 import { HoldToDeleteButton } from '@/components/ui/HoldToDeleteButton';
 import { db } from '@/services/db/db';
 import type { HydratedFoodLog, FoodItem } from '@/types';
-import { formatDisplayAmount } from '@/lib/utils';
+import { formatDisplayAmount, cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
 import { roundTo, gToOz, ozToG, flOzToMl, mlToFlOz } from '@/utils/unitMath';
+import { calculateEffectiveGrams, type WeighingForm } from '@/utils/nutritionMath';
 import { calculateIngredientMacros } from '@/utils/recipeMath';
 import { evaluateNutritionalHighlight } from '@/utils/nutritionEvaluation';
 import { resolveFoodLogTitle } from '@/utils/foodNaming';
@@ -31,6 +32,7 @@ export interface EditFoodLogDialogProps {
     id: string,
     updates: {
       quantity?: number;
+      grossQuantity?: number;
       calories?: number;
       carbs?: number;
       protein?: number;
@@ -72,7 +74,12 @@ export function EditFoodLogDialog({
   const [isKeypadOpen, setIsKeypadOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [keypadInitialQuantity, setKeypadInitialQuantity] = useState<number>(quantity);
+  const [weighingForm, setWeighingForm] = useState<WeighingForm>(
+    log?.grossQuantity && log.grossQuantity > 0 ? 'gross' : 'net'
+  );
+  const [grossQuantity, setGrossQuantity] = useState<number | undefined>(log?.grossQuantity);
   const initialQuantityRef = useRef<number>(quantity);
+  const initialGrossQuantityRef = useRef<number | undefined>(log?.grossQuantity);
   const isKeypadConfirmedRef = useRef(false);
 
   // 當 log 變更時同步初始狀態與查詢原食物實體，並預熱詳情頁所需快取
@@ -80,7 +87,14 @@ export function EditFoodLogDialog({
     if (log && open) {
       const safeQty = isSystemEntry ? (log.quantity ?? 1) : (log.quantity ?? 100);
       setQuantity(safeQty);
+      setGrossQuantity(log.grossQuantity);
+      if (log.grossQuantity && log.grossQuantity > 0) {
+        setWeighingForm('gross');
+      } else {
+        setWeighingForm('net');
+      }
       initialQuantityRef.current = safeQty;
+      initialGrossQuantityRef.current = log.grossQuantity;
 
       void prewarmFoodsCache();
       void prewarmRecipesCache();
@@ -170,28 +184,47 @@ export function EditFoodLogDialog({
   const handleOpenKeypad = (el: HTMLElement) => {
     triggerHaptic('selection');
     setAnchorEl(el);
-    setKeypadInitialQuantity(quantity);
+    const hasGross = Boolean(grossQuantity && grossQuantity > 0);
+    const initialVal = hasGross && weighingForm === 'gross' ? (grossQuantity as number) : quantity;
+    setKeypadInitialQuantity(initialVal);
     initialQuantityRef.current = quantity;
+    initialGrossQuantityRef.current = grossQuantity;
     isKeypadConfirmedRef.current = false;
     setIsKeypadOpen(true);
   };
 
   // 數字鍵盤即時鏡像聯動
   const handleKeypadLiveChange = useCallback((val: number) => {
-    setQuantity(val > 0 ? val : 0);
-  }, []);
+    const rawVal = val > 0 ? val : 0;
+    if (weighingForm === 'gross' && Boolean(baseFood?.edibleRate && baseFood.edibleRate < 1)) {
+      setQuantity(calculateEffectiveGrams(rawVal, 'gross', baseFood?.edibleRate));
+      setGrossQuantity(rawVal);
+    } else {
+      setQuantity(rawVal);
+      setGrossQuantity(undefined);
+    }
+  }, [weighingForm, baseFood?.edibleRate]);
 
   // 數字鍵盤確認
   const handleKeypadConfirm = useCallback((val: number) => {
     isKeypadConfirmedRef.current = true;
-    setQuantity(val > 0 ? val : 1);
+    const inputVal = val > 0 ? val : 1;
+    if (weighingForm === 'gross' && Boolean(baseFood?.edibleRate && baseFood.edibleRate < 1)) {
+      const effective = calculateEffectiveGrams(inputVal, 'gross', baseFood?.edibleRate);
+      setQuantity(effective);
+      setGrossQuantity(inputVal);
+    } else {
+      setQuantity(inputVal);
+      setGrossQuantity(undefined);
+    }
     setIsKeypadOpen(false);
-  }, []);
+  }, [weighingForm, baseFood?.edibleRate]);
 
   // 數字鍵盤取消
   const handleKeypadCancel = useCallback(() => {
     if (isKeypadConfirmedRef.current) return;
     setQuantity(initialQuantityRef.current);
+    setGrossQuantity(initialGrossQuantityRef.current);
     setIsKeypadOpen(false);
   }, []);
 
@@ -208,8 +241,10 @@ export function EditFoodLogDialog({
     if (!log || isSubmitting || (!isSystemEntry && quantity <= 0)) return;
     setIsSubmitting(true);
     try {
+      const isGross = weighingForm === 'gross' && Boolean(grossQuantity && grossQuantity > 0);
       await onSave(log.id, {
         ...(isSystemEntry ? {} : { quantity: quantity > 0 ? quantity : 1 }),
+        ...(isGross ? { grossQuantity } : { grossQuantity: undefined }),
         calories: nutritionFactsData?.calories ?? 0,
         carbs: nutritionFactsData?.carbs ?? 0,
         protein: nutritionFactsData?.protein ?? 0,
@@ -266,17 +301,35 @@ export function EditFoodLogDialog({
         added = flOzToMl(baseServingSize);
       }
     }
-    setQuantity((prev) => roundTo((prev || 0) + added, 2));
+    setQuantity((prev) => {
+      const nextNet = roundTo((prev || 0) + added, 2);
+      if (weighingForm === 'gross' && baseFood?.edibleRate && baseFood.edibleRate > 0 && baseFood.edibleRate < 1) {
+        setGrossQuantity(roundTo(nextNet / baseFood.edibleRate, 1));
+      }
+      return nextNet;
+    });
   };
 
   const handleMultiplyTwo = () => {
     triggerHaptic('light');
-    setQuantity((prev) => roundTo((prev || 0) * 2, 2));
+    setQuantity((prev) => {
+      const nextNet = roundTo((prev || 0) * 2, 2);
+      if (weighingForm === 'gross' && grossQuantity && grossQuantity > 0) {
+        setGrossQuantity(roundTo(grossQuantity * 2, 1));
+      }
+      return nextNet;
+    });
   };
 
   const handleAddStep = (stepVal: number) => {
     triggerHaptic('light');
-    setQuantity((prev) => roundTo((prev || 0) + stepVal, 2));
+    setQuantity((prev) => {
+      const nextNet = roundTo((prev || 0) + stepVal, 2);
+      if (weighingForm === 'gross' && baseFood?.edibleRate && baseFood.edibleRate > 0 && baseFood.edibleRate < 1) {
+        setGrossQuantity(roundTo(nextNet / baseFood.edibleRate, 1));
+      }
+      return nextNet;
+    });
   };
 
   const handleTitleClick = () => {
@@ -302,6 +355,26 @@ export function EditFoodLogDialog({
         >
           {/* 表單主體 (支援滑動檢視完整營養素) */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 pt-3.5 pr-0.5">
+            {/* 權威資料庫來源與損耗提示 */}
+            {baseFood?.dataSource && (
+              <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-muted/40 border border-border/50 text-[11px] text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <span>數據來源：</span>
+                  <span className="font-medium text-foreground">
+                    {baseFood.dataSource.authority === 'CFCT' ? '中國 CDC' : baseFood.dataSource.authority}
+                  </span>
+                  {baseFood.dataSource.sourceId && (
+                    <span className="font-mono text-muted-foreground/75 text-[10px]">({baseFood.dataSource.sourceId})</span>
+                  )}
+                </span>
+                {Boolean(baseFood.refuseRate && baseFood.refuseRate > 0) && (
+                  <span className="font-mono text-[10px] text-muted-foreground/80">
+                    不可食損耗：{Math.round((baseFood.refuseRate || 0) * 100)}%
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* 即時營養成分卡片 (共用通用規格卡片，下方已有份量調整故隱藏基準行) */}
             <NutritionFactsCard
               title={t('diet.servingNutrients', '營養成分')}
@@ -392,6 +465,11 @@ export function EditFoodLogDialog({
                       valueClassName="font-normal text-foreground"
                       unitClassName="text-[11px]"
                     />
+                    {Boolean(weighingForm === 'gross' && grossQuantity && grossQuantity > 0 && Math.round(grossQuantity) !== Math.round(quantity)) && (
+                      <span className="text-[10px] text-muted-foreground/75 font-mono">
+                        ({t('diet.grossWeightPrefix', '毛')} {formatDisplayAmount(String(grossQuantity))})
+                      </span>
+                    )}
                     <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                   </button>
                 </div>
@@ -430,6 +508,58 @@ export function EditFoodLogDialog({
           onLiveChange={handleKeypadLiveChange}
           onConfirm={handleKeypadConfirm}
           onCancel={handleKeypadCancel}
+          renderContextRow={(valStr, currentU) => {
+            const rawQty = parseFloat(valStr) || 0;
+            const effectiveQty = calculateEffectiveGrams(rawQty, weighingForm, baseFood?.edibleRate);
+            const hasRefuse = Boolean(baseFood?.refuseRate && baseFood.refuseRate > 0);
+
+            if (!hasRefuse) return null;
+
+            return (
+              <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-muted/40 border border-border/40 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWeighingForm('net');
+                      setQuantity(rawQty);
+                      setGrossQuantity(undefined);
+                    }}
+                    className={cn(
+                      'py-1 px-2 rounded-md font-medium text-xs transition-all',
+                      weighingForm === 'net'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                    )}
+                  >
+                    {t('diet.netWeightLabel', '可食淨重')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWeighingForm('gross');
+                      setQuantity(effectiveQty);
+                      setGrossQuantity(rawQty);
+                    }}
+                    className={cn(
+                      'py-1 px-2 rounded-md font-medium text-xs transition-all',
+                      weighingForm === 'gross'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                    )}
+                  >
+                    {t('diet.grossWeightLabel', '毛重')}
+                  </button>
+                </div>
+                {weighingForm === 'gross' && (
+                  <div className="px-1 text-[11px] text-muted-foreground font-mono flex items-center justify-between">
+                    <span>不可食損耗：{Math.round((baseFood?.refuseRate || 0) * 100)}%</span>
+                    <span>可食淨重 ~ {effectiveQty} {currentU}</span>
+                  </div>
+                )}
+              </div>
+            );
+          }}
         />
       )}
     </>
