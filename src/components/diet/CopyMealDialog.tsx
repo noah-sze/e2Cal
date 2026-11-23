@@ -25,6 +25,7 @@ export interface CopyMealDialogProps {
   onOpenChange: (open: boolean) => void;
   targetMealType: MealType;
   targetDate: string;
+  onSuccess?: (mealType: MealType) => void;
 }
 
 interface CopyableMealItem extends FoodLog {
@@ -49,6 +50,7 @@ export function CopyMealDialog({
   onOpenChange,
   targetMealType,
   targetDate,
+  onSuccess,
 }: CopyMealDialogProps) {
   const { t } = useTranslation();
   const { energyUnit } = useUnitPreferences();
@@ -434,6 +436,7 @@ export function CopyMealDialog({
           meal: t(`diet.${targetMealType}`),
         })
       );
+      onSuccess?.(targetMealType);
       onOpenChange(false);
     } catch (err) {
       console.error('Failed to copy meal:', err);

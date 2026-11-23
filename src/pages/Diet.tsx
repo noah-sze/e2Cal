@@ -85,6 +85,16 @@ export default function Diet() {
   const [placeholderMealType, setPlaceholderMealType] = useState<MealType | null>(null);
   const [editingPlaceholderLog, setEditingPlaceholderLog] = useState<HydratedFoodLog | null>(null);
 
+  // 記錄觸發展開的餐別（僅限使用者主動新增記錄後，展開該餐別以供檢視剛添加的記錄）
+  const [expandedMealTrigger, setExpandedMealTrigger] = useState<{
+    mealType: MealType;
+    timestamp: number;
+  } | null>(null);
+
+  const triggerExpandMeal = (mealType: MealType) => {
+    setExpandedMealTrigger({ mealType, timestamp: Date.now() });
+  };
+
   // 目標熱量與宏量營養素優先取用當日獨立之 DietPlan (由 useDietPlan 純數學即時動態推算)
   const isBinge = currentActivity === 999 || plan.activityLevel === 999;
   const targetCalories = plan.caloriesTarget;
@@ -164,6 +174,7 @@ export default function Diet() {
         fatGrams: targetMacros.fatGrams,
       });
     const foodName = t('diet.asPlanned.defaultName', '歷史均值');
+    triggerExpandMeal(mealType);
     await addAsPlannedMeal(mealType, budget, {
       foodName,
     });
@@ -207,6 +218,7 @@ export default function Diet() {
       });
       setEditingPlaceholderLog(null);
     } else if (placeholderMealType) {
+      triggerExpandMeal(placeholderMealType);
       await addQuickPlaceholder({
         mealType: placeholderMealType,
         scenario: data.scenario,
@@ -293,6 +305,7 @@ export default function Diet() {
     setSelectedFoodForAdd(null);
     setIsSelectDialogOpen(false);
     triggerHaptic('success');
+    triggerExpandMeal(mealType);
 
     await addFoodLog({
       date: selectedDate,
@@ -321,6 +334,7 @@ export default function Diet() {
         targetMacros={targetMacros}
         targetCalories={targetCalories}
         macroSplitTemplateLabel={macroSplitTemplateLabel}
+        expandedMealTrigger={expandedMealTrigger}
         mealGroups={mealGroups}
         recipeMap={recipeMap}
         foodWeightUnit={foodWeightUnit}
@@ -483,6 +497,9 @@ export default function Diet() {
           date={selectedDate}
           zIndex={70}
           onSuccess={() => {
+            if (targetMealTypeForAdd) {
+              triggerExpandMeal(targetMealTypeForAdd);
+            }
             setSelectedRecipeForStaging(null);
             setIsSelectDialogOpen(false);
           }}
@@ -509,6 +526,9 @@ export default function Diet() {
           }}
           targetMealType={copyMealType || 'lunch'}
           targetDate={selectedDate}
+          onSuccess={(mealType) => {
+            triggerExpandMeal(mealType);
+          }}
         />
       )}
     </>

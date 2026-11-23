@@ -92,6 +92,7 @@ export interface DietViewProps {
   interactive?: boolean;
   expandedMealPopover?: MealType;
   visibleMealTypes?: MealType[];
+  expandedMealTrigger?: { mealType: MealType; timestamp: number } | null;
   onOpenActivityModal?: () => void;
   onOpenPlanModal?: () => void;
   onOpenAddForMeal?: (type: MealType) => void;
@@ -128,6 +129,7 @@ export function DietView({
   interactive = true,
   expandedMealPopover,
   visibleMealTypes,
+  expandedMealTrigger,
   onOpenActivityModal,
   onOpenPlanModal,
   onOpenAddForMeal,
@@ -157,53 +159,14 @@ export function DietView({
     setCollapsedMeals(getDefaultCollapsedMeals(effectiveIsToday));
   }, [selectedDate, effectiveIsToday, interactive]);
 
-  // 監聽各餐別數據變化：當往摺疊的區塊添加記錄後，自動展開該區塊
-  const prevMealGroupsRef = useRef<Record<MealType, { count: number; calories: number }>>(undefined);
-  const prevDateRef = useRef<string | undefined>(selectedDate);
-
+  // 當外部觸發新增記錄時，自動展開該餐別區塊供使用者檢視剛添加的記錄
   useEffect(() => {
-    const sumCalories = (logs?: HydratedFoodLog[]) =>
-      (logs || []).reduce((acc, cur) => acc + (cur.calories || 0), 0);
-
-    const currentSummary: Record<MealType, { count: number; calories: number }> = {
-      breakfast: { count: mealGroups.breakfast?.length || 0, calories: sumCalories(mealGroups.breakfast) },
-      lunch: { count: mealGroups.lunch?.length || 0, calories: sumCalories(mealGroups.lunch) },
-      dinner: { count: mealGroups.dinner?.length || 0, calories: sumCalories(mealGroups.dinner) },
-      snack: { count: mealGroups.snack?.length || 0, calories: sumCalories(mealGroups.snack) },
-    };
-
-    // 若日期切換或初次水合，僅同步快照，不觸發自動展開（維護時段預設摺疊規則）
-    if (prevDateRef.current !== selectedDate || !prevMealGroupsRef.current) {
-      prevDateRef.current = selectedDate;
-      prevMealGroupsRef.current = currentSummary;
-      return;
-    }
-
-    const prevSummary = prevMealGroupsRef.current;
-    const toExpand: Partial<Record<MealType, boolean>> = {};
-    let shouldUpdate = false;
-
-    mealTypes.forEach((type) => {
-      const prev = prevSummary[type];
-      const curr = currentSummary[type];
-      // 條目數量增加或熱量/重量增加（如疊加重量），代表剛新增了記錄
-      if (curr && prev && (curr.count > prev.count || curr.calories > prev.calories)) {
-        if (collapsedMeals[type]) {
-          toExpand[type] = false;
-          shouldUpdate = true;
-        }
-      }
-    });
-
-    if (shouldUpdate) {
-      setCollapsedMeals((prev) => ({
-        ...prev,
-        ...toExpand,
-      }));
-    }
-
-    prevMealGroupsRef.current = currentSummary;
-  }, [mealGroups, selectedDate, mealTypes, collapsedMeals]);
+    if (!expandedMealTrigger) return;
+    setCollapsedMeals((prev) => ({
+      ...prev,
+      [expandedMealTrigger.mealType]: false,
+    }));
+  }, [expandedMealTrigger]);
 
   const toggleMealCollapse = (mealType: MealType) => {
     triggerHaptic('light');

@@ -61,10 +61,18 @@ describe('dietMealPeriod', () => {
       });
     });
 
-    it('今日午餐時段 (e.g. 12:30)，僅午餐與加餐展開，早餐與晚餐摺疊', () => {
-      const result = getDefaultCollapsedMeals(true, 12);
-      expect(result).toEqual({
+    it('今日午餐時段 (e.g. 12:30 或 15:00)，僅午餐與加餐展開，早餐與晚餐摺疊', () => {
+      const result12 = getDefaultCollapsedMeals(true, 12);
+      expect(result12).toEqual({
         breakfast: true, // 摺疊
+        lunch: false, // 展開
+        dinner: true, // 摺疊
+        snack: false, // 加餐始終展開
+      });
+
+      const result15 = getDefaultCollapsedMeals(true, 15);
+      expect(result15).toEqual({
+        breakfast: true, // 摺疊 (即使有記錄，預設仍應根據時段摺疊)
         lunch: false, // 展開
         dinner: true, // 摺疊
         snack: false, // 加餐始終展開
