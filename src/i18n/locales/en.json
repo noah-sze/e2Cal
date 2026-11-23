@@ -133,6 +133,7 @@
       "aiInjectToForm": "Fill Form",
       "aiInjected": "Filled",
       "aiOffline": "Device is offline, AI assistant unavailable.",
+      "aiAddProvider": "Add AI Provider",
       "placeholder": {
         "title": "Quick Estimate",
         "namePlaceholder": "Note",

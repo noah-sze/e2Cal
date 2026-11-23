@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, XIcon } from 'lucide-react';
+import { Check, ChevronRight, XIcon } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -210,7 +210,8 @@ export function ExternalAIAssistant({
     return () => window.clearInterval(timer);
   }, [workPhase]);
 
-  const canSubmit = Boolean(attachedImage || promptText.trim());
+  const hasProviderAvailable = isConfigured || mockMode;
+  const canSubmit = hasProviderAvailable && Boolean(attachedImage || promptText.trim());
   const hasDraft = Boolean(promptText.trim() || attachedImage || workPhase === 'done');
 
   const runAnalysis = async () => {
@@ -807,10 +808,11 @@ export function ExternalAIAssistant({
                 triggerHaptic('selection');
                 setAddProviderOpen(true);
               }}
-              className="flex items-center gap-1.5 text-foreground hover:opacity-80 cursor-pointer transition-opacity"
+              className="flex items-center gap-1 text-foreground hover:opacity-80 cursor-pointer transition-opacity"
             >
               <PixelSpriteIcon />
-              <span>{t('common.add', '新增')}</span>
+              <span>{t('diet.aiAddProvider', '新增 AI 供應商')}</span>
+              <ChevronRight className="size-3 text-muted-foreground/70" />
             </button>
           ) : (
             <Select
@@ -882,6 +884,7 @@ export function ExternalAIAssistant({
         <div className="flex items-center gap-1.5">
           <input
             type="text"
+            disabled={!hasProviderAvailable}
             value={promptText}
             onChange={(e) => setPromptText(e.target.value)}
             onKeyDown={(e) => {
@@ -894,18 +897,21 @@ export function ExternalAIAssistant({
               }
             }}
             placeholder={inputPlaceholder}
-            className="flex-1 min-w-0 h-8 px-2.5 rounded-lg border border-border bg-background text-xs font-sans text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden focus:border-foreground"
+            className="flex-1 min-w-0 h-8 px-2.5 rounded-lg border border-border bg-background text-xs font-sans text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden focus:border-foreground disabled:bg-muted disabled:text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed"
           />
           <button
             type="button"
+            disabled={!hasProviderAvailable}
             onClick={() => fileInputRef.current?.click()}
             title={t('diet.aiTakePhoto', '拍照或選圖')}
             aria-label={t('diet.aiTakePhoto', '拍照或選圖')}
             className={cn(
-              'size-8 rounded-lg border border-border flex items-center justify-center cursor-pointer shrink-0 transition-colors active:scale-95',
-              attachedImage
-                ? 'bg-foreground text-background border-foreground hover:opacity-90'
-                : 'bg-muted/40 hover:bg-hover text-foreground'
+              'size-8 rounded-lg border border-border flex items-center justify-center shrink-0 transition-colors',
+              !hasProviderAvailable
+                ? 'bg-muted text-muted-foreground opacity-40 cursor-not-allowed'
+                : attachedImage
+                  ? 'bg-foreground text-background border-foreground hover:opacity-90 cursor-pointer active:scale-95'
+                  : 'bg-muted/40 hover:bg-hover text-foreground cursor-pointer active:scale-95'
             )}
           >
             <PixelCameraIcon />
