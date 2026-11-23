@@ -19,7 +19,7 @@ export function formatAiErrorMessage(rawMessage: string, status?: number): strin
     lower.includes('overloaded') ||
     lower.includes('temporarily unavailable')
   ) {
-    return '該模型目前負載過高（暫時性擁擠，API Key 連通正常），請稍後再試或切換其他模型（如 gemini-3.8-flash）。';
+    return '模型目前擁堵';
   }
 
   if (
@@ -29,7 +29,7 @@ export function formatAiErrorMessage(rawMessage: string, status?: number): strin
     lower.includes('resource has been exhausted') ||
     lower.includes('too many requests')
   ) {
-    return '已達 API 配額或請求頻率上限，請稍後再試。';
+    return '已達 API 配額或頻率上限';
   }
 
   if (
@@ -43,15 +43,15 @@ export function formatAiErrorMessage(rawMessage: string, status?: number): strin
     lower.includes('authentication_error') ||
     lower.includes('missing_api_key')
   ) {
-    return 'API Key 無效、未填寫或無權限，請檢查密鑰設定。';
+    return 'API Key 無效或無權限';
   }
 
   if (status === 404 || lower.includes('is not found') || lower.includes('model not found')) {
-    return '找不到指定的模型或端點路徑，請檢查模型名稱或點擊重新整理獲取最新可用模型清單。';
+    return '找不到模型或端點';
   }
 
   if (lower.includes('failed to fetch') || lower.includes('networkerror')) {
-    return '網路連線失敗（或跨域 CORS 受限），請檢查網路狀態或端點網址。';
+    return '網路連線失敗';
   }
 
   return rawMessage;
@@ -334,15 +334,26 @@ async function callAiGateway(params: {
   }
 }
 
-/** 測試 AI 設定連通性 */
+const DEFAULT_TEST_TIMEOUT_MS = 15_000;
+
+/** 測試 AI 設定連通性（預設 15 秒超時自動中止） */
 export async function testAIConnection(
-  settings: AISettings
+  settings: AISettings,
+  timeoutMs: number = DEFAULT_TEST_TIMEOUT_MS
 ): Promise<{ success: boolean; message: string }> {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+
   try {
     const prompt = '請回覆純 JSON：{"status":"ok","message":"connection successful"}';
     const raw = await callAiGateway({
       prompt,
       settings,
+      signal: controller.signal,
     });
     const parsed = JSON.parse(cleanJsonResponse(raw));
     if (parsed.status === 'ok' || parsed.message) {
@@ -350,8 +361,16 @@ export async function testAIConnection(
     }
     return { success: true, message: '連線成功。' };
   } catch (err: unknown) {
+    if (timedOut || (err instanceof DOMException && err.name === 'AbortError')) {
+      return {
+        success: false,
+        message: '連線超時',
+      };
+    }
     const msg = err instanceof Error ? err.message : String(err);
     return { success: false, message: formatAiErrorMessage(msg) };
+  } finally {
+    clearTimeout(timer);
   }
 }
 

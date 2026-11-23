@@ -132,6 +132,7 @@
       "aiLabelParsed": "标签已解析",
       "aiInjectToForm": "填入表单",
       "aiInjected": "已填入",
+      "aiOffline": "设备处于离线状态，AI 助手不可用。",
       "placeholder": {
         "title": "快速估算",
         "namePlaceholder": "备注",

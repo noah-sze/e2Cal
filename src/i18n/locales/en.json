@@ -132,6 +132,7 @@
       "aiLabelParsed": "Label Parsed",
       "aiInjectToForm": "Fill Form",
       "aiInjected": "Filled",
+      "aiOffline": "Device is offline, AI assistant unavailable.",
       "placeholder": {
         "title": "Quick Estimate",
         "namePlaceholder": "Note",

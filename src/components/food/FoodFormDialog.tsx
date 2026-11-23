@@ -788,7 +788,7 @@ export function FoodFormDialog({
           externalTopSlot={
             <ExternalAIAssistant
               mode="foodLabel"
-              dialogOpen={open}
+              dialogOpen={open && !isSubmitting}
               focused={isAiFocused}
               onFocusedChange={setIsAiFocused}
               onInjectFoodLabel={handleInjectFoodLabel}

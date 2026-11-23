@@ -27,51 +27,21 @@ export const DEFAULT_PROFILE_IDS = {
   customLegacy: '11111111-1111-4111-8111-111111111106',
 } as const;
 
+const LEGACY_SEED_PROFILE_IDS = new Set<string>([
+  DEFAULT_PROFILE_IDS.gemini,
+  DEFAULT_PROFILE_IDS.gemini2,
+  DEFAULT_PROFILE_IDS.gemini3,
+  DEFAULT_PROFILE_IDS.chatgpt,
+]);
+
 export function createDefaultProfiles(): AIProviderProfile[] {
-  return [
-    {
-      id: DEFAULT_PROFILE_IDS.gemini,
-      name: 'Gemini',
-      provider: 'gemini',
-      protocol: 'gemini',
-      baseUrl: '',
-      apiKey: '',
-      model: 'gemini-3.8-flash',
-    },
-    {
-      id: DEFAULT_PROFILE_IDS.gemini2,
-      name: 'Gemini 2',
-      provider: 'gemini',
-      protocol: 'gemini',
-      baseUrl: '',
-      apiKey: '',
-      model: 'gemini-4-hydrogen',
-    },
-    {
-      id: DEFAULT_PROFILE_IDS.gemini3,
-      name: 'Gemini 3',
-      provider: 'gemini',
-      protocol: 'gemini',
-      baseUrl: '',
-      apiKey: '',
-      model: 'gemini-4-neon',
-    },
-    {
-      id: DEFAULT_PROFILE_IDS.chatgpt,
-      name: 'Chatgpt',
-      provider: 'openai',
-      protocol: 'openai',
-      baseUrl: '',
-      apiKey: '',
-      model: 'gpt-4o-mini',
-    },
-  ];
+  return [];
 }
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
   provider: 'gemini',
-  profiles: createDefaultProfiles(),
-  activeProfileId: DEFAULT_PROFILE_IDS.gemini2,
+  profiles: [],
+  activeProfileId: '',
   geminiApiKey: '',
   geminiModel: 'gemini-3.8-flash',
   openaiApiKey: '',
@@ -201,13 +171,18 @@ function loadStoredSettings(): AISettings {
               : baseUrl.trim()
                 ? 'custom'
                 : item.protocol;
+          const apiKey = typeof item.apiKey === 'string' ? item.apiKey : '';
+          // 清理先前自動生成的空白預設種子，僅保留已配置密鑰或使用者自建的供應商
+          if (LEGACY_SEED_PROFILE_IDS.has(item.id) && !apiKey.trim()) {
+            continue;
+          }
           valid.push({
             id: item.id,
             name: item.name,
             provider,
             protocol: item.protocol,
             baseUrl,
-            apiKey: typeof item.apiKey === 'string' ? item.apiKey : '',
+            apiKey,
             model:
               typeof item.model === 'string' ? item.model : DEFAULT_MODEL_BY_PROTOCOL[item.protocol],
           });
@@ -216,25 +191,40 @@ function loadStoredSettings(): AISettings {
       }
     }
 
-    let activeProfileId = rawActiveId ?? DEFAULT_PROFILE_IDS.gemini2;
+    let activeProfileId = rawActiveId ?? '';
 
     if (!profiles) {
-      profiles = createDefaultProfiles();
-      // 首次遷移：保留舊版已填入的 API Key
+      profiles = [];
+      // 首次遷移：僅保留舊版已填入的 API Key
       if (legacy.geminiApiKey.trim()) {
-        profiles[0].apiKey = legacy.geminiApiKey;
-        profiles[0].model = legacy.geminiModel;
-        if (legacy.provider === 'gemini') activeProfileId = profiles[0].id;
+        profiles.push({
+          id: DEFAULT_PROFILE_IDS.gemini,
+          name: 'Gemini',
+          provider: 'gemini',
+          protocol: 'gemini',
+          baseUrl: '',
+          apiKey: legacy.geminiApiKey,
+          model: legacy.geminiModel,
+        });
+        if (legacy.provider === 'gemini') activeProfileId = DEFAULT_PROFILE_IDS.gemini;
       }
       if (legacy.openaiApiKey.trim()) {
-        profiles[3].apiKey = legacy.openaiApiKey;
-        profiles[3].model = legacy.openaiModel;
-        if (legacy.provider === 'openai') activeProfileId = profiles[3].id;
+        profiles.push({
+          id: DEFAULT_PROFILE_IDS.chatgpt,
+          name: 'Chatgpt',
+          provider: 'openai',
+          protocol: 'openai',
+          baseUrl: '',
+          apiKey: legacy.openaiApiKey,
+          model: legacy.openaiModel,
+        });
+        if (legacy.provider === 'openai') activeProfileId = DEFAULT_PROFILE_IDS.chatgpt;
       }
       if (legacy.anthropicApiKey.trim()) {
         profiles.push({
           id: DEFAULT_PROFILE_IDS.anthropicLegacy,
           name: 'Anthropic',
+          provider: 'anthropic',
           protocol: 'anthropic',
           baseUrl: '',
           apiKey: legacy.anthropicApiKey,
@@ -246,6 +236,7 @@ function loadStoredSettings(): AISettings {
         profiles.push({
           id: DEFAULT_PROFILE_IDS.customLegacy,
           name: 'Custom',
+          provider: 'custom',
           protocol: legacy.customProtocol,
           baseUrl: legacy.customBaseUrl,
           apiKey: legacy.customApiKey,

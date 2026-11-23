@@ -11,6 +11,7 @@ import {
 import { AIProviderDialog } from '@/components/settings/AIProviderDialog';
 import { MetricValue } from '@/components/ui/metric-value';
 import { useAISettings } from '@/hooks/useAISettings';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { compressImage } from '@/utils/imageCompress';
 import { estimateMeal, parseNutritionLabel, formatAiErrorMessage } from '@/services/ai/aiClient';
 import { triggerHaptic } from '@/lib/haptics';
@@ -140,6 +141,7 @@ export function ExternalAIAssistant({
   const { t } = useTranslation();
   const { settings, profiles, activeProfile, setActiveProfile, addProfile, isConfigured } =
     useAISettings();
+  const isOnline = useNetworkStatus();
   const [addProviderOpen, setAddProviderOpen] = useState(false);
 
   const isSpatialMode = focused !== undefined;
@@ -171,6 +173,8 @@ export function ExternalAIAssistant({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputCardRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const dialogOpenRef = useRef(dialogOpen);
+  dialogOpenRef.current = dialogOpen;
 
   // 僅當整個 Dialog 關閉時才徹底重置草稿與狀態並中止進行中請求
   useEffect(() => {
@@ -214,6 +218,12 @@ export function ExternalAIAssistant({
     const imageBase64 = attachedImage?.base64;
     if (!imageBase64 && !cleanText) return;
 
+    if (!isOnline && !mockMode) {
+      triggerHaptic('error');
+      toast.show(t('diet.aiOffline', '設備處於離線狀態，AI 助手不可用。'));
+      return;
+    }
+
     if (!isConfigured && !mockMode) {
       if (profiles.length === 0) {
         triggerHaptic('selection');
@@ -250,7 +260,7 @@ export function ExternalAIAssistant({
             { once: true }
           );
         });
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || !dialogOpenRef.current) return;
         if (mockScenario === 'error') {
           throw new Error(
             formatAiErrorMessage(
@@ -325,7 +335,7 @@ export function ExternalAIAssistant({
           settings,
           controller.signal
         );
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || !dialogOpenRef.current) return;
         setMealResult(res);
       } else {
         const res = await parseNutritionLabel(
@@ -334,14 +344,20 @@ export function ExternalAIAssistant({
           cleanText || undefined,
           controller.signal
         );
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || !dialogOpenRef.current) return;
         setFoodResult(res);
       }
+      if (controller.signal.aborted || !dialogOpenRef.current) return;
       abortControllerRef.current = null;
       triggerHaptic('success');
       setWorkPhase('done');
     } catch (err) {
-      if (controller.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) {
+      if (
+        controller.signal.aborted ||
+        !dialogOpenRef.current ||
+        (err instanceof Error && err.name === 'AbortError') ||
+        (err instanceof DOMException && err.name === 'AbortError')
+      ) {
         return;
       }
       abortControllerRef.current = null;
@@ -390,6 +406,8 @@ export function ExternalAIAssistant({
 
   // 徹底清除草稿並收合
   const handleClearAndCollapse = () => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
     triggerHaptic('selection');
     setFocused(false);
     setWorkPhase('expanded');
@@ -916,6 +934,11 @@ export function ExternalAIAssistant({
     <button
       type="button"
       onClick={() => {
+        if (!isOnline && !mockMode) {
+          triggerHaptic('error');
+          toast.show(t('diet.aiOffline', '設備處於離線狀態，AI 助手不可用。'));
+          return;
+        }
         triggerHaptic('selection');
         setFocused(true);
       }}

@@ -738,7 +738,7 @@ export function QuickPlaceholderDialog({
           externalTopSlot={
             <ExternalAIAssistant
               mode="meal"
-              dialogOpen={open}
+              dialogOpen={open && !isSubmitting}
               focused={isAiFocused}
               onFocusedChange={setIsAiFocused}
               onInjectMeal={handleInjectMeal}

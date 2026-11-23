@@ -127,6 +127,22 @@ describe('AI Client API calls', () => {
     expect(res.message).toContain('API Key');
   });
 
+  it('should abort and return timeout error when connection exceeds timeoutMs', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementationOnce((_url, init) => {
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener(
+          'abort',
+          () => reject(new DOMException('The operation was aborted.', 'AbortError')),
+          { once: true }
+        );
+      });
+    });
+
+    const res = await testAIConnection(dummyGeminiSettings, 30);
+    expect(res.success).toBe(false);
+    expect(res.message).toContain('超時');
+  });
+
   it('should parse nutrition label via Gemini', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
@@ -261,8 +277,7 @@ describe('AI Client API calls', () => {
     const raw =
       'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.';
     const formatted = formatAiErrorMessage(raw, 503);
-    expect(formatted).toContain('負載過高');
-    expect(formatted).toContain('API Key 連通正常');
+    expect(formatted).toBe('模型目前擁堵');
   });
 
   it('should format invalid api key error message cleanly', () => {
