@@ -440,5 +440,31 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
       expect(cleaned.transFat).toBe(0);
       expect(cleaned.sodium).toBe(71);
     });
+
+    it('當遠端傳入歷史版本的「砂糖橘」時，應自愈補齊 sugar: 8.5 等次級營養素', () => {
+      const shatangjuFromRemote = {
+        id: '07b385f5-167e-5cef-817c-6aca9955ae39',
+        name: '砂糖橘',
+        category: 'natural',
+        servingSize: 100,
+        servingUnit: 'g',
+        calories: 43,
+        protein: 0.8,
+        carbs: 10.3,
+        fat: 0.2,
+        fiber: 1.4,
+        isCustom: false,
+        isArchived: false,
+        createdAt: 1794148915715,
+        updatedAt: 1794148915715,
+      };
+
+      const cleaned = sanitizeFoodItem(shatangjuFromRemote);
+      expect(cleaned.sugar).toBe(8.5);
+      expect(cleaned.saturatedFat).toBe(0);
+      expect(cleaned.transFat).toBe(0);
+      expect(cleaned.sodium).toBe(2);
+      expect(cleaned.fiber).toBe(1.4);
+    });
   });
 });

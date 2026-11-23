@@ -15,11 +15,18 @@ import { PRIMARY_USER_ID, DEFAULT_FOODS } from '@/services/db/defaultData';
 import { normalizeServingToMetric } from '@/utils/nutritionMath';
 
 let defaultFoodMapCache: Map<string, Omit<FoodItem, 'createdAt' | 'updatedAt'>> | null = null;
+let defaultFoodByNameMapCache: Map<string, Omit<FoodItem, 'createdAt' | 'updatedAt'>> | null = null;
 function getDefaultFoodMap() {
   if (!defaultFoodMapCache) {
     defaultFoodMapCache = new Map(DEFAULT_FOODS.map((f) => [f.id, f]));
   }
   return defaultFoodMapCache;
+}
+function getDefaultFoodByNameMap() {
+  if (!defaultFoodByNameMapCache) {
+    defaultFoodByNameMapCache = new Map(DEFAULT_FOODS.map((f) => [f.name, f]));
+  }
+  return defaultFoodByNameMapCache;
 }
 
 function asRecord(input: unknown): Record<string, unknown> {
@@ -43,7 +50,10 @@ export function sanitizeFoodItem(rawInput: unknown): FoodItem {
   );
 
   const isCustom = Boolean(raw.isCustom);
-  const defFood = !isCustom ? getDefaultFoodMap().get(rawId) : undefined;
+  const rawName = String(raw.name || '').trim();
+  const defFood = !isCustom
+    ? getDefaultFoodMap().get(rawId) || getDefaultFoodByNameMap().get(rawName)
+    : undefined;
 
   const rawSugar = raw.sugar !== undefined ? Number(raw.sugar) : defFood?.sugar;
   const rawFiber = raw.fiber !== undefined ? Number(raw.fiber) : defFood?.fiber;

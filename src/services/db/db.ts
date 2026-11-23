@@ -1388,6 +1388,61 @@ export class E2CalDatabase extends Dexie {
       }
       clearFoodsCache();
     });
+
+    this.version(28).upgrade(async (tx) => {
+      // 升級至版本 28：強制更新預設食材次級營養素並刷新時間戳，標記強制推送以全量覆蓋遠端舊版本
+      const foodsTable = tx.table('foods');
+      const allFoods = await foodsTable.toArray();
+      const defaultFoodMap = new Map<string, Record<string, unknown>>();
+      for (const defFood of DEFAULT_FOODS) {
+        defaultFoodMap.set(defFood.id, defFood as Record<string, unknown>);
+      }
+      const defaultByNameMap = new Map<string, Record<string, unknown>>();
+      for (const defFood of DEFAULT_FOODS) {
+        defaultByNameMap.set(defFood.name, defFood as Record<string, unknown>);
+      }
+
+      const now = Date.now();
+      for (const food of allFoods) {
+        if (!food.isCustom) {
+          const defaults = defaultFoodMap.get(food.id) || defaultByNameMap.get(food.name);
+          if (!defaults) continue;
+          const updated: Record<string, unknown> = { ...food };
+          for (const key of ['sugar', 'saturatedFat', 'transFat', 'sodium', 'fiber'] as const) {
+            if (defaults[key] !== undefined && updated[key] !== defaults[key]) {
+              updated[key] = defaults[key];
+            }
+          }
+          // 強制刷新更新時間戳，保證同步引擎將其識別為最新版本
+          updated.updatedAt = now;
+          await foodsTable.put(updated);
+        }
+      }
+      clearFoodsCache();
+
+      // 清除本地同步推送快取記錄，並設定強制推送標記以全量覆蓋 Dropbox 遠端舊版本
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          const PUSHED_STORAGE_KEY = 'e2cal_sync_pushed_times_v1';
+          const raw = window.localStorage.getItem(PUSHED_STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            delete parsed['foods'];
+            window.localStorage.setItem(PUSHED_STORAGE_KEY, JSON.stringify(parsed));
+          }
+          const REVS_STORAGE_KEY = 'e2cal_cached_revs_v1';
+          const rawRevs = window.localStorage.getItem(REVS_STORAGE_KEY);
+          if (rawRevs) {
+            const parsedRevs = JSON.parse(rawRevs);
+            delete parsedRevs['/nutrition/foods.json'];
+            window.localStorage.setItem(REVS_STORAGE_KEY, JSON.stringify(parsedRevs));
+          }
+          window.localStorage.setItem('e2cal_force_push_foods', 'true');
+        } catch {
+          // ignore
+        }
+      }
+    });
   }
 
   async seedDefaultData() {

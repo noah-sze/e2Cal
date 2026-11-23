@@ -110,6 +110,48 @@ describe('syncEngine', () => {
       expect(result2.hasLocalChanges).toBe(false);
       expect(result2.hasRemoteChanges).toBe(true);
     });
+
+    it('當合併實體時，若一邊缺少次級營養素而另一邊存在，應保留次級營養素（防止歷史殘損覆蓋）', () => {
+      interface TestFoodEntity {
+        id: string;
+        name: string;
+        carbs: number;
+        sugar?: number;
+        updatedAt: number;
+      }
+      const localWithSugar: TestFoodEntity = {
+        id: 'coca_cola_id',
+        name: 'Coca-Cola · 可口可樂',
+        sugar: 35,
+        carbs: 35,
+        updatedAt: 1000,
+      };
+      const remoteWithoutSugar: TestFoodEntity = {
+        id: 'coca_cola_id',
+        name: 'Coca-Cola · 可口可樂',
+        carbs: 35,
+        updatedAt: 2000, // remote is newer
+      };
+      const result = mergeEntities([localWithSugar], [remoteWithoutSugar]);
+      expect(result.merged[0].sugar).toBe(35);
+
+      // 反向：本地較新但缺少 sugar，遠端有 sugar
+      const localWithoutSugar: TestFoodEntity = {
+        id: 'coca_cola_id_2',
+        name: 'Coca-Cola · 可口可樂',
+        carbs: 35,
+        updatedAt: 3000,
+      };
+      const remoteWithSugar: TestFoodEntity = {
+        id: 'coca_cola_id_2',
+        name: 'Coca-Cola · 可口可樂',
+        sugar: 35,
+        carbs: 35,
+        updatedAt: 1000,
+      };
+      const result2 = mergeEntities([localWithoutSugar], [remoteWithSugar]);
+      expect(result2.merged[0].sugar).toBe(35);
+    });
   });
 
   describe('mergeDietLogsByDate algorithm', () => {

@@ -181,6 +181,24 @@ export function getNormalizedTimestamp(ts?: number | string): number {
   return 0;
 }
 
+function preserveNutrientsIfMissing<T>(chosen: T, fallback: T): T {
+  const c = chosen as Record<string, unknown>;
+  const f = fallback as Record<string, unknown>;
+  const keys = ['sugar', 'fiber', 'saturatedFat', 'transFat', 'sodium'] as const;
+  let enhanced = false;
+  let result: Record<string, unknown> | null = null;
+  for (const k of keys) {
+    if (result ? result[k] === undefined : c[k] === undefined) {
+      if (typeof f[k] === 'number' && !Number.isNaN(f[k])) {
+        if (!result) result = { ...c };
+        result[k] = f[k];
+        enhanced = true;
+      }
+    }
+  }
+  return enhanced && result ? (result as T) : chosen;
+}
+
 /**
  * 核心演算法：支援邏輯版本號 (rev) 與時間戳雙重防護的 LWW (Last-Write-Wins) 合併
  */
@@ -206,25 +224,27 @@ export function mergeEntities<T extends { id: string; updatedAt?: number | strin
       const localTime = getNormalizedTimestamp(localItem.updatedAt);
       const remoteTime = getNormalizedTimestamp(remoteItem.updatedAt);
 
+      let chosen: T;
       // 1. 優先比對單調遞增邏輯版本號
       if (remoteRev > localRev) {
-        mergedMap.set(localItem.id, remoteItem);
+        chosen = preserveNutrientsIfMissing(remoteItem, localItem);
         hasLocalChanges = true;
       } else if (localRev > remoteRev) {
-        mergedMap.set(localItem.id, localItem);
+        chosen = preserveNutrientsIfMissing(localItem, remoteItem);
         hasRemoteChanges = true;
       } else {
         // 2. 版本號相同時，以最新時間戳為仲裁
         if (remoteTime > localTime) {
-          mergedMap.set(localItem.id, remoteItem);
+          chosen = preserveNutrientsIfMissing(remoteItem, localItem);
           hasLocalChanges = true;
         } else if (localTime > remoteTime) {
-          mergedMap.set(localItem.id, localItem);
+          chosen = preserveNutrientsIfMissing(localItem, remoteItem);
           hasRemoteChanges = true;
         } else {
-          mergedMap.set(localItem.id, localItem);
+          chosen = preserveNutrientsIfMissing(localItem, remoteItem);
         }
       }
+      mergedMap.set(localItem.id, chosen);
     }
   }
 
@@ -1056,11 +1076,18 @@ export async function executeSync(
     // 2. foods
     const localFoods = await db.foods.toArray();
     const lastFoodsPushed = pushedTimes['foods'] || '';
+    const forcePushFoods =
+      typeof window !== 'undefined' &&
+      window.localStorage?.getItem('e2cal_force_push_foods') === 'true';
     const maxFoodsUpdated = localFoods.reduce(
       (max, i) => Math.max(max, getNormalizedTimestamp(i.updatedAt)),
       0
     );
-    if (!lastFoodsPushed || maxFoodsUpdated > getNormalizedTimestamp(lastFoodsPushed)) {
+    if (
+      forcePushFoods ||
+      !lastFoodsPushed ||
+      maxFoodsUpdated > getNormalizedTimestamp(lastFoodsPushed)
+    ) {
       cachedRevs['/nutrition/foods.json'] = await uploadJsonFile(
         '/nutrition/foods.json',
         localFoods.map(sanitizeFoodItem),
@@ -1068,6 +1095,13 @@ export async function executeSync(
       );
       pushedTimes['foods'] = now;
       hasRemoteModified = true;
+      if (forcePushFoods && typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.removeItem('e2cal_force_push_foods');
+        } catch {
+          // ignore
+        }
+      }
     }
 
     // 4. recipes
