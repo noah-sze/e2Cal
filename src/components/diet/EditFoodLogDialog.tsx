@@ -13,6 +13,7 @@ import { db } from '@/services/db/db';
 import type { HydratedFoodLog, FoodItem } from '@/types';
 import { formatDisplayAmount } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
+import { roundTo, gToOz, ozToG, flOzToMl, mlToFlOz } from '@/utils/unitMath';
 import { calculateIngredientMacros } from '@/utils/recipeMath';
 import { evaluateNutritionalHighlight } from '@/utils/nutritionEvaluation';
 import { resolveFoodLogTitle } from '@/utils/foodNaming';
@@ -239,6 +240,45 @@ export function EditFoodLogDialog({
   const dialogTitle = log ? resolveFoodLogTitle(log, t, baseFood) : '';
   const canNavigateToFood = !isSystemEntry && Boolean(log.foodId && baseFood);
 
+  // 基準份量大小與單位 (用於加一份快捷按鈕)
+  const currentUnit = log.unit || baseFood?.servingUnit || 'g';
+  const baseServingSize = baseFood?.servingSize && baseFood.servingSize > 0 ? baseFood.servingSize : 100;
+  const baseServingUnit = baseFood?.servingUnit || currentUnit;
+
+  // 快捷步長數值 (依單位區分，公制 g/ml 為 50/100，英制 oz 為 1/2，kg 為 0.05/0.1)
+  const isOunceUnit = currentUnit === 'oz' || currentUnit === 'fl oz' || currentUnit === 'floz';
+  const isKgUnit = currentUnit === 'kg';
+  const step1 = isOunceUnit ? 1 : isKgUnit ? 0.05 : 50;
+  const step2 = isOunceUnit ? 2 : isKgUnit ? 0.1 : 100;
+
+  // 快捷加一份處理 (單位若一致直接相加；若不一致則轉換)
+  const handleAddOneServing = () => {
+    triggerHaptic('light');
+    let added = baseServingSize;
+    if (baseServingUnit !== currentUnit) {
+      if (baseServingUnit === 'g' && currentUnit === 'oz') {
+        added = gToOz(baseServingSize);
+      } else if (baseServingUnit === 'oz' && currentUnit === 'g') {
+        added = ozToG(baseServingSize);
+      } else if (baseServingUnit === 'ml' && (currentUnit === 'fl oz' || currentUnit === 'floz')) {
+        added = mlToFlOz(baseServingSize);
+      } else if ((baseServingUnit === 'fl oz' || baseServingUnit === 'floz') && currentUnit === 'ml') {
+        added = flOzToMl(baseServingSize);
+      }
+    }
+    setQuantity((prev) => roundTo((prev || 0) + added, 2));
+  };
+
+  const handleMultiplyTwo = () => {
+    triggerHaptic('light');
+    setQuantity((prev) => roundTo((prev || 0) * 2, 2));
+  };
+
+  const handleAddStep = (stepVal: number) => {
+    triggerHaptic('light');
+    setQuantity((prev) => roundTo((prev || 0) + stepVal, 2));
+  };
+
   const handleTitleClick = () => {
     if (!canNavigateToFood || !log.foodId) return;
     triggerHaptic('selection');
@@ -271,28 +311,90 @@ export function EditFoodLogDialog({
               showServingRow={false}
             />
 
-            {/* 食用份量調節卡片 (實體食材條目) */}
+            {/* 食用份量調節與快捷增量複合卡片 (實體食材條目) */}
             {!isSystemEntry && (
-              <div className="h-11 px-3.5 flex items-center justify-between border border-border rounded-lg bg-card text-sm shrink-0">
-                <span className="text-muted-foreground text-xs font-sans">
-                  {t('diet.serving', '食用份量')}
-                </span>
+              <div className="border border-border rounded-lg bg-card divide-y divide-border overflow-hidden shrink-0">
+                {/* 1. 快捷增量操作按鈕組 (嚴格遵循微排版標準) */}
+                <div className="px-3 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                  <button
+                    type="button"
+                    onClick={handleAddOneServing}
+                    className="h-7 px-2.5 rounded-md border border-border/80 bg-background hover:bg-hover active:scale-95 text-xs text-foreground transition-colors whitespace-nowrap shrink-0 flex items-center select-none cursor-pointer"
+                  >
+                    <span className="text-muted-foreground font-mono mr-0.5">+</span>
+                    <span className="font-sans mr-1">{t('diet.oneServingLabel', '1 份')}</span>
+                    <span className="inline-flex items-center text-muted-foreground/50 font-sans text-xs">
+                      (
+                      <MetricValue
+                        value={formatDisplayAmount(String(baseServingSize))}
+                        unit={baseServingUnit}
+                        valueClassName="font-normal text-muted-foreground/65 text-xs"
+                        unitClassName="text-[11px] text-muted-foreground/50"
+                      />
+                      )
+                    </span>
+                  </button>
 
-                {/* e2Cal 專案標準數字輸入框膠囊 */}
-                <button
-                  type="button"
-                  onClick={(e) => handleOpenKeypad(e.currentTarget)}
-                  className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none"
-                  title={t('diet.clickToEnter', '點擊輸入數值')}
-                >
-                  <MetricValue
-                    value={formatDisplayAmount(String(quantity)) || '0'}
-                    unit={log.unit || 'g'}
-                    valueClassName="font-normal text-foreground"
-                    unitClassName="text-[11px]"
-                  />
-                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                </button>
+                  <button
+                    type="button"
+                    onClick={handleMultiplyTwo}
+                    className="h-7 px-2.5 rounded-md border border-border/80 bg-background hover:bg-hover active:scale-95 text-xs text-foreground font-mono transition-colors whitespace-nowrap shrink-0 flex items-center select-none cursor-pointer"
+                  >
+                    <span className="text-muted-foreground mr-0.5">×</span>
+                    <span className="text-foreground tabular-nums">2</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleAddStep(step1)}
+                    className="h-7 px-2.5 rounded-md border border-border/80 bg-background hover:bg-hover active:scale-95 text-xs text-foreground transition-colors whitespace-nowrap shrink-0 flex items-center select-none cursor-pointer"
+                  >
+                    <span className="text-muted-foreground font-mono mr-0.5">+</span>
+                    <MetricValue
+                      value={formatDisplayAmount(String(step1))}
+                      unit={currentUnit}
+                      valueClassName="font-normal text-foreground text-xs"
+                      unitClassName="text-[11px]"
+                    />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleAddStep(step2)}
+                    className="h-7 px-2.5 rounded-md border border-border/80 bg-background hover:bg-hover active:scale-95 text-xs text-foreground transition-colors whitespace-nowrap shrink-0 flex items-center select-none cursor-pointer"
+                  >
+                    <span className="text-muted-foreground font-mono mr-0.5">+</span>
+                    <MetricValue
+                      value={formatDisplayAmount(String(step2))}
+                      unit={currentUnit}
+                      valueClassName="font-normal text-foreground text-xs"
+                      unitClassName="text-[11px]"
+                    />
+                  </button>
+                </div>
+
+                {/* 2. 份量顯示與數字鍵盤喚起按鈕 */}
+                <div className="h-11 px-3.5 flex items-center justify-between">
+                  <span className="text-muted-foreground text-xs font-sans">
+                    {t('diet.serving', '食用份量')}
+                  </span>
+
+                  {/* e2Cal 專案標準數字輸入框膠囊 */}
+                  <button
+                    type="button"
+                    onClick={(e) => handleOpenKeypad(e.currentTarget)}
+                    className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none"
+                    title={t('diet.clickToEnter', '點擊輸入數值')}
+                  >
+                    <MetricValue
+                      value={formatDisplayAmount(String(quantity)) || '0'}
+                      unit={log.unit || 'g'}
+                      valueClassName="font-normal text-foreground"
+                      unitClassName="text-[11px]"
+                    />
+                    <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                  </button>
+                </div>
               </div>
             )}
 
