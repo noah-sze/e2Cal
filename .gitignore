@@ -28,10 +28,4 @@ scratch/
 .env
 .env.production
 
-# Authority Pipeline Raw Downloads
-scripts/pipeline/*.zip
-scripts/pipeline/*.json
-scripts/pipeline/china-food-composition-data/
-scripts/pipeline/Taiwan-FDA-nutrition/
-__pycache__/
-*.pyc
+
