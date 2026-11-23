@@ -45,10 +45,18 @@ export function SyncStatusPill() {
     triggerHaptic('light');
     switch (status) {
       case 'offline': {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          toast.show(t('syncStatus.offlineToast'));
+          break;
+        }
         toast.show(t('syncStatus.reconnectingToast'));
         const online = await checkConnectivity();
         if (!online) {
           toast.show(t('syncStatus.offlineToast'));
+          break;
+        }
+        if (isAuthenticated) {
+          await syncNow();
         }
         break;
       }

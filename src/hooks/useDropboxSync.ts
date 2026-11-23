@@ -20,7 +20,13 @@ import {
 } from '@/services/sync/syncEngine';
 import { toast } from '@/components/ui/toast';
 import { startInitialSync } from '@/services/sync/initialSyncManager';
-import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { getSyncErrorReasonKey } from '@/services/sync/dropboxClient';
+import {
+  useNetworkStatus,
+  getNetworkStatus,
+  reportNetworkSuccess,
+  reportNetworkError,
+} from '@/hooks/useNetworkStatus';
 
 // 模組級單例守衛：確保應用冷啟動同步全域只執行一次，次級頁面進出不重複觸發
 let hasInitialMountSyncExecuted = false;
@@ -158,7 +164,8 @@ export function useDropboxSync() {
         return { success: false, timestamp: new Date().toISOString(), actionTaken: 'up_to_date' };
       }
 
-      if (!isOnline) {
+      const browserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+      if (!getNetworkStatus() && browserOffline) {
         toast.show(t('syncStatus.offlineToast'));
         return { success: false, timestamp: new Date().toISOString(), actionTaken: 'up_to_date' };
       }
@@ -166,13 +173,22 @@ export function useDropboxSync() {
       try {
         const result = await executeSync(mode);
         if (result.success) {
+          reportNetworkSuccess();
           toast.show(t('syncStatus.syncSuccessToast'));
-        } else if (result.error === 'Dropbox not connected') {
-          const reason = formatSyncErrorMessage(result.error, t);
-          toast.show(t('syncStatus.syncFailedToast', { reason }));
+        } else if (result.error) {
+          if (getSyncErrorReasonKey(result.error) === 'network') {
+            reportNetworkError();
+          }
+          if (result.error === 'Dropbox not connected') {
+            const reason = formatSyncErrorMessage(result.error, t);
+            toast.show(t('syncStatus.syncFailedToast', { reason }));
+          }
         }
         return result;
       } catch (err: unknown) {
+        if (getSyncErrorReasonKey(err) === 'network') {
+          reportNetworkError();
+        }
         const msg = err instanceof Error ? err.message : 'Unknown sync error';
         const reason = formatSyncErrorMessage(err, t);
         toast.show(t('syncStatus.syncFailedToast', { reason }));
@@ -184,7 +200,7 @@ export function useDropboxSync() {
         };
       }
     },
-    [syncState.isSyncing, isOnline, t]
+    [syncState.isSyncing, t]
   );
 
   return {

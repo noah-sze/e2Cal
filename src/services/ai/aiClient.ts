@@ -4,6 +4,7 @@ import type {
   MealEstimateResult,
 } from '@/types/ai';
 import { resolveActiveEndpoint } from '@/hooks/useAISettings';
+import { reportNetworkError, reportNetworkSuccess } from '@/hooks/useNetworkStatus';
 import {
   NUTRITION_LABEL_SYSTEM_PROMPT,
   MEAL_ESTIMATE_SYSTEM_PROMPT,
@@ -324,13 +325,33 @@ async function callAiGateway(params: {
     signal: params.signal,
   };
 
-  switch (protocol) {
-    case 'gemini':
-      return callGeminiProtocol(callArgs);
-    case 'anthropic':
-      return callAnthropicProtocol(callArgs);
-    case 'openai':
-      return callOpenAiProtocol(callArgs);
+  try {
+    let result: string;
+    switch (protocol) {
+      case 'gemini':
+        result = await callGeminiProtocol(callArgs);
+        break;
+      case 'anthropic':
+        result = await callAnthropicProtocol(callArgs);
+        break;
+      case 'openai':
+        result = await callOpenAiProtocol(callArgs);
+        break;
+    }
+    reportNetworkSuccess();
+    return result;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+    if (
+      msg.includes('failed to fetch') ||
+      msg.includes('networkerror') ||
+      msg.includes('network request failed') ||
+      msg.includes('load failed') ||
+      msg.includes('err_internet_disconnected')
+    ) {
+      reportNetworkError();
+    }
+    throw err;
   }
 }
 
