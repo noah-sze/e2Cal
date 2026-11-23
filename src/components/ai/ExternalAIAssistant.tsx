@@ -705,16 +705,16 @@ export function ExternalAIAssistant({
 
       return (
         <div className="w-full rounded-xl border border-border bg-card text-card-foreground p-3 space-y-2.5 text-xs">
-          {/* 1. 頂部固定供應商標頭（與待機與載入態完全恆定一致） */}
-          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border">
-            <span className="flex items-center gap-1.5 font-mono text-[11px] font-medium text-foreground min-w-0">
+          {/* 1. 頂部固定供應商標頭（無底部分割線，與待機與載入態完全對齊） */}
+          <div className="flex items-center justify-between gap-2 px-0.5 text-[11px] font-mono">
+            <span className="flex items-center gap-1.5 font-medium text-foreground min-w-0">
               <PixelSpriteIcon />
               <span className="truncate">{activeProfile?.name ?? 'PIXEL_AI'}</span>
             </span>
             <button
               type="button"
               onClick={handleClearAndCollapse}
-              className="text-[11px] font-mono text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
+              className="text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
             >
               {t('common.clear', '清除')}
             </button>
