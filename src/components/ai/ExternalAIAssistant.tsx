@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, ChevronRight, XIcon } from 'lucide-react';
 import {
@@ -12,6 +12,7 @@ import { AIProviderDialog } from '@/components/settings/AIProviderDialog';
 import { MetricValue } from '@/components/ui/metric-value';
 import { useAISettings } from '@/hooks/useAISettings';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { useFoods } from '@/hooks/useFoods';
 import { compressImage } from '@/utils/imageCompress';
 import { estimateMeal, parseNutritionLabel, formatAiErrorMessage } from '@/services/ai/aiClient';
 import { resolveSupportedLocale } from '@/utils/defaultLocalization';
@@ -120,6 +121,8 @@ export interface ExternalAIAssistantProps {
   mockMode?: boolean;
   /** Dev 測試專用：模擬結果類型 ('success' | 'error') */
   mockScenario?: 'success' | 'error';
+  /** 使用者資料庫中既有之品牌清單（提供給 AI 優先對齊匹配，避免品牌重複） */
+  existingBrands?: string[];
 }
 
 type WorkPhase = 'expanded' | 'loading' | 'done';
@@ -138,12 +141,36 @@ export function ExternalAIAssistant({
   onInjectFoodLabel,
   mockMode = false,
   mockScenario = 'success',
+  existingBrands,
 }: ExternalAIAssistantProps) {
   const { t, i18n } = useTranslation();
   const { settings, profiles, activeProfile, setActiveProfile, addProfile, isConfigured } =
     useAISettings();
+  const { allFoods } = useFoods();
   const isOnline = useNetworkStatus();
   const [addProviderOpen, setAddProviderOpen] = useState(false);
+
+  // 解析既有品牌清單（優先採用外部傳入，未傳入時自底層資料庫快照自適應提取並按頻次排序）
+  const resolvedBrands = useMemo(() => {
+    if (existingBrands && existingBrands.length > 0) {
+      return existingBrands;
+    }
+    const counts = new Map<string, { label: string; count: number }>();
+    for (const f of allFoods) {
+      const raw = f.brand?.trim();
+      if (!raw) continue;
+      const key = raw.toLowerCase();
+      const prev = counts.get(key);
+      if (prev) {
+        prev.count += 1;
+      } else {
+        counts.set(key, { label: raw, count: 1 });
+      }
+    }
+    return Array.from(counts.values())
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+      .map((entry) => entry.label);
+  }, [existingBrands, allFoods]);
 
   const isSpatialMode = focused !== undefined;
   const [internalFocused, setInternalFocused] = useState(false);
@@ -388,10 +415,14 @@ export function ExternalAIAssistant({
             });
           }
         } else {
+          const matchedBrand =
+            resolvedBrands.find((b) => b.toLowerCase().includes('myprotein')) ||
+            resolvedBrands[0] ||
+            'Myprotein';
           if (locale === 'en') {
             setFoodResult({
               name: cleanText || 'Whey Protein Isolate',
-              brand: 'Myprotein',
+              brand: matchedBrand,
               servingSize: 25,
               servingUnit: 'g',
               calories: 94,
@@ -405,7 +436,7 @@ export function ExternalAIAssistant({
           } else if (locale === 'zh-CN') {
             setFoodResult({
               name: cleanText || '分离乳清蛋白粉',
-              brand: 'Myprotein',
+              brand: matchedBrand,
               servingSize: 25,
               servingUnit: 'g',
               calories: 94,
@@ -419,7 +450,7 @@ export function ExternalAIAssistant({
           } else {
             setFoodResult({
               name: cleanText || '分離乳清蛋白粉',
-              brand: 'Myprotein',
+              brand: matchedBrand,
               servingSize: 25,
               servingUnit: 'g',
               calories: 94,
@@ -454,7 +485,8 @@ export function ExternalAIAssistant({
           settings,
           cleanText || undefined,
           controller.signal,
-          i18n.language
+          i18n.language,
+          resolvedBrands
         );
         if (controller.signal.aborted || !dialogOpenRef.current) return;
         setFoodResult(res);

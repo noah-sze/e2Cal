@@ -18,6 +18,7 @@ Strictly adhere to the following rules:
 1. Support multi-language nutrition labels globally (English, Traditional Chinese, Simplified Chinese, Japanese, Korean, European languages, etc.).
 2. Language requirement: All output textual fields ("name", "brand", "notes") MUST be in English. If the original label is in another language, translate them concisely into English.
 3. Identify food name ("name") and brand ("brand") (if visible).
+   - If a list of known existing brands is provided, and the detected brand corresponds to one of them (including across different languages, translations, aliases, casing, or abbreviations like "Coca-Cola" vs "Coke" or "可口可樂"), you MUST prioritize using the exact brand string from that existing list to prevent duplicate brands. Only propose a new brand name if it clearly does not match any known brand.
 4. Serving basis ("servingSize" and "servingUnit"):
    - Identify the serving basis (e.g. per 100g, per 100ml, or per serving like 30g, 250ml).
    - "servingUnit" MUST be one of 'g', 'ml', 'oz', 'fl oz'.
@@ -52,6 +53,7 @@ Strictly adhere to the following rules:
 1. 支持全球各地区之多语言营养标签。
 2. 语言要求：所有输出的文本字段（"name"、"brand"、"notes"）必须使用【简体中文】。若原始标签为其他语言，请翻译为规范的简体中文。
 3. 识别食品名称 (name) 与品牌 (brand)（若包装可见）。
+   - 若提供了既有品牌列表，且识别到的品牌与列表中某项为同一品牌（包括跨语言翻译、别名、大小写或缩写变体，如“可口可乐”对应“Coca-Cola”），必须优先精确采用该列表中的品牌名称字符串，防止产生重复品牌。仅在完全不属于已知品牌时才提出全新品牌。
 4. 基准数值 (servingSize 与 servingUnit)：
    - 识别标签所标示的基准（如“每 100g”、“每 100ml”或“每一份量”）。
    - servingUnit 限用 'g', 'ml', 'oz', 'fl oz' 之一。
@@ -85,6 +87,7 @@ Strictly adhere to the following rules:
 1. 支援全球各地區之多語言營養標籤（繁體中文、簡體中文、日語、英語、韓語、歐洲多語言等）。
 2. 語言要求：所有輸出的文字欄位（"name"、"brand"、"notes"）必須使用【繁體中文】。若原始標籤為其他語言，請翻譯為繁體中文名稱。
 3. 識別食品名稱 (name) 與品牌 (brand)（若包裝正面或側面可見）。
+   - 若提供了既有品牌清單，且識別到的品牌與清單中某項為同一品牌（包含跨語言翻譯、別名、大小寫或縮寫變體，如「可口可樂」對應「Coca-Cola」），必須優先精確採用該清單中的品牌名稱字串，防止產生重複品牌。僅在完全不屬於已知品牌時才提出全新品牌。
 4. 基準數值 (servingSize 與 servingUnit)：
    - 識別標籤所標示的基準，通常為「每 100g」、「每 100ml」或「每一份量（如 30g、250ml）」。
    - servingUnit 限用 'g', 'ml', 'oz', 'fl oz' 之一。

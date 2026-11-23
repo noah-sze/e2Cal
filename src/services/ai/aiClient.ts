@@ -507,9 +507,14 @@ export async function parseNutritionLabel(
   settings: AISettings,
   userNotes?: string,
   signal?: AbortSignal,
-  lang?: string
+  lang?: string,
+  knownBrands?: string[]
 ): Promise<NutritionLabelParseResult> {
   const locale = resolveSupportedLocale(lang || i18n.language);
+  const cleanBrands = knownBrands
+    ?.map((b) => b.trim())
+    .filter(Boolean)
+    .slice(0, 100);
 
   let prompt: string;
   if (locale === 'en') {
@@ -519,6 +524,9 @@ export async function parseNutritionLabel(
     if (userNotes && userNotes.trim()) {
       prompt += `\nUser provided notes or label text: ${userNotes.trim()}`;
     }
+    if (cleanBrands && cleanBrands.length > 0) {
+      prompt += `\nExisting brand list in user's database (prioritize matching and using the exact string): ${cleanBrands.join(', ')}`;
+    }
   } else if (locale === 'zh-CN') {
     prompt = imageBase64
       ? '请识别图片中的营养标签或营养成分表。请按照指定 JSON 格式以简体中文输出热量、碳水、蛋白质、脂肪、糖、膳食纤维、基准份量与品名。'
@@ -526,12 +534,18 @@ export async function parseNutritionLabel(
     if (userNotes && userNotes.trim()) {
       prompt += `\n用户提供之说明或标签文字：${userNotes.trim()}`;
     }
+    if (cleanBrands && cleanBrands.length > 0) {
+      prompt += `\n用户数据库中的已知品牌列表（请优先匹配并使用完全一致字符串）：${cleanBrands.join('、')}`;
+    }
   } else {
     prompt = imageBase64
       ? '請辨識圖片中的營養標籤或營養成分表。請按照指定 JSON 格式以繁體中文輸出熱量、碳水、蛋白質、脂肪、糖、膳食纖維、基準份量與品名。'
       : '請根據使用者提供的食品名稱或營養成分描述，解析並推算其標準營養標籤數據。請按照指定 JSON 格式以繁體中文輸出。';
     if (userNotes && userNotes.trim()) {
       prompt += `\n使用者提供之說明或標籤文字：${userNotes.trim()}`;
+    }
+    if (cleanBrands && cleanBrands.length > 0) {
+      prompt += `\n使用者資料庫中的已知品牌清單（請優先匹配並使用完全一致字串）：${cleanBrands.join('、')}`;
     }
   }
 

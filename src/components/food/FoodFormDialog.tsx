@@ -794,6 +794,7 @@ export function FoodFormDialog({
               onInjectFoodLabel={handleInjectFoodLabel}
               mockMode={aiMockMode}
               mockScenario={aiMockScenario}
+              existingBrands={existingBrands}
             />
           }
         >

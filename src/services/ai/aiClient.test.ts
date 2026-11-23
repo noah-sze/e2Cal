@@ -503,4 +503,37 @@ describe('AI Client API calls', () => {
     expect(callBody.system_instruction.parts[0].text).toContain('MUST be in English');
     expect(callBody.contents[0].parts.some((p: { text?: string }) => p.text?.includes('Please identify the nutrition facts label'))).toBe(true);
   });
+
+  it('parseNutritionLabel correctly injects knownBrands into prompt and system instructions', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        candidates: [
+          {
+            content: {
+              parts: [{ text: '{"name":"Diet Coke","brand":"Coca-Cola","calories":1,"carbs":0,"protein":0,"fat":0}' }],
+            },
+          },
+        ],
+      }),
+    } as Response);
+
+    const brands = ['Coca-Cola', 'Myprotein', 'Oatly'];
+    const result = await parseNutritionLabel(
+      'dummyBase64',
+      dummyGeminiSettings,
+      undefined,
+      undefined,
+      'zh-TW',
+      brands
+    );
+
+    expect(result.brand).toBe('Coca-Cola');
+    expect(fetchSpy).toHaveBeenCalled();
+    const callBody = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+    expect(callBody.system_instruction.parts[0].text).toContain('若提供了既有品牌清單');
+    const promptText = callBody.contents[0].parts.find((p: { text?: string }) => p.text?.includes('已知品牌清單'))?.text;
+    expect(promptText).toBeDefined();
+    expect(promptText).toContain('Coca-Cola、Myprotein、Oatly');
+  });
 });
