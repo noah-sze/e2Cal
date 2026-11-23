@@ -10,7 +10,7 @@ import {
   SquarePlus,
 } from 'lucide-react';
 import { Dialog, PrecisionDialogContent } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { SectionCard } from '@/components/ui/section-card';
 import {
   Select,
   SelectContent,
@@ -51,13 +51,48 @@ interface GuideStepConfig {
   suffixKey: string;
 }
 
-const PLATFORM_OPTIONS: readonly { value: PwaGuidePlatform; labelKey: string }[] = [
-  { value: 'ios-safari', labelKey: 'pwa.platforms.iosSafari' },
-  { value: 'ios-chrome', labelKey: 'pwa.platforms.iosChrome' },
-  { value: 'android-chrome', labelKey: 'pwa.platforms.androidChrome' },
-  { value: 'macos-safari', labelKey: 'pwa.platforms.macosSafari' },
-  { value: 'desktop-chromium', labelKey: 'pwa.platforms.desktopChromium' },
+type GuideOs = 'ios' | 'android' | 'macos' | 'windows';
+
+interface BrowserOption {
+  value: string;
+  label: string;
+  target: PwaGuidePlatform;
+}
+
+const OS_OPTIONS: readonly { value: GuideOs; label: string }[] = [
+  { value: 'ios', label: 'iOS' },
+  { value: 'android', label: 'Android' },
+  { value: 'macos', label: 'macOS' },
+  { value: 'windows', label: 'Windows' },
 ];
+
+const BROWSERS_BY_OS: Record<GuideOs, readonly BrowserOption[]> = {
+  ios: [
+    { value: 'safari', label: 'Safari', target: 'ios-safari' },
+    { value: 'chrome', label: 'Chrome', target: 'ios-chrome' },
+  ],
+  android: [{ value: 'chrome', label: 'Chrome · Edge', target: 'android-chrome' }],
+  macos: [
+    { value: 'safari', label: 'Safari', target: 'macos-safari' },
+    { value: 'chromium', label: 'Chrome · Edge', target: 'desktop-chromium' },
+  ],
+  windows: [{ value: 'chromium', label: 'Chrome · Edge', target: 'desktop-chromium' }],
+};
+
+function mapPlatformToOsAndBrowser(platform: PwaGuidePlatform): { os: GuideOs; browser: string } {
+  switch (platform) {
+    case 'ios-safari':
+      return { os: 'ios', browser: 'safari' };
+    case 'ios-chrome':
+      return { os: 'ios', browser: 'chrome' };
+    case 'android-chrome':
+      return { os: 'android', browser: 'chrome' };
+    case 'macos-safari':
+      return { os: 'macos', browser: 'safari' };
+    case 'desktop-chromium':
+      return { os: 'windows', browser: 'chromium' };
+  }
+}
 
 const PLATFORM_STEPS: Record<PwaGuidePlatform, readonly GuideStepConfig[]> = {
   'ios-safari': [
@@ -186,11 +221,19 @@ function renderBadgeIcon(icon: GuideBadgeIcon) {
 interface ActionPillProps {
   icon: GuideBadgeIcon;
   label: string;
+  inverted?: boolean;
 }
 
-function ActionPill({ icon, label }: ActionPillProps) {
+function ActionPill({ icon, label, inverted = false }: ActionPillProps) {
   return (
-    <span className="inline-flex items-center gap-1 h-5 px-1.5 mx-1 rounded border border-border bg-muted font-sans text-2xs leading-none font-medium text-foreground align-middle -translate-y-0.5 whitespace-nowrap">
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 h-5 px-1.5 mx-1 rounded border font-sans text-2xs leading-none font-medium align-middle -translate-y-0.5 whitespace-nowrap',
+        inverted
+          ? 'border-background/30 bg-background/15 text-background'
+          : 'border-border bg-muted text-foreground'
+      )}
+    >
       {renderBadgeIcon(icon)}
       <span>{label}</span>
     </span>
@@ -215,23 +258,28 @@ export function PwaInstallGuideDialog({
     });
   }, []);
 
-  const [selectedPlatform, setSelectedPlatform] = useState<PwaGuidePlatform>(
-    detection.platform
+  const initialSelection = useMemo(
+    () => mapPlatformToOsAndBrowser(detection.platform),
+    [detection.platform]
   );
+
+  const [selectedOs, setSelectedOs] = useState<GuideOs>(initialSelection.os);
+  const [selectedBrowser, setSelectedBrowser] = useState<string>(initialSelection.browser);
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setSelectedPlatform(detection.platform);
+      setSelectedOs(initialSelection.os);
+      setSelectedBrowser(initialSelection.browser);
     }
-  }, [open, detection.platform]);
+  }, [open, initialSelection.os, initialSelection.browser]);
 
-  const isIosPlatform =
-    selectedPlatform === 'ios-safari' || selectedPlatform === 'ios-chrome';
-
-  const currentPlatformOption =
-    PLATFORM_OPTIONS.find((opt) => opt.value === selectedPlatform) ??
-    PLATFORM_OPTIONS[0];
+  const availableBrowsers = BROWSERS_BY_OS[selectedOs];
+  const activeBrowserOption =
+    availableBrowsers.find((b) => b.value === selectedBrowser) ?? availableBrowsers[0];
+  const selectedPlatform = activeBrowserOption.target;
+  const isIosPlatform = selectedOs === 'ios';
+  const currentOsLabel = OS_OPTIONS.find((o) => o.value === selectedOs)?.label ?? 'iOS';
   const steps = PLATFORM_STEPS[selectedPlatform];
 
   const handleExportBackup = async () => {
@@ -271,22 +319,24 @@ export function PwaInstallGuideDialog({
         onClose={() => onOpenChange(false)}
         cancelAriaLabel={t('common.close')}
       >
-        <div className="pt-3.5 space-y-3 max-h-[75dvh] overflow-y-auto">
-          {/* App 內建瀏覽器（微信、LINE、IG 等）第 0 步引導卡 */}
+        <div className="pt-3.5 space-y-3 max-h-[78dvh] overflow-y-auto">
+          {/* App 內建瀏覽器（微信、LINE、IG 等）高對比反白第 0 步引導卡 */}
           {detection.isInAppBrowser && (
-            <div className="border border-foreground rounded-lg p-3 bg-muted space-y-1.5">
-              <div className="flex items-center gap-1.5 font-mono text-2xs uppercase tracking-widest text-foreground font-semibold">
-                <span>{t('pwa.inAppBadge')}</span>
-                <span>·</span>
-                <span className="font-sans normal-case tracking-normal">
+            <div className="border border-foreground rounded-lg p-3 bg-foreground text-background space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex items-center h-[18px] px-1.5 rounded bg-background text-foreground font-mono text-3xs font-bold uppercase tracking-widest">
+                  {t('pwa.inAppBadge')}
+                </span>
+                <span className="font-sans text-xs font-semibold text-background">
                   {t('pwa.inAppTitle')}
                 </span>
               </div>
-              <p className="font-sans text-xs text-foreground leading-6">
+              <p className="font-sans text-xs text-background/90 leading-6">
                 {t('pwa.inAppPrefix')}
-                <ActionPill icon="ellipsis" label={t('pwa.badges.moreMenu')} />
+                <ActionPill inverted icon="ellipsis" label={t('pwa.badges.moreMenu')} />
                 {t('pwa.inAppMiddle')}
                 <ActionPill
+                  inverted
                   icon="compass"
                   label={
                     detection.isIos
@@ -299,79 +349,126 @@ export function PwaInstallGuideDialog({
             </div>
           )}
 
-          {/* 設備與瀏覽器選擇列 */}
-          <div className="border border-border rounded-lg bg-card h-10 px-3 flex items-center justify-between gap-2">
-            <span className="font-sans text-xs text-muted-foreground shrink-0">
-              {t('pwa.deviceLabel')}
-            </span>
-            <Select
-              value={selectedPlatform}
-              onValueChange={(val) => {
-                if (val) {
+          {/* 段落 1: 裝置環境（平台與瀏覽器拆分為兩個獨立列） */}
+          <SectionCard title={t('pwa.environmentTitle', '裝置環境')} bodyClassName="text-xs font-sans">
+            <div className="h-10 px-4 flex items-center justify-between gap-2">
+              <span className="text-muted-foreground text-xs shrink-0">
+                {t('pwa.platformLabel', '平台')}
+              </span>
+              <Select
+                value={selectedOs}
+                onValueChange={(val) => {
+                  if (!val) return;
+                  const nextOs = val as GuideOs;
                   triggerHaptic('selection');
-                  setSelectedPlatform(val as PwaGuidePlatform);
-                }
-              }}
-            >
-              <SelectTrigger
-                size="custom"
-                className="flex items-center gap-1 font-mono text-xs text-foreground hover:opacity-80 cursor-pointer transition-opacity min-w-0"
+                  setSelectedOs(nextOs);
+                  const nextBrowsers = BROWSERS_BY_OS[nextOs];
+                  if (!nextBrowsers.some((b) => b.value === selectedBrowser)) {
+                    setSelectedBrowser(nextBrowsers[0].value);
+                  }
+                }}
               >
-                <SelectValue className="flex-none text-right truncate">
-                  {t(currentPlatformOption.labelKey)}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent align="end" className="min-w-48">
-                {PLATFORM_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {t(opt.labelKey)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* iOS 數據隔離提示與匯出按鈕 */}
-          {isIosPlatform && (
-            <div className="border border-border rounded-lg p-3 bg-muted/40 space-y-2">
-              <div className="flex items-center gap-1.5 font-mono text-2xs uppercase tracking-widest text-foreground font-semibold">
-                <span>{t('pwa.iosNotice.title')}</span>
-              </div>
-              <p className="font-sans text-xs text-muted-foreground leading-relaxed">
-                {t('pwa.iosNotice.desc')}
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleExportBackup}
-                disabled={isExporting}
-                className="w-full font-mono text-xs cursor-pointer h-8"
-              >
-                <Download className="size-3.5" />
-                <span>{isExporting ? '...' : t('pwa.iosNotice.export')}</span>
-              </Button>
+                <SelectTrigger
+                  size="custom"
+                  iconClassName="size-3 text-muted-foreground/60"
+                  className="h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-sans text-xs flex items-center gap-1.5 transition-colors cursor-pointer text-foreground active:scale-95 min-w-0"
+                >
+                  <SelectValue className="flex-none text-right truncate">
+                    {currentOsLabel}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent
+                  align="end"
+                  className="min-w-36 z-[110]"
+                  positionerClassName="z-[110]"
+                  backdropClassName="z-[110]"
+                >
+                  {OS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
 
-          {/* 傻瓜式編號步驟卡片 */}
-          <ol className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
+            <div className="h-10 px-4 flex items-center justify-between gap-2">
+              <span className="text-muted-foreground text-xs shrink-0">
+                {t('pwa.browserLabel', '瀏覽器')}
+              </span>
+              <Select
+                value={activeBrowserOption.value}
+                onValueChange={(val) => {
+                  if (!val) return;
+                  triggerHaptic('selection');
+                  setSelectedBrowser(val);
+                }}
+              >
+                <SelectTrigger
+                  size="custom"
+                  iconClassName="size-3 text-muted-foreground/60"
+                  className="h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-sans text-xs flex items-center gap-1.5 transition-colors cursor-pointer text-foreground active:scale-95 min-w-0"
+                >
+                  <SelectValue className="flex-none text-right truncate">
+                    {activeBrowserOption.label}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent
+                  align="end"
+                  className="min-w-40 z-[110]"
+                  positionerClassName="z-[110]"
+                  backdropClassName="z-[110]"
+                >
+                  {availableBrowsers.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </SectionCard>
+
+          {/* 段落 2: 安裝步驟（SectionCard 單屏同構 + iOS 緊湊匯出列） */}
+          <SectionCard
+            title={t('pwa.stepsTitle', '安裝步驟')}
+            action={
+              <span className="font-mono text-3xs text-muted-foreground tracking-wider">
+                {t('pwa.stepsCount', '3 STEPS')}
+              </span>
+            }
+            bodyClassName="text-xs font-sans"
+          >
             {steps.map((step, index) => (
-              <li key={step.prefixKey} className="p-3 flex items-start gap-2.5">
-                <span className="size-5 rounded-full border border-border bg-muted font-mono text-2xs font-semibold text-foreground flex items-center justify-center shrink-0 mt-0.5 tabular-nums">
-                  {index + 1}
+              <div key={step.prefixKey} className="px-4 py-2.5 flex items-start gap-2.5">
+                <span className="font-mono text-2xs text-muted-foreground pt-0.5 shrink-0 tabular-nums">
+                  0{index + 1}
                 </span>
                 <p className="font-sans text-xs text-foreground leading-6 flex-1 min-w-0">
                   {t(step.prefixKey)}
-                  <ActionPill
-                    icon={step.badgeIcon}
-                    label={t(step.badgeKey)}
-                  />
+                  <ActionPill icon={step.badgeIcon} label={t(step.badgeKey)} />
                   {t(step.suffixKey)}
                 </p>
-              </li>
+              </div>
             ))}
-          </ol>
+
+            {isIosPlatform && (
+              <div className="px-4 py-2.5 bg-muted/50 flex items-center justify-between gap-2">
+                <span className="text-2xs text-muted-foreground leading-snug">
+                  {t('pwa.iosNotice.shortDesc', 'iOS 沙盒獨立，建議先備份')}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleExportBackup}
+                  disabled={isExporting}
+                  className="h-6 px-2.5 rounded-full border border-border bg-card hover:bg-foreground hover:text-background hover:border-foreground font-mono text-2xs text-foreground flex items-center gap-1 shrink-0 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Download className="size-3" />
+                  <span>{isExporting ? '...' : t('pwa.iosNotice.exportShort', '匯出')}</span>
+                </button>
+              </div>
+            )}
+          </SectionCard>
 
           {/* 底部低調快捷操作：長按不再提示 */}
           <button

@@ -1666,12 +1666,19 @@
       "installed": "Installed",
       "guideTitle": "Install App",
       "deviceLabel": "Device",
+      "environmentTitle": "Environment",
+      "platformLabel": "Platform",
+      "browserLabel": "Browser",
+      "stepsTitle": "Install Steps",
+      "stepsCount": "3 STEPS",
       "dontShowAgain": "Hold: don't show again",
       "hiddenToast": "Hidden",
       "iosNotice": {
         "title": "Data Isolation Notice",
         "desc": "iOS browser and Home Screen App storages are isolated. If you have recorded data in browser, export a backup first and import it in Settings after installing.",
-        "export": "Export Backup"
+        "shortDesc": "iOS storage isolated, backup first",
+        "export": "Export Backup",
+        "exportShort": "Export"
       },
       "inAppBadge": "STEP 0",
       "inAppTitle": "Open in System Browser First",

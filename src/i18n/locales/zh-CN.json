@@ -1666,12 +1666,19 @@
       "installed": "已安装",
       "guideTitle": "安装应用",
       "deviceLabel": "设备",
+      "environmentTitle": "设备环境",
+      "platformLabel": "平台",
+      "browserLabel": "浏览器",
+      "stepsTitle": "安装步骤",
+      "stepsCount": "3 STEPS",
       "dontShowAgain": "长按不再提示",
       "hiddenToast": "已隐藏",
       "iosNotice": {
         "title": "数据隔离提示",
         "desc": "iOS 浏览器与主屏幕 App 存储空间相互独立。若已在浏览器记录数据，可先导出备份，安装后在设置中导入。",
-        "export": "导出备份"
+        "shortDesc": "iOS 沙盒独立，建议先备份",
+        "export": "导出备份",
+        "exportShort": "导出"
       },
       "inAppBadge": "STEP 0",
       "inAppTitle": "先用系统浏览器打开",
