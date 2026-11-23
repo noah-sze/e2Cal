@@ -5,8 +5,8 @@
 /** 支援之底層 API 協議 */
 export type AIProtocol = 'gemini' | 'openai' | 'anthropic';
 
-/** 使用者選擇之服務提供商（三大官方直連 + 泛用自訂端點） */
-export type AIProvider = 'gemini' | 'openai' | 'anthropic' | 'custom';
+/** 使用者選擇之服務提供商（官方直連 + 泛用自訂端點） */
+export type AIProvider = 'gemini' | 'openai' | 'anthropic' | 'deepseek' | 'custom';
 
 /** 使用者預先設定並保存的 AI 供應商設定檔 */
 export interface AIProviderProfile {

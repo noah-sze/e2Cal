@@ -13,31 +13,13 @@ import {
 } from '@/components/ui/select';
 import {
   OFFICIAL_ENDPOINTS,
-  DEFAULT_MODEL_BY_PROTOCOL,
+  OFFICIAL_PROVIDER_PRESETS,
 } from '@/hooks/useAISettings';
 import { testAIConnection, fetchAvailableModels, type AIModelOption } from '@/services/ai/aiClient';
 import { triggerHaptic } from '@/lib/haptics';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import type { AIProtocol, AIProvider, AIProviderProfile, AISettings } from '@/types/ai';
-
-const DEFAULT_MODELS_BY_PROTOCOL: Record<AIProtocol, AIModelOption[]> = {
-  gemini: [
-    { id: 'gemini-3.8-flash' },
-    { id: 'gemini-4-hydrogen' },
-    { id: 'gemini-4-neon' },
-    { id: 'gemini-3.1-pro' },
-  ],
-  openai: [
-    { id: 'gpt-4o-mini' },
-    { id: 'gpt-4o' },
-  ],
-  anthropic: [
-    { id: 'claude-haiku-5-5' },
-    { id: 'claude-sonnet-5-5' },
-    { id: 'claude-opus-5-5' },
-  ],
-};
 
 const PROTOCOL_LABELS: Record<AIProtocol, string> = {
   gemini: 'Google Gemini',
@@ -73,12 +55,12 @@ export function AIProviderDialog({
   const [protocol, setProtocol] = useState<AIProtocol>('gemini');
   const [baseUrl, setBaseUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState(DEFAULT_MODEL_BY_PROTOCOL.gemini);
+  const [model, setModel] = useState('');
   const [showKey, setShowKey] = useState(false);
 
   const [fetchedModels, setFetchedModels] = useState<Record<string, AIModelOption[]>>({});
   const [isFetchingModels, setIsFetchingModels] = useState(false);
-  const [isCustomModelInput, setIsCustomModelInput] = useState(false);
+  const [isCustomModelInput, setIsCustomModelInput] = useState(true);
 
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -93,22 +75,24 @@ export function AIProviderDialog({
       setProtocol(profile.protocol);
       setBaseUrl(profile.baseUrl);
       setApiKey(profile.apiKey);
-      setModel(profile.model || DEFAULT_MODEL_BY_PROTOCOL[profile.protocol]);
+      setModel(profile.model || '');
     } else {
       setName('');
       setProvider('gemini');
       setProtocol('gemini');
       setBaseUrl('');
       setApiKey('');
-      setModel(DEFAULT_MODEL_BY_PROTOCOL.gemini);
+      setModel('');
     }
     setShowKey(false);
-    setIsCustomModelInput(false);
+    setIsCustomModelInput(true);
     setTestResult(null);
   }, [open, profile]);
 
   const isCustomProvider = provider === 'custom';
-  const effectiveProtocol: AIProtocol = isCustomProvider ? protocol : provider;
+  const effectiveProtocol: AIProtocol = isCustomProvider
+    ? protocol
+    : OFFICIAL_PROVIDER_PRESETS[provider].protocol;
 
   const buildTempSettings = (): AISettings => ({
     provider,
@@ -120,16 +104,16 @@ export function AIProviderDialog({
         protocol: effectiveProtocol,
         baseUrl: isCustomProvider ? baseUrl.trim() : '',
         apiKey: apiKey.trim(),
-        model: model.trim() || DEFAULT_MODEL_BY_PROTOCOL[effectiveProtocol],
+        model: model.trim(),
       },
     ],
     activeProfileId: profile?.id || 'temp',
     geminiApiKey: '',
-    geminiModel: DEFAULT_MODEL_BY_PROTOCOL.gemini,
+    geminiModel: '',
     openaiApiKey: '',
-    openaiModel: DEFAULT_MODEL_BY_PROTOCOL.openai,
+    openaiModel: '',
     anthropicApiKey: '',
-    anthropicModel: DEFAULT_MODEL_BY_PROTOCOL.anthropic,
+    anthropicModel: '',
     customProtocol: effectiveProtocol,
     customBaseUrl: isCustomProvider ? baseUrl.trim() : '',
     customApiKey: apiKey.trim(),
@@ -139,14 +123,12 @@ export function AIProviderDialog({
   const canTestOrFetch = isCustomProvider
     ? Boolean(apiKey.trim() && baseUrl.trim())
     : Boolean(apiKey.trim());
-  const cacheKey = `${effectiveProtocol}:${isCustomProvider ? baseUrl.trim() || 'official' : 'official'}`;
+  const cacheKey = `${effectiveProtocol}:${isCustomProvider ? baseUrl.trim() || 'official' : provider}`;
+  const dynamicModels = fetchedModels[cacheKey];
+  const hasFetchedModels = Boolean(dynamicModels && dynamicModels.length > 0);
   const modelOptions: AIModelOption[] = (() => {
-    const dynamicList = fetchedModels[cacheKey];
-    const baseList =
-      dynamicList && dynamicList.length > 0
-        ? dynamicList
-        : DEFAULT_MODELS_BY_PROTOCOL[effectiveProtocol];
-    const current = model.trim() || DEFAULT_MODEL_BY_PROTOCOL[effectiveProtocol];
+    const baseList = dynamicModels ?? [];
+    const current = model.trim();
     if (current && !baseList.some((m) => m.id === current)) {
       return [{ id: current }, ...baseList];
     }
@@ -159,13 +141,10 @@ export function AIProviderDialog({
     triggerHaptic('selection');
     setProvider(nextProvider);
     if (nextProvider !== 'custom') {
-      setProtocol(nextProvider);
-      setModel(DEFAULT_MODEL_BY_PROTOCOL[nextProvider]);
-      setIsCustomModelInput(false);
-    } else {
-      setModel('');
-      setIsCustomModelInput(true);
+      setProtocol(OFFICIAL_PROVIDER_PRESETS[nextProvider].protocol);
     }
+    setModel('');
+    setIsCustomModelInput(true);
     setTestResult(null);
   };
 
@@ -174,7 +153,8 @@ export function AIProviderDialog({
     const nextProto = val as AIProtocol;
     triggerHaptic('selection');
     setProtocol(nextProto);
-    setModel(DEFAULT_MODEL_BY_PROTOCOL[nextProto]);
+    setModel('');
+    setIsCustomModelInput(true);
     setTestResult(null);
   };
 
@@ -189,6 +169,9 @@ export function AIProviderDialog({
       }
       setFetchedModels((prev) => ({ ...prev, [cacheKey]: models }));
       setIsCustomModelInput(false);
+      if (!model.trim()) {
+        setModel(models[0].id);
+      }
       triggerHaptic('success');
       toast.show(
         t('settings.aiFetchModelsSuccess', '已更新模型清單 ({{count}})', { count: models.length })
@@ -236,13 +219,16 @@ export function AIProviderDialog({
       protocol: effectiveProtocol,
       baseUrl: isCustomProvider ? baseUrl.trim() : '',
       apiKey: apiKey.trim(),
-      model: model.trim() || DEFAULT_MODEL_BY_PROTOCOL[effectiveProtocol],
+      model: model.trim(),
     });
     onOpenChange(false);
   };
 
-  const getProviderDisplayLabel = (p: AIProvider) =>
-    p === 'custom' ? t('settings.aiProviderCustomApi', '自定義 API') : PROTOCOL_LABELS[p];
+  const getProviderDisplayLabel = (p: AIProvider) => {
+    if (p === 'custom') return t('settings.aiProviderCustomApi', '自定義 API');
+    if (p === 'deepseek') return 'DeepSeek';
+    return PROTOCOL_LABELS[p];
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -287,10 +273,16 @@ export function AIProviderDialog({
                       {getProviderDisplayLabel(provider)}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent align="end" className="min-w-44 z-[90]">
+                  <SelectContent
+                    align="end"
+                    className="min-w-44 z-[110]"
+                    positionerClassName="z-[110]"
+                    backdropClassName="z-[110]"
+                  >
                     <SelectItem value="gemini">Google Gemini</SelectItem>
                     <SelectItem value="openai">OpenAI</SelectItem>
                     <SelectItem value="anthropic">Anthropic</SelectItem>
+                    <SelectItem value="deepseek">DeepSeek</SelectItem>
                     <SelectItem value="custom">
                       {t('settings.aiProviderCustomApi', '自定義 API')}
                     </SelectItem>
@@ -316,7 +308,12 @@ export function AIProviderDialog({
                         {PROTOCOL_LABELS[protocol]}
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent align="end" className="min-w-40 z-[90]">
+                    <SelectContent
+                      align="end"
+                      className="min-w-40 z-[110]"
+                      positionerClassName="z-[110]"
+                      backdropClassName="z-[110]"
+                    >
                       <SelectItem value="gemini">Google Gemini</SelectItem>
                       <SelectItem value="openai">OpenAI</SelectItem>
                       <SelectItem value="anthropic">Anthropic</SelectItem>
@@ -343,115 +340,7 @@ export function AIProviderDialog({
             )}
           </SectionCard>
 
-          {/* 段落 2: 視覺模型（自定義 API 固定為手動輸入；官方供應商可切換列表/手動並更新） */}
-          <SectionCard
-            title={t('settings.aiModel', '視覺模型')}
-            action={
-              !isCustomProvider ? (
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic('selection');
-                      setIsCustomModelInput((prev) => {
-                        const next = !prev;
-                        if (next) {
-                          setModel('');
-                        } else if (!model.trim()) {
-                          setModel(DEFAULT_MODEL_BY_PROTOCOL[effectiveProtocol]);
-                        }
-                        return next;
-                      });
-                    }}
-                    className="h-6 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover text-[11px] font-mono text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer active:scale-95"
-                    aria-label={
-                      isCustomModelInput
-                        ? t('settings.aiSelectModel', '切換至列表選擇')
-                        : t('settings.aiCustomModel', '手動輸入模型')
-                    }
-                  >
-                    {isCustomModelInput ? (
-                      <>
-                        <List className="size-3" />
-                        <span>{t('settings.aiListMode', '列表')}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Pencil className="size-3" />
-                        <span>{t('settings.aiManualMode', '手動')}</span>
-                      </>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!canTestOrFetch || isFetchingModels}
-                    onClick={handleFetchModels}
-                    className={cn(
-                      'size-6 rounded-full border border-border/80 bg-background flex items-center justify-center transition-colors',
-                      canTestOrFetch && !isFetchingModels
-                        ? 'text-muted-foreground hover:text-foreground hover:bg-hover cursor-pointer active:scale-95'
-                        : 'text-muted-foreground/30 cursor-not-allowed'
-                    )}
-                    aria-label={t('settings.aiFetchModels', '獲取最新模型')}
-                    title={t('settings.aiFetchModels', '獲取最新模型')}
-                  >
-                    <RefreshCw className={cn('size-3', isFetchingModels && 'animate-spin')} />
-                  </button>
-                </div>
-              ) : undefined
-            }
-            bodyClassName="text-xs font-sans"
-          >
-            <div
-              className={cn(
-                'h-10 px-4 flex items-center justify-between gap-2',
-                (isCustomProvider || isCustomModelInput) &&
-                  'rounded-b-lg focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground transition-shadow duration-100'
-              )}
-            >
-              {isCustomProvider || isCustomModelInput ? (
-                <input
-                  type="text"
-                  value={model}
-                  onChange={(e) => {
-                    setModel(e.target.value);
-                    setTestResult(null);
-                  }}
-                  placeholder={t('settings.aiCustomModelPlaceholder', '手動輸入模型名')}
-                  className="w-full h-full bg-transparent text-xs font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none min-w-0"
-                />
-              ) : (
-                <Select
-                  value={model || DEFAULT_MODEL_BY_PROTOCOL[effectiveProtocol]}
-                  onValueChange={(v) => {
-                    if (!v) return;
-                    triggerHaptic('selection');
-                    setModel(v);
-                    setTestResult(null);
-                  }}
-                >
-                  <SelectTrigger
-                    size="custom"
-                    iconClassName="size-3.5 text-muted-foreground/60 shrink-0"
-                    className="w-full h-full flex items-center justify-between gap-2 font-mono text-xs cursor-pointer text-foreground"
-                  >
-                    <SelectValue className="flex-1 text-left truncate">
-                      {model || DEFAULT_MODEL_BY_PROTOCOL[effectiveProtocol]}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent align="end" className="min-w-52 max-h-60 z-[90]">
-                    {modelOptions.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.id}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          </SectionCard>
-
-          {/* 段落 3: API 憑證 */}
+          {/* 段落 2: API 憑證 */}
           <SectionCard
             title={t('settings.aiCredentials', 'API 憑證')}
             bodyClassName="text-xs font-sans"
@@ -481,6 +370,119 @@ export function AIProviderDialog({
                   {showKey ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
                 </button>
               </div>
+            </div>
+          </SectionCard>
+
+          {/* 段落 3: 視覺模型（預設手動輸入，在線獲取成功後才允許切換至列表選擇；下方附測試連線） */}
+          <SectionCard
+            title={t('settings.aiModel', '視覺模型')}
+            action={
+              <div className="flex items-center gap-1">
+                {hasFetchedModels && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('selection');
+                      setIsCustomModelInput((prev) => {
+                        const next = !prev;
+                        if (next) {
+                          setModel('');
+                        } else if (!model.trim() && dynamicModels?.[0]) {
+                          setModel(dynamicModels[0].id);
+                        }
+                        return next;
+                      });
+                    }}
+                    className="h-6 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover text-[11px] font-mono text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer active:scale-95"
+                    aria-label={
+                      isCustomModelInput
+                        ? t('settings.aiSelectModel', '切換至列表選擇')
+                        : t('settings.aiCustomModel', '手動輸入模型')
+                    }
+                  >
+                    {isCustomModelInput ? (
+                      <>
+                        <List className="size-3" />
+                        <span>{t('settings.aiListMode', '列表')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Pencil className="size-3" />
+                        <span>{t('settings.aiManualMode', '手動')}</span>
+                      </>
+                    )}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={!canTestOrFetch || isFetchingModels}
+                  onClick={handleFetchModels}
+                  className={cn(
+                    'size-6 rounded-full border border-border/80 bg-background flex items-center justify-center transition-colors',
+                    canTestOrFetch && !isFetchingModels
+                      ? 'text-muted-foreground hover:text-foreground hover:bg-hover cursor-pointer active:scale-95'
+                      : 'text-muted-foreground/30 cursor-not-allowed'
+                  )}
+                  aria-label={t('settings.aiFetchModels', '獲取最新模型')}
+                  title={t('settings.aiFetchModels', '獲取最新模型')}
+                >
+                  <RefreshCw className={cn('size-3', isFetchingModels && 'animate-spin')} />
+                </button>
+              </div>
+            }
+            bodyClassName="text-xs font-sans"
+          >
+            <div
+              className={cn(
+                'h-10 px-4 flex items-center justify-between gap-2',
+                (!hasFetchedModels || isCustomModelInput) &&
+                  'focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground transition-shadow duration-100'
+              )}
+            >
+              {!hasFetchedModels || isCustomModelInput ? (
+                <input
+                  type="text"
+                  value={model}
+                  onChange={(e) => {
+                    setModel(e.target.value);
+                    setTestResult(null);
+                  }}
+                  placeholder={t('settings.aiCustomModelPlaceholder', '手動輸入模型名')}
+                  className="w-full h-full bg-transparent text-xs font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none min-w-0"
+                />
+              ) : (
+                <Select
+                  value={model || dynamicModels?.[0]?.id || ''}
+                  onValueChange={(v) => {
+                    if (!v) return;
+                    triggerHaptic('selection');
+                    setModel(v);
+                    setTestResult(null);
+                  }}
+                >
+                  <SelectTrigger
+                    size="custom"
+                    iconClassName="size-3.5 text-muted-foreground/60 shrink-0"
+                    className="w-full h-full flex items-center justify-between gap-2 font-mono text-xs cursor-pointer text-foreground"
+                  >
+                    <SelectValue className="flex-1 text-left truncate">
+                      {model || dynamicModels?.[0]?.id || ''}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent
+                    align="end"
+                    className="min-w-52 max-h-60 z-[110]"
+                    positionerClassName="z-[110]"
+                    backdropClassName="z-[110]"
+                  >
+                    {modelOptions.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {/* 內嵌連線狀態與測試膠囊 */}

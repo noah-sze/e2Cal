@@ -17,6 +17,32 @@ export const DEFAULT_MODEL_BY_PROTOCOL: Record<AIProtocol, string> = {
   anthropic: 'claude-haiku-5-5',
 };
 
+export const OFFICIAL_PROVIDER_PRESETS: Record<
+  Exclude<AIProvider, 'custom'>,
+  { protocol: AIProtocol; baseUrl: string; defaultModel: string }
+> = {
+  gemini: {
+    protocol: 'gemini',
+    baseUrl: OFFICIAL_ENDPOINTS.gemini,
+    defaultModel: DEFAULT_MODEL_BY_PROTOCOL.gemini,
+  },
+  openai: {
+    protocol: 'openai',
+    baseUrl: OFFICIAL_ENDPOINTS.openai,
+    defaultModel: DEFAULT_MODEL_BY_PROTOCOL.openai,
+  },
+  anthropic: {
+    protocol: 'anthropic',
+    baseUrl: OFFICIAL_ENDPOINTS.anthropic,
+    defaultModel: DEFAULT_MODEL_BY_PROTOCOL.anthropic,
+  },
+  deepseek: {
+    protocol: 'openai',
+    baseUrl: 'https://api.deepseek.com/v1',
+    defaultModel: 'deepseek-chat',
+  },
+};
+
 /** 預設供應商種子（標準固定 UUID，預設選中 Gemini 2） */
 export const DEFAULT_PROFILE_IDS = {
   gemini: '11111111-1111-4111-8111-111111111101',
@@ -56,7 +82,7 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
 
 const AI_SETTINGS_EVENT = 'e2cal_ai_settings_change';
 const DEPRECATED_GEMINI_MODELS = new Set(['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']);
-const VALID_PROVIDERS = new Set<AIProvider>(['gemini', 'openai', 'anthropic', 'custom']);
+const VALID_PROVIDERS = new Set<AIProvider>(['gemini', 'openai', 'anthropic', 'deepseek', 'custom']);
 const VALID_PROTOCOLS = new Set<AIProtocol>(['gemini', 'openai', 'anthropic']);
 
 function generateUuid(): string {
@@ -315,15 +341,18 @@ export function resolveActiveEndpoint(settings: AISettings): {
     }
     const active =
       settings.profiles.find((p) => p.id === settings.activeProfileId) || settings.profiles[0];
-    const isOfficial = active.provider && active.provider !== 'custom';
-    const protocol = isOfficial ? (active.provider as AIProtocol) : active.protocol;
+    const preset =
+      active.provider && active.provider !== 'custom'
+        ? OFFICIAL_PROVIDER_PRESETS[active.provider]
+        : null;
+    const protocol = preset ? preset.protocol : active.protocol;
     return {
       protocol,
-      baseUrl: isOfficial
-        ? OFFICIAL_ENDPOINTS[protocol]
+      baseUrl: preset
+        ? preset.baseUrl
         : active.baseUrl.trim() || OFFICIAL_ENDPOINTS[protocol],
       apiKey: active.apiKey.trim(),
-      model: active.model.trim() || DEFAULT_MODEL_BY_PROTOCOL[protocol],
+      model: active.model.trim() || preset?.defaultModel || DEFAULT_MODEL_BY_PROTOCOL[protocol],
     };
   }
 
@@ -348,6 +377,13 @@ export function resolveActiveEndpoint(settings: AISettings): {
         baseUrl: OFFICIAL_ENDPOINTS.anthropic,
         apiKey: settings.anthropicApiKey.trim(),
         model: settings.anthropicModel.trim() || DEFAULT_AI_SETTINGS.anthropicModel,
+      };
+    case 'deepseek':
+      return {
+        protocol: 'openai',
+        baseUrl: OFFICIAL_PROVIDER_PRESETS.deepseek.baseUrl,
+        apiKey: settings.openaiApiKey.trim(),
+        model: OFFICIAL_PROVIDER_PRESETS.deepseek.defaultModel,
       };
     case 'custom': {
       const protocol = settings.customProtocol || 'openai';

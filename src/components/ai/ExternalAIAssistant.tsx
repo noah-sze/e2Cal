@@ -837,7 +837,12 @@ export function ExternalAIAssistant({
                   {activeProfile?.name ?? '-'}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent align="start" className="min-w-40 z-[105]">
+              <SelectContent
+                align="start"
+                className="min-w-40 z-[105]"
+                positionerClassName="z-[105]"
+                backdropClassName="z-[105]"
+              >
                 {profiles.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}
