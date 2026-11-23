@@ -54,8 +54,7 @@ const MONO_PRESETS = [
 ];
 
 const SERIF_PRESETS = [
-  { label: 'Playfair Display (預設)', value: "'Playfair Display', Georgia, serif" },
-  { label: 'Georgia', value: "Georgia, Cambria, serif" },
+  { label: 'Georgia (預設)', value: "Georgia, Cambria, serif" },
   { label: 'Times New Roman', value: "'Times New Roman', Times, serif" },
   { label: '思源宋體 (Noto Serif)', value: "'Noto Serif TC', 'Noto Serif SC', serif" },
   { label: 'Cambria', value: "Cambria, Georgia, serif" },
@@ -559,7 +558,7 @@ export const TokensTab: React.FC<TokensTabProps> = ({
           <FontFamilyControl
             label="Serif (襯線引言體)"
             tokenKey="--font-serif"
-            fallback="'Playfair Display', Georgia, serif"
+            fallback="Georgia, Cambria, 'Times New Roman', 'Noto Serif TC', serif"
             presets={SERIF_PRESETS}
             currentValue={tokens['--font-serif']}
             onChange={(v) => updateToken('--font-serif', v)}

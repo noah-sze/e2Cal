@@ -49,6 +49,10 @@ trigger: always_on
 - **官方品牌字標規範 (Brand Wordmark: Geist Sans)**：
   - 產品名 **`e2Cal`** 在全站嚴格採用 `Geist Sans`（`@fontsource-variable/geist`），Token 為 `--font-brand` 與 `--tracking-brand: -0.03em`。JSX 一律由 `<BrandWordmark />`（獨立標誌鎖定 `variant="lockup"` 600）或 `<BrandText />`（行內自然繼承字重）輸出；Canvas 繪製採用 `BRAND_FONT`。
 - **排版細節**：統計數據採用 `font-mono`；大標題緊湊字距（`tracking-tight`），小標籤大寫寬字距（`uppercase tracking-widest text-xs`）；中文與英數之間嚴格插入半形空格（Pangu Spacing）。
+- **100% 本地自託管字體與零外部阻塞資源契約 (Zero External Fonts & Local-First Asset Standard)**：
+  - **絕對零外部外鏈**：全應用程式（包含 HTML `<head>`、CSS 檔案與各元件）**絕對嚴禁引入任何外部第三方 CDN 字體或外鏈樣式表**（如 Google Fonts、Typekit、外部 CDN 等）。
+  - **本機打包與離線預載**：所有字體資源一律嚴格透過 npm 本地依賴（`@fontsource-variable/*`）自託管打包，並交由 Service Worker 100% 離線預快取；非核心輔助字體僅允許採用系統內建回退（如 `Georgia`, `Cambria` 等系統襯線字體）。
+  - **杜絕首屏渲染阻塞**：嚴格保障 Local-First PWA 瞬時啟動體驗，徹底根除連網時瀏覽器強制等待外部 CDN 進行 DNS 解析、TLS 握手與下載外鏈 CSS 所造成的渲染阻塞（Render-Blocking），確保連網與離線啟動性能絕對一致（毫秒級秒開）。
 
 ---
 
@@ -127,7 +131,7 @@ trigger: always_on
 ---
 
 ## 5. 違規紅線速查清單 (Strict Prohibitions Checklist)
-以下 36 項行為在專案中被**絕對禁止**：
+以下 37 項行為在專案中被**絕對禁止**：
 1. **不得進行主觀批判與行為干涉**：嚴禁指示「該吃什麼」、「超標了」、「少練了」等批判警示或紅色超標卡片。
 2. **不得 Copy-Paste JSX**：凡重複 2 次以上必須抽離為共用元件。
 3. **不得使用 Arbitrary 任意數值與魔術色碼**：嚴禁使用未經 Tokens 定義的臨時值。
@@ -164,3 +168,4 @@ trigger: always_on
 34. **不得在「數字 + 物理單位」間手寫字串空格**：一律由 `<MetricValue />` 輸出，嚴格落實 2px (`ml-0.5`) 微排版契約與雙字體分離。
 35. **不得於使用者端介面展示或提供記錄「飽和脂肪、反式脂肪、鈉」**：三者均屬預留屬性，禁止出現於前端任何組件與表單中。
 36. **不得將 AI 組件、觸發按鈕或拆解預覽直接融入原生 Dialog 內部**：AI 必須作為外部掛載助手懸浮於彈窗之外，識別完畢後再單向注入數據至原生表單。
+37. **不得引入任何外部第三方 CDN 字體或外鏈阻塞樣式**：全域字體 100% 本地 npm 依賴自託管或系統字體回退，嚴禁在 `<head>` 或樣式中鏈接外部網路字體，杜絕連網時阻塞初次渲染。
