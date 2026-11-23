@@ -31,6 +31,7 @@ import {
 import i18n from '@/i18n/config';
 import { toast } from '@/components/ui/toast';
 import { db } from '@/services/db/db';
+import { _resetNetworkStatus } from '@/hooks/useNetworkStatus';
 import type { FoodLog, WorkoutLog, BodyMetric, DailyDietLog } from '@/types';
 
 class LocalStorageMock {
@@ -521,6 +522,7 @@ describe('dropboxAuth', () => {
 
 describe('syncErrorReason & Toast handling', () => {
   beforeEach(() => {
+    _resetNetworkStatus();
     const mockStorage = new LocalStorageMock();
     Object.defineProperty(globalThis, 'localStorage', {
       value: mockStorage,
@@ -634,6 +636,36 @@ describe('syncErrorReason & Toast handling', () => {
     const res = await executeSync('auto');
     expect(res.success).toBe(false);
     expect(toastSpy).toHaveBeenCalledWith('Dropbox 同步失敗：網路連線不穩定，無法連接伺服器');
+  });
+
+  it('does not attempt sync, toast, or set error when device is offline', async () => {
+    const originalNavigator = globalThis.navigator;
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { onLine: false },
+      configurable: true,
+    });
+
+    const toastSpy = vi.spyOn(toast, 'show');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    setStoredTokens({
+      access_token: 'valid_token',
+      expires_in: 14400,
+      expires_at: Date.now() + 14400 * 1000,
+    });
+
+    try {
+      const res = await executeSync('auto');
+      expect(res.success).toBe(false);
+      expect(res.error).toBe('Device is offline');
+      expect(toastSpy).not.toHaveBeenCalled();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(globalThis, 'navigator', {
+        value: originalNavigator,
+        configurable: true,
+      });
+    }
   });
 
   it('handles DROPBOX_CONFLICT with retry limit, circuit breaker, and rev caching', async () => {

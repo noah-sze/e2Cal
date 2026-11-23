@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
-import { useNetworkStatus, checkConnectivity } from '@/hooks/useNetworkStatus';
+import { useNetworkStatus, checkConnectivity, isDeviceOffline } from '@/hooks/useNetworkStatus';
 import { useDropboxSync } from '@/hooks/useDropboxSync';
 import { formatSyncErrorMessage } from '@/services/sync/syncEngine';
 import { toast } from '@/components/ui/toast';
@@ -27,7 +27,7 @@ export function SyncStatusPill() {
   type PillStatus = 'offline' | 'syncing' | 'disconnected' | 'failed' | 'synced' | 'connected';
 
   let status: PillStatus = 'connected';
-  if (!isOnline) {
+  if (!isOnline || isDeviceOffline()) {
     status = 'offline';
   } else if (isSyncing) {
     status = 'syncing';
@@ -45,7 +45,7 @@ export function SyncStatusPill() {
     triggerHaptic('light');
     switch (status) {
       case 'offline': {
-        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        if (isDeviceOffline()) {
           toast.show(t('syncStatus.offlineToast'));
           break;
         }

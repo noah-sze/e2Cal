@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   checkConnectivity,
   getNetworkStatus,
+  isDeviceOffline,
   reportNetworkError,
   reportNetworkSuccess,
 } from './useNetworkStatus';
@@ -30,6 +31,7 @@ describe('useNetworkStatus', () => {
     const online = await checkConnectivity();
     expect(online).toBe(true);
     expect(getNetworkStatus()).toBe(true);
+    expect(isDeviceOffline()).toBe(false);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -42,6 +44,7 @@ describe('useNetworkStatus', () => {
     const online = await checkConnectivity();
     expect(online).toBe(false);
     expect(getNetworkStatus()).toBe(false);
+    expect(isDeviceOffline()).toBe(true);
   });
 
   it('should transition to offline on reportNetworkError and recover on reportNetworkSuccess when browser is online', async () => {

@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 
 // 全域單例狀態，確保跨頁面與多個 Hook 間的網路狀態嚴格同步
-let globalIsOnline: boolean = typeof navigator !== 'undefined' ? navigator.onLine : true;
+let globalIsOnline: boolean =
+  typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean'
+    ? navigator.onLine
+    : true;
 const listeners = new Set<(online: boolean) => void>();
 
 function notifyListeners(online: boolean) {
@@ -11,14 +14,28 @@ function notifyListeners(online: boolean) {
   }
 }
 
+/** 判斷設備目前是否處於離線狀態（優先檢查原生 navigator.onLine，再檢查全域狀態） */
+export function isDeviceOffline(): boolean {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return true;
+  }
+  return !globalIsOnline;
+}
+
 /** 取得目前全域網路在線狀態（同步讀取最新單例值） */
 export function getNetworkStatus(): boolean {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return false;
+  }
   return globalIsOnline;
 }
 
 /** 由真實業務請求成功呼叫：當裝置處於聯網介面時，立即恢復在線狀態 */
 export function reportNetworkSuccess(): void {
-  const browserOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+  const browserOnline =
+    typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean'
+      ? navigator.onLine
+      : true;
   if (browserOnline) {
     notifyListeners(true);
   }
@@ -29,12 +46,23 @@ export function reportNetworkError(): void {
   notifyListeners(false);
 }
 
+/** 供測試環境重設全域網路狀態 */
+export function _resetNetworkStatus(): void {
+  globalIsOnline =
+    typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean'
+      ? navigator.onLine
+      : true;
+}
+
 /**
  * 檢查裝置聯網狀態（純本地訊號，不依賴部署源站 `_ping`）
  * 確保 PWA 離線於部署伺服器時，只要設備本身有網路即可正常與 Dropbox／AI 通訊
  */
 export async function checkConnectivity(): Promise<boolean> {
-  const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
+  const online =
+    typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean'
+      ? navigator.onLine
+      : true;
   notifyListeners(online);
   return online;
 }
@@ -43,10 +71,14 @@ export async function checkConnectivity(): Promise<boolean> {
  * 監聽瀏覽器全域網路在線/離線狀態（純本地事件 + 真實請求回饋修正）
  */
 export function useNetworkStatus(): boolean {
-  const [isOnline, setIsOnline] = useState<boolean>(globalIsOnline);
+  const [isOnline, setIsOnline] = useState<boolean>(() => !isDeviceOffline());
 
   useEffect(() => {
     listeners.add(setIsOnline);
+
+    if (isDeviceOffline()) {
+      notifyListeners(false);
+    }
 
     const handleOnline = () => {
       notifyListeners(true);

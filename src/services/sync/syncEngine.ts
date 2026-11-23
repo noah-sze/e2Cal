@@ -32,6 +32,7 @@ import {
 } from './syncSanitizers';
 import { isDropboxConnected } from './dropboxAuth';
 import { clearFoodsCache } from '@/hooks/useFoods';
+import { isDeviceOffline, reportNetworkError } from '@/hooks/useNetworkStatus';
 
 export { getSyncErrorReasonKey, formatSyncErrorMessage, type SyncErrorReasonKey };
 
@@ -558,6 +559,16 @@ export async function executeSync(
     };
   }
 
+  // 離線防護：若設備已離線，嚴禁嘗試發起同步，亦不切換狀態為同步中或跳出報錯 Toast
+  if (isDeviceOffline()) {
+    return {
+      success: false,
+      timestamp: new Date().toISOString(),
+      error: 'Device is offline',
+      actionTaken: 'up_to_date',
+    };
+  }
+
   updateSyncEngineStatus({ isSyncing: true, lastSyncError: null, justSynced: false });
 
   // 1. 純覆蓋雲端模式 (Overwrite Remote)
@@ -589,6 +600,9 @@ export async function executeSync(
     } catch (error: unknown) {
       console.error('Overwrite remote error:', error);
       const errMsg = error instanceof Error ? error.message : 'Overwrite remote error';
+      if (getSyncErrorReasonKey(error) === 'network') {
+        reportNetworkError();
+      }
       updateSyncEngineStatus({
         isSyncing: false,
         lastSyncError: errMsg,
@@ -1339,6 +1353,9 @@ export async function executeSync(
         actionTaken: 'up_to_date',
       };
     }
+    if (getSyncErrorReasonKey(error) === 'network') {
+      reportNetworkError();
+    }
     updateSyncEngineStatus({
       isSyncing: false,
       lastSyncError: errMsg,
@@ -1363,10 +1380,12 @@ export async function executeSync(
 function drainPendingQueue(): void {
   if (hasPendingSyncRequest) {
     hasPendingSyncRequest = false;
+    if (!isDropboxConnected() || isDeviceOffline()) return;
     const nextMode = pendingSyncMode;
     pendingSyncMode = 'auto';
     const jitterDelay = Math.floor(800 + Math.random() * 700);
     setTimeout(() => {
+      if (!isDropboxConnected() || isDeviceOffline()) return;
       executeSync(nextMode).catch((err) => {
         console.warn('Pending sync execution error:', err);
       });
@@ -1378,13 +1397,14 @@ function drainPendingQueue(): void {
  * 安排防抖自動同步 (本地有數據變更後 3 秒自動執行局部增量推送)
  */
 export function scheduleAutoSync(delayMs = 3000): void {
-  if (!isDropboxConnected() || !navigator.onLine) return;
+  if (!isDropboxConnected() || isDeviceOffline()) return;
 
   if (autoSyncTimeout) {
     clearTimeout(autoSyncTimeout);
   }
 
   autoSyncTimeout = setTimeout(() => {
+    if (!isDropboxConnected() || isDeviceOffline()) return;
     executeSync('auto').catch((err) => {
       console.warn('Auto folder sync error:', err);
     });

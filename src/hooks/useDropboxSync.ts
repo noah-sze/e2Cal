@@ -23,7 +23,7 @@ import { startInitialSync } from '@/services/sync/initialSyncManager';
 import { getSyncErrorReasonKey } from '@/services/sync/dropboxClient';
 import {
   useNetworkStatus,
-  getNetworkStatus,
+  isDeviceOffline,
   reportNetworkSuccess,
   reportNetworkError,
 } from '@/hooks/useNetworkStatus';
@@ -49,10 +49,10 @@ export function useDropboxSync() {
 
   // 應用啟動與切回視窗時主動檢查遠端是否有更新
   useEffect(() => {
-    // 1. 全應用冷啟動同步：僅首次加載時執行一次
+    // 1. 全應用冷啟動同步：僅首次加載且設備在線時執行一次
     if (!hasInitialMountSyncExecuted) {
-      hasInitialMountSyncExecuted = true;
-      if (isDropboxConnected() && isOnline) {
+      if (isDropboxConnected() && !isDeviceOffline() && isOnline) {
+        hasInitialMountSyncExecuted = true;
         scheduleAutoSync(1500);
       }
     }
@@ -68,7 +68,8 @@ export function useDropboxSync() {
         hasBlurredOrHidden &&
         now - lastGlobalFocusCheckTime > FOCUS_COOLDOWN_MS &&
         isDropboxConnected() &&
-        isOnline
+        isOnline &&
+        !isDeviceOffline()
       ) {
         lastGlobalFocusCheckTime = now;
         hasBlurredOrHidden = false;
@@ -102,7 +103,8 @@ export function useDropboxSync() {
   // 網路恢復時自動補發同步
   useEffect(() => {
     if (!prevIsOnlineRef.current && isOnline) {
-      if (isDropboxConnected()) {
+      if (isDropboxConnected() && !isDeviceOffline()) {
+        hasInitialMountSyncExecuted = true;
         scheduleAutoSync(1000);
       }
     }
@@ -164,8 +166,7 @@ export function useDropboxSync() {
         return { success: false, timestamp: new Date().toISOString(), actionTaken: 'up_to_date' };
       }
 
-      const browserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
-      if (!getNetworkStatus() && browserOffline) {
+      if (isDeviceOffline() || !isOnline) {
         toast.show(t('syncStatus.offlineToast'));
         return { success: false, timestamp: new Date().toISOString(), actionTaken: 'up_to_date' };
       }
@@ -179,7 +180,9 @@ export function useDropboxSync() {
           if (getSyncErrorReasonKey(result.error) === 'network') {
             reportNetworkError();
           }
-          if (result.error === 'Dropbox not connected') {
+          if (result.error === 'Device is offline') {
+            toast.show(t('syncStatus.offlineToast'));
+          } else if (result.error === 'Dropbox not connected') {
             const reason = formatSyncErrorMessage(result.error, t);
             toast.show(t('syncStatus.syncFailedToast', { reason }));
           }
@@ -200,7 +203,7 @@ export function useDropboxSync() {
         };
       }
     },
-    [syncState.isSyncing, t]
+    [syncState.isSyncing, t, isOnline]
   );
 
   return {
