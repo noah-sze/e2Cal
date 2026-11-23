@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import i18n from '@/i18n/config';
 import {
   cleanJsonResponse,
   parseNutritionLabel,
@@ -7,6 +8,7 @@ import {
   fetchAvailableModels,
   formatAiErrorMessage,
 } from './aiClient';
+import { getNutritionLabelSystemPrompt, getMealEstimateSystemPrompt } from './prompts';
 import type { AISettings } from '@/types/ai';
 
 describe('cleanJsonResponse', () => {
@@ -273,6 +275,129 @@ describe('AI Client API calls', () => {
     expect(models[0].id).toBe('gpt-4o');
   });
 
+  it('should fetch models from custom OpenAI endpoint without API key', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: [{ id: 'llama3.2:latest' }, { id: 'qwen2.5-coder:7b' }],
+      }),
+    } as Response);
+
+    const customSettings: AISettings = {
+      ...baseSettings,
+      provider: 'custom',
+      customProtocol: 'openai',
+      customBaseUrl: 'http://localhost:11434/v1',
+      customApiKey: '',
+      customModel: '',
+    };
+
+    const models = await fetchAvailableModels(customSettings);
+    expect(models).toHaveLength(2);
+    expect(models.map((m) => m.id)).toContain('llama3.2:latest');
+    expect(models.map((m) => m.id)).toContain('qwen2.5-coder:7b');
+
+    // Should not send Authorization header when apiKey is empty
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:11434/v1/models',
+      expect.objectContaining({
+        headers: {},
+      })
+    );
+  });
+
+  it('should fetch models from custom endpoint returning models array with name property', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        models: [{ name: 'mistral:latest' }, { name: 'gemma2:9b' }],
+      }),
+    } as Response);
+
+    const customSettings: AISettings = {
+      ...baseSettings,
+      provider: 'custom',
+      customProtocol: 'openai',
+      customBaseUrl: 'http://localhost:11434',
+      customApiKey: '',
+      customModel: '',
+    };
+
+    const models = await fetchAvailableModels(customSettings);
+    expect(models).toHaveLength(2);
+    expect(models.map((m) => m.id)).toContain('mistral:latest');
+    expect(models.map((m) => m.id)).toContain('gemma2:9b');
+  });
+
+  it('should fallback to /v1/models when root /models returns 404', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: async () => 'Not Found',
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: [{ id: 'deepseek-r1:latest' }],
+        }),
+      } as Response);
+
+    const customSettings: AISettings = {
+      ...baseSettings,
+      provider: 'custom',
+      customProtocol: 'openai',
+      customBaseUrl: 'http://localhost:11434',
+      customApiKey: '',
+      customModel: '',
+    };
+
+    const models = await fetchAvailableModels(customSettings);
+    expect(models).toHaveLength(1);
+    expect(models[0].id).toBe('deepseek-r1:latest');
+  });
+
+  it('should test connection successfully on custom endpoint without API key', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: '{"status":"ok","message":"connection successful"}',
+            },
+          },
+        ],
+      }),
+    } as Response);
+
+    const customSettings: AISettings = {
+      ...baseSettings,
+      provider: 'custom',
+      customProtocol: 'openai',
+      customBaseUrl: 'http://localhost:11434/v1',
+      customApiKey: '',
+      customModel: 'llama3.2',
+    };
+
+    const res = await testAIConnection(customSettings);
+    expect(res.success).toBe(true);
+    expect(res.message).toContain('連線成功');
+  });
+
+  it('should error when custom endpoint has empty baseUrl', async () => {
+    const customSettings: AISettings = {
+      ...baseSettings,
+      provider: 'custom',
+      customProtocol: 'openai',
+      customBaseUrl: '',
+      customApiKey: '',
+      customModel: '',
+    };
+
+    await expect(fetchAvailableModels(customSettings)).rejects.toThrow('未填寫端點網址');
+  });
+
   it('should format high demand error message cleanly', () => {
     const raw =
       'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.';
@@ -283,5 +408,99 @@ describe('AI Client API calls', () => {
   it('should format invalid api key error message cleanly', () => {
     const formatted = formatAiErrorMessage('API key not valid. Please pass a valid API key.', 400);
     expect(formatted).toContain('API Key 無效');
+  });
+
+  it('should support multilingual error messages across en, zh-CN, and zh-TW', async () => {
+    await i18n.changeLanguage('en');
+    expect(formatAiErrorMessage('MISSING_API_KEY')).toBe('Invalid API Key');
+    expect(formatAiErrorMessage('MISSING_ENDPOINT')).toBe('Missing endpoint URL');
+    expect(formatAiErrorMessage('overloaded', 503)).toBe('Model overloaded');
+    expect(formatAiErrorMessage('rate limit', 429)).toBe('Rate limit exceeded');
+    expect(formatAiErrorMessage('not found', 404)).toBe('Model or endpoint not found');
+    expect(formatAiErrorMessage('failed to fetch')).toBe('Network error');
+    expect(formatAiErrorMessage('TIMEOUT')).toBe('Connection timed out');
+    expect(formatAiErrorMessage('EMPTY_AI_RESPONSE')).toBe('Empty AI response');
+    expect(formatAiErrorMessage('PARSE_NUTRITION_FAILED')).toBe(
+      'Failed to parse nutrition label JSON'
+    );
+    expect(formatAiErrorMessage('PARSE_MEAL_FAILED')).toBe(
+      'Failed to parse meal estimate JSON'
+    );
+
+    await i18n.changeLanguage('zh-CN');
+    expect(formatAiErrorMessage('MISSING_API_KEY')).toBe('API Key 无效或无权限');
+    expect(formatAiErrorMessage('MISSING_ENDPOINT')).toBe('未填写端点网址');
+    expect(formatAiErrorMessage('overloaded', 503)).toBe('模型目前拥堵');
+    expect(formatAiErrorMessage('rate limit', 429)).toBe('已达 API 配额或频率上限');
+    expect(formatAiErrorMessage('not found', 404)).toBe('找不到模型或端点');
+    expect(formatAiErrorMessage('failed to fetch')).toBe('网络连接失败');
+    expect(formatAiErrorMessage('TIMEOUT')).toBe('连接超时');
+    expect(formatAiErrorMessage('EMPTY_AI_RESPONSE')).toBe('AI 响应为空');
+    expect(formatAiErrorMessage('PARSE_NUTRITION_FAILED')).toBe(
+      'AI 返回格式无法解析为营养标签 JSON'
+    );
+    expect(formatAiErrorMessage('PARSE_MEAL_FAILED')).toBe(
+      'AI 返回格式无法解析为餐点估算 JSON'
+    );
+
+    await i18n.changeLanguage('zh-TW');
+    expect(formatAiErrorMessage('MISSING_API_KEY')).toBe('API Key 無效或無權限');
+    expect(formatAiErrorMessage('MISSING_ENDPOINT')).toBe('未填寫端點網址');
+    expect(formatAiErrorMessage('overloaded', 503)).toBe('模型目前擁堵');
+    expect(formatAiErrorMessage('rate limit', 429)).toBe('已達 API 配額或頻率上限');
+    expect(formatAiErrorMessage('not found', 404)).toBe('找不到模型或端點');
+    expect(formatAiErrorMessage('failed to fetch')).toBe('網路連線失敗');
+    expect(formatAiErrorMessage('TIMEOUT')).toBe('連線超時');
+    expect(formatAiErrorMessage('EMPTY_AI_RESPONSE')).toBe('AI 回應為空');
+    expect(formatAiErrorMessage('PARSE_NUTRITION_FAILED')).toBe(
+      'AI 回傳格式無法解析為營養標籤 JSON'
+    );
+    expect(formatAiErrorMessage('PARSE_MEAL_FAILED')).toBe(
+      'AI 回傳格式無法解析為餐點估算 JSON'
+    );
+  });
+
+  it('should accept custom t translation function parameter', () => {
+    const customT = vi.fn().mockReturnValue('Custom translated error');
+    const result = formatAiErrorMessage('MISSING_API_KEY', undefined, customT as never);
+    expect(result).toBe('Custom translated error');
+    expect(customT).toHaveBeenCalledWith('settings.aiErrorInvalidApiKey', 'API Key 無效或無權限');
+  });
+
+  it('should generate system prompts matching user language', () => {
+    const enLabelPrompt = getNutritionLabelSystemPrompt('en');
+    expect(enLabelPrompt).toContain('All output textual fields ("name", "brand", "notes") MUST be in English');
+    const zhCNLabelPrompt = getNutritionLabelSystemPrompt('zh-CN');
+    expect(zhCNLabelPrompt).toContain('所有输出的文本字段（"name"、"brand"、"notes"）必须使用【简体中文】');
+    const zhTWLabelPrompt = getNutritionLabelSystemPrompt('zh-TW');
+    expect(zhTWLabelPrompt).toContain('所有輸出的文字欄位（"name"、"brand"、"notes"）必須使用【繁體中文】');
+
+    const enMealPrompt = getMealEstimateSystemPrompt('en');
+    expect(enMealPrompt).toContain('All output textual fields ("title", "summary", "components[].name", "components[].notes") MUST be in English');
+    const zhCNMealPrompt = getMealEstimateSystemPrompt('zh-CN');
+    expect(zhCNMealPrompt).toContain('所有输出的文本字段（"title"、"summary"、"components[].name"、"components[].notes"）必须使用【简体中文】');
+    const zhTWMealPrompt = getMealEstimateSystemPrompt('zh-TW');
+    expect(zhTWMealPrompt).toContain('所有輸出的文字欄位（"title"、"summary"、"components[].name"、"components[].notes"）必須使用【繁體中文】');
+  });
+
+  it('should send prompt and system instruction in English when user language is en', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        candidates: [
+          {
+            content: {
+              parts: [{ text: '{"name":"Oatmeal","calories":150,"carbs":27,"protein":5,"fat":3}' }],
+            },
+          },
+        ],
+      }),
+    } as Response);
+
+    await parseNutritionLabel('dummyBase64', dummyGeminiSettings, 'fine oats', undefined, 'en');
+    expect(fetchSpy).toHaveBeenCalled();
+    const callBody = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+    expect(callBody.system_instruction.parts[0].text).toContain('MUST be in English');
+    expect(callBody.contents[0].parts.some((p: { text?: string }) => p.text?.includes('Please identify the nutrition facts label'))).toBe(true);
   });
 });

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AISettingsCard } from '@/components/settings/AISettingsCard';
 import { AIProviderManagerDialog } from '@/components/settings/AIProviderManagerDialog';
 import { AIProviderDialog } from '@/components/settings/AIProviderDialog';
@@ -14,6 +15,7 @@ import type { AIProviderProfile, MealEstimateResult, NutritionLabelParseResult }
 type RequestMode = 'mock-success' | 'mock-error' | 'live';
 
 export function AITab() {
+  const { t } = useTranslation();
   const {
     settings,
     profiles,
@@ -276,11 +278,11 @@ export function AITab() {
           } else {
             addProfile(data, true);
           }
-          toast.show('已儲存');
+          toast.show(t('common.saved', '已儲存'));
         }}
         onDelete={(id) => {
           deleteProfile(id);
-          toast.show('已刪除');
+          toast.show(t('common.deleted', '已刪除'));
         }}
       />
     </div>

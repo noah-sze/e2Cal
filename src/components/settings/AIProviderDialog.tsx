@@ -15,7 +15,7 @@ import {
   OFFICIAL_ENDPOINTS,
   OFFICIAL_PROVIDER_PRESETS,
 } from '@/hooks/useAISettings';
-import { testAIConnection, fetchAvailableModels, type AIModelOption } from '@/services/ai/aiClient';
+import { testAIConnection, fetchAvailableModels, formatAiErrorMessage, type AIModelOption } from '@/services/ai/aiClient';
 import { triggerHaptic } from '@/lib/haptics';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
@@ -48,7 +48,7 @@ export function AIProviderDialog({
   overlayClassName = 'z-[70]',
   dialogClassName = 'z-[70]',
 }: AIProviderDialogProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [name, setName] = useState('');
   const [provider, setProvider] = useState<AIProvider>('gemini');
@@ -121,7 +121,7 @@ export function AIProviderDialog({
   });
 
   const canTestOrFetch = isCustomProvider
-    ? Boolean(apiKey.trim() && baseUrl.trim())
+    ? Boolean(baseUrl.trim())
     : Boolean(apiKey.trim());
   const cacheKey = `${effectiveProtocol}:${isCustomProvider ? baseUrl.trim() || 'official' : provider}`;
   const dynamicModels = fetchedModels[cacheKey];
@@ -179,7 +179,10 @@ export function AIProviderDialog({
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       triggerHaptic('error');
-      toast.show(msg || t('settings.aiFetchModelsFailed', '獲取模型失敗'));
+      toast.show(
+        formatAiErrorMessage(msg, undefined, t, i18n.language) ||
+          t('settings.aiFetchModelsFailed', '獲取模型失敗')
+      );
     } finally {
       setIsFetchingModels(false);
     }
@@ -190,20 +193,25 @@ export function AIProviderDialog({
     setIsTesting(true);
     setTestResult(null);
     try {
-      const res = await testAIConnection(buildTempSettings());
-      setTestResult(res);
+      const res = await testAIConnection(buildTempSettings(), undefined, i18n.language);
+      const formattedMessage = res.message
+        ? formatAiErrorMessage(res.message, undefined, t, i18n.language)
+        : '';
+      const resolvedRes = { ...res, message: formattedMessage };
+      setTestResult(resolvedRes);
       if (res.success) {
         triggerHaptic('success');
         toast.show(t('settings.aiTestSuccess', '連線成功'));
       } else {
         triggerHaptic('error');
-        toast.show(res.message || t('settings.aiTestFailed', '連線失敗'));
+        toast.show(formattedMessage || t('settings.aiTestFailed', '連線失敗'));
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      setTestResult({ success: false, message: msg });
+      const formatted = formatAiErrorMessage(msg, undefined, t, i18n.language);
+      setTestResult({ success: false, message: formatted });
       triggerHaptic('error');
-      toast.show(msg);
+      toast.show(formatted);
     } finally {
       setIsTesting(false);
     }
@@ -242,7 +250,7 @@ export function AIProviderDialog({
       >
         <div className="space-y-3.5 pt-3.5 pb-0">
           {/* 段落 1: 基本資訊 (50/50 雙格首行：名稱｜供應商) */}
-          <SectionCard title={t('diet.basicInfo', '基本資訊')} bodyClassName="text-xs font-sans">
+          <SectionCard title={t('settings.aiBasicInfo', '基本資訊')} bodyClassName="text-xs font-sans">
             <div className="h-10 grid grid-cols-2 divide-x divide-border bg-card">
               {/* 名稱 */}
               <div
@@ -365,7 +373,7 @@ export function AIProviderDialog({
                   type="button"
                   onClick={() => setShowKey((prev) => !prev)}
                   className="text-muted-foreground hover:text-foreground p-0.5 cursor-pointer shrink-0"
-                  aria-label={showKey ? '隱藏' : '顯示'}
+                  aria-label={showKey ? t('common.hide', '隱藏') : t('common.show', '顯示')}
                 >
                   {showKey ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
                 </button>
@@ -490,21 +498,25 @@ export function AIProviderDialog({
               <div className="min-w-0 flex-1 text-[11px] font-mono">
                 {testResult ? (
                   testResult.success ? (
-                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                       <CheckCircle2 className="size-3.5 shrink-0" />
                       <span>{t('settings.aiTestSuccess', '連線成功')}</span>
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1 text-destructive">
+                    <span className="flex items-center gap-1 text-destructive whitespace-nowrap">
                       <AlertCircle className="size-3.5 shrink-0" />
                       <span>{t('settings.aiTestFailed', '連線失敗')}</span>
                     </span>
                   )
                 ) : (
-                  <span className="text-muted-foreground/70">
+                  <span className="text-muted-foreground/70 whitespace-nowrap truncate block">
                     {canTestOrFetch
-                      ? t('settings.aiConfigured', '已配置密鑰')
-                      : t('settings.aiNotConfigured', '尚未填寫密鑰')}
+                      ? isCustomProvider && !apiKey.trim()
+                        ? t('settings.aiEndpointConfigured', '已配置端點')
+                        : t('settings.aiConfigured', '已配置密鑰')
+                      : isCustomProvider
+                        ? t('settings.aiEndpointNotConfigured', '尚未填寫端點')
+                        : t('settings.aiNotConfigured', '尚未填寫密鑰')}
                   </span>
                 )}
               </div>

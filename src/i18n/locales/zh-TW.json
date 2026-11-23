@@ -134,6 +134,7 @@
       "aiInjected": "已填入",
       "aiOffline": "設備處於離線狀態，AI 助手不可用。",
       "aiAddProvider": "新增 AI 供應商",
+      "per": "每",
       "placeholder": {
         "title": "快速估算",
         "namePlaceholder": "備註",
@@ -360,6 +361,11 @@
       "unknownFood": "未知食材",
       "servingCount_one": "{{count}} 份",
       "servingCount_other": "{{count}} 份"
+    },
+    "nutrients": {
+      "carbs": "碳水",
+      "protein": "蛋白質",
+      "fat": "脂肪"
     },
     "dietPlan": {
       "title": "供能比",
@@ -874,6 +880,7 @@
       "bodyTrackingSection": "體態指標",
       "bodyTrackingDesc": "自訂需記錄或忽略的圍度範圍",
       "aiSection": "AI 助手設定",
+      "aiBasicInfo": "基本資訊",
       "aiDefaultAssistant": "預設助手",
       "aiDefaultProvider": "預設供應商",
       "aiProviderManagement": "供應商管理",
@@ -906,6 +913,18 @@
       "aiTestFailed": "連線失敗",
       "aiNotConfigured": "尚未填寫密鑰",
       "aiConfigured": "已配置密鑰",
+      "aiEndpointNotConfigured": "尚未填寫端點",
+      "aiEndpointConfigured": "已配置端點",
+      "aiErrorMissingEndpoint": "未填寫端點網址",
+      "aiErrorOverloaded": "模型目前擁堵",
+      "aiErrorRateLimit": "已達 API 配額或頻率上限",
+      "aiErrorInvalidApiKey": "API Key 無效或無權限",
+      "aiErrorNotFound": "找不到模型或端點",
+      "aiErrorNetwork": "網路連線失敗",
+      "aiErrorTimeout": "連線超時",
+      "aiErrorEmptyResponse": "AI 回應為空",
+      "aiErrorParseNutritionFailed": "AI 回傳格式無法解析為營養標籤 JSON",
+      "aiErrorParseMealFailed": "AI 回傳格式無法解析為餐點估算 JSON",
       "aiPrivacyNotice": "所有 API Key 均以純本機方式儲存在瀏覽器中，不經由任何官方伺服器轉發。",
       "torsoCircumference": "胸腰臀",
       "limbCircumference": "手臂、大腿圍",

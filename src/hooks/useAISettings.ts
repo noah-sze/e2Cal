@@ -329,6 +329,8 @@ export function resolveActiveEndpoint(settings: AISettings): {
   baseUrl: string;
   apiKey: string;
   model: string;
+  isCustom: boolean;
+  provider: AIProvider;
 } {
   if (settings.profiles) {
     if (settings.profiles.length === 0) {
@@ -337,10 +339,13 @@ export function resolveActiveEndpoint(settings: AISettings): {
         baseUrl: OFFICIAL_ENDPOINTS.gemini,
         apiKey: '',
         model: DEFAULT_MODEL_BY_PROTOCOL.gemini,
+        isCustom: false,
+        provider: 'gemini',
       };
     }
     const active =
       settings.profiles.find((p) => p.id === settings.activeProfileId) || settings.profiles[0];
+    const isCustom = active.provider === 'custom';
     const preset =
       active.provider && active.provider !== 'custom'
         ? OFFICIAL_PROVIDER_PRESETS[active.provider]
@@ -350,9 +355,13 @@ export function resolveActiveEndpoint(settings: AISettings): {
       protocol,
       baseUrl: preset
         ? preset.baseUrl
-        : active.baseUrl.trim() || OFFICIAL_ENDPOINTS[protocol],
+        : isCustom
+          ? active.baseUrl.trim()
+          : active.baseUrl.trim() || OFFICIAL_ENDPOINTS[protocol],
       apiKey: active.apiKey.trim(),
       model: active.model.trim() || preset?.defaultModel || DEFAULT_MODEL_BY_PROTOCOL[protocol],
+      isCustom,
+      provider: active.provider || (isCustom ? 'custom' : 'gemini'),
     };
   }
 
@@ -363,6 +372,8 @@ export function resolveActiveEndpoint(settings: AISettings): {
         baseUrl: OFFICIAL_ENDPOINTS.gemini,
         apiKey: settings.geminiApiKey.trim(),
         model: settings.geminiModel.trim() || DEFAULT_AI_SETTINGS.geminiModel,
+        isCustom: false,
+        provider: 'gemini',
       };
     case 'openai':
       return {
@@ -370,6 +381,8 @@ export function resolveActiveEndpoint(settings: AISettings): {
         baseUrl: OFFICIAL_ENDPOINTS.openai,
         apiKey: settings.openaiApiKey.trim(),
         model: settings.openaiModel.trim() || DEFAULT_AI_SETTINGS.openaiModel,
+        isCustom: false,
+        provider: 'openai',
       };
     case 'anthropic':
       return {
@@ -377,6 +390,8 @@ export function resolveActiveEndpoint(settings: AISettings): {
         baseUrl: OFFICIAL_ENDPOINTS.anthropic,
         apiKey: settings.anthropicApiKey.trim(),
         model: settings.anthropicModel.trim() || DEFAULT_AI_SETTINGS.anthropicModel,
+        isCustom: false,
+        provider: 'anthropic',
       };
     case 'deepseek':
       return {
@@ -384,14 +399,18 @@ export function resolveActiveEndpoint(settings: AISettings): {
         baseUrl: OFFICIAL_PROVIDER_PRESETS.deepseek.baseUrl,
         apiKey: settings.openaiApiKey.trim(),
         model: OFFICIAL_PROVIDER_PRESETS.deepseek.defaultModel,
+        isCustom: false,
+        provider: 'deepseek',
       };
     case 'custom': {
       const protocol = settings.customProtocol || 'openai';
       return {
         protocol,
-        baseUrl: settings.customBaseUrl.trim() || OFFICIAL_ENDPOINTS[protocol],
+        baseUrl: settings.customBaseUrl.trim(),
         apiKey: settings.customApiKey.trim(),
         model: settings.customModel.trim() || DEFAULT_MODEL_BY_PROTOCOL[protocol],
+        isCustom: true,
+        provider: 'custom',
       };
     }
   }
@@ -478,7 +497,9 @@ export function useAISettings() {
   }, []);
 
   const active = resolveActiveEndpoint(settings);
-  const isConfigured = Boolean(active.apiKey);
+  const isConfigured = active.isCustom
+    ? Boolean(active.baseUrl.trim() || active.apiKey)
+    : Boolean(active.apiKey);
 
   return {
     settings,

@@ -14,6 +14,7 @@ import { useAISettings } from '@/hooks/useAISettings';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { compressImage } from '@/utils/imageCompress';
 import { estimateMeal, parseNutritionLabel, formatAiErrorMessage } from '@/services/ai/aiClient';
+import { resolveSupportedLocale } from '@/utils/defaultLocalization';
 import { triggerHaptic } from '@/lib/haptics';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
@@ -138,7 +139,7 @@ export function ExternalAIAssistant({
   mockMode = false,
   mockScenario = 'success',
 }: ExternalAIAssistantProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { settings, profiles, activeProfile, setActiveProfile, addProfile, isConfigured } =
     useAISettings();
   const isOnline = useNetworkStatus();
@@ -232,7 +233,8 @@ export function ExternalAIAssistant({
         return;
       }
       triggerHaptic('error');
-      toast.show(formatAiErrorMessage('MISSING_API_KEY'));
+      const isCustom = activeProfile?.provider === 'custom';
+      toast.show(formatAiErrorMessage(isCustom ? 'MISSING_ENDPOINT' : 'MISSING_API_KEY', undefined, t));
       return;
     }
 
@@ -271,57 +273,164 @@ export function ExternalAIAssistant({
           );
         }
 
+        const locale = resolveSupportedLocale(i18n.language);
         if (mode === 'meal') {
-          setMealResult({
-            title: cleanText || '香煎雞胸便當',
-            summary: '模擬結構化拆解結果',
-            totalCalories: 645,
-            totalCarbs: 68,
-            totalProtein: 42,
-            totalFat: 23,
-            totalSugar: 4.5,
-            totalFiber: 5.2,
-            components: [
-              {
-                name: '白飯',
-                estimatedWeightGrams: 180,
-                calories: 234,
-                carbs: 51,
-                protein: 4.5,
-                fat: 0.5,
-              },
-              {
-                name: '香煎雞胸肉',
-                estimatedWeightGrams: 150,
-                calories: 248,
-                carbs: 0,
-                protein: 34,
-                fat: 12,
-              },
-              {
-                name: '炒時蔬與烹調油',
-                estimatedWeightGrams: 120,
-                calories: 163,
-                carbs: 17,
-                protein: 3.5,
-                fat: 10.5,
-              },
-            ],
-          });
+          if (locale === 'en') {
+            setMealResult({
+              title: cleanText || 'Pan-Seared Chicken Bento',
+              summary: 'Simulated meal deconstruction result',
+              totalCalories: 645,
+              totalCarbs: 68,
+              totalProtein: 42,
+              totalFat: 23,
+              totalSugar: 4.5,
+              totalFiber: 5.2,
+              components: [
+                {
+                  name: 'Steamed Rice',
+                  estimatedWeightGrams: 180,
+                  calories: 234,
+                  carbs: 51,
+                  protein: 4.5,
+                  fat: 0.5,
+                },
+                {
+                  name: 'Pan-Seared Chicken Breast',
+                  estimatedWeightGrams: 150,
+                  calories: 248,
+                  carbs: 0,
+                  protein: 34,
+                  fat: 12,
+                },
+                {
+                  name: 'Stir-Fried Vegetables',
+                  estimatedWeightGrams: 120,
+                  calories: 163,
+                  carbs: 17,
+                  protein: 3.5,
+                  fat: 10.5,
+                },
+              ],
+            });
+          } else if (locale === 'zh-CN') {
+            setMealResult({
+              title: cleanText || '香煎鸡胸便当',
+              summary: '模拟结构化拆解结果',
+              totalCalories: 645,
+              totalCarbs: 68,
+              totalProtein: 42,
+              totalFat: 23,
+              totalSugar: 4.5,
+              totalFiber: 5.2,
+              components: [
+                {
+                  name: '白米饭',
+                  estimatedWeightGrams: 180,
+                  calories: 234,
+                  carbs: 51,
+                  protein: 4.5,
+                  fat: 0.5,
+                },
+                {
+                  name: '香煎鸡胸肉',
+                  estimatedWeightGrams: 150,
+                  calories: 248,
+                  carbs: 0,
+                  protein: 34,
+                  fat: 12,
+                },
+                {
+                  name: '炒时蔬与烹调用油',
+                  estimatedWeightGrams: 120,
+                  calories: 163,
+                  carbs: 17,
+                  protein: 3.5,
+                  fat: 10.5,
+                },
+              ],
+            });
+          } else {
+            setMealResult({
+              title: cleanText || '香煎雞胸便當',
+              summary: '模擬結構化拆解結果',
+              totalCalories: 645,
+              totalCarbs: 68,
+              totalProtein: 42,
+              totalFat: 23,
+              totalSugar: 4.5,
+              totalFiber: 5.2,
+              components: [
+                {
+                  name: '白飯',
+                  estimatedWeightGrams: 180,
+                  calories: 234,
+                  carbs: 51,
+                  protein: 4.5,
+                  fat: 0.5,
+                },
+                {
+                  name: '香煎雞胸肉',
+                  estimatedWeightGrams: 150,
+                  calories: 248,
+                  carbs: 0,
+                  protein: 34,
+                  fat: 12,
+                },
+                {
+                  name: '炒時蔬與烹調油',
+                  estimatedWeightGrams: 120,
+                  calories: 163,
+                  carbs: 17,
+                  protein: 3.5,
+                  fat: 10.5,
+                },
+              ],
+            });
+          }
         } else {
-          setFoodResult({
-            name: cleanText || '分離乳清蛋白粉',
-            brand: 'Myprotein',
-            servingSize: 25,
-            servingUnit: 'g',
-            calories: 94,
-            carbs: 0.6,
-            protein: 22.0,
-            fat: 0.3,
-            sugar: 0.2,
-            fiber: 0,
-            notes: 'Mock nutrition label result',
-          });
+          if (locale === 'en') {
+            setFoodResult({
+              name: cleanText || 'Whey Protein Isolate',
+              brand: 'Myprotein',
+              servingSize: 25,
+              servingUnit: 'g',
+              calories: 94,
+              carbs: 0.6,
+              protein: 22.0,
+              fat: 0.3,
+              sugar: 0.2,
+              fiber: 0,
+              notes: 'Simulated nutrition label result',
+            });
+          } else if (locale === 'zh-CN') {
+            setFoodResult({
+              name: cleanText || '分离乳清蛋白粉',
+              brand: 'Myprotein',
+              servingSize: 25,
+              servingUnit: 'g',
+              calories: 94,
+              carbs: 0.6,
+              protein: 22.0,
+              fat: 0.3,
+              sugar: 0.2,
+              fiber: 0,
+              notes: '模拟营养标签结果',
+            });
+          } else {
+            setFoodResult({
+              name: cleanText || '分離乳清蛋白粉',
+              brand: 'Myprotein',
+              servingSize: 25,
+              servingUnit: 'g',
+              calories: 94,
+              carbs: 0.6,
+              protein: 22.0,
+              fat: 0.3,
+              sugar: 0.2,
+              fiber: 0,
+              notes: '模擬營養標籤結果',
+            });
+          }
         }
         abortControllerRef.current = null;
         triggerHaptic('success');
@@ -334,7 +443,8 @@ export function ExternalAIAssistant({
           imageBase64,
           cleanText || undefined,
           settings,
-          controller.signal
+          controller.signal,
+          i18n.language
         );
         if (controller.signal.aborted || !dialogOpenRef.current) return;
         setMealResult(res);
@@ -343,7 +453,8 @@ export function ExternalAIAssistant({
           imageBase64,
           settings,
           cleanText || undefined,
-          controller.signal
+          controller.signal,
+          i18n.language
         );
         if (controller.signal.aborted || !dialogOpenRef.current) return;
         setFoodResult(res);
@@ -364,7 +475,7 @@ export function ExternalAIAssistant({
       abortControllerRef.current = null;
       const msg = err instanceof Error ? err.message : String(err);
       triggerHaptic('error');
-      toast.show(msg || t('diet.aiScanFailed', '辨識失敗，請確認圖片清晰度或重試'));
+      toast.show(formatAiErrorMessage(msg, undefined, t) || t('diet.aiScanFailed', '辨識失敗，請確認圖片清晰度或重試'));
       setWorkPhase('expanded');
     }
   };
@@ -594,20 +705,11 @@ export function ExternalAIAssistant({
 
       return (
         <div className="w-full rounded-xl border border-border bg-card text-card-foreground p-3 space-y-2.5 text-xs">
+          {/* 1. 頂部固定供應商標頭（與待機與載入態完全恆定一致） */}
           <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border">
-            <span className="flex items-center gap-1.5 font-mono font-medium text-foreground min-w-0">
+            <span className="flex items-center gap-1.5 font-mono text-[11px] font-medium text-foreground min-w-0">
               <PixelSpriteIcon />
-              {mode === 'meal' && mealResult ? (
-                <MetricValue
-                  value={activeMealSummary.totalCalories}
-                  unit="kcal"
-                  valueClassName="font-semibold text-foreground"
-                />
-              ) : (
-                <span className="truncate">
-                  {foodTitle || t('diet.aiLabelParsed', '標籤已解析')}
-                </span>
-              )}
+              <span className="truncate">{activeProfile?.name ?? 'PIXEL_AI'}</span>
             </span>
             <button
               type="button"
@@ -618,164 +720,149 @@ export function ExternalAIAssistant({
             </button>
           </div>
 
-          {mode === 'meal' && mealResult && (
-            <div className="space-y-2.5">
-              {/* 方案 3：與標籤頁統一的 C → P → F 迷你營養三格 */}
-              <div className="grid grid-cols-3 divide-x divide-border border border-border rounded-lg text-center bg-card">
-                <div className="py-1.5 px-1">
-                  <div className="text-[10px] text-muted-foreground">
-                    {t('nutrients.carbs', '碳水')}
-                  </div>
-                  <div className="mt-0.5 flex justify-center">
+          {/* 2. 方案 A：雙層整合卡（上層：品名 ｜ 卡路里；下層：三大營養素 C -> P -> F） */}
+          <div className="border border-border rounded-lg overflow-hidden divide-y divide-border bg-card">
+            {/* 上層：名稱 ｜ 卡路里（外食與標籤掃描統一同構） */}
+            <div className="h-8 px-3 bg-muted/40 flex items-center justify-between gap-2 text-[11px]">
+              <span className="font-medium text-foreground truncate min-w-0">
+                {mode === 'meal'
+                  ? mealResult?.title || t('diet.placeholder.defaultName', '快速估算')
+                  : foodTitle || t('diet.aiLabelParsed', '標籤已解析')}
+              </span>
+              <span className="flex items-center gap-1.5 shrink-0">
+                {mode === 'foodLabel' && foodResult?.servingSize && (
+                  <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-1">
+                    <span>{t('diet.per', '每')}</span>
                     <MetricValue
-                      value={activeMealSummary.totalCarbs}
-                      unit="g"
-                      valueClassName="text-[11px] font-semibold text-[var(--carbs)]"
+                      value={foodResult.servingSize}
+                      unit={foodResult.servingUnit || 'g'}
                     />
-                  </div>
-                </div>
-                <div className="py-1.5 px-1">
-                  <div className="text-[10px] text-muted-foreground">
-                    {t('nutrients.protein', '蛋白質')}
-                  </div>
-                  <div className="mt-0.5 flex justify-center">
-                    <MetricValue
-                      value={activeMealSummary.totalProtein}
-                      unit="g"
-                      valueClassName="text-[11px] font-semibold text-[var(--protein)]"
-                    />
-                  </div>
-                </div>
-                <div className="py-1.5 px-1">
-                  <div className="text-[10px] text-muted-foreground">
-                    {t('nutrients.fat', '脂肪')}
-                  </div>
-                  <div className="mt-0.5 flex justify-center">
-                    <MetricValue
-                      value={activeMealSummary.totalFat}
-                      unit="g"
-                      valueClassName="text-[11px] font-semibold text-[var(--fat)]"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 可手動剔除/恢復的食材清單 */}
-              {mealResult.components && mealResult.components.length > 0 ? (
-                <div className="border border-border rounded-lg overflow-hidden divide-y divide-border max-h-36 overflow-y-auto">
-                  {mealResult.components.map((c, idx) => {
-                    const isExcluded = excludedComponentIndices.includes(idx);
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => toggleMealComponent(idx)}
-                        className="w-full min-h-8 px-3 py-1 flex items-center justify-between gap-2 text-left hover:bg-hover transition-colors cursor-pointer"
-                      >
-                        <span className="flex items-center gap-2 min-w-0">
-                          <span
-                            className={cn(
-                              'size-3.5 rounded-full border flex items-center justify-center shrink-0 transition-colors',
-                              !isExcluded
-                                ? 'bg-foreground border-foreground text-background'
-                                : 'border-border text-transparent'
-                            )}
-                          >
-                            <Check className="size-2.5 stroke-[3]" />
-                          </span>
-                          <span
-                            className={cn(
-                              'text-[11px] font-mono truncate flex items-center gap-1',
-                              isExcluded ? 'line-through text-muted-foreground/50' : 'text-foreground'
-                            )}
-                          >
-                            <span className="truncate">{c.name}</span>
-                            {c.estimatedWeightGrams ? (
-                              <>
-                                <span>·</span>
-                                <MetricValue value={c.estimatedWeightGrams} unit="g" />
-                              </>
-                            ) : null}
-                          </span>
-                        </span>
-                        <MetricValue
-                          value={Math.round(c.calories)}
-                          unit="kcal"
-                          className="shrink-0 text-[11px]"
-                          valueClassName={
-                            isExcluded ? 'line-through text-muted-foreground/40' : 'text-muted-foreground'
-                          }
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-[11px] font-mono text-muted-foreground">
-                  {mealResult.summary || mealResult.title}
-                </div>
-              )}
-            </div>
-          )}
-
-          {mode === 'foodLabel' && foodResult && (
-            <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
-              <div className="h-8 px-3 bg-muted/30 flex items-center justify-between text-[11px]">
-                <span className="flex items-center gap-1 text-muted-foreground">
-                  <span>{t('diet.per', '每')}</span>
-                  <MetricValue
-                    value={foodResult.servingSize ?? '-'}
-                    unit={foodResult.servingUnit || 'g'}
-                    valueClassName="text-foreground"
-                  />
-                </span>
+                  </span>
+                )}
                 <MetricValue
-                  value={foodResult.calories ?? '-'}
+                  value={
+                    mode === 'meal'
+                      ? activeMealSummary.totalCalories
+                      : (foodResult?.calories ?? '-')
+                  }
                   unit="kcal"
-                  valueClassName="font-semibold text-foreground"
+                  valueClassName="font-semibold text-foreground text-xs"
                 />
+              </span>
+            </div>
+
+            {/* 下層：三大營養素 3 格 (C -> P -> F) */}
+            <div className="grid grid-cols-3 divide-x divide-border text-center bg-card">
+              <div className="py-1.5 px-1">
+                <div className="text-[10px] text-muted-foreground">
+                  {t('nutrients.carbs', '碳水')}
+                </div>
+                <div className="mt-0.5 flex justify-center">
+                  <MetricValue
+                    value={
+                      mode === 'meal'
+                        ? activeMealSummary.totalCarbs
+                        : (foodResult?.carbs ?? '-')
+                    }
+                    unit="g"
+                    valueClassName="text-[11px] font-semibold text-[var(--carbs)]"
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-3 divide-x divide-border text-center bg-card">
-                <div className="py-2 px-1">
-                  <div className="text-[10px] text-muted-foreground">
-                    {t('nutrients.carbs', '碳水')}
-                  </div>
-                  <div className="mt-0.5 flex justify-center">
-                    <MetricValue
-                      value={foodResult.carbs ?? '-'}
-                      unit="g"
-                      valueClassName="font-semibold text-[var(--carbs)]"
-                    />
-                  </div>
+              <div className="py-1.5 px-1">
+                <div className="text-[10px] text-muted-foreground">
+                  {t('nutrients.protein', '蛋白質')}
                 </div>
-                <div className="py-2 px-1">
-                  <div className="text-[10px] text-muted-foreground">
-                    {t('nutrients.protein', '蛋白質')}
-                  </div>
-                  <div className="mt-0.5 flex justify-center">
-                    <MetricValue
-                      value={foodResult.protein ?? '-'}
-                      unit="g"
-                      valueClassName="font-semibold text-[var(--protein)]"
-                    />
-                  </div>
+                <div className="mt-0.5 flex justify-center">
+                  <MetricValue
+                    value={
+                      mode === 'meal'
+                        ? activeMealSummary.totalProtein
+                        : (foodResult?.protein ?? '-')
+                    }
+                    unit="g"
+                    valueClassName="text-[11px] font-semibold text-[var(--protein)]"
+                  />
                 </div>
-                <div className="py-2 px-1">
-                  <div className="text-[10px] text-muted-foreground">
-                    {t('nutrients.fat', '脂肪')}
-                  </div>
-                  <div className="mt-0.5 flex justify-center">
-                    <MetricValue
-                      value={foodResult.fat ?? '-'}
-                      unit="g"
-                      valueClassName="font-semibold text-[var(--fat)]"
-                    />
-                  </div>
+              </div>
+              <div className="py-1.5 px-1">
+                <div className="text-[10px] text-muted-foreground">
+                  {t('nutrients.fat', '脂肪')}
+                </div>
+                <div className="mt-0.5 flex justify-center">
+                  <MetricValue
+                    value={
+                      mode === 'meal'
+                        ? activeMealSummary.totalFat
+                        : (foodResult?.fat ?? '-')
+                    }
+                    unit="g"
+                    valueClassName="text-[11px] font-semibold text-[var(--fat)]"
+                  />
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* 3. 外食估算組件清單（支援單獨剔除/恢復） */}
+          {mode === 'meal' && mealResult && (
+            mealResult.components && mealResult.components.length > 0 ? (
+              <div className="border border-border rounded-lg overflow-hidden divide-y divide-border max-h-44 overflow-y-auto">
+                {mealResult.components.map((c, idx) => {
+                  const isExcluded = excludedComponentIndices.includes(idx);
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => toggleMealComponent(idx)}
+                      className="w-full min-h-9.5 px-3 py-2 flex items-center justify-between gap-2.5 text-left hover:bg-hover transition-colors cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span
+                          className={cn(
+                            'size-3.5 rounded-full border flex items-center justify-center shrink-0 transition-colors',
+                            !isExcluded
+                              ? 'bg-foreground border-foreground text-background'
+                              : 'border-border text-transparent'
+                          )}
+                        >
+                          <Check className="size-2.5 stroke-[3]" />
+                        </span>
+                        <span
+                          className={cn(
+                            'text-[11px] font-mono truncate flex items-center gap-1',
+                            isExcluded ? 'line-through text-muted-foreground/50' : 'text-foreground'
+                          )}
+                        >
+                          <span className="truncate">{c.name}</span>
+                          {c.estimatedWeightGrams ? (
+                            <>
+                              <span>·</span>
+                              <MetricValue value={c.estimatedWeightGrams} unit="g" />
+                            </>
+                          ) : null}
+                        </span>
+                      </span>
+                      <MetricValue
+                        value={Math.round(c.calories)}
+                        unit="kcal"
+                        className="shrink-0 text-[11px]"
+                        valueClassName={
+                          isExcluded ? 'line-through text-muted-foreground/40' : 'text-muted-foreground'
+                        }
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            ) : mealResult.summary ? (
+              <div className="text-[11px] font-mono text-muted-foreground">
+                {mealResult.summary}
+              </div>
+            ) : null
           )}
 
+          {/* 4. 底部填入表單按鈕 */}
           <button
             type="button"
             disabled={mode === 'meal' && !activeMealSummary.canInjectMeal}

@@ -1,3 +1,5 @@
+import type { TFunction } from 'i18next';
+import i18n from '@/i18n/config';
 import type {
   AISettings,
   NutritionLabelParseResult,
@@ -6,13 +8,29 @@ import type {
 import { resolveActiveEndpoint } from '@/hooks/useAISettings';
 import { reportNetworkError, reportNetworkSuccess } from '@/hooks/useNetworkStatus';
 import {
-  NUTRITION_LABEL_SYSTEM_PROMPT,
-  MEAL_ESTIMATE_SYSTEM_PROMPT,
+  getNutritionLabelSystemPrompt,
+  getMealEstimateSystemPrompt,
 } from './prompts';
+import { resolveSupportedLocale } from '@/utils/defaultLocalization';
 
-/** 解析並翻譯常見 AI API 錯誤訊息，讓使用者能一眼看懂問題根源 */
-export function formatAiErrorMessage(rawMessage: string, status?: number): string {
+/** 解析並翻譯常見 AI API 錯誤訊息，讓使用者能一眼看懂問題根源（支援多語系 i18n） */
+export function formatAiErrorMessage(
+  rawMessage: string,
+  status?: number,
+  t?: TFunction,
+  lang?: string
+): string {
+  const translate = (key: string, fallback: string) => {
+    if (t) {
+      return t(key, fallback);
+    }
+    return i18n.t(key, { defaultValue: fallback, lng: lang || i18n.language });
+  };
   const lower = rawMessage.toLowerCase();
+
+  if (lower.includes('missing_endpoint')) {
+    return translate('settings.aiErrorMissingEndpoint', '未填寫端點網址');
+  }
 
   if (
     status === 503 ||
@@ -20,7 +38,7 @@ export function formatAiErrorMessage(rawMessage: string, status?: number): strin
     lower.includes('overloaded') ||
     lower.includes('temporarily unavailable')
   ) {
-    return '模型目前擁堵';
+    return translate('settings.aiErrorOverloaded', '模型目前擁堵');
   }
 
   if (
@@ -30,7 +48,7 @@ export function formatAiErrorMessage(rawMessage: string, status?: number): strin
     lower.includes('resource has been exhausted') ||
     lower.includes('too many requests')
   ) {
-    return '已達 API 配額或頻率上限';
+    return translate('settings.aiErrorRateLimit', '已達 API 配額或頻率上限');
   }
 
   if (
@@ -44,15 +62,31 @@ export function formatAiErrorMessage(rawMessage: string, status?: number): strin
     lower.includes('authentication_error') ||
     lower.includes('missing_api_key')
   ) {
-    return 'API Key 無效或無權限';
+    return translate('settings.aiErrorInvalidApiKey', 'API Key 無效或無權限');
   }
 
   if (status === 404 || lower.includes('is not found') || lower.includes('model not found')) {
-    return '找不到模型或端點';
+    return translate('settings.aiErrorNotFound', '找不到模型或端點');
   }
 
   if (lower.includes('failed to fetch') || lower.includes('networkerror')) {
-    return '網路連線失敗';
+    return translate('settings.aiErrorNetwork', '網路連線失敗');
+  }
+
+  if (lower.includes('timeout') || lower.includes('timed out') || lower.includes('連線超時')) {
+    return translate('settings.aiErrorTimeout', '連線超時');
+  }
+
+  if (lower.includes('empty_ai_response') || lower.includes('empty response')) {
+    return translate('settings.aiErrorEmptyResponse', 'AI 回應為空');
+  }
+
+  if (lower.includes('parse_nutrition_failed') || lower.includes('營養標籤 json')) {
+    return translate('settings.aiErrorParseNutritionFailed', 'AI 回傳格式無法解析為營養標籤 JSON');
+  }
+
+  if (lower.includes('parse_meal_failed') || lower.includes('餐點估算 json')) {
+    return translate('settings.aiErrorParseMealFailed', 'AI 回傳格式無法解析為餐點估算 JSON');
   }
 
   return rawMessage;
@@ -75,6 +109,9 @@ export function cleanJsonResponse(rawText: string): string {
 function buildGeminiUrl(baseUrl: string, path: string, apiKey: string): string {
   const trimmed = baseUrl.replace(/\/+$/, '');
   const prefix = trimmed.endsWith('/v1beta') || trimmed.endsWith('/v1') ? trimmed : `${trimmed}/v1beta`;
+  if (!apiKey) {
+    return `${prefix}${path}`;
+  }
   const sep = path.includes('?') ? '&' : '?';
   return `${prefix}${path}${sep}key=${encodeURIComponent(apiKey)}`;
 }
@@ -179,7 +216,8 @@ async function callOpenAiProtocol({
   mimeType?: string;
   signal?: AbortSignal;
 }): Promise<string> {
-  const url = `${baseUrl.replace(/\/+$/, '')}/chat/completions`;
+  const cleanBase = baseUrl.replace(/\/+$/, '');
+  const url = `${cleanBase}/chat/completions`;
 
   const messages: Array<{ role: string; content: unknown }> = [];
   if (systemInstruction) {
@@ -201,12 +239,16 @@ async function callOpenAiProtocol({
     messages.push({ role: 'user', content: prompt });
   }
 
-  const res = await fetch(url, {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (apiKey) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+
+  let res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
+    headers,
     body: JSON.stringify({
       model,
       messages,
@@ -215,6 +257,40 @@ async function callOpenAiProtocol({
     }),
     signal,
   });
+
+  if (!res.ok && res.status === 404 && !cleanBase.endsWith('/v1')) {
+    const fallbackUrl = `${cleanBase}/v1/chat/completions`;
+    const fallbackRes = await fetch(fallbackUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model,
+        messages,
+        response_format: { type: 'json_object' },
+        temperature: 0.2,
+      }),
+      signal,
+    }).catch(() => null);
+    if (fallbackRes && fallbackRes.ok) {
+      res = fallbackRes;
+    }
+  }
+
+  if (!res.ok && res.status === 400) {
+    const fallbackRes = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: 0.2,
+      }),
+      signal,
+    }).catch(() => null);
+    if (fallbackRes && fallbackRes.ok) {
+      res = fallbackRes;
+    }
+  }
 
   if (!res.ok) {
     throw new Error(await parseErrorResponse(res, 'OpenAI API'));
@@ -274,14 +350,18 @@ async function callAnthropicProtocol({
     payload.system = systemInstruction;
   }
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'anthropic-version': '2023-06-01',
+    'anthropic-dangerous-direct-browser-access': 'true',
+  };
+  if (apiKey) {
+    headers['x-api-key'] = apiKey;
+  }
+
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
+    headers,
     body: JSON.stringify(payload),
     signal,
   });
@@ -309,9 +389,12 @@ async function callAiGateway(params: {
   settings: AISettings;
   signal?: AbortSignal;
 }): Promise<string> {
-  const { protocol, baseUrl, apiKey, model } = resolveActiveEndpoint(params.settings);
-  if (!apiKey) {
+  const { protocol, baseUrl, apiKey, model, isCustom } = resolveActiveEndpoint(params.settings);
+  if (!isCustom && !apiKey) {
     throw new Error(formatAiErrorMessage('MISSING_API_KEY'));
+  }
+  if (isCustom && !baseUrl) {
+    throw new Error(formatAiErrorMessage('MISSING_ENDPOINT'));
   }
 
   const callArgs = {
@@ -360,7 +443,8 @@ const DEFAULT_TEST_TIMEOUT_MS = 15_000;
 /** 測試 AI 設定連通性（預設 15 秒超時自動中止） */
 export async function testAIConnection(
   settings: AISettings,
-  timeoutMs: number = DEFAULT_TEST_TIMEOUT_MS
+  timeoutMs: number = DEFAULT_TEST_TIMEOUT_MS,
+  lang?: string
 ): Promise<{ success: boolean; message: string }> {
   const controller = new AbortController();
   let timedOut = false;
@@ -369,27 +453,49 @@ export async function testAIConnection(
     controller.abort();
   }, timeoutMs);
 
+  const locale = resolveSupportedLocale(lang || i18n.language);
+  const prompt =
+    locale === 'en'
+      ? 'Please reply with raw JSON: {"status":"ok","message":"connection successful"}'
+      : locale === 'zh-CN'
+        ? '请回复纯 JSON：{"status":"ok","message":"connection successful"}'
+        : '請回覆純 JSON：{"status":"ok","message":"connection successful"}';
+
   try {
-    const prompt = '請回覆純 JSON：{"status":"ok","message":"connection successful"}';
     const raw = await callAiGateway({
       prompt,
       settings,
       signal: controller.signal,
     });
-    const parsed = JSON.parse(cleanJsonResponse(raw));
-    if (parsed.status === 'ok' || parsed.message) {
-      return { success: true, message: '連線成功！' };
+    try {
+      const parsed = JSON.parse(cleanJsonResponse(raw));
+      if (parsed.status === 'ok' || parsed.message) {
+        return {
+          success: true,
+          message: i18n.t('settings.aiTestSuccess', { defaultValue: '連線成功', lng: locale }),
+        };
+      }
+    } catch {
+      if (raw.trim()) {
+        return {
+          success: true,
+          message: i18n.t('settings.aiTestSuccess', { defaultValue: '連線成功', lng: locale }),
+        };
+      }
     }
-    return { success: true, message: '連線成功。' };
+    return {
+      success: true,
+      message: i18n.t('settings.aiTestSuccess', { defaultValue: '連線成功', lng: locale }),
+    };
   } catch (err: unknown) {
     if (timedOut || (err instanceof DOMException && err.name === 'AbortError')) {
       return {
         success: false,
-        message: '連線超時',
+        message: formatAiErrorMessage('TIMEOUT', undefined, undefined, locale),
       };
     }
     const msg = err instanceof Error ? err.message : String(err);
-    return { success: false, message: formatAiErrorMessage(msg) };
+    return { success: false, message: formatAiErrorMessage(msg, undefined, undefined, locale) };
   } finally {
     clearTimeout(timer);
   }
@@ -400,19 +506,38 @@ export async function parseNutritionLabel(
   imageBase64: string | undefined,
   settings: AISettings,
   userNotes?: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  lang?: string
 ): Promise<NutritionLabelParseResult> {
-  let prompt = imageBase64
-    ? '請辨識圖片中的營養標籤或營養成分表。請按照指定 JSON 格式輸出熱量、碳水、蛋白質、脂肪、糖、膳食纖維、基準份量與品名。'
-    : '請根據使用者提供的食品名稱或營養成分描述，解析並推算其標準營養標籤數據。請按照指定 JSON 格式輸出。';
+  const locale = resolveSupportedLocale(lang || i18n.language);
 
-  if (userNotes && userNotes.trim()) {
-    prompt += `\n使用者提供之說明或標籤文字：${userNotes.trim()}`;
+  let prompt: string;
+  if (locale === 'en') {
+    prompt = imageBase64
+      ? 'Please identify the nutrition facts label in the image. Output calories, carbs, protein, fat, sugar, dietary fiber, serving size, and product name in the specified JSON format in English.'
+      : 'Please analyze and estimate standard nutrition label facts based on the food name or description provided by the user. Output in the specified JSON format in English.';
+    if (userNotes && userNotes.trim()) {
+      prompt += `\nUser provided notes or label text: ${userNotes.trim()}`;
+    }
+  } else if (locale === 'zh-CN') {
+    prompt = imageBase64
+      ? '请识别图片中的营养标签或营养成分表。请按照指定 JSON 格式以简体中文输出热量、碳水、蛋白质、脂肪、糖、膳食纤维、基准份量与品名。'
+      : '请根据用户提供的食品名称或营养成分描述，解析并推算其标准营养标签数据。请按照指定 JSON 格式以简体中文输出。';
+    if (userNotes && userNotes.trim()) {
+      prompt += `\n用户提供之说明或标签文字：${userNotes.trim()}`;
+    }
+  } else {
+    prompt = imageBase64
+      ? '請辨識圖片中的營養標籤或營養成分表。請按照指定 JSON 格式以繁體中文輸出熱量、碳水、蛋白質、脂肪、糖、膳食纖維、基準份量與品名。'
+      : '請根據使用者提供的食品名稱或營養成分描述，解析並推算其標準營養標籤數據。請按照指定 JSON 格式以繁體中文輸出。';
+    if (userNotes && userNotes.trim()) {
+      prompt += `\n使用者提供之說明或標籤文字：${userNotes.trim()}`;
+    }
   }
 
   const raw = await callAiGateway({
     prompt,
-    systemInstruction: NUTRITION_LABEL_SYSTEM_PROMPT,
+    systemInstruction: getNutritionLabelSystemPrompt(locale),
     imageBase64,
     settings,
     signal,
@@ -422,7 +547,7 @@ export async function parseNutritionLabel(
     const parsed = JSON.parse(cleanJsonResponse(raw));
     return parsed as NutritionLabelParseResult;
   } catch {
-    throw new Error('AI 返回之格式無法正確解析為營養標籤 JSON。');
+    throw new Error(formatAiErrorMessage('PARSE_NUTRITION_FAILED'));
   }
 }
 
@@ -431,19 +556,38 @@ export async function estimateMeal(
   imageBase64: string | undefined,
   userNotes: string | undefined,
   settings: AISettings,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  lang?: string
 ): Promise<MealEstimateResult> {
-  let prompt = imageBase64
-    ? '請解構盤中餐點，客觀推算各組件份量克數與熱量、碳水、蛋白質、脂肪數值，並輸出結構化 JSON。'
-    : '請根據使用者描述的餐點內容，客觀推算各組件份量克數與熱量、碳水、蛋白質、脂肪數值，並輸出結構化 JSON。';
+  const locale = resolveSupportedLocale(lang || i18n.language);
 
-  if (userNotes && userNotes.trim()) {
-    prompt += `\n使用者提供之餐點說明：${userNotes.trim()}`;
+  let prompt: string;
+  if (locale === 'en') {
+    prompt = imageBase64
+      ? 'Please deconstruct the meal in the image, objectively estimate component weight in grams, calories, carbs, protein, and fat, and output structured JSON in English.'
+      : 'Please deconstruct the meal based on the user description, objectively estimate component weight in grams, calories, carbs, protein, and fat, and output structured JSON in English.';
+    if (userNotes && userNotes.trim()) {
+      prompt += `\nUser provided meal description: ${userNotes.trim()}`;
+    }
+  } else if (locale === 'zh-CN') {
+    prompt = imageBase64
+      ? '请解构盘中餐点，客观推算各组件份量克数与热量、碳水、蛋白质、脂肪数值，并以简体中文输出结构化 JSON。'
+      : '请根据用户描述的餐点内容，客观推算各组件份量克数与热量、碳水、蛋白质、脂肪数值，并以简体中文输出结构化 JSON。';
+    if (userNotes && userNotes.trim()) {
+      prompt += `\n用户提供之餐点说明：${userNotes.trim()}`;
+    }
+  } else {
+    prompt = imageBase64
+      ? '請解構盤中餐點，客觀推算各組件份量克數與熱量、碳水、蛋白質、脂肪數值，並以繁體中文輸出結構化 JSON。'
+      : '請根據使用者描述的餐點內容，客觀推算各組件份量克數與熱量、碳水、蛋白質、脂肪數值，並以繁體中文輸出結構化 JSON。';
+    if (userNotes && userNotes.trim()) {
+      prompt += `\n使用者提供之說明或餐點說明：${userNotes.trim()}`;
+    }
   }
 
   const raw = await callAiGateway({
     prompt,
-    systemInstruction: MEAL_ESTIMATE_SYSTEM_PROMPT,
+    systemInstruction: getMealEstimateSystemPrompt(locale),
     imageBase64,
     settings,
     signal,
@@ -453,7 +597,7 @@ export async function estimateMeal(
     const parsed = JSON.parse(cleanJsonResponse(raw));
     return parsed as MealEstimateResult;
   } catch {
-    throw new Error('AI 返回之格式無法正確解析為餐點估算 JSON。');
+    throw new Error(formatAiErrorMessage('PARSE_MEAL_FAILED'));
   }
 }
 
@@ -469,9 +613,12 @@ export interface AIModelOption {
  * - Anthropic 協議: 呼叫 /models (含 CORS header)
  */
 export async function fetchAvailableModels(settings: AISettings): Promise<AIModelOption[]> {
-  const { protocol, baseUrl, apiKey } = resolveActiveEndpoint(settings);
-  if (!apiKey) {
+  const { protocol, baseUrl, apiKey, isCustom } = resolveActiveEndpoint(settings);
+  if (!isCustom && !apiKey) {
     throw new Error(formatAiErrorMessage('MISSING_API_KEY'));
+  }
+  if (isCustom && !baseUrl) {
+    throw new Error(formatAiErrorMessage('MISSING_ENDPOINT'));
   }
 
   if (protocol === 'gemini') {
@@ -484,17 +631,28 @@ export async function fetchAvailableModels(settings: AISettings): Promise<AIMode
     const data = (await res.json()) as {
       models?: Array<{
         name?: string;
+        id?: string;
+        displayName?: string;
+        supportedGenerationMethods?: string[];
+      }>;
+      data?: Array<{
+        name?: string;
+        id?: string;
         displayName?: string;
         supportedGenerationMethods?: string[];
       }>;
     };
 
-    const models = (data.models || [])
+    const rawList = Array.isArray(data) ? data : (data.models || data.data || []);
+
+    const models = rawList
       .filter((m) => {
-        if (!m.name) return false;
-        const methods = m.supportedGenerationMethods || [];
-        if (!methods.includes('generateContent')) return false;
-        const lower = m.name.toLowerCase();
+        const id = m.id || m.name;
+        if (!id) return false;
+        if (Array.isArray(m.supportedGenerationMethods)) {
+          if (!m.supportedGenerationMethods.includes('generateContent')) return false;
+        }
+        const lower = String(id).toLowerCase();
         if (
           lower.includes('embedding') ||
           lower.includes('aqa') ||
@@ -506,55 +664,91 @@ export async function fetchAvailableModels(settings: AISettings): Promise<AIMode
         }
         return true;
       })
-      .map((m) => ({
-        id: (m.name || '').replace(/^models\//, ''),
-        displayName: m.displayName || (m.name || '').replace(/^models\//, ''),
-      }));
+      .map((m) => {
+        const rawId = String(m.id || m.name || '').replace(/^models\//, '');
+        return {
+          id: rawId,
+          displayName: m.displayName || rawId,
+        };
+      });
 
     return models.sort((a, b) => b.id.localeCompare(a.id));
   }
 
   if (protocol === 'anthropic') {
     const url = `${baseUrl.replace(/\/+$/, '')}/models`;
-    const res = await fetch(url, {
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-    });
+    const headers: Record<string, string> = {
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    };
+    if (apiKey) {
+      headers['x-api-key'] = apiKey;
+    }
+    const res = await fetch(url, { headers });
     if (!res.ok) {
       throw new Error(await parseErrorResponse(res, 'Anthropic API'));
     }
 
-    const data = (await res.json()) as {
-      data?: Array<{ id?: string; display_name?: string }>;
-    };
+    const data = (await res.json()) as Record<string, unknown>;
+    const rawList: Array<Record<string, unknown>> = Array.isArray(data)
+      ? data
+      : Array.isArray(data.data)
+        ? data.data
+        : Array.isArray(data.models)
+          ? data.models
+          : [];
 
-    return (data.data || [])
-      .filter((m) => Boolean(m.id))
-      .map((m) => ({ id: m.id as string, displayName: m.display_name || m.id }))
+    return rawList
+      .filter((m) => Boolean(m.id || m.name))
+      .map((m) => {
+        const id = String(m.id || m.name);
+        const displayName = (m.display_name as string) || (m.displayName as string) || id;
+        return { id, displayName };
+      })
       .sort((a, b) => b.id.localeCompare(a.id));
   }
 
   // OpenAI Compatible
-  const url = `${baseUrl.replace(/\/+$/, '')}/models`;
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-  });
+  const cleanBase = baseUrl.replace(/\/+$/, '');
+  const url = `${cleanBase}/models`;
+  const headers: Record<string, string> = {};
+  if (apiKey) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+
+  let res = await fetch(url, { headers });
+
+  if (!res.ok && res.status === 404 && !cleanBase.endsWith('/v1')) {
+    const fallbackUrl = `${cleanBase}/v1/models`;
+    try {
+      const fallbackRes = await fetch(fallbackUrl, { headers });
+      if (fallbackRes.ok) {
+        res = fallbackRes;
+      }
+    } catch {
+      // 保持原始 res
+    }
+  }
 
   if (!res.ok) {
     throw new Error(await parseErrorResponse(res, 'OpenAI API'));
   }
 
-  const data = (await res.json()) as {
-    data?: Array<{ id?: string }>;
-  };
+  const json = (await res.json()) as Record<string, unknown>;
+  const rawList: Array<Record<string, unknown>> = Array.isArray(json)
+    ? json
+    : Array.isArray(json.data)
+      ? json.data
+      : Array.isArray(json.models)
+        ? json.models
+        : [];
 
-  return (data.data || [])
-    .filter((m) => Boolean(m.id))
-    .map((m) => ({ id: m.id as string }))
+  return rawList
+    .filter((m) => Boolean(m.id || m.name))
+    .map((m) => {
+      const id = String(m.id || m.name);
+      const displayName = (m.display_name as string) || (m.displayName as string) || id;
+      return { id, displayName };
+    })
     .sort((a, b) => a.id.localeCompare(b.id));
 }
