@@ -9,6 +9,8 @@ import {
   ShieldCheck,
   Scale,
   Sparkles,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -194,29 +196,31 @@ function runDatabaseAudit(foods: Omit<FoodItem, 'createdAt' | 'updatedAt'>[]): A
       });
     }
 
-    // 4. 帶皮帶核帶骨損耗剛性約束
-    const name = item.name.toLowerCase();
-    const isHighRefuseFruit =
-      name.includes('香蕉') ||
-      name.includes('西瓜') ||
-      name.includes('火龍果') ||
-      name.includes('柚') ||
-      name.includes('鳳梨') ||
-      name.includes('酪梨') ||
-      name.includes('奇異果') ||
-      name.includes('芒果') ||
-      name.includes('百香果') ||
-      name.includes('甜瓜') ||
-      name.includes('哈密瓜');
+    // 4. 帶皮帶核帶骨損耗剛性約束（僅審計天然原型食材，排除油脂與加工品）
+    if (item.category === 'natural') {
+      const name = item.name.toLowerCase();
+      const isHighRefuseFruit =
+        name.includes('香蕉') ||
+        name.includes('西瓜') ||
+        name.includes('火龍果') ||
+        name.includes('柚') ||
+        name.includes('鳳梨') ||
+        name.includes('酪梨') ||
+        name.includes('奇異果') ||
+        name.includes('芒果') ||
+        name.includes('百香果') ||
+        name.includes('甜瓜') ||
+        name.includes('哈密瓜');
 
-    if (isHighRefuseFruit && (!item.refuseRate || item.refuseRate <= 0)) {
-      issues.push({
-        foodId: item.id,
-        foodName: item.name,
-        level: 'warn',
-        rule: 'REFUSE_RATE_INTEGRITY',
-        message: `帶皮/核水果 (${item.name}) 未標註物理損耗率 refuseRate`,
-      });
+      if (isHighRefuseFruit && (!item.refuseRate || item.refuseRate <= 0)) {
+        issues.push({
+          foodId: item.id,
+          foodName: item.name,
+          level: 'warn',
+          rule: 'REFUSE_RATE_INTEGRITY',
+          message: `帶皮/核水果 (${item.name}) 未標註物理損耗率 refuseRate`,
+        });
+      }
     }
 
     // 5. 原型食材加工污染審計
@@ -262,7 +266,7 @@ export function DatabaseTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedAuthority, setSelectedAuthority] = useState<string>('all');
-  const [filterRefuseOnly, setFilterRefuseOnly] = useState(false);
+  const [refuseFilter, setRefuseFilter] = useState<'all' | 'has-refuse' | 'no-refuse'>('all');
   const [filterMicrosOnly, setFilterMicrosOnly] = useState(false);
   const [filterHighProtein, setFilterHighProtein] = useState(false);
   const [sortBy, setSortBy] = useState<
@@ -280,6 +284,43 @@ export function DatabaseTab() {
   // 審計報告狀態
   const [auditReport, setAuditReport] = useState<AuditReport | null>(null);
   const [showAuditModal, setShowAuditModal] = useState(false);
+  const [isReportCopied, setIsReportCopied] = useState(false);
+
+  // 複製審計報告為 Markdown 格式
+  const handleCopyReportMarkdown = () => {
+    if (!auditReport) return;
+    const lines = [
+      '# e2Cal 預設庫 CI 級別規則審計報告',
+      `- 審計時間: ${auditReport.timestamp}`,
+      `- 檢測條目: ${auditReport.totalChecked} 筆`,
+      `- 合規通過: ${auditReport.passedCount} 筆 (${Math.round((auditReport.passedCount / auditReport.totalChecked) * 100)}%)`,
+      `- 合理偏差警示: ${auditReport.warningCount} 筆`,
+      `- 違規攔截: ${auditReport.failCount} 筆`,
+      '',
+      '## 審計項目清單',
+    ];
+
+    if (auditReport.issues.length === 0) {
+      lines.push('🎉 全庫 434 筆食材完全符合 SOP 權威規範、Atwater 熱力學平衡與損耗率要求，無任何違規！');
+    } else {
+      auditReport.issues.forEach((issue, idx) => {
+        const tag = issue.level === 'fail' ? '🔴 [FAIL]' : '🟡 [WARN]';
+        lines.push(`${idx + 1}. ${tag} **[${issue.foodName}]** ${issue.message} (\`${issue.rule}\`)`);
+      });
+    }
+
+    navigator.clipboard.writeText(lines.join('\n'));
+    setIsReportCopied(true);
+    toast.show('已複製 Markdown 審計報告');
+    setTimeout(() => setIsReportCopied(false), 2000);
+  };
+
+  // 複製審計報告為 JSON 格式
+  const handleCopyReportJson = () => {
+    if (!auditReport) return;
+    navigator.clipboard.writeText(JSON.stringify(auditReport, null, 2));
+    toast.show('已複製 JSON 審計報告');
+  };
 
   // 查詢本地 IndexedDB 狀態
   const refreshDbStatus = async () => {
@@ -423,8 +464,11 @@ export function DatabaseTab() {
           return false;
         }
 
-        // 3. 損耗率篩選
-        if (filterRefuseOnly && (!food.refuseRate || food.refuseRate <= 0)) {
+        // 3. 損耗率篩選 ('has-refuse' | 'no-refuse')
+        if (refuseFilter === 'has-refuse' && (!food.refuseRate || food.refuseRate <= 0)) {
+          return false;
+        }
+        if (refuseFilter === 'no-refuse' && food.refuseRate && food.refuseRate > 0) {
           return false;
         }
 
@@ -468,7 +512,7 @@ export function DatabaseTab() {
     searchQuery,
     selectedCategory,
     selectedAuthority,
-    filterRefuseOnly,
+    refuseFilter,
     filterMicrosOnly,
     filterHighProtein,
     sortBy,
@@ -571,7 +615,7 @@ export function DatabaseTab() {
               </span>
             </div>
             <div className="text-[10px] text-muted-foreground truncate">
-              骨/皮/核/殼損耗率雙向換算
+              有損耗 {stats.refuseCount} · 無損耗 {stats.total - stats.refuseCount} (全可食)
             </div>
           </div>
 
@@ -685,15 +729,34 @@ export function DatabaseTab() {
           {/* 特性 Toggle */}
           <button
             type="button"
-            onClick={() => setFilterRefuseOnly((v) => !v)}
+            onClick={() => {
+              setRefuseFilter((v) => (v === 'has-refuse' ? 'all' : 'has-refuse'));
+              setVisibleCount(BATCH_SIZE);
+            }}
             className={`h-6 px-2 rounded text-2xs flex items-center gap-1 transition-colors ${
-              filterRefuseOnly
+              refuseFilter === 'has-refuse'
                 ? 'bg-amber-500/20 text-amber-500 border border-amber-500/40 font-medium'
                 : 'bg-muted/60 text-muted-foreground hover:text-foreground'
             }`}
           >
             <Scale className="w-3 h-3" />
             有損耗率
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setRefuseFilter((v) => (v === 'no-refuse' ? 'all' : 'no-refuse'));
+              setVisibleCount(BATCH_SIZE);
+            }}
+            className={`h-6 px-2 rounded text-2xs flex items-center gap-1 transition-colors ${
+              refuseFilter === 'no-refuse'
+                ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 font-medium'
+                : 'bg-muted/60 text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Scale className="w-3 h-3" />
+            無損耗率
           </button>
 
           <button
@@ -1174,13 +1237,35 @@ export function DatabaseTab() {
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
                 <h3 className="font-semibold text-sm text-foreground">預設庫 CI 級別規則審計報告</h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowAuditModal(false)}
-                className="text-muted-foreground hover:text-foreground text-xs font-mono"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCopyReportMarkdown}
+                  className="h-7 text-xs font-mono"
+                  title="複製 Markdown 格式報告"
+                >
+                  {isReportCopied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 mr-1 text-emerald-500" />
+                      已複製
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 mr-1" />
+                      複製報告
+                    </>
+                  )}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setShowAuditModal(false)}
+                  className="text-muted-foreground hover:text-foreground text-xs font-mono p-1 rounded hover:bg-muted"
+                  aria-label="關閉"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -1199,8 +1284,11 @@ export function DatabaseTab() {
             </div>
 
             <div className="space-y-2">
-              <div className="text-2xs text-muted-foreground uppercase">審計項目清單</div>
-              <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+              <div className="flex items-center justify-between text-2xs text-muted-foreground uppercase">
+                <span>審計項目清單</span>
+                <span>點擊單項可獨立複製</span>
+              </div>
+              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                 {auditReport.issues.length === 0 ? (
                   <div className="p-3 rounded border border-border bg-muted/30 text-center text-muted-foreground text-2xs">
                     🎉 全庫 434 筆食材完全符合 SOP 權威規範、Atwater 熱力學平衡與損耗率要求，無任何違規！
@@ -1209,25 +1297,60 @@ export function DatabaseTab() {
                   auditReport.issues.map((issue, idx) => (
                     <div
                       key={idx}
-                      className={`p-2 rounded border text-2xs flex items-start justify-between gap-2 ${
+                      className={`p-2 rounded border text-2xs flex items-start justify-between gap-2 transition-colors ${
                         issue.level === 'fail'
                           ? 'border-destructive/30 bg-destructive/10 text-destructive'
                           : 'border-amber-500/30 bg-amber-500/10 text-amber-500'
                       }`}
                     >
-                      <div>
-                        <strong className="font-semibold">[{issue.foodName}]</strong> {issue.message}
+                      <div className="flex-1 min-w-0 pr-1">
+                        <div>
+                          <strong className="font-semibold">[{issue.foodName}]</strong> {issue.message}
+                        </div>
                       </div>
-                      <Badge variant="outline" className="text-3xs shrink-0 py-0 h-4 border-current">
-                        {issue.rule}
-                      </Badge>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <CopySnippet
+                          value={`[${issue.level.toUpperCase()}] [${issue.foodName}] ${issue.message} (${issue.rule})`}
+                          variant="badge"
+                          toastMessage="已複製該項問題"
+                        >
+                          複製
+                        </CopySnippet>
+                        <Badge variant="outline" className="text-3xs shrink-0 py-0 h-4 border-current">
+                          {issue.rule}
+                        </Badge>
+                      </div>
                     </div>
                   ))
                 )}
               </div>
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-border">
+            <div className="flex items-center justify-between pt-3 border-t border-border">
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCopyReportMarkdown}
+                  className="h-7 text-xs font-mono"
+                >
+                  {isReportCopied ? (
+                    <Check className="w-3.5 h-3.5 mr-1 text-emerald-500" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 mr-1" />
+                  )}
+                  複製 Markdown 報告
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleCopyReportJson}
+                  className="h-7 text-xs font-mono text-muted-foreground hover:text-foreground"
+                >
+                  複製 JSON
+                </Button>
+              </div>
+
               <Button
                 size="sm"
                 variant="outline"
