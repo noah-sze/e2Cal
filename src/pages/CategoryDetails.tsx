@@ -22,7 +22,9 @@ import { getLocalizedFoodName } from '@/utils/defaultLocalization';
 import { useAppStore } from '@/store/useAppStore';
 import { calculateScaledNutrition } from '@/utils/nutritionMath';
 import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
+import { AuthorityFoodDetailsDialog } from '@/components/food/AuthorityFoodDetailsDialog';
 import { FoodFormDialog, type FoodFormData } from '@/components/food/FoodFormDialog';
+import { DEFAULT_NATURAL_FOODS } from '@/services/db/defaultNaturalFoods';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { formatEnergy, formatFoodServing } from '@/utils/unitMath';
 import type { NutritionTag, FoodLog } from '@/types';
@@ -98,6 +100,28 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
 
 
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isSourceDetailsOpen, setIsSourceDetailsOpen] = useState(false);
+
+  const defaultNaturalItem = useMemo(() => {
+    if (!food || (food.dataSource && food.micros)) return null;
+    return DEFAULT_NATURAL_FOODS.find((f) => f.id === food.id) || null;
+  }, [food]);
+
+  const effectiveFood = useMemo(() => {
+    if (!food) return null;
+    if (!defaultNaturalItem) return food;
+    return {
+      ...defaultNaturalItem,
+      ...food,
+      dataSource: food.dataSource || defaultNaturalItem.dataSource,
+      micros: food.micros || defaultNaturalItem.micros,
+      refuseRate: food.refuseRate ?? defaultNaturalItem.refuseRate,
+      edibleRate: food.edibleRate ?? defaultNaturalItem.edibleRate,
+      refuseDescription: food.refuseDescription ?? defaultNaturalItem.refuseDescription,
+    };
+  }, [food, defaultNaturalItem]);
+
+  const effectiveDataSource = effectiveFood?.dataSource;
 
   const [headerActionEl, setHeaderActionEl] = useState<HTMLElement | null>(() =>
     typeof document !== 'undefined' ? document.getElementById('subpage-header-action') : null
@@ -329,6 +353,25 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
                 <span className="text-muted-foreground text-[11px]">{food.brand}</span>
               </>
             )}
+            {effectiveDataSource && (
+              <>
+                <span className="text-border select-none">·</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setIsSourceDetailsOpen(true);
+                  }}
+                  className="px-1.5 py-0.5 rounded border border-border/80 bg-background/80 hover:bg-hover hover:border-foreground/30 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-all cursor-pointer select-none inline-flex items-center gap-1 active:scale-95"
+                  title={t('diet.viewAuthorityDetails')}
+                  aria-label={t('diet.viewAuthorityDetails')}
+                >
+                  <span>
+                    {effectiveDataSource.authority} {effectiveDataSource.sourceId}
+                  </span>
+                </button>
+              </>
+            )}
           </div>
           <div>
             {food.isArchived ? (
@@ -487,6 +530,15 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
         initialData={food}
         onSubmit={handleEditSubmit}
       />
+
+      {/* 權威食材元素數據詳細 Dialog */}
+      {effectiveFood && (
+        <AuthorityFoodDetailsDialog
+          food={effectiveFood}
+          open={isSourceDetailsOpen}
+          onOpenChange={setIsSourceDetailsOpen}
+        />
+      )}
     </div>
   );
 }

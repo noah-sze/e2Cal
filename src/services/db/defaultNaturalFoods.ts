@@ -8955,6 +8955,7 @@ export const DEFAULT_NATURAL_FOODS: Omit<FoodItem, 'createdAt' | 'updatedAt'>[] 
       sourceName: 'Squash, Indian, cooked, boiled (Navajo)',
       verifiedAt: '2026-11-23',
     },
+    micros: { potassium: 261.0, calcium: 16.0, magnesium: 18.0, iron: 0.37, zinc: 0.32, vitaminC: 17.9, cholesterol: 0.0 },
     isCustom: false,
     isArchived: false,
   },

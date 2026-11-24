@@ -86,4 +86,24 @@ describe('DEFAULT_NATURAL_FOODS 精密客觀測量儀審計', () => {
       expect(Number.isNaN(food.sodium)).toBe(false);
     }
   });
+
+  it('所有天然食材必須包含權威資料庫溯源憑證 (dataSource) 與微量元素儲備 (micros)', () => {
+    const validAuthorities = ['USDA', 'CFCT', 'TFDA', 'MEXT'];
+    for (const food of DEFAULT_NATURAL_FOODS) {
+      expect(food.dataSource).toBeDefined();
+      expect(validAuthorities).toContain(food.dataSource!.authority);
+      expect(typeof food.dataSource!.sourceId).toBe('string');
+      expect(food.dataSource!.sourceId.length).toBeGreaterThan(0);
+
+      // 微量元素儲備
+      expect(food.micros).toBeDefined();
+      if (food.micros) {
+        for (const [key, val] of Object.entries(food.micros)) {
+          expect(typeof val).toBe('number');
+          expect(Number.isNaN(val)).toBe(false);
+          expect(val).toBeGreaterThanOrEqual(0);
+        }
+      }
+    }
+  });
 });
