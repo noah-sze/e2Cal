@@ -4,12 +4,15 @@ trigger: always_on
 
 # 權威科研食材資料庫更新與對齊標準作業程序 (Authority Food Database SOP)
 
-## 1. 適用範圍與梯隊順位
-本 SOP 適用於四大官方科研機構資料庫之增補、季度更新、年度改訂或微量營養素修訂：
-- **P1 USDA**：FoodData Central（優先取 SR Legacy / Foundation Foods）
-- **P2 CFCT**：中國疾病預防控制中心《中國食物成分表》（第 6 版）
-- **P3 TFDA**：台灣衛福部食藥署《食品營養成分資料庫》
-- **P4 MEXT**：日本文部科學省《日本食品標準成分表》（八訂）
+## 1. 適用範圍與動態梯隊順位 (Dynamic Authority Hierarchy)
+本 SOP 適用於四大官方科研機構資料庫之增補、季度更新、年度改訂或微量營養素修訂。**嚴禁盲目優先使用單一西方機構資料庫**，應按食材的地域性原生特性動態定序：
+- **東亞特色飲食與部位食材 (Asian Native & Cut-specific Foods)**：
+  - **P1 TFDA / CFCT**：台灣食藥署與中國疾控中心（禽爪翅、帶骨小排、內臟副產物、中式蔬菜、傳統豆製品，具備第一手精準骨重與外殼損耗率）。
+  - **P2 MEXT**：日本文部科學省（生鮮水產魚貝、海藻、日式大豆發酵物）。
+  - **P3 USDA**：美國農業部（僅當亞洲庫無測定記錄時作為補充）。
+- **西方大宗與通用農產食材 (Western Staple & Universal Commodities)**：
+  - **P1 USDA**：乳製品、原切牛羊、穀物燕麥片、西方堅果。
+  - **P2 MEXT / TFDA / CFCT**：亞洲官方測定之進口或在地化對應項。
 
 ---
 
@@ -23,7 +26,10 @@ trigger: always_on
 3. **不可食用損耗形態解耦 (Refuse Decoupling)**：
    - 不可食殘渣（骨、殼、果核）一律由 `refuseRate` 承載，折算率為 `edibleRate = 1.0 - refuseRate`。
    - **嚴禁在食物品名中添加「（帶骨）」、「(含芯)」、「(帶皮)」等括號或後綴**。
-4. **四層營養素分類與 UI 分離原則**：
+4. **解剖學物理損耗與防降級鐵律 (Anatomical & Semantic Invariants)**：
+   - **帶骨/帶殼損耗剛性約束**：凡品名包含「翅、排骨、小排、爪、掌、蛤、貝、螺、帶殼」等明確骨骼或外殼部位者（且未標註去骨/純肉），其 `refuseRate` 絕對不可為 0 或 undefined。
+   - **中英解剖部位語意對齊**：部位食材（如翅 = wing、排 = rib、爪 = foot）溯源品名嚴禁出現全身肉（如 "meat and skin"）泛稱降級混充；亞洲庫有原樣化驗者強制使用亞洲庫。
+5. **四層營養素分類與 UI 分離原則**：
    - 核心宏量：`calories`, `carbs`, `protein`, `fat`。
    - 次級宏量：`sugar`, `fiber`（正常參與計算與支援視圖呈現）；`saturatedFat`, `transFat`（資料層 100% 留存，UI 依 Rule 35 隱藏）。
    - 電解質：`sodium`（資料層 100% 留存，UI 依 Rule 35 隱藏）。
