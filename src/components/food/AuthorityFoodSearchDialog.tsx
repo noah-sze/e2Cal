@@ -35,7 +35,7 @@ export interface AuthorityFoodSearchDialogProps {
   className?: string;
 }
 
-type AuthorityFilter = 'all' | 'USDA' | 'TFDA' | 'CFCT';
+type AuthorityFilter = 'all' | 'USDA' | 'MEXT' | 'TFDA' | 'CFCT';
 
 const POPULAR_RECOMMENDATIONS = [
   '去皮雞胸肉',
@@ -221,8 +221,9 @@ export function AuthorityFoodSearchDialog({
           <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto no-scrollbar py-0.5">
             {(
               [
-                { id: 'all', label: t('diet.authoritySourceAll', '全部 (1.1 萬)') },
+                { id: 'all', label: t('diet.authoritySourceAll', '全部 (1.4 萬)') },
                 { id: 'USDA', label: 'USDA (7,793)' },
+                { id: 'MEXT', label: '日本 MEXT (2,478)' },
                 { id: 'TFDA', label: 'TFDA (2,213)' },
                 { id: 'CFCT', label: '中國 CDC (1,677)' },
               ] as const
@@ -254,7 +255,7 @@ export function AuthorityFoodSearchDialog({
             <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground">
               <Loader2 className="size-5 animate-spin text-primary" />
               <span className="text-xs font-mono">
-                {t('common.loading', '正在檢索 1.1 萬條權威科研數據...')}
+                {t('common.loading', '正在檢索 1.4 萬條權威科研數據...')}
               </span>
             </div>
           )}
@@ -314,7 +315,9 @@ export function AuthorityFoodSearchDialog({
             const authorityLabel =
               food.dataSource?.authority === 'CFCT'
                 ? '中國 CDC'
-                : food.dataSource?.authority || 'USDA';
+                : food.dataSource?.authority === 'MEXT'
+                  ? '日本 MEXT'
+                  : food.dataSource?.authority || 'USDA';
 
             return (
               <div

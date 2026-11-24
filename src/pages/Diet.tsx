@@ -481,7 +481,7 @@ export default function Diet() {
                 {selectedFoodForAdd.dataSource && (
                   <div className="flex items-center justify-between text-[11px] text-muted-foreground/80 px-0.5">
                     <span>
-                      數據來自：{selectedFoodForAdd.dataSource.authority === 'CFCT' ? '中國 CDC' : selectedFoodForAdd.dataSource.authority}
+                      數據來自：{selectedFoodForAdd.dataSource.authority === 'CFCT' ? '中國 CDC' : selectedFoodForAdd.dataSource.authority === 'MEXT' ? '日本 MEXT' : selectedFoodForAdd.dataSource.authority}
                       {selectedFoodForAdd.dataSource.sourceId ? ` (${selectedFoodForAdd.dataSource.sourceId})` : ''}
                     </span>
                     <span className="font-mono text-[10px]">

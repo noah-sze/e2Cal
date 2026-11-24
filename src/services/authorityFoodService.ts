@@ -25,7 +25,7 @@ let cachedAuthorityFoods: FoodItem[] | null = null;
 let loadingPromise: Promise<FoodItem[]> | null = null;
 
 /**
- * 按需非同步載入 11,683 筆權威科研食材庫 (Code-Splitting，首屏 0 佔用)
+ * 按需非同步載入 14,161 筆權威科研食材庫 (Code-Splitting，首屏 0 佔用)
  */
 export async function getAuthorityFoods(): Promise<FoodItem[]> {
   if (cachedAuthorityFoods) {
@@ -83,7 +83,7 @@ export async function getAuthorityFoods(): Promise<FoodItem[]> {
 export async function searchAuthorityFoods(
   query: string,
   limit = 40,
-  authorityFilter?: 'all' | 'USDA' | 'TFDA' | 'CFCT'
+  authorityFilter?: 'all' | 'USDA' | 'TFDA' | 'CFCT' | 'MEXT'
 ): Promise<FoodItem[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
