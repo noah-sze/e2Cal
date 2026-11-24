@@ -256,6 +256,114 @@ describe('multilingualSearch', () => {
       expect(matchesMultilingual('garbanzo', chickpeaTarget, 'food')).toBe(true);
     });
 
+    it('飲食民間俗稱與方言：A菜 / 鵝仔菜 -> 油麥菜 (youmai_vegetable)', () => {
+      const target = {
+        id: NATURAL_FOOD_IDS.youmai_vegetable,
+        name: '油麥菜',
+      };
+      expect(matchesMultilingual('A菜', target, 'food')).toBe(true);
+      expect(matchesMultilingual('a菜', target, 'food')).toBe(true);
+      expect(matchesMultilingual('鵝仔菜', target, 'food')).toBe(true);
+      expect(matchesMultilingual('大陸妹', target, 'food')).toBe(true);
+    });
+
+    it('飲食民間俗稱與方言：通菜 / 蕹菜 -> 空心菜 (water_spinach_raw)', () => {
+      const target = {
+        id: NATURAL_FOOD_IDS.water_spinach_raw,
+        name: '空心菜',
+      };
+      expect(matchesMultilingual('通菜', target, 'food')).toBe(true);
+      expect(matchesMultilingual('蕹菜', target, 'food')).toBe(true);
+      expect(matchesMultilingual('藤藤菜', target, 'food')).toBe(true);
+      expect(matchesMultilingual('water spinach', target, 'food')).toBe(true);
+    });
+
+    it('飲食民間俗稱與方言：晴王 / 香印青提 -> 陽光玫瑰葡萄 (shine_muscat_grape)', () => {
+      const target = {
+        id: NATURAL_FOOD_IDS.shine_muscat_grape,
+        name: '陽光玫瑰葡萄',
+      };
+      expect(matchesMultilingual('晴王', target, 'food')).toBe(true);
+      expect(matchesMultilingual('香印青提', target, 'food')).toBe(true);
+      expect(matchesMultilingual('shine muscat', target, 'food')).toBe(true);
+    });
+
+    it('飲食民間俗稱與方言：西柚 -> 葡萄柚 (grapefruit_pink_raw)', () => {
+      const target = {
+        id: NATURAL_FOOD_IDS.grapefruit_pink_raw,
+        name: '葡萄柚',
+      };
+      expect(matchesMultilingual('西柚', target, 'food')).toBe(true);
+      expect(matchesMultilingual('grapefruit', target, 'food')).toBe(true);
+    });
+
+    it('飲食民間俗稱與方言：文旦 -> 沙田柚 (shatian_pomelo)', () => {
+      const target = {
+        id: NATURAL_FOOD_IDS.shatian_pomelo,
+        name: '沙田柚',
+      };
+      expect(matchesMultilingual('文旦', target, 'food')).toBe(true);
+      expect(matchesMultilingual('文旦柚', target, 'food')).toBe(true);
+      expect(matchesMultilingual('白柚', target, 'food')).toBe(true);
+    });
+
+    it('飲食民間俗稱與方言：瀨尿蝦 / 蝦爬子 -> 皮皮蝦 (mantis_shrimp_pipixia)', () => {
+      const target = {
+        id: NATURAL_FOOD_IDS.mantis_shrimp_pipixia,
+        name: '皮皮蝦肉',
+      };
+      expect(matchesMultilingual('瀨尿蝦', target, 'food')).toBe(true);
+      expect(matchesMultilingual('蝦爬子', target, 'food')).toBe(true);
+      expect(matchesMultilingual('mantis shrimp', target, 'food')).toBe(true);
+    });
+
+    it('飲食民間俗稱與方言：多利魚 / 龍利魚 -> 巴沙魚柳 (basa_fillet_raw)', () => {
+      const target = {
+        id: NATURAL_FOOD_IDS.basa_fillet_raw,
+        name: '巴沙魚柳',
+      };
+      expect(matchesMultilingual('多利魚', target, 'food')).toBe(true);
+      expect(matchesMultilingual('龍利魚', target, 'food')).toBe(true);
+      expect(matchesMultilingual('basa', target, 'food')).toBe(true);
+    });
+
+    it('飲食民間俗稱與方言：淮山 -> 山藥 (yam_raw)', () => {
+      const target = {
+        id: NATURAL_FOOD_IDS.yam_raw,
+        name: '山藥',
+      };
+      expect(matchesMultilingual('淮山', target, 'food')).toBe(true);
+      expect(matchesMultilingual('chinese yam', target, 'food')).toBe(true);
+    });
+
+    it('飲食民間俗稱與方言：涼瓜 -> 苦瓜 (bitter_gourd_raw)', () => {
+      const target = {
+        id: NATURAL_FOOD_IDS.bitter_gourd_raw,
+        name: '苦瓜',
+      };
+      expect(matchesMultilingual('涼瓜', target, 'food')).toBe(true);
+      expect(matchesMultilingual('bitter melon', target, 'food')).toBe(true);
+    });
+
+    it('飲食民間俗稱與方言：勝瓜 -> 絲瓜 (luffa_raw)', () => {
+      const target = {
+        id: NATURAL_FOOD_IDS.luffa_raw,
+        name: '絲瓜',
+      };
+      expect(matchesMultilingual('勝瓜', target, 'food')).toBe(true);
+      expect(matchesMultilingual('loofah', target, 'food')).toBe(true);
+    });
+
+    it('飲食民間俗稱與方言：松阪肉 / 雪花肉 -> 松阪豬 (pork_neck_matsusaka)', () => {
+      const target = {
+        id: NATURAL_FOOD_IDS.pork_neck_matsusaka,
+        name: '松阪豬',
+      };
+      expect(matchesMultilingual('松阪肉', target, 'food')).toBe(true);
+      expect(matchesMultilingual('雪花肉', target, 'food')).toBe(true);
+      expect(matchesMultilingual('豬頸肉', target, 'food')).toBe(true);
+    });
+
     it('動作別名：OHP -> 站姿肩推 (standing_overhead_press)', () => {
       const ohpTarget = {
         id: DEFAULT_EXERCISE_IDS.standing_overhead_press,

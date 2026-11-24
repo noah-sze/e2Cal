@@ -77,7 +77,7 @@ export const FOOD_ALIASES_REGISTRY: Record<string, readonly string[]> = {
   // 20. 萵苣 / 生菜 / 美生菜 / 大陸妹 / lettuce
   [NATURAL_FOOD_IDS.romaine_lettuce]: ['蘿蔓', '羅蔓', '羅蔓生菜', '長葉萵苣', 'romaine', 'romaine lettuce'],
   [NATURAL_FOOD_IDS.iceberg_lettuce]: ['結球萵苣', '美生菜', '生菜', '包心生菜', '圓生菜', 'iceberg lettuce'],
-  [NATURAL_FOOD_IDS.youmai_vegetable]: ['油麥菜', '大陸妹', '葉用萵苣', 'youmai'],
+  [NATURAL_FOOD_IDS.youmai_vegetable]: ['油麥菜', '大陸妹', '葉用萵苣', 'A菜', 'ａ菜', 'a菜', '鵝仔菜', '妹仔菜', 'youmai', 'youmaicai'],
 
   // 21. 蘆筍 / asparagus
   [NATURAL_FOOD_IDS.asparagus_raw]: ['蘆筍', '綠蘆筍', '龍鬚菜', '露筍', '石刁柏', 'asparagus'],
@@ -186,6 +186,88 @@ export const FOOD_ALIASES_REGISTRY: Record<string, readonly string[]> = {
 
   // 50. 橄欖油 / olive oil (通用天然油脂別名支援)
   'olive_oil': ['橄欖油', '特級初榨橄欖油', '純橄欖油', '初榨橄欖油', 'olive oil', 'evoo'],
+
+  // 51. 空心菜 / 蕹菜 / 通菜 / water spinach
+  [NATURAL_FOOD_IDS.water_spinach_raw]: ['空心菜', '蕹菜', '藤藤菜', '通菜', '竹葉菜', '空筒菜', 'water spinach', 'ong choy'],
+
+  // 52. 大白菜 / 結球白菜 / napa cabbage
+  [NATURAL_FOOD_IDS.chinese_cabbage_raw]: ['大白菜', '白菜', '結球白菜', '包心白菜', '黃芽菜', '膠州白菜', 'chinese cabbage', 'napa cabbage'],
+  [NATURAL_FOOD_IDS.baby_chinese_cabbage]: ['娃娃菜', '小白菜芯', '微型白菜', 'baby napa cabbage'],
+
+  // 53. 青江菜 / 上海青 / 油菜 / bok choy
+  [NATURAL_FOOD_IDS.bok_choy_raw]: ['青江菜', '江門白菜', '上海青', '油菜', '小油菜', '青菜', '黑油菜', '湯匙菜', 'bok choy', 'pak choi'],
+
+  // 54. 火龍果 / 白肉火龍果 / 紅肉火龍果 / pitaya / dragon fruit
+  [NATURAL_FOOD_IDS.pitaya_white_raw]: ['白肉火龍果', '白火龍果', '火龍果', '白心火龍果', '白心火龙果', '火龙果', '仙蜜果', 'white pitaya', 'dragon fruit'],
+  [NATURAL_FOOD_IDS.pitaya_red_raw]: ['紅肉火龍果', '紅火龍果', '紅心火龍果', '紅龍果', '红肉火龙果', '红心火龙果', '红龙果', 'red pitaya'],
+
+  // 55. 百香果 / 熱情果 / 西番蓮 / passion fruit
+  [NATURAL_FOOD_IDS.passion_fruit_raw]: ['百香果', '熱情果', '西番蓮', '雞蛋果', '西番果', '百香', 'passion fruit', 'passionfruit'],
+
+  // 56. 柚類 / 葡萄柚 / 西柚 / 紅心柚 / 沙田柚 / 文旦 / pomelo / grapefruit
+  [NATURAL_FOOD_IDS.grapefruit_pink_raw]: ['葡萄柚', '西柚', '紅葡萄柚', '粉紅葡萄柚', '朱欒', 'grapefruit'],
+  [NATURAL_FOOD_IDS.red_flesh_pomelo]: ['紅心柚', '紅肉蜜柚', '紅柚', '血柚', '紅心葡萄柚', 'red pomelo'],
+  [NATURAL_FOOD_IDS.shatian_pomelo]: ['沙田柚', '白柚', '文旦', '文旦柚', '柚子', '蜜柚', 'pomelo'],
+  [NATURAL_FOOD_IDS.wogan_mandarin]: ['沃柑', '沃柑橘', '沃桔', '晚熟柑橘', 'wogan', 'mandarin'],
+
+  // 57. 棗類 / 冬棗 / 鮮棗 / jujube
+  [NATURAL_FOOD_IDS.winter_jujube]: ['冬棗', '鮮棗', '凍棗', '冬枣', '鲜枣', '沾化冬棗', 'winter jujube', 'fresh jujube'],
+
+  // 58. 甜瓜 / 羊角蜜 / 脆瓜 / crisp melon
+  [NATURAL_FOOD_IDS.yangjiaomi_melon]: ['羊角蜜甜瓜', '羊角蜜', '羊角脆', '脆瓜', '香瓜', '甜瓜', 'crisp melon'],
+
+  // 59. 葡萄 / 陽光玫瑰 / 晴王 / 香印 / 巨峰 / grapes
+  [NATURAL_FOOD_IDS.shine_muscat_grape]: ['陽光玫瑰葡萄', '陽光玫瑰', '香印青提', '晴王', '晴王葡萄', '青提', '綠葡萄', 'shine muscat'],
+  [NATURAL_FOOD_IDS.kyoho_grape]: ['巨峰葡萄', '巨峰', '黑葡萄', '紫葡萄', 'kyoho grape'],
+
+  // 60. 水產蝦貝 / 皮皮蝦 / 瀨尿蝦 / 基圍蝦 / 青蝦
+  [NATURAL_FOOD_IDS.mantis_shrimp_pipixia]: ['皮皮蝦', '皮皮蝦肉', '瀨尿蝦', '攋尿蝦', '蝦爬子', '螳螂蝦', '蝦蛄', '爬蝦', 'mantis shrimp'],
+  [NATURAL_FOOD_IDS.sand_shrimp_jiweixia]: ['基圍蝦', '沙蝦', '刀額新對蝦', '基围虾', 'sand shrimp'],
+  [NATURAL_FOOD_IDS.river_shrimp]: ['青蝦', '河蝦', '日本沼蝦', '青虾', '河虾', 'river shrimp'],
+
+  // 61. 魚類 / 武昌魚 / 鰻魚 / 沙丁魚 / 巴沙魚
+  [NATURAL_FOOD_IDS.wuchang_bream]: ['武昌魚', '鯿魚', '鲂魚', '團頭魴', '鳊鱼', 'wuchang bream'],
+  [NATURAL_FOOD_IDS.eel_raw]: ['鰻魚', '日本鰻', '白鱔', '鰻鱺', '白鳝', 'eel', 'freshwater eel'],
+  [NATURAL_FOOD_IDS.sardine_pacific_raw]: ['沙丁魚', '沙丁', '沙甸魚', 'sardine', 'sardines'],
+  [NATURAL_FOOD_IDS.basa_fillet_raw]: ['巴沙魚', '巴沙魚柳', '多利魚', '龍利魚柳', '博氏巨鯰', '鯰魚柳', 'basa fillet', 'basa'],
+
+  // 62. 蕈菇木耳 / 金針菇 / 木耳
+  [NATURAL_FOOD_IDS.enoki_mushroom]: ['金針菇', '樸菇', '冬菇', '構菌', '凍菌', '金菇', 'enoki', 'enoki mushroom'],
+  [NATURAL_FOOD_IDS.wood_ear_fresh]: ['木耳', '黑木耳', '雲耳', '光木耳', '黑菜', 'wood ear', 'black fungus'],
+
+  // 63. 根莖地下莖 / 蓮藕 / 山藥 / 芋頭
+  [NATURAL_FOOD_IDS.lotus_root_raw]: ['蓮藕', '藕', '蓮菜', '荷藕', 'lotus root'],
+  [NATURAL_FOOD_IDS.yam_raw]: ['山藥', '淮山', '山藥蛋', '薯蕷', '山薯', 'yam', 'chinese yam'],
+  [NATURAL_FOOD_IDS.taro_raw]: ['芋頭', '芋艿', '芋仔', '大薯', '毛芋', 'taro'],
+
+  // 64. 瓜果蔬菜 / 苦瓜 / 絲瓜 / 冬瓜 / 佛手瓜 / 龍鬚菜
+  [NATURAL_FOOD_IDS.bitter_gourd_raw]: ['苦瓜', '涼瓜', '癩葡萄', '錦荔枝', 'bitter melon', 'bitter gourd'],
+  [NATURAL_FOOD_IDS.luffa_raw]: ['絲瓜', '勝瓜', '菜瓜', '天羅', 'luffa', 'loofah'],
+  [NATURAL_FOOD_IDS.winter_melon_raw]: ['冬瓜', '枕瓜', '白瓜', '東瓜', 'winter melon'],
+  [NATURAL_FOOD_IDS.chayote_fruit_raw]: ['佛手瓜', '合手瓜', '隼人瓜', '拳頭瓜', 'chayote'],
+  [NATURAL_FOOD_IDS.chayote_shoots_raw]: ['龍鬚菜', '佛手瓜苗', '淮山藤', 'chayote shoots'],
+
+  // 65. 特色肉品部位 / 豬蹄 / 牛腩 / 松阪豬
+  [NATURAL_FOOD_IDS.pork_trotters_zhuti]: ['豬蹄', '豬腳', '豬手', '蹄膀', '豬肘', '豬蹄爪', 'pork trotters', 'pig feet'],
+  [NATURAL_FOOD_IDS.beef_flank_brisket_niunan]: ['牛腩', '牛腩肉', '牛胸腹肉', '牛腩塊', 'beef flank', 'beef brisket'],
+  [NATURAL_FOOD_IDS.pork_neck_matsusaka]: ['松阪豬', '松坂豬', '松阪肉', '松坂肉', '雪花肉', '豬頸肉', '黃金六兩', 'pork neck', 'pork jowl'],
+
+  // 66. 辛香蔬菜與莖葉 / 萵筍 / 蒜黃 / 韭菜 / 韭菜花 / 蒜苗 / 蒜苔
+  [NATURAL_FOOD_IDS.stem_lettuce_celtuce]: ['萵筍', '嫩莖萵苣', '萵筍苔', '萵苣筍', '青筍', '萵菜', 'celtuce', 'stem lettuce'],
+  [NATURAL_FOOD_IDS.yellow_garlic_chives]: ['蒜黃', '蒜黃菜', '黃蒜', '軟化蒜苗', 'yellow garlic chives'],
+  [NATURAL_FOOD_IDS.chinese_chives_raw]: ['韭菜', '起陽草', '草鐘乳', '長生韭', 'chinese chives'],
+  [NATURAL_FOOD_IDS.chive_flower_stems_raw]: ['韭菜花', '韭菜苔', '韭花', 'chive flower'],
+  [NATURAL_FOOD_IDS.green_garlic_stems_raw]: ['蒜苗', '青蒜', '大蒜苗', 'green garlic'],
+  [NATURAL_FOOD_IDS.garlic_scapes]: ['蒜苔', '蒜薹', '蒜毫', 'garlic scapes'],
+
+  // 67. 亞熱帶熱門鮮果 / 芭樂 / 釋迦 / 蓮霧 / 木瓜 / 香蕉 / 芒果
+  [NATURAL_FOOD_IDS.guava_raw]: ['芭樂', '番石榴', '拔仔', '吉卜', 'guava'],
+  [NATURAL_FOOD_IDS.red_guava_raw]: ['紅心芭樂', '紅心番石榴', '紅肉芭樂', '紅芭樂', 'red guava'],
+  [NATURAL_FOOD_IDS.sugar_apple_raw]: ['釋迦', '番荔枝', '佛頭果', 'sugar apple', 'sweetsop'],
+  [NATURAL_FOOD_IDS.wax_apple_raw]: ['蓮霧', '爪哇蒲桃', '水蓊', 'wax apple', 'bell fruit'],
+  [NATURAL_FOOD_IDS.papaya_raw]: ['木瓜', '萬壽果', '番木瓜', '石瓜', 'papaya'],
+  [NATURAL_FOOD_IDS.banana_raw]: ['香蕉', '弓蕉', '芭蕉', '金蕉', '甘蕉', 'banana'],
+  [NATURAL_FOOD_IDS.mango_raw]: ['芒果', '愛文芒果', '金煌芒果', '檨仔', 'mango'],
 };
 
 // ----------------------------------------------------------------------------
