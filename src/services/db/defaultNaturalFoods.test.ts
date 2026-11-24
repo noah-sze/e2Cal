@@ -109,8 +109,9 @@ describe('DEFAULT_NATURAL_FOODS 精密客觀測量儀審計', () => {
 
   it('解剖學物理損耗率審計：帶骨/帶殼部位必須具備客觀損耗率 (refuseRate > 0)', () => {
     // 凡包含明確帶骨/帶殼解剖部位且未標明「去骨/去殼/純肉/仁」者，物理上必定存在損耗殘渣
-    const boneOrShellKeywords = ['翅', '小排', '排骨', '文蛤', '帶殼', '鳳爪', '雞爪', '鴨掌'];
+    const boneOrShellKeywords = ['翅', '小排', '排骨', '文蛤', '帶殼', '鳳爪', '雞爪', '鴨掌', '雞腿'];
     for (const food of DEFAULT_NATURAL_FOODS) {
+      if (food.name.includes('雞腿菇')) continue;
       const isBoneOrShell = boneOrShellKeywords.some((kw) => food.name.includes(kw));
       const isExplicitlyDeboned =
         food.name.includes('去骨') ||
@@ -118,6 +119,7 @@ describe('DEFAULT_NATURAL_FOODS 精密客觀測量儀審計', () => {
         food.name.includes('純肉') ||
         food.name.includes('肉絲') ||
         food.name.includes('絞肉') ||
+        food.name.includes('腿肉') ||
         (food.dataSource?.sourceName?.toLowerCase().includes('boneless') ?? false) ||
         (food.dataSource?.sourceName?.includes('無骨') ?? false);
 
@@ -134,7 +136,7 @@ describe('DEFAULT_NATURAL_FOODS 精密客觀測量儀審計', () => {
     }
   });
 
-  it('解剖部位語意對齊審計：部位食材溯源品名嚴禁出現全身泛稱混充', () => {
+  it('解剖部位語意對齊審計：部位食材溯源品名嚴禁出現全身泛稱或跨部位混充', () => {
     // 檢查「翅」字食材不得映射到無 wing 的全身泛肉
     for (const food of DEFAULT_NATURAL_FOODS) {
       if (food.name.includes('翅') && food.dataSource?.authority === 'USDA') {
@@ -143,6 +145,14 @@ describe('DEFAULT_NATURAL_FOODS 精密客觀測量儀審計', () => {
           sourceLower.includes('wing'),
           `食材「${food.name}」來源品名「${food.dataSource.sourceName}」必須包含 wing，嚴禁以全身泛肉混充`
         ).toBe(true);
+      }
+      // 檢查「雞腿」不得映射到 breast (雞胸)
+      if (food.name.includes('雞腿') && !food.name.includes('菇')) {
+        const sourceLower = (food.dataSource?.sourceName || '').toLowerCase();
+        expect(
+          sourceLower.includes('breast'),
+          `食材「${food.name}」來源品名「${food.dataSource?.sourceName}」嚴禁混充為雞胸 (breast)`
+        ).toBe(false);
       }
     }
   });

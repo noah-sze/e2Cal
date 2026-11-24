@@ -167,6 +167,26 @@ export async function restoreMissingDefaultData(db: E2CalDatabase): Promise<{
       if (target && !target.isCustom) {
         let needsUpdate = false;
         const patch: Partial<FoodItem> = {};
+        if (f.name !== undefined && target.name !== f.name) {
+          patch.name = f.name;
+          needsUpdate = true;
+        }
+        if (f.calories !== undefined && target.calories !== f.calories) {
+          patch.calories = f.calories;
+          needsUpdate = true;
+        }
+        if (f.protein !== undefined && target.protein !== f.protein) {
+          patch.protein = f.protein;
+          needsUpdate = true;
+        }
+        if (f.fat !== undefined && target.fat !== f.fat) {
+          patch.fat = f.fat;
+          needsUpdate = true;
+        }
+        if (f.carbs !== undefined && target.carbs !== f.carbs) {
+          patch.carbs = f.carbs;
+          needsUpdate = true;
+        }
         if (f.refuseRate !== undefined && target.refuseRate !== f.refuseRate) {
           patch.refuseRate = f.refuseRate;
           needsUpdate = true;

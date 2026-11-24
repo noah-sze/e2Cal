@@ -141,9 +141,9 @@ export const FOOD_ALIASES_REGISTRY: Record<string, readonly string[]> = {
   [NATURAL_FOOD_IDS.chicken_breast_raw]: ['雞胸肉', '雞胸', '雞肉', '去皮雞胸', '雞胸肉生', 'chicken breast', 'chicken'],
   [NATURAL_FOOD_IDS.chicken_tenderloin]: ['雞里肌', '雞柳', '雞小胸', 'chicken tenderloin'],
 
-  // 38. 雞腿肉 / chicken thigh
-  [NATURAL_FOOD_IDS.chicken_thigh_skinless]: ['雞腿肉', '去皮雞腿肉', '雞腿', '去皮去骨雞腿', '雞扒肉', 'chicken thigh'],
-  [NATURAL_FOOD_IDS.chicken_thigh_with_skin]: ['帶皮雞腿肉', '雞腿肉帶皮', 'chicken thigh with skin'],
+  // 38. 雞腿 / chicken thigh
+  [NATURAL_FOOD_IDS.chicken_thigh_skinless]: ['去皮雞腿', '去皮雞腿肉', '雞腿', '雞腿肉', '去皮去骨雞腿', '去骨雞腿排', '雞扒肉', 'chicken thigh', 'skinless chicken thigh'],
+  [NATURAL_FOOD_IDS.chicken_thigh_with_skin]: ['帶皮雞腿', '帶皮雞腿肉', '雞腿帶皮', '雞腿肉帶皮', '帶皮雞腿排', 'chicken thigh with skin'],
 
   // 39. 牛菲力 / 牛里脊 / tenderloin
   [NATURAL_FOOD_IDS.beef_tenderloin]: ['牛菲力', '牛里脊', '菲力', '菲力牛排', '牛柳', '牛柳肉', 'tenderloin', 'filet mignon'],
