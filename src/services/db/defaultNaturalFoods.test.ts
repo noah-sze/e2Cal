@@ -98,7 +98,7 @@ describe('DEFAULT_NATURAL_FOODS 精密客觀測量儀審計', () => {
       // 微量元素儲備
       expect(food.micros).toBeDefined();
       if (food.micros) {
-        for (const [key, val] of Object.entries(food.micros)) {
+        for (const val of Object.values(food.micros)) {
           expect(typeof val).toBe('number');
           expect(Number.isNaN(val)).toBe(false);
           expect(val).toBeGreaterThanOrEqual(0);

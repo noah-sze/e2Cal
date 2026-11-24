@@ -60,17 +60,17 @@ export function AuthorityFoodDetailsDialog({
 }: AuthorityFoodDetailsDialogProps) {
   const { t } = useTranslation();
 
-  // 若目前 food 缺少元數據，嘗試自預設庫自然食材中回填對齊
+  // 若目前 food 屬於標準內建自然食材，優先對齊最新權威元數據
   const defaultItem = useMemo(() => {
-    if (food.dataSource && food.micros) return null;
+    if (food.isCustom) return null;
     return DEFAULT_NATURAL_FOODS.find((f) => f.id === food.id) || null;
-  }, [food.id, food.dataSource, food.micros]);
+  }, [food.id, food.isCustom]);
 
-  const dataSource = food.dataSource || defaultItem?.dataSource;
-  const micros = food.micros || defaultItem?.micros;
-  const refuseRate = food.refuseRate ?? defaultItem?.refuseRate ?? 0;
-  const edibleRate = food.edibleRate ?? defaultItem?.edibleRate ?? 1.0;
-  const refuseDescription = food.refuseDescription ?? defaultItem?.refuseDescription;
+  const dataSource = defaultItem?.dataSource || food.dataSource;
+  const micros = defaultItem?.micros || food.micros;
+  const refuseRate = defaultItem?.refuseRate ?? food.refuseRate ?? 0;
+  const edibleRate = defaultItem?.edibleRate ?? food.edibleRate ?? 1.0;
+  const refuseDescription = defaultItem?.refuseDescription ?? food.refuseDescription;
 
   // 過濾具有測定記錄的微量營養素
   const activeMicros = useMemo(() => {

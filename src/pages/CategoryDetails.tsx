@@ -103,7 +103,7 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
   const [isSourceDetailsOpen, setIsSourceDetailsOpen] = useState(false);
 
   const defaultNaturalItem = useMemo(() => {
-    if (!food || (food.dataSource && food.micros)) return null;
+    if (!food || food.isCustom) return null;
     return DEFAULT_NATURAL_FOODS.find((f) => f.id === food.id) || null;
   }, [food]);
 
@@ -111,13 +111,12 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
     if (!food) return null;
     if (!defaultNaturalItem) return food;
     return {
-      ...defaultNaturalItem,
       ...food,
-      dataSource: food.dataSource || defaultNaturalItem.dataSource,
-      micros: food.micros || defaultNaturalItem.micros,
-      refuseRate: food.refuseRate ?? defaultNaturalItem.refuseRate,
-      edibleRate: food.edibleRate ?? defaultNaturalItem.edibleRate,
-      refuseDescription: food.refuseDescription ?? defaultNaturalItem.refuseDescription,
+      ...defaultNaturalItem,
+      name: food.name,
+      isArchived: food.isArchived,
+      createdAt: food.createdAt,
+      updatedAt: food.updatedAt,
     };
   }, [food, defaultNaturalItem]);
 

@@ -1515,6 +1515,78 @@ export class E2CalDatabase extends Dexie {
         }
       }
     });
+
+    this.version(30).upgrade(async (tx) => {
+      // 升級至版本 30：全面校對天然食材權威溯源、損耗率（如鴨翅 TFDA I0520601、豬小排、文蛤等精準部位）與微量元素
+      const foodsTable = tx.table('foods');
+      const allFoods = await foodsTable.toArray();
+      const defaultFoodMap = new Map<string, Record<string, unknown>>();
+      for (const defFood of DEFAULT_FOODS) {
+        defaultFoodMap.set(defFood.id, defFood as Record<string, unknown>);
+      }
+      const defaultByNameMap = new Map<string, Record<string, unknown>>();
+      for (const defFood of DEFAULT_FOODS) {
+        defaultByNameMap.set(defFood.name, defFood as Record<string, unknown>);
+      }
+
+      const now = Date.now();
+      for (const food of allFoods) {
+        if (!food.isCustom) {
+          const defaults = defaultFoodMap.get(food.id) || defaultByNameMap.get(food.name);
+          if (!defaults) continue;
+          let changed = false;
+          const updated: Record<string, unknown> = { ...food };
+
+          // 核心與次級營養素同步對齊
+          const macroKeys = ['calories', 'protein', 'fat', 'carbs', 'sugar', 'saturatedFat', 'transFat', 'sodium', 'fiber'] as const;
+          for (const key of macroKeys) {
+            if (defaults[key] !== undefined && updated[key] !== defaults[key]) {
+              updated[key] = defaults[key];
+              changed = true;
+            }
+          }
+
+          // 權威庫元數據與稱重廢棄率對齊
+          const authorityKeys = ['refuseRate', 'edibleRate', 'refuseDescription', 'dataSource', 'micros'] as const;
+          for (const key of authorityKeys) {
+            if (defaults[key] !== undefined && JSON.stringify(updated[key]) !== JSON.stringify(defaults[key])) {
+              updated[key] = defaults[key];
+              changed = true;
+            }
+          }
+
+          if (changed) {
+            updated.updatedAt = now;
+            updated.rev = (Number(food.rev) || 1) + 1;
+            await foodsTable.put(updated);
+          }
+        }
+      }
+      clearFoodsCache();
+
+      // 清除本地同步推送快取記錄，並設定強制推送標記以全量覆蓋 Dropbox 遠端舊版本
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          const PUSHED_STORAGE_KEY = 'e2cal_sync_pushed_times_v1';
+          const raw = window.localStorage.getItem(PUSHED_STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            delete parsed['foods'];
+            window.localStorage.setItem(PUSHED_STORAGE_KEY, JSON.stringify(parsed));
+          }
+          const REVS_STORAGE_KEY = 'e2cal_cached_revs_v1';
+          const rawRevs = window.localStorage.getItem(REVS_STORAGE_KEY);
+          if (rawRevs) {
+            const parsedRevs = JSON.parse(rawRevs);
+            delete parsedRevs['/nutrition/foods.json'];
+            window.localStorage.setItem(REVS_STORAGE_KEY, JSON.stringify(parsedRevs));
+          }
+          window.localStorage.setItem('e2cal_force_push_foods', 'true');
+        } catch {
+          // ignore
+        }
+      }
+    });
   }
 
   async seedDefaultData() {
