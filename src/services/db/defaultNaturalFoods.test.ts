@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { DEFAULT_NATURAL_FOODS, NATURAL_FOOD_IDS } from './defaultNaturalFoods';
 
 describe('DEFAULT_NATURAL_FOODS 精密客觀測量儀審計', () => {
-  it('必須包含全部 412 項雙權威驗證的天然原型食材', () => {
-    expect(DEFAULT_NATURAL_FOODS.length).toBe(412);
-    expect(Object.keys(NATURAL_FOOD_IDS).length).toBe(412);
+  it('必須包含全部 415 項雙權威驗證的天然原型食材', () => {
+    expect(DEFAULT_NATURAL_FOODS.length).toBe(415);
+    expect(Object.keys(NATURAL_FOOD_IDS).length).toBe(415);
   });
 
   it('每一項食材 ID 均需符合確定性 UUID 格式且無重複', () => {
@@ -109,7 +109,7 @@ describe('DEFAULT_NATURAL_FOODS 精密客觀測量儀審計', () => {
 
   it('解剖學物理損耗率審計：帶骨/帶殼部位必須具備客觀損耗率 (refuseRate > 0)', () => {
     // 凡包含明確帶骨/帶殼解剖部位且未標明「去骨/去殼/純肉/仁」者，物理上必定存在損耗殘渣
-    const boneOrShellKeywords = ['翅', '小排', '排骨', '文蛤', '帶殼', '鳳爪', '雞爪', '鴨掌', '雞腿'];
+    const boneOrShellKeywords = ['翅', '小排', '排骨', '文蛤', '帶殼', '鳳爪', '雞爪', '鴨掌', '雞腿', '鴨腿'];
     for (const food of DEFAULT_NATURAL_FOODS) {
       if (food.name.includes('雞腿菇')) continue;
       const isBoneOrShell = boneOrShellKeywords.some((kw) => food.name.includes(kw));

@@ -1718,6 +1718,15 @@ export class E2CalDatabase extends Dexie {
           }
         }
       }
+
+      // 補齊本機尚未存在的預設原型食材（如新增之帶皮鴨腿）
+      const existingIds = new Set(allFoods.map((f: { id: string }) => f.id));
+      for (const defFood of DEFAULT_FOODS) {
+        if (!existingIds.has(defFood.id)) {
+          await foodsTable.add({ ...defFood, createdAt: now, updatedAt: now });
+        }
+      }
+
       clearFoodsCache();
 
       // 清除本地同步推送快取記錄，並設定強制推送標記以全量覆蓋 Dropbox 遠端舊版本

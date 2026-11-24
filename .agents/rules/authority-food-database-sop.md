@@ -4,6 +4,31 @@ trigger: always_on
 
 # 權威科研食材資料庫更新與對齊標準作業程序 (Authority Food Database SOP)
 
+## 0. 新增食材檢索鐵律：內置權威資料庫優先 (In-Memory Authority First)
+本專案已將四大官方科研資料庫（USDA、TFDA、CFCT、MEXT 共 14,161 條權威條目）離線編譯並完整內置於 `src/services/db/authorityFoods.json`。
+**在新增原型食材、調整食材屬性或校準損耗率時，嚴禁在互聯網上進行外部搜尋！**
+
+1. **零外網搜尋原則 (Zero Web Search Invariant)**：
+   - 所有待新增的原型食材、部位肉、水產、蔬果，必須**100% 直接自專案內置的 `src/services/db/authorityFoods.json` 進行檢索與提取**。
+   - 內置庫已涵蓋官方生鮮測定值、微量元素（micros）、電解質（鈉、鉀、鈣、鎂、鐵、鋅）、水分以及官方解剖損耗率（`refuseRate`）。
+2. **本地檢索標準指令 (Local Search Standard)**：
+   - 透過 Node.js 直接讀取並過濾 `src/services/db/authorityFoods.json`：
+     ```bash
+     node -e "
+     const fs = require('fs');
+     const data = JSON.parse(fs.readFileSync('src/services/db/authorityFoods.json', 'utf8'));
+     const matches = data.filter(i => {
+       const text = (i.name + ' ' + (i.dataSource?.sourceName || '') + ' ' + (i.dataSource?.sourceId || '')).toLowerCase();
+       return text.includes('關鍵字');
+     });
+     matches.forEach(m => console.log(m.dataSource?.authority, m.dataSource?.sourceId, m.name, '| refuse:', m.refuseRate, '| cal:', m.calories, 'p:', m.protein, 'f:', m.fat, 'c:', m.carbs));
+     "
+     ```
+3. **主鍵與數據繼承原則 (UUID & Spec Continuity)**：
+   - **優先繼承確定性 UUIDv5**：直接使用內置庫條目已固化之 `item.id`（例如 TFDA 鴨腿 `e1364b57-12b9-5de6-a00d-7cad72609881`），杜絕隨機生成導致 ID 漂移與外鍵斷裂。
+   - **數值嚴格對齊**：100% 承襲內置項目的測定常數（`calories`, `carbs`, `protein`, `fat`, `sodium`, `micros`, `refuseRate`, `refuseDescription`）。
+   - **補齊次級營養素**：若內置項目缺少個別次級宏量（如 `fiber`, `sugar`, `saturatedFat`, `transFat`），依生物物理守恆與官方營養手冊補齊預設值（純肉/純蛋類 fiber=0, sugar=0，飽和脂肪依脂肪酸組成比例填寫）。
+
 ## 1. 適用範圍與動態梯隊順位 (Dynamic Authority Hierarchy)
 本 SOP 適用於四大官方科研機構資料庫之增補、季度更新、年度改訂或微量營養素修訂。**嚴禁盲目優先使用單一西方機構資料庫**，應按食材的地域性原生特性動態定序：
 - **東亞特色飲食與部位食材 (Asian Native & Cut-specific Foods)**：
@@ -42,8 +67,9 @@ trigger: always_on
 
 ## 3. 五步標準執行流程 (5-Step Execution Workflow)
 
-### Step 1: 官方權威資料集獲取
-- 自官方公開途徑獲取正式發布檔（MEXT Excel、TFDA CSV/ZIP、USDA CSV/API、CFCT 官方出版數據），禁止使用第三方未經化驗的二手數據。
+### Step 1: 權威資料檢索與獲取 (Retrieval & Ingestion)
+- **日常增補預設食材**：100% 透過本地 Node 腳本檢索 `src/services/db/authorityFoods.json`，提取條目之確定性 UUID、化學分析數值、微量元素與 `refuseRate`。嚴禁聯網搜尋。
+- **年度/全量資料集升級**：自官方公開途徑獲取正式發布檔（MEXT Excel、TFDA CSV/ZIP、USDA CSV/API、CFCT 官方出版數據），禁止使用第三方未經化驗的二手數據。
 
 ### Step 2: 離線清洗與 INFOODS 標籤標準化
 - 數值清洗：移除括號估算標記 `(1.2) -> 1.2`，將未檢出/微量符號 `Tr / - / * / NA` 歸零為 `0.0`。

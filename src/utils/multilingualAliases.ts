@@ -101,7 +101,8 @@ export const FOOD_ALIASES_REGISTRY: Record<string, readonly string[]> = {
   [NATURAL_FOOD_IDS.edamame_kernels]: ['毛豆', '毛豆仁', '枝豆', '菜用大豆', '綠大豆', 'edamame'],
 
   // 27. 鱈魚 / cod
-  [NATURAL_FOOD_IDS.cod_fish]: ['鱈魚', '大西洋鱈', '黑線鱈', '鱈狹鱈', 'cod', 'codfish'],
+  [NATURAL_FOOD_IDS.cod_fish]: ['鱈魚', '大西洋鱈', '黑線鱈', '鱈狹鱈', '帶骨鱈魚', '鱈魚切片', 'cod', 'codfish'],
+  [NATURAL_FOOD_IDS.cod_fillet]: ['鱈魚排', '鱈魚片', '無刺鱈魚排', '無刺鱈魚片', '去骨鱈魚', 'cod fillet'],
 
   // 28. 鯖魚 / 青花魚 / mackerel
   [NATURAL_FOOD_IDS.mackerel]: ['鯖魚', '青花魚', '鯖', '青佔魚', '挪威鯖魚', 'mackerel'],
@@ -112,7 +113,8 @@ export const FOOD_ALIASES_REGISTRY: Record<string, readonly string[]> = {
   [NATURAL_FOOD_IDS.red_seabream_raw]: ['真鯛', '加吉魚', '銅盆魚', '紅鯛', '黑鯛', 'red seabream', 'sea bream', 'snapper'],
 
   // 30. 鱸魚 / sea bass
-  [NATURAL_FOOD_IDS.sea_bass]: ['鱸魚', '花鱸', '海鱸', '七星鱸', '金目鱸', 'sea bass', 'perch'],
+  [NATURAL_FOOD_IDS.sea_bass]: ['鱸魚', '花鱸', '海鱸', '七星鱸', '金目鱸', '日本花鱸', '全魚鱸魚', 'sea bass', 'perch'],
+  [NATURAL_FOOD_IDS.sea_bass_fillet]: ['鱸魚排', '鱸魚片', '無刺鱸魚排', '無刺鱸魚片', '金目鱸魚排', 'sea bass fillet'],
 
   // 31. 蝦仁 / 鮮蝦 / shrimp
   [NATURAL_FOOD_IDS.shrimp_meat]: ['蝦仁', '鮮蝦', '蝦肉', '海蝦仁', '白蝦仁', 'shrimp', 'prawn'],
@@ -144,6 +146,10 @@ export const FOOD_ALIASES_REGISTRY: Record<string, readonly string[]> = {
   // 38. 雞腿 / chicken thigh
   [NATURAL_FOOD_IDS.chicken_thigh_skinless]: ['去皮雞腿', '去皮雞腿肉', '雞腿', '雞腿肉', '去皮去骨雞腿', '去骨雞腿排', '雞扒肉', 'chicken thigh', 'skinless chicken thigh'],
   [NATURAL_FOOD_IDS.chicken_thigh_with_skin]: ['帶皮雞腿', '帶皮雞腿肉', '雞腿帶皮', '雞腿肉帶皮', '帶皮雞腿排', 'chicken thigh with skin'],
+
+  // 38b. 鴨腿 / duck leg
+  [NATURAL_FOOD_IDS.duck_leg_skinless]: ['去皮鴨腿', '去皮鴨腿肉', '鴨腿', '鴨腿肉', '去皮去骨鴨腿', '去骨鴨腿', 'duck leg skinless', 'skinless duck leg'],
+  [NATURAL_FOOD_IDS.duck_leg_with_skin]: ['帶皮鴨腿', '帶皮鴨腿肉', '鴨腿帶皮', '鴨腿肉帶皮', '鴨腿', 'duck leg with skin'],
 
   // 39. 牛菲力 / 牛里脊 / tenderloin
   [NATURAL_FOOD_IDS.beef_tenderloin]: ['牛菲力', '牛里脊', '菲力', '菲力牛排', '牛柳', '牛柳肉', 'tenderloin', 'filet mignon'],
