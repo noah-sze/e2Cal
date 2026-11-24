@@ -367,11 +367,9 @@ export function EditFoodLogDialog({
                     <span className="font-mono text-muted-foreground/75 text-[10px]">({baseFood.dataSource.sourceId})</span>
                   )}
                 </span>
-                {Boolean(baseFood.refuseRate && baseFood.refuseRate > 0) && (
-                  <span className="font-mono text-[10px] text-muted-foreground/80">
-                    不可食損耗：{Math.round((baseFood.refuseRate || 0) * 100)}%
-                  </span>
-                )}
+                <span className="font-mono text-[10px] text-muted-foreground/80">
+                  {t('diet.refuseRatePrefix', '不可食損耗')}：{Boolean(baseFood.refuseRate && baseFood.refuseRate > 0) ? `${Math.round((baseFood.refuseRate || 0) * 100)}%` : '0%'}
+                </span>
               </div>
             )}
 
@@ -513,8 +511,6 @@ export function EditFoodLogDialog({
             const effectiveQty = calculateEffectiveGrams(rawQty, weighingForm, baseFood?.edibleRate);
             const hasRefuse = Boolean(baseFood?.refuseRate && baseFood.refuseRate > 0);
 
-            if (!hasRefuse) return null;
-
             return (
               <div className="flex flex-col gap-2">
                 <div className="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-muted/40 border border-border/40 text-xs">
@@ -536,27 +532,32 @@ export function EditFoodLogDialog({
                   </button>
                   <button
                     type="button"
+                    disabled={!hasRefuse}
                     onClick={() => {
+                      if (!hasRefuse) return;
                       setWeighingForm('gross');
                       setQuantity(effectiveQty);
                       setGrossQuantity(rawQty);
                     }}
+                    title={!hasRefuse ? t('diet.zeroRefuseTip', '此食材無不可食損耗（損耗 0%）') : undefined}
                     className={cn(
                       'py-1 px-2 rounded-md font-medium text-xs transition-all',
-                      weighingForm === 'gross'
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                      !hasRefuse
+                        ? 'opacity-35 cursor-not-allowed text-muted-foreground select-none pointer-events-none'
+                        : weighingForm === 'gross'
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                     )}
                   >
                     {t('diet.grossWeightLabel', '毛重')}
                   </button>
                 </div>
-                {weighingForm === 'gross' && (
-                  <div className="px-1 text-[11px] text-muted-foreground font-mono flex items-center justify-between">
-                    <span>不可食損耗：{Math.round((baseFood?.refuseRate || 0) * 100)}%</span>
-                    <span>可食淨重 ~ {effectiveQty} {currentU}</span>
-                  </div>
-                )}
+                <div className="px-1 text-[11px] text-muted-foreground font-mono flex items-center justify-between">
+                  <span>{t('diet.refuseRatePrefix', '不可食損耗')}：{hasRefuse ? `${Math.round((baseFood?.refuseRate || 0) * 100)}%` : '0%'}</span>
+                  {hasRefuse && weighingForm === 'gross' && (
+                    <span>{t('diet.netWeightLabel', '可食淨重')} ~ {effectiveQty} {currentU}</span>
+                  )}
+                </div>
               </div>
             );
           }}

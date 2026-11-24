@@ -251,6 +251,8 @@
       "grossWeightPrefix": "毛",
       "grossWeightLabel": "毛重",
       "netWeightLabel": "可食淨重",
+      "refuseRatePrefix": "不可食損耗",
+      "zeroRefuseTip": "此食材無不可食損耗（損耗 0%）",
       "authoritySearchTitle": "權威科研庫搜索添加",
       "authoritySearchSubtitle": "收錄 USDA、台灣 TFDA、中國 CDC 共 11,683 筆權威科研數據",
       "authoritySearchPlaceholder": "搜尋食材名稱（如：去皮雞胸、Salmon、牛腱、燕麥）...",

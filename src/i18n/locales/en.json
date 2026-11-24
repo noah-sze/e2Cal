@@ -251,6 +251,8 @@
       "grossWeightPrefix": "gross",
       "grossWeightLabel": "Gross Weight",
       "netWeightLabel": "Net Weight",
+      "refuseRatePrefix": "Refuse",
+      "zeroRefuseTip": "This food has 0% inedible refuse",
       "authoritySearchTitle": "Search Authority Foods",
       "authoritySearchSubtitle": "USDA, TFDA & CDC scientific food databases (11,683 items)",
       "authoritySearchPlaceholder": "Search foods (e.g. skinless chicken, salmon, beef shank, oats)...",

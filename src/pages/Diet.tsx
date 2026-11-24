@@ -484,40 +484,49 @@ export default function Diet() {
                       數據來自：{selectedFoodForAdd.dataSource.authority === 'CFCT' ? '中國 CDC' : selectedFoodForAdd.dataSource.authority}
                       {selectedFoodForAdd.dataSource.sourceId ? ` (${selectedFoodForAdd.dataSource.sourceId})` : ''}
                     </span>
-                    {hasRefuse && (
-                      <span className="font-mono text-[10px]">
-                        不可食損耗：{Math.round((selectedFoodForAdd.refuseRate || 0) * 100)}%
-                      </span>
-                    )}
+                    <span className="font-mono text-[10px]">
+                      {t('diet.refuseRatePrefix', '不可食損耗')}：{hasRefuse ? `${Math.round((selectedFoodForAdd.refuseRate || 0) * 100)}%` : '0%'}
+                    </span>
                   </div>
                 )}
 
-                {hasRefuse && (
-                  <div className="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-muted/40 border border-border/40 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setWeighingForm('net')}
-                      className={cn(
-                        'py-1 px-2 rounded-md font-medium text-xs transition-all',
-                        weighingForm === 'net'
+                <div className="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-muted/40 border border-border/40 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setWeighingForm('net')}
+                    className={cn(
+                      'py-1 px-2 rounded-md font-medium text-xs transition-all',
+                      weighingForm === 'net'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                    )}
+                  >
+                    {t('diet.netWeightLabel', '可食淨重')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!hasRefuse}
+                    onClick={() => {
+                      if (!hasRefuse) return;
+                      setWeighingForm('gross');
+                    }}
+                    title={!hasRefuse ? t('diet.zeroRefuseTip', '此食材無不可食損耗（損耗 0%）') : undefined}
+                    className={cn(
+                      'py-1 px-2 rounded-md font-medium text-xs transition-all',
+                      !hasRefuse
+                        ? 'opacity-35 cursor-not-allowed text-muted-foreground select-none pointer-events-none'
+                        : weighingForm === 'gross'
                           ? 'bg-primary text-primary-foreground shadow-sm'
                           : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-                      )}
-                    >
-                      {t('diet.netWeightLabel', '可食淨重')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setWeighingForm('gross')}
-                      className={cn(
-                        'py-1 px-2 rounded-md font-medium text-xs transition-all',
-                        weighingForm === 'gross'
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-                      )}
-                    >
-                      {t('diet.grossWeightLabel', '毛重')}
-                    </button>
+                    )}
+                  >
+                    {t('diet.grossWeightLabel', '毛重')}
+                  </button>
+                </div>
+
+                {!selectedFoodForAdd.dataSource && (
+                  <div className="px-1 text-[11px] text-muted-foreground font-mono flex items-center justify-between">
+                    <span>{t('diet.refuseRatePrefix', '不可食損耗')}：{hasRefuse ? `${Math.round((selectedFoodForAdd.refuseRate || 0) * 100)}%` : '0%'}</span>
                   </div>
                 )}
 
