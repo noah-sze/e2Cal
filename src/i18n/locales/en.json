@@ -245,7 +245,7 @@
       "burn": "Burned",
       "foodLibrary": "Food Library",
       "addAuthorityFood": "Search Authority Database",
-      "addAuthorityFoodDesc": "USDA / TFDA / CDC (11.6k foods)",
+      "addAuthorityFoodDesc": "USDA / MEXT / TFDA / CFCT (14.1k foods)",
       "addManualFood": "Add Manually",
       "addManualFoodDesc": "Custom food with manual macros",
       "grossWeightPrefix": "gross",

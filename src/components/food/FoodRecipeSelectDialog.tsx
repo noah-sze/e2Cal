@@ -226,7 +226,7 @@ export function FoodRecipeSelectDialog({
                             {t('diet.addAuthorityFood', '權威科研庫搜索添加')}
                           </span>
                           <span className="text-[10px] text-muted-foreground">
-                            {t('diet.addAuthorityFoodDesc', 'USDA / TFDA / CDC（1.1 萬條）')}
+                            {t('diet.addAuthorityFoodDesc', 'USDA / MEXT / TFDA / CFCT（1.4 萬條）')}
                           </span>
                         </div>
                       </DropdownMenuItem>
