@@ -22,8 +22,6 @@ import {
   DEFAULT_EXERCISES,
   DEFAULT_FOODS,
   DEFAULT_FOOD_IDS,
-  DEFAULT_OILS,
-  DEFAULT_RECIPES,
   DEFAULT_RECIPE_IDS,
   PRIMARY_USER_ID,
   DEFAULT_USER_PROFILE_ID,
@@ -31,7 +29,6 @@ import {
   restoreMissingDefaultData,
   resetDatabaseToFactory,
 } from './defaultData';
-import { DEFAULT_NATURAL_FOODS } from './defaultNaturalFoods';
 import { inferDiningScenario, DINING_SCENARIOS } from '@/utils/foodNaming';
 import { normalizeServingToMetric } from '@/utils/nutritionMath';
 import { clearFoodsCache } from '@/hooks/useFoods';
@@ -1074,22 +1071,7 @@ export class E2CalDatabase extends Dexie {
         }
       }
 
-      // 2. 補齊天然原型食材
-      const updatedFoods = await foodsTable.toArray();
-      const existingIds = new Set(updatedFoods.map((f: FoodItem) => f.id));
-      const existingNames = new Set(updatedFoods.map((f: FoodItem) => f.name?.trim()));
-
-      for (const food of DEFAULT_NATURAL_FOODS) {
-        if (!existingIds.has(food.id) && !existingNames.has(food.name.trim())) {
-          await foodsTable.add({
-            ...food,
-            createdAt: now,
-            updatedAt: now,
-          });
-          existingIds.add(food.id);
-          existingNames.add(food.name.trim());
-        }
-      }
+      // 2. 補齊天然原型食材（預設食材庫已於版本 34 徹底廢棄，不再注入）
     });
 
     this.version(17).upgrade(async (tx) => {
@@ -1111,43 +1093,11 @@ export class E2CalDatabase extends Dexie {
         }
       }
 
-      // 2. 補入天然原型食材
-      const updatedFoods = await foodsTable.toArray();
-      const existingIds = new Set(updatedFoods.map((f: FoodItem) => f.id));
-      const existingNames = new Set(updatedFoods.map((f: FoodItem) => f.name?.trim()));
-
-      for (const food of DEFAULT_NATURAL_FOODS) {
-        if (!existingIds.has(food.id) && !existingNames.has(food.name.trim())) {
-          await foodsTable.add({
-            ...food,
-            createdAt: now,
-            updatedAt: now,
-          });
-          existingIds.add(food.id);
-          existingNames.add(food.name.trim());
-        }
-      }
+      // 2. 補入天然原型食材（預設食材庫已於版本 34 徹底廢棄，不再注入）
     });
 
-    this.version(18).upgrade(async (tx) => {
-      // 升級至 18：擴充第二批常見食材（含羅非魚、地方水產、內臟部位、蔬菜、傳統主食與鮮果等 50 種，全庫達 409 種天然食材）
-      const now = Date.now();
-      const foodsTable = tx.table('foods');
-      const existingFoods = await foodsTable.toArray();
-      const existingIds = new Set(existingFoods.map((f: FoodItem) => f.id));
-      const existingNames = new Set(existingFoods.map((f: FoodItem) => f.name?.trim()));
-
-      for (const food of DEFAULT_NATURAL_FOODS) {
-        if (!existingIds.has(food.id) && !existingNames.has(food.name.trim())) {
-          await foodsTable.add({
-            ...food,
-            createdAt: now,
-            updatedAt: now,
-          });
-          existingIds.add(food.id);
-          existingNames.add(food.name.trim());
-        }
-      }
+    this.version(18).upgrade(async () => {
+      // 升級至 18：歷史食材擴充（預設食材庫已於版本 34 徹底廢棄，不再注入）
     });
 
     this.version(19).upgrade(async (tx) => {
@@ -1205,25 +1155,8 @@ export class E2CalDatabase extends Dexie {
       }
     });
 
-    this.version(21).upgrade(async (tx) => {
-      // 升級至 21：擴充基礎通用中性肉品數據（牛肉、豬肉、羊肉，生重基準 1:9 肥瘦比）
-      const now = Date.now();
-      const foodsTable = tx.table('foods');
-      const existingFoods = await foodsTable.toArray();
-      const existingIds = new Set(existingFoods.map((f: FoodItem) => f.id));
-      const existingNames = new Set(existingFoods.map((f: FoodItem) => f.name?.trim()));
-
-      for (const food of DEFAULT_NATURAL_FOODS) {
-        if (!existingIds.has(food.id) && !existingNames.has(food.name.trim())) {
-          await foodsTable.add({
-            ...food,
-            createdAt: now,
-            updatedAt: now,
-          });
-          existingIds.add(food.id);
-          existingNames.add(food.name.trim());
-        }
-      }
+    this.version(21).upgrade(async () => {
+      // 升級至 21：肉品數據擴充（預設食材庫已於版本 34 徹底廢棄，不再注入）
     });
 
     this.version(22).upgrade(async (tx) => {
@@ -1238,33 +1171,8 @@ export class E2CalDatabase extends Dexie {
       }
     });
 
-    this.version(23).upgrade(async (tx) => {
-      // 升級至版本 23：將預設「食用植物油」更名為「花生油」，並擴充常見油類食材
-      const now = Date.now();
-      const foodsTable = tx.table('foods');
-      const cookingOil = await foodsTable.get(DEFAULT_FOOD_IDS.cooking_oil);
-      if (cookingOil && cookingOil.name === '食用植物油') {
-        await foodsTable.update(DEFAULT_FOOD_IDS.cooking_oil, {
-          name: '花生油',
-          updatedAt: now,
-        });
-      }
-
-      const existingFoods = await foodsTable.toArray();
-      const existingIds = new Set(existingFoods.map((f: FoodItem) => f.id));
-      const existingNames = new Set(existingFoods.map((f: FoodItem) => f.name?.trim()));
-
-      for (const oil of DEFAULT_OILS) {
-        if (!existingIds.has(oil.id) && !existingNames.has(oil.name.trim())) {
-          await foodsTable.add({
-            ...oil,
-            createdAt: now,
-            updatedAt: now,
-          });
-          existingIds.add(oil.id);
-          existingNames.add(oil.name.trim());
-        }
-      }
+    this.version(23).upgrade(async () => {
+      // 升級至版本 23：歷史油類數據擴充（預設食材庫已於版本 34 徹底廢棄，不再注入）
     });
 
     this.version(24).upgrade(async (tx) => {
@@ -1752,6 +1660,205 @@ export class E2CalDatabase extends Dexie {
         }
       }
     });
+
+    this.version(33).upgrade(async (tx) => {
+      // 升級至版本 33：全新純淨 173 項黃金重鑄食材庫無縫升級
+      // 1. 嚴格審計全域外鍵：掃描 daily_diet_logs 與 recipes，精確收集被使用者歷史引用的 foodId
+      // 2. 舊預設條目分流：被引用過的舊食材轉為使用者自訂歷史存檔（isCustom: true, isArchived: true），保全外鍵與歷史日誌
+      // 3. 徹底清理死重：未被任何歷史日誌或食譜引用的舊預設食材，物理刪除
+      // 4. 原子注入全新重鑄庫：寫入 173 項客觀生重 100g 確定性 UUIDv5 食材
+      const foodsTable = tx.table('foods');
+      const dietLogsTable = tx.table('daily_diet_logs');
+      const recipesTable = tx.table('recipes');
+
+      const now = Date.now();
+
+      // 步驟 1：收集被引用的 Food ID
+      const usedFoodIds = new Set<string>();
+
+      try {
+        const allDietLogs = await dietLogsTable.toArray();
+        for (const log of allDietLogs) {
+          if (Array.isArray(log.entries)) {
+            for (const entry of log.entries) {
+              if (entry && typeof entry.foodId === 'string') {
+                usedFoodIds.add(entry.foodId);
+              }
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+
+      try {
+        const allRecipes = await recipesTable.toArray();
+        for (const recipe of allRecipes) {
+          if (Array.isArray(recipe.ingredients)) {
+            for (const ing of recipe.ingredients) {
+              if (ing && typeof ing.foodId === 'string') {
+                usedFoodIds.add(ing.foodId);
+              }
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+
+      // 步驟 2：建立全新 173 項重鑄庫的 ID 集合
+      const canonicalFoodIds = new Set(DEFAULT_FOODS.map((f) => f.id));
+
+      const allFoods = await foodsTable.toArray();
+      for (const food of allFoods) {
+        // 若屬於全新 173 項重鑄庫，保持最新系統預設狀態
+        if (canonicalFoodIds.has(food.id)) {
+          continue;
+        }
+
+        // 若使用者自行創建的食材（isCustom: true），100% 尊重使用者資產，原封不動
+        if (food.isCustom) {
+          continue;
+        }
+
+        // 舊系統預設食材 (!food.isCustom 且不在新庫中)
+        if (usedFoodIds.has(food.id)) {
+          // 被歷史引用過：名正言順轉為自訂歸檔（歷史存檔，不污染日常新增飲食搜尋）
+          await foodsTable.put({
+            ...food,
+            isCustom: true,
+            isArchived: true,
+            updatedAt: now,
+            rev: (Number(food.rev) || 1) + 1,
+          });
+        } else {
+          // 未被任何日誌或菜餚引用：徹底物理刪除，清除歷史死重
+          await foodsTable.delete(food.id);
+        }
+      }
+
+      // 步驟 3：原子注入全新 173 項重鑄庫
+      const currentFoodIds = new Set((await foodsTable.toArray()).map((f: { id: string }) => f.id));
+      for (const defFood of DEFAULT_FOODS) {
+        if (!currentFoodIds.has(defFood.id)) {
+          await foodsTable.add({
+            ...defFood,
+            createdAt: now,
+            updatedAt: now,
+            rev: 1,
+          });
+        } else {
+          // 若已存在但為系統預設，確保更新至最新標準化化驗常數
+          const existing = await foodsTable.get(defFood.id);
+          if (existing && !existing.isCustom) {
+            await foodsTable.put({
+              ...existing,
+              ...defFood,
+              isCustom: false,
+              isArchived: false,
+              updatedAt: now,
+              rev: (Number(existing.rev) || 1) + 1,
+            });
+          }
+        }
+      }
+
+      clearFoodsCache();
+
+      // 清除本地同步推送快取記錄，並設定強制推送標記以全量覆蓋 Dropbox 遠端舊版本
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          const PUSHED_STORAGE_KEY = 'e2cal_sync_pushed_times_v1';
+          const raw = window.localStorage.getItem(PUSHED_STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            delete parsed['foods'];
+            window.localStorage.setItem(PUSHED_STORAGE_KEY, JSON.stringify(parsed));
+          }
+          const REVS_STORAGE_KEY = 'e2cal_cached_revs_v1';
+          const rawRevs = window.localStorage.getItem(REVS_STORAGE_KEY);
+          if (rawRevs) {
+            const parsedRevs = JSON.parse(rawRevs);
+            delete parsedRevs['/nutrition/foods.json'];
+            window.localStorage.setItem(REVS_STORAGE_KEY, JSON.stringify(parsedRevs));
+          }
+          window.localStorage.setItem('e2cal_force_push_foods', 'true');
+        } catch {
+          // ignore
+        }
+      }
+    });
+
+    // ========================================================================
+    // Schema v34: 徹底刪除預設食材庫，全量收斂為使用者自建個人庫
+    // 1. 掃描飲食日誌與食譜，被調用的舊預設食材轉為使用者自訂歷史存檔 (isCustom: true, isArchived: true)
+    // 2. 未曾調用之舊預設食材 100% 徹底物理清除
+    // 3. 使用者自訂食材 100% 完整保留
+    // ========================================================================
+    this.version(34).upgrade(async (tx) => {
+      const now = Date.now();
+
+      // 1. 收集被實際調用過的外鍵 ID
+      const usedFoodIds = new Set<string>();
+      const dietLogs = await tx.table<DailyDietLog, string>('daily_diet_logs').toArray();
+      for (const log of dietLogs) {
+        if (Array.isArray(log.entries)) {
+          for (const entry of log.entries) {
+            if (entry.foodId) usedFoodIds.add(entry.foodId);
+          }
+        }
+      }
+
+      const recipes = await tx.table<FoodRecipe, string>('recipes').toArray();
+      for (const recipe of recipes) {
+        if (Array.isArray(recipe.ingredients)) {
+          for (const ing of recipe.ingredients) {
+            if (ing.foodId) usedFoodIds.add(ing.foodId);
+          }
+        }
+      }
+
+      // 2. 掃描現有食物表
+      const allFoods = await tx.table<FoodItem, string>('foods').toArray();
+      for (const f of allFoods) {
+        if (f.isCustom) continue;
+
+        if (usedFoodIds.has(f.id)) {
+          await tx.table<FoodItem, string>('foods').update(f.id, {
+            isCustom: true,
+            isArchived: true,
+            updatedAt: now,
+            rev: (Number(f.rev) || 1) + 1,
+          });
+        } else {
+          await tx.table('foods').delete(f.id);
+        }
+      }
+
+      clearFoodsCache();
+
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          const PUSHED_STORAGE_KEY = 'e2cal_sync_pushed_times_v1';
+          const raw = window.localStorage.getItem(PUSHED_STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            delete parsed['foods'];
+            window.localStorage.setItem(PUSHED_STORAGE_KEY, JSON.stringify(parsed));
+          }
+          const REVS_STORAGE_KEY = 'e2cal_cached_revs_v1';
+          const rawRevs = window.localStorage.getItem(REVS_STORAGE_KEY);
+          if (rawRevs) {
+            const parsedRevs = JSON.parse(rawRevs);
+            delete parsedRevs['/nutrition/foods.json'];
+            window.localStorage.setItem(REVS_STORAGE_KEY, JSON.stringify(parsedRevs));
+          }
+          window.localStorage.setItem('e2cal_force_push_foods', 'true');
+        } catch {
+          // ignore
+        }
+      }
+    });
   }
 
   async seedDefaultData() {
@@ -1774,18 +1881,12 @@ export class E2CalDatabase extends Dexie {
       return;
     }
 
-    // 全新資料庫初始種子寫入
+    // 全新資料庫初始種子寫入 (食物與食譜庫出廠為空，由使用者自主打造)
     await this.equipments.bulkAdd(
       DEFAULT_EQUIPMENTS.map((eq) => ({ ...eq, createdAt: now, updatedAt: now }))
     );
     await this.exercises.bulkAdd(
       DEFAULT_EXERCISES.map((ex) => ({ ...ex, createdAt: now, updatedAt: now }))
-    );
-    await this.foods.bulkAdd(
-      DEFAULT_FOODS.map((f) => ({ ...f, createdAt: now, updatedAt: now }))
-    );
-    await this.recipes.bulkAdd(
-      DEFAULT_RECIPES.map((r) => ({ ...r, createdAt: now, updatedAt: now }))
     );
 
     const profileCount = await this.user_profile.count();

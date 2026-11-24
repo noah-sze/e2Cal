@@ -361,7 +361,15 @@ export function EditFoodLogDialog({
                 <span className="flex items-center gap-1">
                   <span>數據來源：</span>
                   <span className="font-medium text-foreground">
-                    {baseFood.dataSource.authority === 'CFCT' ? '中國 CDC' : baseFood.dataSource.authority === 'MEXT' ? '日本 MEXT' : baseFood.dataSource.authority}
+                    {baseFood.dataSource.authority === 'CFCT'
+                      ? '中國 CDC'
+                      : baseFood.dataSource.authority === 'MEXT'
+                        ? '日本 MEXT'
+                        : baseFood.dataSource.authority === 'AFCD'
+                          ? '澳洲 FSANZ'
+                          : baseFood.dataSource.authority === 'CoFID'
+                            ? '英國 UKHSA'
+                            : baseFood.dataSource.authority}
                   </span>
                   {baseFood.dataSource.sourceId && (
                     <span className="font-mono text-muted-foreground/75 text-[10px]">({baseFood.dataSource.sourceId})</span>

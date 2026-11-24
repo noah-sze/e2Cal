@@ -9,10 +9,12 @@ import {
   sanitizeUserBaseInfo,
 } from './syncSanitizers';
 import {
-  DEFAULT_FOOD_IDS,
   DEFAULT_RECIPE_IDS,
   PRIMARY_USER_ID,
 } from '../db/defaultData';
+
+const TEST_CHICKEN_ID = 'e1364b57-12b9-5de6-a00d-7cad72609881';
+const TEST_OIL_ID = 'f2475c68-23ca-6ef7-b11e-8dbe8371a992';
 
 describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
   describe('sanitizeRecipe', () => {
@@ -23,14 +25,14 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
         description: '標準乾淨減脂主食，可選配微量烹調油',
         ingredients: [
           {
-            foodId: DEFAULT_FOOD_IDS.chicken_breast,
+            foodId: TEST_CHICKEN_ID,
             foodName: '雞胸肉',
             quantity: 150,
             unit: 'g',
             isOptional: false,
           },
           {
-            foodId: DEFAULT_FOOD_IDS.cooking_oil,
+            foodId: TEST_OIL_ID,
             foodName: '食用植物油',
             quantity: 5,
             unit: 'g',
@@ -49,8 +51,8 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
         id: DEFAULT_RECIPE_IDS.chicken_rice_box,
         name: '經典低脂雞胸便當',
         ingredients: [
-          { foodId: DEFAULT_FOOD_IDS.chicken_breast, quantity: 150, unit: 'g', isOptional: false },
-          { foodId: DEFAULT_FOOD_IDS.cooking_oil, quantity: 5, unit: 'g', isOptional: true },
+          { foodId: TEST_CHICKEN_ID, quantity: 150, unit: 'g', isOptional: false },
+          { foodId: TEST_OIL_ID, quantity: 5, unit: 'g', isOptional: true },
         ],
         isCustom: false,
         isArchived: false,
@@ -91,7 +93,7 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
         id: 'log-1',
         date: '2026-11-06',
         mealType: 'breakfast',
-        foodId: DEFAULT_FOOD_IDS.chicken_breast,
+        foodId: TEST_CHICKEN_ID,
         foodName: '雞胸肉',
         calories: 165,
         protein: 34.5,
@@ -111,7 +113,7 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
         date: '2026-11-06',
         mealType: 'breakfast',
         entryType: 'item',
-        foodId: DEFAULT_FOOD_IDS.chicken_breast,
+        foodId: TEST_CHICKEN_ID,
         quantity: 150,
         unit: 'g',
         createdAt: 1000,
@@ -131,7 +133,7 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
         id: 'log-gross-1',
         date: '2026-11-24',
         mealType: 'dinner',
-        foodId: DEFAULT_FOOD_IDS.chicken_thigh_with_skin,
+        foodId: TEST_CHICKEN_ID,
         quantity: 130, // 淨重
         grossQuantity: 200, // 毛重
         unit: 'g',
@@ -317,7 +319,7 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
           {
             id: 'e1',
             mealType: 'breakfast',
-            foodId: DEFAULT_FOOD_IDS.chicken_breast,
+            foodId: TEST_CHICKEN_ID,
             foodName: '雞胸肉',
             bundleId: DEFAULT_RECIPE_IDS.chicken_rice_box,
             bundleName: '經典低脂雞胸便當',
@@ -347,7 +349,7 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
         date: '',
         mealType: 'breakfast',
         entryType: 'item',
-        foodId: DEFAULT_FOOD_IDS.chicken_breast,
+        foodId: TEST_CHICKEN_ID,
         bundleId: DEFAULT_RECIPE_IDS.chicken_rice_box,
         quantity: 150,
         unit: 'g',
@@ -443,54 +445,30 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
       expect(cleaned.sodium).toBe(80);
     });
 
-    it('當系統預設食材 (!isCustom) 次級營養素缺失時，應能自動自愈從預設庫補齊', () => {
-      // 假設從遠端舊版同步回來的雞蛋（缺少 sugar, saturatedFat 等）
-      const eggFromOldSync = {
-        id: 'f57cb780-a0b1-4d41-bb80-8750fd9361cc', // whole_egg
+    it('當食材次級營養素齊全時，清洗應正確保留數值', () => {
+      const foodItem = {
+        id: 'food-test-id',
         name: '雞蛋',
-        category: 'natural',
-        servingSize: 50,
-        servingUnit: 'g',
-        calories: 72,
-        carbs: 0.4,
-        protein: 6.3,
-        fat: 4.8,
-        fiber: 0,
-        // sugar 缺失
-        isCustom: false,
-      };
-
-      const cleaned = sanitizeFoodItem(eggFromOldSync);
-      expect(cleaned.sugar).toBe(0.2); // 應自動補齊雞蛋的 0.2g sugar
-      expect(cleaned.saturatedFat).toBe(1.6);
-      expect(cleaned.transFat).toBe(0);
-      expect(cleaned.sodium).toBe(71);
-    });
-
-    it('當遠端傳入歷史版本的「砂糖橘」時，應自愈補齊 sugar: 8.5 等次級營養素', () => {
-      const shatangjuFromRemote = {
-        id: '07b385f5-167e-5cef-817c-6aca9955ae39',
-        name: '砂糖橘',
         category: 'natural',
         servingSize: 100,
         servingUnit: 'g',
-        calories: 43,
-        protein: 0.8,
-        carbs: 10.3,
-        fat: 0.2,
-        fiber: 1.4,
-        isCustom: false,
-        isArchived: false,
-        createdAt: 1794148915715,
-        updatedAt: 1794148915715,
+        calories: 143,
+        carbs: 0.7,
+        protein: 12.6,
+        fat: 9.5,
+        fiber: 0,
+        sugar: 0.4,
+        saturatedFat: 3.1,
+        transFat: 0,
+        sodium: 142,
+        isCustom: true,
       };
 
-      const cleaned = sanitizeFoodItem(shatangjuFromRemote);
-      expect(cleaned.sugar).toBe(8.5);
-      expect(cleaned.saturatedFat).toBe(0);
+      const cleaned = sanitizeFoodItem(foodItem);
+      expect(cleaned.sugar).toBe(0.4);
+      expect(cleaned.saturatedFat).toBe(3.1);
       expect(cleaned.transFat).toBe(0);
-      expect(cleaned.sodium).toBe(2);
-      expect(cleaned.fiber).toBe(1.4);
+      expect(cleaned.sodium).toBe(142);
     });
   });
 });

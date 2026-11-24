@@ -1,5 +1,4 @@
 import i18n from '@/i18n/config';
-import { DEFAULT_FOOD_I18N } from '@/services/db/defaultFoodLocalization';
 import { DEFAULT_EXERCISE_I18N } from '@/services/db/defaultExerciseLocalization';
 
 export type SupportedLocale = 'zh-TW' | 'zh-CN' | 'en';
@@ -18,26 +17,11 @@ export interface LocalizableItem {
 }
 
 /**
- * 解析預設食物之動態語系名稱：
- * - 自定義食物（isCustom: true）保留原名稱
- * - 系統預設食物依當前語系返回對應譯名（若使用者曾手動改名則保留改名結果）
+ * 解析食物名稱：
+ * 食物庫 100% 由使用者自建與權威庫導入，直接呈現實體名稱
  */
-export function getLocalizedFoodName(item: LocalizableItem, lang?: string): string {
-  const rawName = item.name?.trim() || '';
-  if (item.isCustom || !item.id) return rawName;
-
-  const entry = DEFAULT_FOOD_I18N[item.id];
-  if (!entry) return rawName;
-
-  // 若使用者曾手動覆寫過系統預設食材名稱，尊重使用者編輯結果
-  if (rawName && rawName !== entry.zhTW && rawName !== entry.zhCN && rawName !== entry.en) {
-    return rawName;
-  }
-
-  const locale = resolveSupportedLocale(lang);
-  if (locale === 'en') return entry.en;
-  if (locale === 'zh-CN') return entry.zhCN;
-  return entry.zhTW;
+export function getLocalizedFoodName(item: LocalizableItem, _lang?: string): string {
+  return item.name?.trim() || '';
 }
 
 /**

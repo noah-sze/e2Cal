@@ -11,23 +11,8 @@ import type {
   UserBaseInfo,
 } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { PRIMARY_USER_ID, DEFAULT_FOODS } from '@/services/db/defaultData';
+import { PRIMARY_USER_ID } from '@/services/db/defaultData';
 import { normalizeServingToMetric } from '@/utils/nutritionMath';
-
-let defaultFoodMapCache: Map<string, Omit<FoodItem, 'createdAt' | 'updatedAt'>> | null = null;
-let defaultFoodByNameMapCache: Map<string, Omit<FoodItem, 'createdAt' | 'updatedAt'>> | null = null;
-function getDefaultFoodMap() {
-  if (!defaultFoodMapCache) {
-    defaultFoodMapCache = new Map(DEFAULT_FOODS.map((f) => [f.id, f]));
-  }
-  return defaultFoodMapCache;
-}
-function getDefaultFoodByNameMap() {
-  if (!defaultFoodByNameMapCache) {
-    defaultFoodByNameMapCache = new Map(DEFAULT_FOODS.map((f) => [f.name, f]));
-  }
-  return defaultFoodByNameMapCache;
-}
 
 function asRecord(input: unknown): Record<string, unknown> {
   return typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
@@ -35,7 +20,7 @@ function asRecord(input: unknown): Record<string, unknown> {
 
 /**
  * 清洗單品食材：強制收斂為純淨公制 SI（g / ml、kcal），徹底剔除歷史殘留的 rawNutrition / labelBasisSize / labelBasisUnit
- * 同步完整保留各次級營養素（sugar, fiber, saturatedFat, transFat, sodium），預設食材具備自愈兜底機制
+ * 同步完整保留各次級營養素（sugar, fiber, saturatedFat, transFat, sodium）
  */
 export function sanitizeFoodItem(rawInput: unknown): FoodItem {
   const raw = asRecord(rawInput);
@@ -49,18 +34,13 @@ export function sanitizeFoodItem(rawInput: unknown): FoodItem {
     category
   );
 
-  const isCustom = Boolean(raw.isCustom);
-  const rawName = String(raw.name || '').trim();
-  const defFood = !isCustom
-    ? getDefaultFoodMap().get(rawId) || getDefaultFoodByNameMap().get(rawName)
-    : undefined;
-
-  const rawSugar = raw.sugar !== undefined ? Number(raw.sugar) : defFood?.sugar;
-  const rawFiber = raw.fiber !== undefined ? Number(raw.fiber) : defFood?.fiber;
+  const isCustom = raw.isCustom !== undefined ? Boolean(raw.isCustom) : true;
+  const rawSugar = raw.sugar !== undefined ? Number(raw.sugar) : undefined;
+  const rawFiber = raw.fiber !== undefined ? Number(raw.fiber) : undefined;
   const rawSaturatedFat =
-    raw.saturatedFat !== undefined ? Number(raw.saturatedFat) : defFood?.saturatedFat;
-  const rawTransFat = raw.transFat !== undefined ? Number(raw.transFat) : defFood?.transFat;
-  const rawSodium = raw.sodium !== undefined ? Number(raw.sodium) : defFood?.sodium;
+    raw.saturatedFat !== undefined ? Number(raw.saturatedFat) : undefined;
+  const rawTransFat = raw.transFat !== undefined ? Number(raw.transFat) : undefined;
+  const rawSodium = raw.sodium !== undefined ? Number(raw.sodium) : undefined;
 
   return {
     id: rawId,

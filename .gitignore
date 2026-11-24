@@ -28,4 +28,13 @@ scratch/
 .env
 .env.production
 
+# Food Pipeline Raw Data
+scripts/food-pipeline/raw/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+
 

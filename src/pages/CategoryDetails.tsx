@@ -24,7 +24,6 @@ import { calculateScaledNutrition } from '@/utils/nutritionMath';
 import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
 import { AuthorityFoodDetailsDialog } from '@/components/food/AuthorityFoodDetailsDialog';
 import { FoodFormDialog, type FoodFormData } from '@/components/food/FoodFormDialog';
-import { DEFAULT_NATURAL_FOODS } from '@/services/db/defaultNaturalFoods';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { formatEnergy, formatFoodServing } from '@/utils/unitMath';
 import type { NutritionTag, FoodLog } from '@/types';
@@ -102,25 +101,8 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSourceDetailsOpen, setIsSourceDetailsOpen] = useState(false);
 
-  const defaultNaturalItem = useMemo(() => {
-    if (!food || food.isCustom) return null;
-    return DEFAULT_NATURAL_FOODS.find((f) => f.id === food.id) || null;
-  }, [food]);
-
-  const effectiveFood = useMemo(() => {
-    if (!food) return null;
-    if (!defaultNaturalItem) return food;
-    return {
-      ...food,
-      ...defaultNaturalItem,
-      name: food.name,
-      isArchived: food.isArchived,
-      createdAt: food.createdAt,
-      updatedAt: food.updatedAt,
-    };
-  }, [food, defaultNaturalItem]);
-
-  const effectiveDataSource = effectiveFood?.dataSource;
+  const effectiveFood = food;
+  const effectiveDataSource = food?.dataSource;
 
   const [headerActionEl, setHeaderActionEl] = useState<HTMLElement | null>(() =>
     typeof document !== 'undefined' ? document.getElementById('subpage-header-action') : null

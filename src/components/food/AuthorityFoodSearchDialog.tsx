@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
 import { cn } from '@/lib/utils';
-import type { FoodItem } from '@/types';
+import type { FoodItem, AuthoritySource } from '@/types';
 import { useFoods } from '@/hooks/useFoods';
 import {
   searchAuthorityFoods,
@@ -35,7 +35,7 @@ export interface AuthorityFoodSearchDialogProps {
   className?: string;
 }
 
-type AuthorityFilter = 'all' | 'USDA' | 'MEXT' | 'TFDA' | 'CFCT';
+type AuthorityFilter = 'all' | AuthoritySource;
 
 const POPULAR_RECOMMENDATIONS = [
   '去皮雞胸肉',
@@ -221,11 +221,13 @@ export function AuthorityFoodSearchDialog({
           <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto no-scrollbar py-0.5">
             {(
               [
-                { id: 'all', label: t('diet.authoritySourceAll', '全部 (1.4 萬)') },
+                { id: 'all', label: t('diet.authoritySourceAll', '全部 (1.8 萬)') },
                 { id: 'USDA', label: 'USDA (7,793)' },
+                { id: 'CoFID', label: '英國 UKHSA (2,886)' },
                 { id: 'MEXT', label: '日本 MEXT (2,478)' },
                 { id: 'TFDA', label: 'TFDA (2,213)' },
                 { id: 'CFCT', label: '中國 CDC (1,677)' },
+                { id: 'AFCD', label: '澳洲 FSANZ (1,588)' },
               ] as const
             ).map((src) => (
               <button
@@ -317,7 +319,11 @@ export function AuthorityFoodSearchDialog({
                 ? '中國 CDC'
                 : food.dataSource?.authority === 'MEXT'
                   ? '日本 MEXT'
-                  : food.dataSource?.authority || 'USDA';
+                  : food.dataSource?.authority === 'AFCD'
+                    ? '澳洲 FSANZ'
+                    : food.dataSource?.authority === 'CoFID'
+                      ? '英國 UKHSA'
+                      : food.dataSource?.authority || 'USDA';
 
             return (
               <div

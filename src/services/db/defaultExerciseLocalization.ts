@@ -1,5 +1,9 @@
 // 自動生成之系統預設動作多語系名稱映射表 (83 項，以確定性 UUID 為鍵)
-import type { LocalizedEntityNames } from './defaultFoodLocalization';
+export interface LocalizedEntityNames {
+  zhTW: string;
+  zhCN: string;
+  en: string;
+}
 
 export const DEFAULT_EXERCISE_I18N: Record<string, LocalizedEntityNames> = {
   'c359b893-6d1b-46b9-84e8-66cd1215a946': { zhTW: '槓鈴臥推', zhCN: '杠铃卧推', en: 'Barbell Bench Press' },

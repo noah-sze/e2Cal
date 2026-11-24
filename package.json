@@ -8,6 +8,7 @@
     "dev": "vite --host",
     "build": "tsc -b && vite build",
     "lint": "oxlint .",
+    "build:authority": "python scripts/food-pipeline/merge_into_authority_foods.py",
     "test": "vitest run",
     "check:all": "oxlint . && tsc -b && vitest run && vite build",
     "preview": "vite preview"

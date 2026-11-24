@@ -10,7 +10,7 @@ export type NutritionTag =
   | 'low-calorie'
   | 'high-calorie';
 
-export type AuthoritySource = 'USDA' | 'CFCT' | 'TFDA' | 'MEXT';
+export type AuthoritySource = 'USDA' | 'CFCT' | 'TFDA' | 'MEXT' | 'AFCD' | 'CoFID';
 
 export interface FoodDataSource {
   authority: AuthoritySource;

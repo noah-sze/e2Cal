@@ -4,7 +4,6 @@ import { clearDropboxTokens } from '@/services/sync/dropboxAuth';
 import { clearFoodsCache } from '@/hooks/useFoods';
 import { clearRecipesCache } from '@/hooks/useRecipes';
 import { clearExercisesCache } from '@/hooks/useExercises';
-import { NATURAL_FOOD_IDS, DEFAULT_NATURAL_FOODS } from './defaultNaturalFoods';
 import { DEFAULT_EQUIPMENT_IDS, DEFAULT_EQUIPMENTS } from './defaultEquipments';
 import { DEFAULT_EXERCISE_IDS, DEFAULT_EXERCISES } from './defaultExercises';
 
@@ -19,32 +18,8 @@ export { DEFAULT_EXERCISE_IDS, DEFAULT_EXERCISES };
 export const PRIMARY_USER_ID = '2848673b-dd09-4d1c-893a-bc501b79122a';
 export const DEFAULT_USER_PROFILE_ID = '36789f9a-551b-4b58-9984-dd26b50a2e71';
 
-export const DEFAULT_FOOD_IDS = {
-  chicken_breast: '11504467-3117-4122-97c6-305bb10ff4dc',
-  whole_egg: 'f57cb780-a0b1-4d41-bb80-8750fd9361cc',
-  white_rice: 'a8edd570-19e9-4866-9103-35dae800e958',
-  sweet_potato: '1193d479-e382-41e7-9ecb-895b3b18da42',
-  whey_protein: '9ff121e5-ff94-4bdf-9012-fe7466eb957f',
-  rolled_oats: 'a0bf9893-0f2d-45d7-83db-dd029d3f4b18',
-  beef_flank: '1d8c099f-5c03-4ada-8171-73be97f57198',
-  greek_yogurt: '98717b75-f935-46d7-9c8a-3c0bdc0df251',
-  salmon: '325c20fb-b4b2-49ce-b91f-ea2044401a42',
-  soy_milk: '6bdcc9bd-6e4b-40f7-b772-113e38ee556d',
-  tomato: '53aef1a1-7d50-4655-924c-aa544ef76558',
-  cooking_oil: '182261b5-6e77-4f51-9cdd-4a2b3c5ab785',
-  olive_oil: '2d4f8c1a-7b3e-4e92-a814-6c5d9e2f1a01',
-  corn_oil: '3e5a9d2b-8c4f-4f03-b925-7d6e0f3a2b02',
-  rapeseed_oil: '4f6b0e3c-9d5a-4014-ca36-8e7f1a4b3c03',
-  sunflower_oil: '5a7c1f4d-ae6b-4125-db47-9f8a2b5c4d04',
-  soybean_oil: '6b8d2a5e-bf7c-4236-ec58-0a9b3c6d5e05',
-  sesame_oil: '7c9e3b6f-c08d-4347-fd69-1b0c4d7e6f06',
-  coconut_oil: '8d0f4c70-d19e-4458-ae70-2c1d5e8f7007',
-  avocado_oil: '9e105d81-e2af-4569-bf81-3d2e6f908108',
-  lard: 'af216e92-f3b0-467a-c092-4e3f70a19209',
-  butter: 'b0327fa3-04c1-478b-d1a3-5f4081b2a310',
-  black_pepper: 'f564160e-46af-4a25-aaad-3c8fe8cf9710',
-  ...NATURAL_FOOD_IDS,
-} as const;
+// 預設食物庫已徹底刪除，食物 100% 由使用者自建或自 1.8 萬筆權威庫選取導入
+export const DEFAULT_FOOD_IDS: Record<string, string> = {};
 
 export const DEFAULT_RECIPE_IDS = {
   tomato_egg: '4156a9b9-5fa1-4a7e-bda3-fa373bdd51b2',
@@ -54,21 +29,6 @@ export const DEFAULT_RECIPE_IDS = {
 
 // 歷史 slug ID 至標準確定性 UUID 映射字典
 export const LEGACY_ID_TO_UUID_MAP: Record<string, string> = {
-  // Foods
-  food_chicken_breast: DEFAULT_FOOD_IDS.chicken_breast,
-  food_whole_egg: DEFAULT_FOOD_IDS.whole_egg,
-  food_white_rice: DEFAULT_FOOD_IDS.white_rice,
-  food_sweet_potato: DEFAULT_FOOD_IDS.sweet_potato,
-  food_whey_protein: DEFAULT_FOOD_IDS.whey_protein,
-  food_rolled_oats: DEFAULT_FOOD_IDS.rolled_oats,
-  food_beef_flank: DEFAULT_FOOD_IDS.beef_flank,
-  food_greek_yogurt: DEFAULT_FOOD_IDS.greek_yogurt,
-  food_salmon: DEFAULT_FOOD_IDS.salmon,
-  food_soy_milk: DEFAULT_FOOD_IDS.soy_milk,
-  food_tomato: DEFAULT_FOOD_IDS.tomato,
-  food_cooking_oil: DEFAULT_FOOD_IDS.cooking_oil,
-  food_black_pepper: DEFAULT_FOOD_IDS.black_pepper,
-
   // Recipes
   recipe_tomato_egg: DEFAULT_RECIPE_IDS.tomato_egg,
   recipe_oat_bowl: DEFAULT_RECIPE_IDS.oat_bowl,
@@ -97,36 +57,8 @@ export const LEGACY_ID_TO_UUID_MAP: Record<string, string> = {
   'default-user-profile': DEFAULT_USER_PROFILE_ID,
 };
 
-export const DEFAULT_OILS: Omit<FoodItem, 'createdAt' | 'updatedAt'>[] = [
-  { id: DEFAULT_FOOD_IDS.olive_oil, name: '橄欖油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.4, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171413', sourceName: 'Oil, olive, salad or cooking', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.corn_oil, name: '玉米油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 90, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.3, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171414', sourceName: 'Oil, corn, industrial and retail', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.rapeseed_oil, name: '菜籽油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 90, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 0.7, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171411', sourceName: 'Oil, canola', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.sunflower_oil, name: '葵花籽油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.0, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171428', sourceName: 'Oil, sunflower, linoleic', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.soybean_oil, name: '大豆油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.5, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171427', sourceName: 'Oil, soybean, salad or cooking', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.sesame_oil, name: '芝麻油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.4, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171426', sourceName: 'Oil, sesame, salad or cooking', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.coconut_oil, name: '椰子油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 89, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 8.7, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171412', sourceName: 'Oil, coconut', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.avocado_oil, name: '酪梨油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.2, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '173586', sourceName: 'Oil, avocado', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.lard, name: '豬油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 90, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 3.9, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171400', sourceName: 'Lard', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.butter, name: '奶油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 72, protein: 0.1, carbs: 0, fat: 8.1, fiber: 0, sugar: 0, saturatedFat: 5.1, transFat: 0.3, sodium: 60, dataSource: { authority: 'USDA', sourceId: '173410', sourceName: 'Butter, without salt', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-];
-
-export const DEFAULT_FOODS: Omit<FoodItem, 'createdAt' | 'updatedAt'>[] = [
-  { id: DEFAULT_FOOD_IDS.chicken_breast, name: '雞胸肉', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 120, protein: 22.5, carbs: 0, fat: 2.6, fiber: 0.0, sugar: 0.0, saturatedFat: 0.6, transFat: 0.0, sodium: 65, dataSource: { authority: 'USDA', sourceId: '171077', sourceName: 'Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.whole_egg, name: '雞蛋', category: 'natural', servingSize: 50, servingUnit: 'g', calories: 72, protein: 6.3, carbs: 0.4, fat: 4.8, fiber: 0.0, sugar: 0.2, saturatedFat: 1.6, transFat: 0.0, sodium: 71, refuseRate: 0.12, edibleRate: 0.88, refuseDescription: 'shell 12%', dataSource: { authority: 'USDA', sourceId: '171287', sourceName: 'Egg, whole, raw, fresh', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.white_rice, name: '白米', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 358, protein: 6.8, carbs: 79.2, fat: 0.7, fiber: 1.3, sugar: 0.1, saturatedFat: 0.2, transFat: 0.0, sodium: 2, dataSource: { authority: 'USDA', sourceId: '169756', sourceName: 'Rice, white, long-grain, regular, raw, unenriched', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.sweet_potato, name: '地瓜', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 86, protein: 1.6, carbs: 20, fat: 0.1, fiber: 3.0, sugar: 4.2, saturatedFat: 0.0, transFat: 0.0, sodium: 55, refuseRate: 0.28, edibleRate: 0.72, refuseDescription: 'peel 28%', dataSource: { authority: 'USDA', sourceId: '168482', sourceName: 'Sweet potato, raw, unprepared', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.whey_protein, name: '乳清蛋白粉', category: 'processed', servingSize: 30, servingUnit: 'g', calories: 120, protein: 24, carbs: 2, fat: 1.5, fiber: 0.0, sugar: 1.5, saturatedFat: 0.9, transFat: 0.0, sodium: 140, dataSource: { authority: 'USDA', sourceId: '173177', sourceName: 'Beverages, whey protein powder concentrate', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.rolled_oats, name: '大燕麥片', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 389, protein: 16.9, carbs: 66, fat: 6.9, fiber: 10.6, sugar: 1.0, saturatedFat: 1.2, transFat: 0.0, sodium: 4, dataSource: { authority: 'USDA', sourceId: '169705', sourceName: 'Cereals, oats, regular and quick, not fortified, dry', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.beef_flank, name: '牛板腱', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 180, protein: 24, carbs: 0, fat: 9, fiber: 0.0, sugar: 0.0, saturatedFat: 3.6, transFat: 0.3, sodium: 54, dataSource: { authority: 'USDA', sourceId: '170258', sourceName: 'Beef, chuck, top blade, steak, separable lean only, raw', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.greek_yogurt, name: '無糖希臘優格', category: 'processed', servingSize: 100, servingUnit: 'g', calories: 60, protein: 10, carbs: 3.5, fat: 0.5, fiber: 0.0, sugar: 3.5, saturatedFat: 0.3, transFat: 0.0, sodium: 36, dataSource: { authority: 'USDA', sourceId: '170886', sourceName: 'Yogurt, Greek, plain, nonfat', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.salmon, name: '鮭魚', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 208, protein: 20, carbs: 0, fat: 13, fiber: 0.0, sugar: 0.0, saturatedFat: 3.1, transFat: 0.0, sodium: 59, refuseRate: 0.32, edibleRate: 0.68, refuseDescription: 'skin and bones 32%', dataSource: { authority: 'USDA', sourceId: '173686', sourceName: 'Fish, salmon, Atlantic, wild, raw', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.soy_milk, name: '無糖豆漿', category: 'beverage', servingSize: 250, servingUnit: 'ml', calories: 85, protein: 8.5, carbs: 4.5, fat: 3.5, fiber: 1.0, sugar: 1.5, saturatedFat: 0.5, transFat: 0.0, sodium: 30, dataSource: { authority: 'TFDA', sourceId: 'C0100401', sourceName: '無糖豆漿', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.tomato, name: '牛番茄', category: 'natural', servingSize: 100, servingUnit: 'g', calories: 18, protein: 0.9, carbs: 3.9, fat: 0.2, fiber: 1.2, sugar: 2.6, saturatedFat: 0.0, transFat: 0.0, sodium: 5, refuseRate: 0.09, edibleRate: 0.91, refuseDescription: 'stem and core 9%', dataSource: { authority: 'USDA', sourceId: '170457', sourceName: 'Tomatoes, red, ripe, raw, year round average', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  { id: DEFAULT_FOOD_IDS.cooking_oil, name: '花生油', category: 'oil', servingSize: 10, servingUnit: 'g', calories: 90, protein: 0, carbs: 0, fat: 10, fiber: 0, sugar: 0, saturatedFat: 1.7, transFat: 0, sodium: 0, dataSource: { authority: 'USDA', sourceId: '171424', sourceName: 'Oil, peanut, salad or cooking', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  ...DEFAULT_OILS,
-  { id: DEFAULT_FOOD_IDS.black_pepper, name: '黑胡椒粒', category: 'condiment', servingSize: 5, servingUnit: 'g', calories: 13, protein: 0.5, carbs: 3.2, fat: 0.2, fiber: 1.3, sugar: 0.0, saturatedFat: 0.1, transFat: 0.0, sodium: 1, dataSource: { authority: 'USDA', sourceId: '171320', sourceName: 'Spices, pepper, black', verifiedAt: '2026-11-23' }, isCustom: false, isArchived: false },
-  ...DEFAULT_NATURAL_FOODS,
-];
+// 系統預設食材庫完全清空，由使用者依個人需求自主打造個人庫
+export const DEFAULT_FOODS: Omit<FoodItem, 'createdAt' | 'updatedAt'>[] = [];
 
 // 預設食譜（菜餚）庫已完全清空，所有複合料理皆由使用者依個人烹飪習慣自訂
 export const DEFAULT_RECIPES: Omit<FoodRecipe, 'createdAt' | 'updatedAt'>[] = [];
@@ -154,67 +86,7 @@ export async function restoreMissingDefaultData(db: E2CalDatabase): Promise<{
     }
   }
 
-  // 2. 補齊食材
-  for (const f of DEFAULT_FOODS) {
-    const existingById = await db.foods.get(f.id);
-    const existingByName = await db.foods.where('name').equals(f.name).first();
-    if (!existingById && !existingByName) {
-      await db.foods.add({ ...f, createdAt: now, updatedAt: now });
-      foodsRestored += 1;
-    } else {
-      // 若預設食材存在但缺失最新權威與損耗率欄位，進行無害補齊
-      const target = existingById || existingByName;
-      if (target && !target.isCustom) {
-        let needsUpdate = false;
-        const patch: Partial<FoodItem> = {};
-        if (f.name !== undefined && target.name !== f.name) {
-          patch.name = f.name;
-          needsUpdate = true;
-        }
-        if (f.calories !== undefined && target.calories !== f.calories) {
-          patch.calories = f.calories;
-          needsUpdate = true;
-        }
-        if (f.protein !== undefined && target.protein !== f.protein) {
-          patch.protein = f.protein;
-          needsUpdate = true;
-        }
-        if (f.fat !== undefined && target.fat !== f.fat) {
-          patch.fat = f.fat;
-          needsUpdate = true;
-        }
-        if (f.carbs !== undefined && target.carbs !== f.carbs) {
-          patch.carbs = f.carbs;
-          needsUpdate = true;
-        }
-        if (f.refuseRate !== undefined && target.refuseRate !== f.refuseRate) {
-          patch.refuseRate = f.refuseRate;
-          needsUpdate = true;
-        }
-        if (f.edibleRate !== undefined && target.edibleRate !== f.edibleRate) {
-          patch.edibleRate = f.edibleRate;
-          needsUpdate = true;
-        }
-        if (f.refuseDescription !== undefined && target.refuseDescription !== f.refuseDescription) {
-          patch.refuseDescription = f.refuseDescription;
-          needsUpdate = true;
-        }
-        if (f.dataSource && (!target.dataSource || target.dataSource.sourceId !== f.dataSource.sourceId)) {
-          patch.dataSource = f.dataSource;
-          needsUpdate = true;
-        }
-        if (f.micros && !target.micros) {
-          patch.micros = f.micros;
-          needsUpdate = true;
-        }
-        if (needsUpdate) {
-          await db.foods.update(target.id, { ...patch, updatedAt: now });
-        }
-      }
-    }
-  }
-
-  // 3. 補齊動作
+  // 2. 補齊動作
   for (const ex of DEFAULT_EXERCISES) {
     const existingById = await db.exercises.get(ex.id);
     const existingByName = await db.exercises.where('name').equals(ex.name).first();
@@ -227,16 +99,7 @@ export async function restoreMissingDefaultData(db: E2CalDatabase): Promise<{
     }
   }
 
-  // 4. 補齊菜餚
-  for (const r of DEFAULT_RECIPES) {
-    const existingById = await db.recipes.get(r.id);
-    const existingByName = await db.recipes.where('name').equals(r.name).first();
-    if (!existingById && !existingByName) {
-      await db.recipes.add({ ...r, createdAt: now, updatedAt: now });
-      recipesRestored += 1;
-    }
-  }
-
+  // 3. 菜餚與食材 100% 由使用者自主建立或自 1.8 萬筆權威庫選取導入，不作工廠強制填補
   const totalRestored = foodsRestored + exercisesRestored + equipmentsRestored + recipesRestored;
   return {
     totalRestored,
@@ -252,9 +115,9 @@ export async function restoreMissingDefaultData(db: E2CalDatabase): Promise<{
 /**
  * 徹底出廠重置 (Factory Reset)
  * 1. 清空所有業務日誌 (飲食記錄 daily_diet_logs、訓練日誌 workout_logs、身體指標 body_metrics、課表 routines)
- * 2. 清除所有使用者自定義項目 (isCustom: true 的食材、菜餚、動作、器械)
- * 3. 預設飲食與動作庫 100% 保留並自動解除歸檔 (isArchived: false)；若有缺失自動補齊出廠數據
- * 4. 個人基本資料與檔案重置為初始出廠狀態 (Jason / 70kg / 175cm)
+ * 2. 清空飲食與食譜（回歸出廠純淨空白態，零寫死預設食材庫）
+ * 3. 系統動作與器械庫 100% 保留並解除歸檔 (isArchived: false)；若有缺失自動補齊出廠數據
+ * 4. 個人基本資料與檔案重置為初始出廠狀態 (空白未設定態)
  * 5. 徹底中斷 Dropbox 雲端同步並清除本地授權 Token 與中繼資料
  * 6. 清理記憶體快取與本地偏好存儲
  */
@@ -269,18 +132,16 @@ export async function resetDatabaseToFactory(db: E2CalDatabase): Promise<void> {
     db.routines.clear(),
   ]);
 
-  // 2. 清除所有自定義實體 (isCustom: true)
+  // 2. 清空飲食與食譜（零寫死食材庫），清除器械與動作的自定義項目
   await Promise.all([
-    db.foods.filter((f) => Boolean(f.isCustom)).delete(),
-    db.recipes.filter((r) => Boolean(r.isCustom)).delete(),
+    db.foods.clear(),
+    db.recipes.clear(),
     db.exercises.filter((e) => Boolean(e.isCustom)).delete(),
     db.equipments.filter((eq) => Boolean(eq.isCustom)).delete(),
   ]);
 
-  // 3. 預設項目解除歸檔
+  // 3. 系統器械與動作庫解除歸檔
   await Promise.all([
-    db.foods.toCollection().modify({ isArchived: false }),
-    db.recipes.toCollection().modify({ isArchived: false }),
     db.exercises.toCollection().modify({ isArchived: false }),
     db.equipments.toCollection().modify({ isArchived: false }),
   ]);

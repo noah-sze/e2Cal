@@ -4,7 +4,6 @@
 // 嚴格零副作用純函數 (Pure Function)，無任何 UI 顯示入侵
 // ============================================================================
 
-import { NATURAL_FOOD_IDS } from '@/services/db/defaultNaturalFoods';
 import { DEFAULT_EXERCISE_IDS } from '@/services/db/defaultExercises';
 import { DEFAULT_EQUIPMENT_IDS } from '@/services/db/defaultEquipments';
 import { getAliasesForTarget } from './multilingualAliases';
@@ -751,11 +750,6 @@ export function normalizeChinese(str: string): string {
 // ----------------------------------------------------------------------------
 const ALL_SLUGS_MAP = new Map<string, string>();
 
-for (const [slug, id] of Object.entries(NATURAL_FOOD_IDS)) {
-  ALL_SLUGS_MAP.set(id, slug);
-  ALL_SLUGS_MAP.set(slug, slug);
-}
-
 for (const [slug, id] of Object.entries(DEFAULT_EXERCISE_IDS)) {
   ALL_SLUGS_MAP.set(id, slug);
   ALL_SLUGS_MAP.set(slug, slug);
@@ -893,6 +887,26 @@ export function matchesMultilingual(
   }
 
   // 4. 權威雙語別名庫匹配 (Phase 2 - Domain Aliases Matching)
+  // 4.1 查詢詞同義詞正向穿透 (Query Synonyms Forward Matching: 例如輸入「紅薯」命中權威庫的「地瓜」)
+  const queryAliases = getAliasesForTarget(undefined, cleanQuery);
+  if (queryAliases.length > 0) {
+    for (let i = 0; i < queryAliases.length; i++) {
+      const qAlias = queryAliases[i];
+      if (targetName.includes(qAlias)) {
+        return true;
+      }
+      if (!isQueryAscii) {
+        const qAliasTrad = toTraditional(qAlias);
+        const qAliasSimp = toSimplified(qAlias);
+        const targetNameTrad = toTraditional(targetName);
+        const targetNameSimp = toSimplified(targetName);
+        if (targetNameTrad.includes(qAliasTrad) || targetNameSimp.includes(qAliasSimp)) {
+          return true;
+        }
+      }
+    }
+  }
+
   const targetAliases = getAliasesForTarget(target.id, target.name);
   if (targetAliases.length > 0) {
     for (let i = 0; i < targetAliases.length; i++) {

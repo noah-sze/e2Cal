@@ -1187,7 +1187,15 @@ export function FoodRecipeBrowser({
                                     {item.name}
                                   </span>
                                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono shrink-0">
-                                    {item.dataSource?.authority === 'CFCT' ? '中國 CDC' : item.dataSource?.authority === 'MEXT' ? '日本 MEXT' : item.dataSource?.authority}
+                                    {item.dataSource?.authority === 'CFCT'
+                                      ? '中國 CDC'
+                                      : item.dataSource?.authority === 'MEXT'
+                                        ? '日本 MEXT'
+                                        : item.dataSource?.authority === 'AFCD'
+                                          ? '澳洲 FSANZ'
+                                          : item.dataSource?.authority === 'CoFID'
+                                            ? '英國 UKHSA'
+                                            : item.dataSource?.authority}
                                   </span>
                                   {Boolean(item.refuseRate && item.refuseRate > 0) && (
                                     <span className="text-[9px] px-1 py-0.5 rounded bg-muted/60 text-muted-foreground/80 font-mono shrink-0">
