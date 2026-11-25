@@ -210,6 +210,22 @@ export function sanitizeDailyDietLog(rawInput: unknown): DailyDietLog {
   const raw = asRecord(rawInput);
   const meta = asRecord(raw.meta);
   const rawId = String(raw.id || '');
+  const now = Date.now();
+  const maxTombstoneAgeMs = 30 * 24 * 60 * 60 * 1000;
+  let deletedEntries: Record<string, number> | undefined;
+  if (raw.deletedEntries && typeof raw.deletedEntries === 'object' && !Array.isArray(raw.deletedEntries)) {
+    const cleaned: Record<string, number> = {};
+    for (const [entryId, ts] of Object.entries(raw.deletedEntries as Record<string, unknown>)) {
+      const numTs = Number(ts);
+      if (entryId && Number.isFinite(numTs) && numTs > 0 && now - numTs <= maxTombstoneAgeMs) {
+        cleaned[entryId] = numTs;
+      }
+    }
+    if (Object.keys(cleaned).length > 0) {
+      deletedEntries = cleaned;
+    }
+  }
+
   return {
     id: rawId,
     date: String(raw.date || ''),
@@ -220,8 +236,9 @@ export function sanitizeDailyDietLog(rawInput: unknown): DailyDietLog {
     entries: Array.isArray(raw.entries)
       ? raw.entries.map((entry: unknown) => sanitizeFoodLog(entry))
       : [],
-    createdAt: Number(raw.createdAt) || Date.now(),
-    updatedAt: Number(raw.updatedAt) || Date.now(),
+    ...(deletedEntries ? { deletedEntries } : {}),
+    createdAt: Number(raw.createdAt) || now,
+    updatedAt: Number(raw.updatedAt) || now,
     ...(raw.rev !== undefined ? { rev: Number(raw.rev) } : {}),
   };
 }
@@ -231,6 +248,22 @@ export function sanitizeDailyDietLog(rawInput: unknown): DailyDietLog {
  */
 export function sanitizeWorkoutLog(logInput: unknown): WorkoutLog {
   const log = asRecord(logInput);
+  const now = Date.now();
+  const maxTombstoneAgeMs = 30 * 24 * 60 * 60 * 1000;
+  let deletedSetIds: Record<string, number> | undefined;
+  if (log.deletedSetIds && typeof log.deletedSetIds === 'object' && !Array.isArray(log.deletedSetIds)) {
+    const cleaned: Record<string, number> = {};
+    for (const [setId, ts] of Object.entries(log.deletedSetIds as Record<string, unknown>)) {
+      const numTs = Number(ts);
+      if (setId && Number.isFinite(numTs) && numTs > 0 && now - numTs <= maxTombstoneAgeMs) {
+        cleaned[setId] = numTs;
+      }
+    }
+    if (Object.keys(cleaned).length > 0) {
+      deletedSetIds = cleaned;
+    }
+  }
+
   const sanitized: WorkoutLog = {
     id: String(log.id || ''),
     date: String(log.date || ''),
@@ -249,14 +282,19 @@ export function sanitizeWorkoutLog(logInput: unknown): WorkoutLog {
                     reps: Number(s.reps) || 0,
                     isCompleted: Boolean(s.isCompleted),
                     ...(s.rpe !== undefined ? { rpe: Number(s.rpe) } : {}),
+                    ...(s.durationSeconds !== undefined ? { durationSeconds: Number(s.durationSeconds) } : {}),
+                    ...(s.distanceKm !== undefined ? { distanceKm: Number(s.distanceKm) } : {}),
+                    ...(s.isWarmup !== undefined ? { isWarmup: Boolean(s.isWarmup) } : {}),
+                    ...(s.updatedAt !== undefined ? { updatedAt: Number(s.updatedAt) } : {}),
                   };
                 })
               : [],
           };
         })
       : [],
-    createdAt: Number(log.createdAt) || Date.now(),
-    updatedAt: Number(log.updatedAt) || Date.now(),
+    ...(deletedSetIds ? { deletedSetIds } : {}),
+    createdAt: Number(log.createdAt) || now,
+    updatedAt: Number(log.updatedAt) || now,
   };
 
   if (log.routineId) sanitized.routineId = String(log.routineId);

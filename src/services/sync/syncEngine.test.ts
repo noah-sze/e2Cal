@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   mergeEntities,
+  mergeEntityTombstoneMaps,
+  mergeWorkoutLogs,
   mergeDietLogsByDate,
   groupFoodLogsByDate,
   groupWorkoutLogsByDate,
@@ -151,6 +153,45 @@ describe('syncEngine', () => {
       };
       const result2 = mergeEntities([localWithoutSugar], [remoteWithSugar]);
       expect(result2.merged[0].sugar).toBe(35);
+    });
+
+    it('prevents deleted entities from resurrecting via tombstones and reports deletedIds for local cleanup', () => {
+      const now = 40 * 24 * 60 * 60 * 1000;
+      const local = [
+        { id: 'food-deleted-remote', updatedAt: now - 5000, rev: 1 },
+        { id: 'food-recreated', updatedAt: now - 500, rev: 2 },
+      ];
+      const remote = [
+        { id: 'food-deleted-local', updatedAt: now - 4000, rev: 1 },
+        { id: 'food-keep', updatedAt: now - 3000, rev: 1 },
+      ];
+      const tombstones = {
+        'food-deleted-remote': now - 2000,
+        'food-deleted-local': now - 1000,
+        'food-recreated': now - 3000,
+      };
+
+      const result = mergeEntities(local, remote, tombstones, now);
+      expect(result.merged.map((i) => i.id)).toEqual(['food-recreated', 'food-keep']);
+      expect(result.deletedIds).toEqual(['food-deleted-remote']);
+      expect(result.hasLocalChanges).toBe(true);
+      expect(result.hasRemoteChanges).toBe(true);
+    });
+
+    it('merges entity tombstone maps and prunes entries older than 30 days', () => {
+      const now = 40 * 24 * 60 * 60 * 1000;
+      const { merged, changedLocal, changedRemote } = mergeEntityTombstoneMaps(
+        { foods: { f1: now - 1000, old: 1000 } },
+        { foods: { f2: now - 2000 }, recipes: { r1: now - 500 } },
+        now
+      );
+
+      expect(changedLocal).toBe(true);
+      expect(changedRemote).toBe(true);
+      expect(merged).toEqual({
+        foods: { f1: now - 1000, f2: now - 2000 },
+        recipes: { r1: now - 500 },
+      });
     });
   });
 
@@ -307,6 +348,163 @@ describe('syncEngine', () => {
       expect(result2.merged[0].meta.activityLevel).toBe(1.55);
       expect(result2.hasLocalChanges).toBe(false);
       expect(result2.hasRemoteChanges).toBe(true);
+    });
+
+    it('merges distinct entries created offline on two devices on the same day without data loss', () => {
+      const local: DailyDietLog[] = [
+        {
+          id: 'local-id',
+          date: '2026-11-25',
+          meta: { activityLevel: 1.55, macroSplit: { carbs: 40, protein: 30, fat: 30 } },
+          entries: [
+            { id: 'd1-e1', date: '2026-11-25', mealType: 'breakfast', foodId: 'f1', quantity: 100, unit: 'g', createdAt: 1000, updatedAt: 1000 },
+            { id: 'd1-e2', date: '2026-11-25', mealType: 'breakfast', foodId: 'f2', quantity: 50, unit: 'g', createdAt: 1100, updatedAt: 1100 },
+          ],
+          createdAt: 1000,
+          updatedAt: 1100,
+          rev: 2,
+        },
+      ];
+      const remote: DailyDietLog[] = [
+        {
+          id: 'remote-id',
+          date: '2026-11-25',
+          meta: { activityLevel: 1.55, macroSplit: { carbs: 40, protein: 30, fat: 30 } },
+          entries: [
+            { id: 'd2-e1', date: '2026-11-25', mealType: 'lunch', foodId: 'f3', quantity: 200, unit: 'g', createdAt: 2000, updatedAt: 2000 },
+          ],
+          createdAt: 2000,
+          updatedAt: 2000,
+          rev: 3,
+        },
+      ];
+
+      const result = mergeDietLogsByDate(local, remote, 3000);
+      expect(result.merged).toHaveLength(1);
+      expect(result.merged[0].entries.map((e) => e.id)).toEqual(['d1-e1', 'd1-e2', 'd2-e1']);
+      expect(result.hasLocalChanges).toBe(true);
+      expect(result.hasRemoteChanges).toBe(true);
+    });
+
+    it('prevents deleted entries from resurrecting via deletedEntries tombstones and prunes expired ones', () => {
+      const now = 40 * 24 * 60 * 60 * 1000;
+      const local: DailyDietLog[] = [
+        {
+          id: 'local-id',
+          date: '2026-11-25',
+          meta: { activityLevel: 1.55, macroSplit: { carbs: 40, protein: 30, fat: 30 } },
+          entries: [],
+          deletedEntries: {
+            'entry-del': now - 1000,
+            'entry-expired': 1000,
+          },
+          createdAt: 1000,
+          updatedAt: now - 1000,
+        },
+      ];
+      const remote: DailyDietLog[] = [
+        {
+          id: 'remote-id',
+          date: '2026-11-25',
+          meta: { activityLevel: 1.55, macroSplit: { carbs: 40, protein: 30, fat: 30 } },
+          entries: [
+            { id: 'entry-del', date: '2026-11-25', mealType: 'breakfast', foodId: 'f1', quantity: 100, unit: 'g', createdAt: 1000, updatedAt: now - 5000 },
+            { id: 'entry-keep', date: '2026-11-25', mealType: 'lunch', foodId: 'f2', quantity: 100, unit: 'g', createdAt: 2000, updatedAt: now - 2000 },
+          ],
+          createdAt: 1000,
+          updatedAt: now - 2000,
+        },
+      ];
+
+      const result = mergeDietLogsByDate(local, remote, now);
+      expect(result.merged[0].entries.map((e) => e.id)).toEqual(['entry-keep']);
+      expect(result.merged[0].deletedEntries).toEqual({ 'entry-del': now - 1000 });
+      expect(result.hasLocalChanges).toBe(true);
+      expect(result.hasRemoteChanges).toBe(true);
+    });
+  });
+
+  describe('mergeWorkoutLogs algorithm', () => {
+    it('merges distinct exercises and sets edited offline on two devices for the same WorkoutLog id', () => {
+      const local: WorkoutLog[] = [
+        {
+          id: 'w-1',
+          date: '2026-11-25',
+          exercises: [
+            {
+              exerciseId: 'squat',
+              sets: [{ id: 's1', setNumber: 1, weight: 100, reps: 5, isCompleted: true, updatedAt: 1000 }],
+            },
+          ],
+          createdAt: 1000,
+          updatedAt: 1000,
+        },
+      ];
+      const remote: WorkoutLog[] = [
+        {
+          id: 'w-1',
+          date: '2026-11-25',
+          exercises: [
+            {
+              exerciseId: 'squat',
+              sets: [{ id: 's2', setNumber: 2, weight: 105, reps: 5, isCompleted: true, updatedAt: 2000 }],
+            },
+            {
+              exerciseId: 'bench',
+              sets: [{ id: 'b1', setNumber: 1, weight: 80, reps: 8, isCompleted: true, updatedAt: 2000 }],
+            },
+          ],
+          createdAt: 1000,
+          updatedAt: 2000,
+        },
+      ];
+
+      const result = mergeWorkoutLogs(local, remote, undefined, 3000);
+      expect(result.merged).toHaveLength(1);
+      expect(result.merged[0].exercises.map((g) => g.exerciseId)).toEqual(['squat', 'bench']);
+      expect(result.merged[0].exercises[0].sets.map((s) => s.id)).toEqual(['s1', 's2']);
+      expect(result.hasLocalChanges).toBe(true);
+      expect(result.hasRemoteChanges).toBe(true);
+    });
+
+    it('prevents deleted sets from resurrecting via deletedSetIds tombstones', () => {
+      const now = 40 * 24 * 60 * 60 * 1000;
+      const local: WorkoutLog[] = [
+        {
+          id: 'w-1',
+          date: '2026-11-25',
+          exercises: [
+            {
+              exerciseId: 'squat',
+              sets: [{ id: 's1', setNumber: 1, weight: 100, reps: 5, isCompleted: true, updatedAt: now - 5000 }],
+            },
+          ],
+          deletedSetIds: { 's2': now - 1000 },
+          createdAt: 1000,
+          updatedAt: now - 1000,
+        },
+      ];
+      const remote: WorkoutLog[] = [
+        {
+          id: 'w-1',
+          date: '2026-11-25',
+          exercises: [
+            {
+              exerciseId: 'squat',
+              sets: [
+                { id: 's1', setNumber: 1, weight: 100, reps: 5, isCompleted: true, updatedAt: now - 5000 },
+                { id: 's2', setNumber: 2, weight: 110, reps: 5, isCompleted: true, updatedAt: now - 4000 },
+              ],
+            },
+          ],
+          createdAt: 1000,
+          updatedAt: now - 4000,
+        },
+      ];
+
+      const result = mergeWorkoutLogs(local, remote, undefined, now);
+      expect(result.merged[0].exercises[0].sets.map((s) => s.id)).toEqual(['s1']);
+      expect(result.merged[0].deletedSetIds).toEqual({ 's2': now - 1000 });
     });
   });
 

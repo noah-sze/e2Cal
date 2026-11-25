@@ -388,10 +388,14 @@ export async function uploadJsonFile<T>(
     ? { '.tag': 'update', update: expectedRev }
     : 'overwrite';
 
+  // 瀏覽器對 fetch keepalive 有 64KB payload 上限，小於 60KB 的增量檔案開啟 keepalive 提高切背景存活率
+  const useKeepalive = bodyBuffer.byteLength <= 60 * 1024;
+
   const response = await fetchDropboxWithAuth(
     'https://content.dropboxapi.com/2/files/upload',
     (token) => ({
       method: 'POST',
+      ...(useKeepalive ? { keepalive: true } : {}),
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/octet-stream',

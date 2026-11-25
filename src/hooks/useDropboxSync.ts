@@ -11,6 +11,9 @@ import {
 import {
   executeSync,
   scheduleAutoSync,
+  flushAutoSync,
+  markPendingAutoSync,
+  hasPendingAutoSync,
   onSyncEngineStatusChange,
   getSyncEngineStatus,
   updateSyncEngineStatus,
@@ -18,6 +21,7 @@ import {
   type SyncEngineStatus,
   type SyncResult,
 } from '@/services/sync/syncEngine';
+import { onDatabaseMutated } from '@/services/db/db';
 import { toast } from '@/components/ui/toast';
 import { startInitialSync } from '@/services/sync/initialSyncManager';
 import { getSyncErrorReasonKey } from '@/services/sync/dropboxClient';
@@ -28,8 +32,9 @@ import {
   reportNetworkError,
 } from '@/hooks/useNetworkStatus';
 
-// 模組級單例守衛：確保應用冷啟動同步全域只執行一次，次級頁面進出不重複觸發
+// 模組級單例守衛：確保應用冷啟動同步與全域監聽器只註冊一次，多元件掛載不重複註冊
 let hasInitialMountSyncExecuted = false;
+let activeSyncHookCount = 0;
 
 // 視窗聚焦與分頁可見性切回：全域 30 秒冷卻防護時間戳與離開標記
 const FOCUS_COOLDOWN_MS = 30 * 1000;
@@ -47,42 +52,70 @@ export function useDropboxSync() {
     return onSyncEngineStatusChange(setSyncState);
   }, []);
 
-  // 應用啟動與切回視窗時主動檢查遠端是否有更新
+  // 訂閱本機 IndexedDB 資料寫入：任何新增、修改、刪除後 2 秒防抖自動同步，離線則標記待補傳
+  useEffect(() => {
+    activeSyncHookCount += 1;
+    const isPrimaryInstance = activeSyncHookCount === 1;
+    let unsubscribeDb: (() => void) | undefined;
+
+    if (isPrimaryInstance) {
+      unsubscribeDb = onDatabaseMutated(() => {
+        if (!isDropboxConnected()) return;
+        if (isDeviceOffline() || !isOnline) {
+          markPendingAutoSync();
+          return;
+        }
+        scheduleAutoSync(2000);
+      });
+    }
+
+    return () => {
+      unsubscribeDb?.();
+      activeSyncHookCount = Math.max(0, activeSyncHookCount - 1);
+    };
+  }, [isOnline]);
+
+  // 應用啟動與切回視窗時主動檢查遠端是否有更新；切至背景或關閉前立即沖刷待同步變更
   useEffect(() => {
     // 1. 全應用冷啟動同步：僅首次加載且設備在線時執行一次
     if (!hasInitialMountSyncExecuted) {
       if (isDropboxConnected() && !isDeviceOffline() && isOnline) {
         hasInitialMountSyncExecuted = true;
-        scheduleAutoSync(1500);
+        scheduleAutoSync(hasPendingAutoSync() ? 500 : 1500);
       }
     }
 
-    // 2. 視窗失焦與分頁隱藏記錄
+    // 2. 視窗失焦與分頁隱藏記錄（若有待上傳的防抖同步則立即沖刷）
     const handleBlur = () => {
       hasBlurredOrHidden = true;
     };
 
     const checkAndTriggerFocusSync = () => {
       const now = Date.now();
+      const pending = hasPendingAutoSync();
       if (
-        hasBlurredOrHidden &&
-        now - lastGlobalFocusCheckTime > FOCUS_COOLDOWN_MS &&
+        (pending || (hasBlurredOrHidden && now - lastGlobalFocusCheckTime > FOCUS_COOLDOWN_MS)) &&
         isDropboxConnected() &&
         isOnline &&
         !isDeviceOffline()
       ) {
         lastGlobalFocusCheckTime = now;
         hasBlurredOrHidden = false;
-        scheduleAutoSync(1000);
+        scheduleAutoSync(pending ? 500 : 1000);
       }
     };
 
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
         hasBlurredOrHidden = true;
+        flushAutoSync();
       } else if (document.visibilityState === 'visible') {
         checkAndTriggerFocusSync();
       }
+    };
+
+    const handlePageHide = () => {
+      flushAutoSync();
     };
 
     const handleFocus = () => {
@@ -91,11 +124,13 @@ export function useDropboxSync() {
 
     window.addEventListener('blur', handleBlur);
     window.addEventListener('focus', handleFocus);
+    window.addEventListener('pagehide', handlePageHide);
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       window.removeEventListener('blur', handleBlur);
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('pagehide', handlePageHide);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [isOnline]);

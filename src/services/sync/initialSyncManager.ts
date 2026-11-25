@@ -1,4 +1,4 @@
-import { db } from '@/services/db/db';
+import { db, withAutoSyncSuppressed } from '@/services/db/db';
 import type {
   FoodItem,
   FoodRecipe,
@@ -40,6 +40,7 @@ import i18n from '@/i18n/config';
 import { toast } from '@/components/ui/toast';
 import {
   mergeEntities,
+  mergeWorkoutLogs,
   mergeDietLogsByDate,
   getNormalizedTimestamp,
   uploadAllLocalData,
@@ -473,7 +474,8 @@ async function executeAtomicCommit(): Promise<void> {
       setCachedRevs(cachedRevs);
       setPushedTimes(pushedTimes);
     } else if (strategy === 'overwrite_local') {
-      await db.transaction(
+      await withAutoSyncSuppressed(() =>
+        db.transaction(
         'rw',
         [
           db.user_base_info,
@@ -529,11 +531,13 @@ async function executeAtomicCommit(): Promise<void> {
           if (staged.workoutLogs.length) await db.workout_logs.bulkPut(staged.workoutLogs);
           if (staged.bodyMetrics.length) await db.body_metrics.bulkPut(staged.bodyMetrics);
         }
+      )
       );
       setCachedRevs(staged.revs);
     } else {
       // 合併 (merge)
-      await db.transaction(
+      await withAutoSyncSuppressed(() =>
+        db.transaction(
         'rw',
         [
           db.user_base_info,
@@ -576,7 +580,7 @@ async function executeAtomicCommit(): Promise<void> {
           const mEx = mergeEntities(localExercises, staged.exercises);
           const mEq = mergeEntities(localEquipments, staged.equipments);
           const mRoutine = mergeEntities(localRoutines, staged.routines);
-          const mWLogs = mergeEntities(localWorkoutLogs, staged.workoutLogs);
+          const mWLogs = mergeWorkoutLogs(localWorkoutLogs, staged.workoutLogs);
           const mMetrics = mergeEntities(localMetrics, staged.bodyMetrics);
 
           if (mBase.merged.length) await db.user_base_info.bulkPut(mBase.merged);
@@ -592,6 +596,7 @@ async function executeAtomicCommit(): Promise<void> {
           if (mWLogs.merged.length) await db.workout_logs.bulkPut(mWLogs.merged);
           if (mMetrics.merged.length) await db.body_metrics.bulkPut(mMetrics.merged);
         }
+      )
       );
 
       // 合併後上傳全量數據確保雲端與本機雙向一致

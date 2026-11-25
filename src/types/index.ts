@@ -206,6 +206,8 @@ export interface DailyDietLog {
   date: string; // YYYY-MM-DD
   meta: DailyDietMeta; // ⭐️ 日誌頭部 (SSOT)
   entries: FoodLog[]; // ⭐️ 當日物理進食記錄
+  /** 條目級刪除墓碑 (entryId -> deletedAt timestamp)，用於多端離線合併防止已刪條目復活 */
+  deletedEntries?: Record<string, number>;
   createdAt: number;
   updatedAt: number;
   rev?: number;
@@ -315,6 +317,7 @@ export interface WorkoutSet {
   distanceKm?: number;
   isWarmup?: boolean;
   isCompleted: boolean;
+  updatedAt?: number;
 }
 
 /**
@@ -343,6 +346,8 @@ export interface WorkoutLog {
   endTime?: number;
   durationMinutes?: number;
   exercises: WorkoutExerciseGroup[];
+  /** 組數級刪除墓碑 (setId -> deletedAt timestamp)，用於多端同時編輯同一訓練日誌防復活 */
+  deletedSetIds?: Record<string, number>;
   createdAt: number;
   updatedAt: number;
   rev?: number;

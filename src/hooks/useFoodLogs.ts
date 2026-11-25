@@ -453,6 +453,10 @@ export function useFoodLogs(date: string) {
     if (!dailyLog || idx === -1) return;
     const now = Date.now();
     dailyLog.entries = dailyLog.entries.filter((e) => e.id !== id);
+    dailyLog.deletedEntries = {
+      ...(dailyLog.deletedEntries ?? {}),
+      [id]: now,
+    };
     dailyLog.updatedAt = now;
     await db.daily_diet_logs.put(dailyLog);
     upsertInMemoryDailyDietLog(dailyLog);
@@ -462,7 +466,15 @@ export function useFoodLogs(date: string) {
     const dailyLog = await db.daily_diet_logs.where('date').equals(date).first();
     if (!dailyLog) return;
     const now = Date.now();
+    const removedIds = dailyLog.entries.filter((e) => e.bundleId === bundleId).map((e) => e.id);
     dailyLog.entries = dailyLog.entries.filter((e) => e.bundleId !== bundleId);
+    if (removedIds.length > 0) {
+      const nextDeleted = { ...(dailyLog.deletedEntries ?? {}) };
+      for (const removedId of removedIds) {
+        nextDeleted[removedId] = now;
+      }
+      dailyLog.deletedEntries = nextDeleted;
+    }
     dailyLog.updatedAt = now;
     await db.daily_diet_logs.put(dailyLog);
     upsertInMemoryDailyDietLog(dailyLog);
@@ -482,6 +494,7 @@ export function useFoodLogs(date: string) {
     const existing = dailyLog.entries.find((e) => e.bundleId === bundleId);
     if (!existing) return;
     const now = Date.now();
+    const previousIds = dailyLog.entries.filter((e) => e.bundleId === bundleId).map((e) => e.id);
     const otherEntries = dailyLog.entries.filter((e) => e.bundleId !== bundleId);
     const updatedEntries: FoodLog[] = items.map((item) => ({
       id: item.id || uuidv4(),
@@ -494,6 +507,15 @@ export function useFoodLogs(date: string) {
       createdAt: existing.createdAt,
       updatedAt: now,
     }));
+    const keptIdSet = new Set(updatedEntries.map((e) => e.id));
+    const removedIds = previousIds.filter((prevId) => !keptIdSet.has(prevId));
+    if (removedIds.length > 0) {
+      const nextDeleted = { ...(dailyLog.deletedEntries ?? {}) };
+      for (const removedId of removedIds) {
+        nextDeleted[removedId] = now;
+      }
+      dailyLog.deletedEntries = nextDeleted;
+    }
     dailyLog.entries = [...otherEntries, ...updatedEntries];
     dailyLog.updatedAt = now;
     await db.daily_diet_logs.put(dailyLog);

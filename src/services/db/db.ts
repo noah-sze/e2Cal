@@ -1967,8 +1967,158 @@ export class E2CalDatabase extends Dexie {
 
 export const db = new E2CalDatabase();
 
-// 自動檢查初始化種子資料
-db.seedDefaultData().catch(console.error);
+// ── 全域資料庫寫入監聽與自動同步防迴圈守衛 ──────────────────────────────
+let autoSyncSuppressDepth = 0;
+const dbMutationListeners = new Set<() => void>();
+let pendingMutationMicrotask = false;
+
+export type SyncTombstoneTable =
+  | 'foods'
+  | 'recipes'
+  | 'exercises'
+  | 'equipments'
+  | 'routines'
+  | 'workout_logs'
+  | 'body_metrics';
+
+export type EntityTombstoneMap = Partial<Record<SyncTombstoneTable, Record<string, number>>>;
+
+const ENTITY_TOMBSTONES_STORAGE_KEY = 'e2cal_deleted_entity_tombstones';
+const ENTITY_TOMBSTONE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
+export function getLocalEntityTombstones(now: number = Date.now()): EntityTombstoneMap {
+  try {
+    if (typeof localStorage === 'undefined') return {};
+    const raw = localStorage.getItem(ENTITY_TOMBSTONES_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, Record<string, number>>;
+    const cleaned: EntityTombstoneMap = {};
+    for (const [tbl, map] of Object.entries(parsed)) {
+      if (!map || typeof map !== 'object') continue;
+      const valid: Record<string, number> = {};
+      for (const [id, ts] of Object.entries(map)) {
+        if (id && typeof ts === 'number' && Number.isFinite(ts) && ts > 0 && now - ts <= ENTITY_TOMBSTONE_RETENTION_MS) {
+          valid[id] = ts;
+        }
+      }
+      if (Object.keys(valid).length > 0) {
+        cleaned[tbl as SyncTombstoneTable] = valid;
+      }
+    }
+    return cleaned;
+  } catch {
+    return {};
+  }
+}
+
+export function setLocalEntityTombstones(map: EntityTombstoneMap): void {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const hasAny = Object.values(map).some((m) => m && Object.keys(m).length > 0);
+    if (!hasAny) {
+      localStorage.removeItem(ENTITY_TOMBSTONES_STORAGE_KEY);
+    } else {
+      localStorage.setItem(ENTITY_TOMBSTONES_STORAGE_KEY, JSON.stringify(map));
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function recordEntityDeletion(table: SyncTombstoneTable, id: unknown): void {
+  if (autoSyncSuppressDepth > 0) return;
+  const key = typeof id === 'string' ? id : String(id || '');
+  if (!key) return;
+  const now = Date.now();
+  const current = getLocalEntityTombstones(now);
+  const tableMap = { ...(current[table] ?? {}), [key]: now };
+  setLocalEntityTombstones({ ...current, [table]: tableMap });
+}
+
+function clearEntityDeletion(table: SyncTombstoneTable, id: unknown): void {
+  if (autoSyncSuppressDepth > 0) return;
+  const key = typeof id === 'string' ? id : String(id || '');
+  if (!key) return;
+  const current = getLocalEntityTombstones();
+  if (!current[table]?.[key]) return;
+  const nextTableMap = { ...current[table] };
+  delete nextTableMap[key];
+  setLocalEntityTombstones({ ...current, [table]: nextTableMap });
+}
+
+function notifyDatabaseMutated(): void {
+  if (autoSyncSuppressDepth > 0 || dbMutationListeners.size === 0) return;
+  if (pendingMutationMicrotask) return;
+  pendingMutationMicrotask = true;
+  Promise.resolve().then(() => {
+    pendingMutationMicrotask = false;
+    if (autoSyncSuppressDepth > 0) return;
+    dbMutationListeners.forEach((listener) => {
+      try {
+        listener();
+      } catch (err) {
+        console.error('[e2CalDB] mutation listener error:', err);
+      }
+    });
+  });
+}
+
+/**
+ * 在同步拉取或系統種子寫入本機 IndexedDB 期間暫時抑制自動同步觸發，防止無限迴圈
+ */
+export async function withAutoSyncSuppressed<T>(fn: () => Promise<T>): Promise<T> {
+  autoSyncSuppressDepth += 1;
+  try {
+    return await fn();
+  } finally {
+    autoSyncSuppressDepth = Math.max(0, autoSyncSuppressDepth - 1);
+  }
+}
+
+/**
+ * 訂閱本機業務資料表的任何新增、修改、刪除事件
+ */
+export function onDatabaseMutated(listener: () => void): () => void {
+  dbMutationListeners.add(listener);
+  return () => {
+    dbMutationListeners.delete(listener);
+  };
+}
+
+function registerSyncMutationHooks(database: E2CalDatabase): void {
+  const entityTables: Array<{ key?: SyncTombstoneTable; table: Table }> = [
+    { table: database.user_base_info },
+    { table: database.user_profile },
+    { key: 'foods', table: database.foods },
+    { key: 'recipes', table: database.recipes },
+    { table: database.daily_diet_logs },
+    { key: 'equipments', table: database.equipments },
+    { key: 'exercises', table: database.exercises },
+    { key: 'routines', table: database.routines },
+    { key: 'workout_logs', table: database.workout_logs },
+    { key: 'body_metrics', table: database.body_metrics },
+  ];
+
+  for (const { key, table } of entityTables) {
+    table.hook('creating', (primKey) => {
+      if (key) clearEntityDeletion(key, primKey);
+      notifyDatabaseMutated();
+    });
+    table.hook('updating', (_mods, primKey) => {
+      if (key) clearEntityDeletion(key, primKey);
+      notifyDatabaseMutated();
+    });
+    table.hook('deleting', (primKey) => {
+      if (key) recordEntityDeletion(key, primKey);
+      notifyDatabaseMutated();
+    });
+  }
+}
+
+registerSyncMutationHooks(db);
+
+// 自動檢查初始化種子資料（抑制自動同步觸發）
+withAutoSyncSuppressed(() => db.seedDefaultData()).catch(console.error);
 
 // 僅於開發環境掛載至 window 便於 Console 即時檢視
 if (import.meta.env.DEV && typeof window !== 'undefined') {

@@ -91,7 +91,10 @@ export function useWorkoutLogs(date?: string) {
       startTime: data.startTime,
       endTime: data.endTime,
       durationMinutes: data.durationMinutes,
-      exercises: cleanExercises,
+      exercises: cleanExercises.map((g) => ({
+        ...g,
+        sets: (g.sets || []).map((s) => ({ ...s, updatedAt: s.updatedAt ?? now })),
+      })),
       id: uuidv4(),
       createdAt: now,
       updatedAt: now,
@@ -103,13 +106,51 @@ export function useWorkoutLogs(date?: string) {
 
   const updateWorkout = async (id: string, updates: Partial<Omit<WorkoutLog, 'id' | 'createdAt'>>) => {
     const now = Date.now();
-    // 若有更新 exercises，同樣確保清理冗餘屬性
-    const finalUpdates = { ...updates, updatedAt: now };
+    const finalUpdates: Partial<Omit<WorkoutLog, 'id' | 'createdAt'>> = { ...updates, updatedAt: now };
     if (finalUpdates.exercises) {
+      const existing = await db.workout_logs.get(id);
+      const prevSetMap = new Map<string, WorkoutLog['exercises'][number]['sets'][number]>();
+      for (const g of existing?.exercises || []) {
+        for (const s of g.sets || []) {
+          prevSetMap.set(s.id, s);
+        }
+      }
+
+      const nextSetIds = new Set<string>();
       finalUpdates.exercises = finalUpdates.exercises.map((group) => ({
         exerciseId: group.exerciseId,
-        sets: group.sets || [],
+        sets: (group.sets || []).map((s) => {
+          nextSetIds.add(s.id);
+          const prev = prevSetMap.get(s.id);
+          const isChanged =
+            !prev ||
+            prev.setNumber !== s.setNumber ||
+            prev.weight !== s.weight ||
+            prev.reps !== s.reps ||
+            prev.rpe !== s.rpe ||
+            prev.durationSeconds !== s.durationSeconds ||
+            prev.distanceKm !== s.distanceKm ||
+            prev.isWarmup !== s.isWarmup ||
+            prev.isCompleted !== s.isCompleted;
+          return {
+            ...s,
+            updatedAt: isChanged ? now : (prev?.updatedAt ?? s.updatedAt ?? now),
+          };
+        }),
       }));
+
+      const nextDeletedSetIds: Record<string, number> = { ...(existing?.deletedSetIds ?? {}) };
+      for (const prevId of prevSetMap.keys()) {
+        if (!nextSetIds.has(prevId)) {
+          nextDeletedSetIds[prevId] = now;
+        }
+      }
+      for (const activeId of nextSetIds) {
+        delete nextDeletedSetIds[activeId];
+      }
+      if (Object.keys(nextDeletedSetIds).length > 0) {
+        finalUpdates.deletedSetIds = nextDeletedSetIds;
+      }
     }
     await db.workout_logs.update(id, finalUpdates);
   };
