@@ -1001,10 +1001,7 @@ export function FoodRecipeBrowser({
                   render={
                     <button
                       type="button"
-                      className={cn(
-                        'ml-auto items-center gap-1 py-1 px-2.5 rounded-full text-xs font-mono border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer shrink-0 active:scale-95 whitespace-nowrap',
-                        interactiveMode === 'manage' ? 'hidden md:inline-flex' : 'inline-flex'
-                      )}
+                      className="ml-auto hidden md:inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-mono border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer shrink-0 active:scale-95 whitespace-nowrap"
                       title={t('common.add', '新增')}
                       aria-label={t('common.add', '新增')}
                     >
@@ -1440,10 +1437,7 @@ export function FoodRecipeBrowser({
                     onAdd('recipe');
                   }
                 }}
-                className={cn(
-                  'ml-auto items-center gap-1 py-1 px-2.5 rounded-full text-xs font-mono border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer shrink-0 active:scale-95 whitespace-nowrap',
-                  interactiveMode === 'manage' ? 'hidden md:inline-flex' : 'inline-flex'
-                )}
+                className="ml-auto hidden md:inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-mono border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer shrink-0 active:scale-95 whitespace-nowrap"
                 title={t('common.add', '新增')}
                 aria-label={t('common.add', '新增')}
               >

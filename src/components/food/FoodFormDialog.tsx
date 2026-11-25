@@ -742,17 +742,15 @@ export function FoodFormDialog({
         saturatedFat: normalizedMetricFood.saturatedFat,
         transFat: normalizedMetricFood.transFat,
         sodium: normalizedMetricFood.sodium,
-        ...(!isAuthorityFood
-          ? (() => {
-              const clampedPct = Math.min(100, Math.max(1, Math.round(Number(edibleRatePct) || 100)));
-              const finalEdibleRate = clampedPct / 100;
-              const finalRefuseRate = Math.round((1 - finalEdibleRate) * 1000) / 1000;
-              return {
-                edibleRate: finalEdibleRate,
-                refuseRate: finalRefuseRate,
-              };
-            })()
-          : {}),
+        ...(() => {
+          const clampedPct = Math.min(100, Math.max(1, Math.round(Number(edibleRatePct) || 100)));
+          const finalEdibleRate = clampedPct / 100;
+          const finalRefuseRate = Math.round((1 - finalEdibleRate) * 1000) / 1000;
+          return {
+            edibleRate: finalEdibleRate,
+            refuseRate: finalRefuseRate,
+          };
+        })(),
       });
 
       onOpenChange(false);
@@ -1030,33 +1028,24 @@ export function FoodFormDialog({
                 </button>
               </div>
 
-              {/* 可食率（權威庫導入食材唯讀展示，手動新增／編輯食材可點擊調整） */}
+              {/* 可食率（含權威庫導入食材皆可依實際處理形態微調，不影響每 100 g 純可食部營養常數） */}
               <div className="h-10 px-4 flex items-center justify-between">
                 <span className="text-muted-foreground text-xs">{t('diet.edibleRate')}</span>
-                {isAuthorityFood ? (
+                <button
+                  type="button"
+                  onClick={(e) => openKeypad('edibleRate', e.currentTarget)}
+                  className="h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none text-foreground"
+                  title={t('diet.edibleRate')}
+                  aria-label={t('diet.edibleRate')}
+                >
                   <MetricValue
                     value={edibleRatePct}
                     unit="%"
-                    valueClassName="font-normal text-foreground text-xs"
-                    unitClassName="text-xs text-muted-foreground"
+                    valueClassName="text-foreground font-normal"
+                    unitClassName="text-muted-foreground"
                   />
-                ) : (
-                  <button
-                    type="button"
-                    onClick={(e) => openKeypad('edibleRate', e.currentTarget)}
-                    className="h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none text-foreground"
-                    title={t('diet.edibleRate')}
-                    aria-label={t('diet.edibleRate')}
-                  >
-                    <MetricValue
-                      value={edibleRatePct}
-                      unit="%"
-                      valueClassName="text-foreground font-normal"
-                      unitClassName="text-muted-foreground"
-                    />
-                    <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                  </button>
-                )}
+                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                </button>
               </div>
           </SectionCard>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, X, Plus, Check } from 'lucide-react';
+import { Search, X, Plus, Check, Leaf } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 import type { FoodItem, AuthoritySource } from '@/types';
 import { useFoods } from '@/hooks/useFoods';
 import {
-  searchAuthorityFoods,
+  searchAuthorityFoodsWithTotal,
   getAuthorityStats,
   importAuthorityFoodToDatabase,
   type AuthorityStats,
@@ -93,15 +93,23 @@ export function AuthorityFoodSearchDialog({
 
   const [query, setQuery] = useState(initialQuery);
   const [activeFilter, setActiveFilter] = useState<AuthorityFilter>('all');
+  const [rawOnly, setRawOnly] = useState(true);
   const [stats, setStats] = useState<AuthorityStats | null>(null);
   const [results, setResults] = useState<FoodItem[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [displayLimit, setDisplayLimit] = useState(80);
   const [isSearching, setIsSearching] = useState(false);
   const [settledQuery, setSettledQuery] = useState('');
   const [locallyImportedIds, setLocallyImportedIds] = useState<Set<string>>(new Set());
   const [previewFood, setPreviewFood] = useState<FoodItem | null>(null);
   const [importDraftFood, setImportDraftFood] = useState<FoodItem | null>(null);
   const searchSeqRef = useRef(0);
-  const lastExecutedRef = useRef<{ query: string; filter: AuthorityFilter } | null>(null);
+  const lastExecutedRef = useRef<{
+    query: string;
+    filter: AuthorityFilter;
+    rawOnly: boolean;
+    limit: number;
+  } | null>(null);
 
   // 現存本機食物 ID 集合（快速比對「已在食物庫」）
   const existingFoodIdSet = useMemo(() => {
@@ -114,6 +122,8 @@ export function AuthorityFoodSearchDialog({
   const executeSearch = async (
     searchTerm: string,
     filter: AuthorityFilter,
+    isRawOnly: boolean,
+    limitCount: number,
     skipAnimation = false
   ) => {
     const trimmed = searchTerm.trim();
@@ -123,31 +133,34 @@ export function AuthorityFoodSearchDialog({
       lastExecutedRef.current = null;
       setIsSearching(false);
       setResults([]);
+      setTotalCount(0);
       setSettledQuery('');
       return;
     }
 
-    lastExecutedRef.current = { query: trimmed, filter };
+    lastExecutedRef.current = { query: trimmed, filter, rawOnly: isRawOnly, limit: limitCount };
     if (!skipAnimation) {
       setIsSearching(true);
     }
 
     try {
       const data = skipAnimation
-        ? await searchAuthorityFoods(trimmed, 80, filter)
+        ? await searchAuthorityFoodsWithTotal(trimmed, limitCount, filter, undefined, isRawOnly)
         : (
             await Promise.all([
-              searchAuthorityFoods(trimmed, 80, filter),
+              searchAuthorityFoodsWithTotal(trimmed, limitCount, filter, undefined, isRawOnly),
               new Promise<void>((resolve) => setTimeout(resolve, SEARCH_MIN_DURATION_MS)),
             ])
           )[0];
       if (seq !== searchSeqRef.current) return;
-      setResults(data);
+      setResults(data.items);
+      setTotalCount(data.total);
       setSettledQuery(trimmed);
     } catch (err) {
       if (seq !== searchSeqRef.current) return;
       console.error('[AuthoritySearch] 搜尋出錯:', err);
       setResults([]);
+      setTotalCount(0);
       setSettledQuery(trimmed);
     } finally {
       if (seq === searchSeqRef.current) {
@@ -160,16 +173,18 @@ export function AuthorityFoodSearchDialog({
   useEffect(() => {
     if (open) {
       setQuery(initialQuery);
+      setDisplayLimit(80);
       setLocallyImportedIds(new Set());
       setPreviewFood(null);
       setImportDraftFood(null);
       if (initialQuery.trim()) {
-        executeSearch(initialQuery, activeFilter, false);
+        executeSearch(initialQuery, activeFilter, rawOnly, 80, false);
       } else {
         searchSeqRef.current += 1;
         lastExecutedRef.current = null;
         setIsSearching(false);
         setResults([]);
+        setTotalCount(0);
         setSettledQuery('');
       }
       if (!stats) {
@@ -179,11 +194,18 @@ export function AuthorityFoodSearchDialog({
       searchSeqRef.current += 1;
       lastExecutedRef.current = null;
       setIsSearching(false);
+      setResults([]);
+      setTotalCount(0);
       setSettledQuery('');
     }
   }, [open, initialQuery]);
 
-  // 響應式搜尋：關鍵字變更時播放至少 1s 搜索動畫；僅切換來源分類時即時過濾不播放動畫
+  // 關鍵字 / 來源 / 生重過濾變更時重設分頁上限
+  useEffect(() => {
+    setDisplayLimit(80);
+  }, [query, activeFilter, rawOnly]);
+
+  // 響應式搜尋：關鍵字變更時播放至少 1s 搜索動畫；僅切換來源分類 / 生重開關 / 載入更多時即時重篩不播放動畫
   useEffect(() => {
     if (!open) return;
     const trimmed = query.trim();
@@ -192,28 +214,31 @@ export function AuthorityFoodSearchDialog({
       lastExecutedRef.current = null;
       setIsSearching(false);
       setResults([]);
+      setTotalCount(0);
       setSettledQuery('');
       return;
     }
 
     if (
       lastExecutedRef.current?.query === trimmed &&
-      lastExecutedRef.current?.filter === activeFilter
+      lastExecutedRef.current?.filter === activeFilter &&
+      lastExecutedRef.current?.rawOnly === rawOnly &&
+      lastExecutedRef.current?.limit === displayLimit
     ) {
       return;
     }
 
     if (settledQuery === trimmed) {
-      executeSearch(trimmed, activeFilter, true);
+      executeSearch(trimmed, activeFilter, rawOnly, displayLimit, true);
       return;
     }
 
     const timer = setTimeout(() => {
-      executeSearch(trimmed, activeFilter, false);
+      executeSearch(trimmed, activeFilter, rawOnly, displayLimit, false);
     }, 160);
 
     return () => clearTimeout(timer);
-  }, [query, activeFilter, open, settledQuery]);
+  }, [query, activeFilter, rawOnly, displayLimit, open, settledQuery]);
 
   // 經由 FoodFormDialog 編輯名稱、分類與確認後寫入資料庫
   const handleFormImportSubmit = async (formData: FoodFormData) => {
@@ -326,7 +351,32 @@ export function AuthorityFoodSearchDialog({
           </div>
 
           {/* 3. 內容區域 */}
-          <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar p-4 bg-background/40">
+          <div
+            className={cn(
+              'flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 pb-4 bg-background/40',
+              isInitialEmpty ? 'pt-4' : 'pt-2.5 space-y-2.5'
+            )}
+          >
+            {!isInitialEmpty && (
+              <div className="flex items-center gap-1.5 shrink-0 overflow-x-auto no-scrollbar min-w-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setRawOnly((prev) => !prev);
+                  }}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-sans transition-all border shrink-0 cursor-pointer whitespace-nowrap',
+                    rawOnly
+                      ? 'bg-foreground text-background border-foreground font-medium'
+                      : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
+                  )}
+                >
+                  <Leaf className={cn('size-3 shrink-0', !rawOnly && 'opacity-60')} />
+                  <span>{t('diet.rawOnlyFilter', '生重原型')}</span>
+                </button>
+              </div>
+            )}
             {/* 搜尋中狀態（方案 A：1:1 等高骨架屏掃描，含 debounce 等待零空白過渡） */}
             {isLoadingView && (
               <div className="border border-border rounded-lg overflow-hidden bg-card">
@@ -446,10 +496,11 @@ export function AuthorityFoodSearchDialog({
               <div className="border border-border rounded-lg overflow-hidden bg-card">
                 <div className="h-10 px-4 bg-muted/40 border-b border-border flex items-center justify-between text-xs text-muted-foreground">
                   <span className="font-mono tabular-nums">
-                    {t('common.itemCount', { count: results.length })}
+                    {t('common.itemCount', { count: totalCount })}
                   </span>
-                  <span className="text-[11px] font-mono">
-                    {activeFilter === 'all' ? '100g' : `${activeFilter} · 100g`}
+                  <span className="text-[11px] font-mono inline-flex items-baseline gap-1">
+                    {activeFilter !== 'all' && <span>{activeFilter} ·</span>}
+                    <MetricValue value={100} unit="g" />
                   </span>
                 </div>
 
@@ -496,6 +547,15 @@ export function AuthorityFoodSearchDialog({
                           <div className="font-medium text-sm text-foreground tracking-tight leading-snug">
                             {food.name}
                           </div>
+
+                          {food.dataSource?.sourceName && food.dataSource.sourceName !== food.name && (
+                            <div
+                              className="text-[11px] text-muted-foreground/75 truncate leading-tight"
+                              title={food.dataSource.sourceName}
+                            >
+                              {food.dataSource.sourceName}
+                            </div>
+                          )}
 
                           <div className="text-[11px] font-mono tabular-nums text-muted-foreground leading-none">
                             <MetricValue
@@ -545,6 +605,18 @@ export function AuthorityFoodSearchDialog({
                       </div>
                     );
                   })}
+                  {results.length < totalCount && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setDisplayLimit((prev) => prev + 80);
+                      }}
+                      className="w-full py-2.5 px-4 text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-hover transition-colors cursor-pointer text-center"
+                    >
+                      {t('common.loadMore', '載入更多')} ({results.length} / {totalCount})
+                    </button>
+                  )}
                   </div>
                 )}
               </div>

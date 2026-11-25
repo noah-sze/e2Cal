@@ -279,10 +279,16 @@ export function FoodRecipeSelectDialog({
               disabledIds={disabledIds}
               isItemDisabled={isItemDisabled}
               onItemClick={handleItemClick}
-              onAddAuthorityFood={(searchQuery) => {
-                setAuthorityInitialQuery(searchQuery ?? '');
-                setIsAuthoritySearchOpen(true);
-              }}
+              onAddFood={allowAdd ? () => setIsAddFoodOpen(true) : undefined}
+              onAdd={allowAdd ? () => handleOpenAdd() : undefined}
+              onAddAuthorityFood={
+                allowAdd
+                  ? (searchQuery) => {
+                      setAuthorityInitialQuery(searchQuery ?? '');
+                      setIsAuthoritySearchOpen(true);
+                    }
+                  : undefined
+              }
               freezeSort={open}
               className="flex-1 min-h-0"
               listContainerClassName="flex-1 min-h-0"
