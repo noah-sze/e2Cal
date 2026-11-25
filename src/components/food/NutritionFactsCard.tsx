@@ -59,6 +59,8 @@ export interface NutritionFactsCardProps {
   } | null;
   /** 首行基準標籤，預設為 t('diet.perLabelBasis', '每') */
   perLabel?: string;
+  /** 首行基準份量前綴（例如「淨重」） */
+  servingPrefix?: React.ReactNode;
   /** 是否顯示頂部表頭列，預設為 true */
   showHeader?: boolean;
   /** 是否顯示首行基準份量行（例如「每 100 g」），預設為 true */
@@ -103,6 +105,7 @@ export function NutritionFactsCard({
   fallbackData,
   highlights,
   perLabel,
+  servingPrefix,
   showHeader = true,
   showServingRow = true,
   showCaloriesRow = true,
@@ -174,12 +177,17 @@ export function NutritionFactsCard({
             {(() => {
               const s = formatFoodServing(servingSize, servingUnit, foodWeightUnit, foodVolumeUnit);
               const node = (
-                <MetricValue
-                  value={s.size}
-                  unit={s.unit}
-                  valueClassName="font-medium text-foreground text-xs"
-                  unitClassName="text-xs"
-                />
+                <span className="inline-flex items-baseline gap-1">
+                  {servingPrefix && (
+                    <span className="font-sans text-xs text-muted-foreground">{servingPrefix}</span>
+                  )}
+                  <MetricValue
+                    value={s.size}
+                    unit={s.unit}
+                    valueClassName="font-medium text-foreground text-xs"
+                    unitClassName="text-xs"
+                  />
+                </span>
               );
               return editable ? editable.renderValue('serving', node) : node;
             })()}
@@ -215,57 +223,59 @@ export function NutritionFactsCard({
 
       {/* 3. 碳水化合物行 (h-10) */}
       {hasCarbSub ? (
-        <SubNutrientsPopover
-          align="start"
-          alignOffset={16}
-          positionerClassName="z-[70]"
-          lockOpen={Boolean(editable?.lockSubPopover)}
-          rows={buildCarbsSubRows(t, sugarVal, fiberVal).map((row, idx) => ({
-            ...row,
-            renderValue: editable
-              ? (node) => editable.renderValue(idx === 0 ? 'sugar' : 'fiber', node)
-              : undefined,
-          }))}
-        >
-          {({ open }) => (
-            <div
-              className={cn(
-                "h-10 px-4 flex items-center justify-between transition-colors select-none cursor-pointer hover:bg-hover",
-                effectiveHighlights?.carbs && "bg-carbs-subtle-bg"
-              )}
-            >
-              <div className="flex items-center gap-1">
-                <span className="text-carbs text-xs font-medium">{t('diet.carbs')}</span>
-                <ChevronRight
-                  className={cn(
-                    "size-3 text-carbs/60 transition-transform duration-150",
-                    open && "rotate-90 text-carbs"
-                  )}
-                />
-              </div>
-
+        <div className="flex flex-col">
+          <SubNutrientsPopover
+            align="start"
+            alignOffset={16}
+            positionerClassName="z-[70]"
+            lockOpen={Boolean(editable?.lockSubPopover)}
+            rows={buildCarbsSubRows(t, sugarVal, fiberVal).map((row, idx) => ({
+              ...row,
+              renderValue: editable
+                ? (node) => editable.renderValue(idx === 0 ? 'sugar' : 'fiber', node)
+                : undefined,
+            }))}
+          >
+            {({ open }) => (
               <div
-                onClick={(e) => {
-                  if (editable) {
-                    e.stopPropagation();
-                  }
-                }}
+                className={cn(
+                  "h-10 px-4 flex items-center justify-between transition-colors select-none cursor-pointer hover:bg-hover",
+                  effectiveHighlights?.carbs && "bg-carbs-subtle-bg"
+                )}
               >
-                {(() => {
-                  const node = (
-                    <MetricValue
-                      value={carbs}
-                      unit="g"
-                      valueClassName="font-medium text-carbs text-xs"
-                      unitClassName="text-xs"
-                    />
-                  );
-                  return editable ? editable.renderValue('carbs', node) : node;
-                })()}
+                <div className="flex items-center gap-1">
+                  <span className="text-carbs text-xs font-medium">{t('diet.carbs')}</span>
+                  <ChevronRight
+                    className={cn(
+                      "size-3 text-carbs/60 transition-transform duration-150",
+                      open && "rotate-90 text-carbs"
+                    )}
+                  />
+                </div>
+
+                <div
+                  onClick={(e) => {
+                    if (editable) {
+                      e.stopPropagation();
+                    }
+                  }}
+                >
+                  {(() => {
+                    const node = (
+                      <MetricValue
+                        value={carbs}
+                        unit="g"
+                        valueClassName="font-medium text-carbs text-xs"
+                        unitClassName="text-xs"
+                      />
+                    );
+                    return editable ? editable.renderValue('carbs', node) : node;
+                  })()}
+                </div>
               </div>
-            </div>
-          )}
-        </SubNutrientsPopover>
+            )}
+          </SubNutrientsPopover>
+        </div>
       ) : (
         <div
           className={cn(
@@ -315,57 +325,59 @@ export function NutritionFactsCard({
 
       {/* 5. 脂肪行 (h-10) */}
       {hasFatSub ? (
-        <SubNutrientsPopover
-          align="start"
-          alignOffset={16}
-          positionerClassName="z-[70]"
-          lockOpen={Boolean(editable?.lockSubPopover)}
-          rows={buildFatSubRows(t, satFatVal, transFatVal).map((row, idx) => ({
-            ...row,
-            renderValue: editable
-              ? (node) => editable.renderValue(idx === 0 ? 'saturatedFat' : 'transFat', node)
-              : undefined,
-          }))}
-        >
-          {({ open }) => (
-            <div
-              className={cn(
-                "h-10 px-4 flex items-center justify-between transition-colors select-none cursor-pointer hover:bg-hover",
-                effectiveHighlights?.fat && "bg-fat-subtle-bg"
-              )}
-            >
-              <div className="flex items-center gap-1">
-                <span className="text-fat text-xs font-medium">{t('diet.fat')}</span>
-                <ChevronRight
-                  className={cn(
-                    "size-3 text-fat/60 transition-transform duration-150",
-                    open && "rotate-90 text-fat"
-                  )}
-                />
-              </div>
-
+        <div className="flex flex-col">
+          <SubNutrientsPopover
+            align="start"
+            alignOffset={16}
+            positionerClassName="z-[70]"
+            lockOpen={Boolean(editable?.lockSubPopover)}
+            rows={buildFatSubRows(t, satFatVal, transFatVal).map((row, idx) => ({
+              ...row,
+              renderValue: editable
+                ? (node) => editable.renderValue(idx === 0 ? 'saturatedFat' : 'transFat', node)
+                : undefined,
+            }))}
+          >
+            {({ open }) => (
               <div
-                onClick={(e) => {
-                  if (editable) {
-                    e.stopPropagation();
-                  }
-                }}
+                className={cn(
+                  "h-10 px-4 flex items-center justify-between transition-colors select-none cursor-pointer hover:bg-hover",
+                  effectiveHighlights?.fat && "bg-fat-subtle-bg"
+                )}
               >
-                {(() => {
-                  const node = (
-                    <MetricValue
-                      value={fat}
-                      unit="g"
-                      valueClassName="font-medium text-fat text-xs"
-                      unitClassName="text-xs"
-                    />
-                  );
-                  return editable ? editable.renderValue('fat', node) : node;
-                })()}
+                <div className="flex items-center gap-1">
+                  <span className="text-fat text-xs font-medium">{t('diet.fat')}</span>
+                  <ChevronRight
+                    className={cn(
+                      "size-3 text-fat/60 transition-transform duration-150",
+                      open && "rotate-90 text-fat"
+                    )}
+                  />
+                </div>
+
+                <div
+                  onClick={(e) => {
+                    if (editable) {
+                      e.stopPropagation();
+                    }
+                  }}
+                >
+                  {(() => {
+                    const node = (
+                      <MetricValue
+                        value={fat}
+                        unit="g"
+                        valueClassName="font-medium text-fat text-xs"
+                        unitClassName="text-xs"
+                      />
+                    );
+                    return editable ? editable.renderValue('fat', node) : node;
+                  })()}
+                </div>
               </div>
-            </div>
-          )}
-        </SubNutrientsPopover>
+            )}
+          </SubNutrientsPopover>
+        </div>
       ) : (
         <div
           className={cn(

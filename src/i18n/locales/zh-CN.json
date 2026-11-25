@@ -251,7 +251,9 @@
       "grossWeightPrefix": "毛",
       "grossWeightLabel": "毛重",
       "netWeightLabel": "可食净重",
+      "netWeightPrefix": "净重",
       "refuseRatePrefix": "不可食损耗",
+      "edibleRate": "可食率",
       "zeroRefuseTip": "此食材无不可食损耗（损耗 0%）",
       "authoritySearchTitle": "权威科研库搜索添加",
       "authoritySearchSubtitle": "收录 USDA、UKHSA、日本 MEXT、澳洲 FSANZ、台湾 TFDA、中国 CDC 共 18,635 条权威科研数据",
@@ -394,6 +396,7 @@
         "sourceId": "条目代码",
         "sourceName": "原始品名",
         "verifiedAt": "核对日期",
+        "edition": "资料版次",
         "standardBasis": "基准规格",
         "standardBasisValue": "每 100g 纯可食部 (生重)",
         "edibleRate": "标准可食率",
@@ -406,7 +409,17 @@
           "USDA": "美国农业部 (USDA)",
           "MEXT": "日本文部科学省 (MEXT)",
           "TFDA": "台湾卫福部食药署 (TFDA)",
-          "CFCT": "中国疾病预防控制中心 (CFCT)"
+          "CFCT": "中国疾病预防控制中心 (CFCT)",
+          "AFCD": "澳洲澳新食品标准局 (AFCD)",
+          "CoFID": "英国卫生安全局 (CoFID)"
+        },
+        "editions": {
+          "USDA": "FoodData Central",
+          "MEXT": "2020 年版 (八订)",
+          "TFDA": "2024 年版",
+          "CFCT": "标准版第 6 版",
+          "AFCD": "Release 2",
+          "CoFID": "2021 年版"
         },
         "micros": {
           "potassium": "钾",

@@ -122,6 +122,44 @@ export async function searchAuthorityFoods(
 }
 
 /**
+ * 同步從記憶體快取查詢對應的權威科研原始條目（若尚未載入快取則回傳 undefined）
+ */
+export function getCachedAuthorityFood(
+  id?: string,
+  authority?: AuthoritySource,
+  sourceId?: string
+): FoodItem | undefined {
+  if (!cachedAuthorityFoods) return undefined;
+  return (
+    (id ? cachedAuthorityFoods.find((f) => f.id === id) : undefined) ||
+    (authority && sourceId
+      ? cachedAuthorityFoods.find(
+          (f) => f.dataSource?.authority === authority && f.dataSource?.sourceId === sourceId
+        )
+      : undefined)
+  );
+}
+
+/**
+ * 非同步查詢對應的權威科研原始條目（會按需載入權威庫並永久快取）
+ */
+export async function findAuthorityFood(
+  id?: string,
+  authority?: AuthoritySource,
+  sourceId?: string
+): Promise<FoodItem | undefined> {
+  const foods = await getAuthorityFoods();
+  return (
+    (id ? foods.find((f) => f.id === id) : undefined) ||
+    (authority && sourceId
+      ? foods.find(
+          (f) => f.dataSource?.authority === authority && f.dataSource?.sourceId === sourceId
+        )
+      : undefined)
+  );
+}
+
+/**
  * 將選中的權威食材單筆寫入本機 IndexedDB (foods 表)，立即在庫存中可用
  */
 export async function importAuthorityFoodToDatabase(food: FoodItem): Promise<FoodItem> {

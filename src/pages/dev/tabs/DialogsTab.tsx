@@ -7,6 +7,8 @@ import { CopySnippet } from '../components/CopySnippet';
 import { cn } from '@/lib/utils';
 
 // 飲食模組 Dialogs
+import { AuthorityFoodSearchDialog } from '@/components/food/AuthorityFoodSearchDialog';
+import { AuthorityFoodDetailsDialog } from '@/components/food/AuthorityFoodDetailsDialog';
 import { FoodFormDialog } from '@/components/food/FoodFormDialog';
 import { RecipeDialog } from '@/components/food/RecipeDialog';
 import { FoodRecipeSelectDialog } from '@/components/food/FoodRecipeSelectDialog';
@@ -34,6 +36,7 @@ import { ClearDataModal } from '@/components/settings/ClearDataModal';
 import { DropboxSyncDialog } from '@/components/settings/dialogs/DropboxSyncDialog';
 import { InitialSyncModal } from '@/components/sync/InitialSyncModal';
 import { CopyDailyDataDialog } from '@/components/common/CopyDailyDataDialog';
+import { RecordedDatePickerDialog } from '@/components/common/RecordedDatePickerDialog';
 import type { InitialSyncStep } from '@/services/sync/initialSyncManager';
 import { PwaInstallGuideDialog } from '@/components/pwa/PwaInstallGuideDialog';
 import { AIProviderManagerDialog } from '@/components/settings/AIProviderManagerDialog';
@@ -75,6 +78,42 @@ const MOCK_FOOD: FoodItem = {
   updatedAt: Date.now(),
 };
 
+const MOCK_AUTHORITY_FOOD: FoodItem = {
+  id: 'mock-authority-food-1',
+  name: '雞蛋',
+  category: 'natural',
+  servingSize: 50,
+  servingUnit: 'g',
+  calories: 70,
+  carbs: 0.7,
+  protein: 6.5,
+  fat: 4.6,
+  fiber: 0,
+  sugar: 0.2,
+  saturatedFat: 1.5,
+  transFat: 0,
+  refuseRate: 0.13,
+  edibleRate: 0.87,
+  dataSource: {
+    authority: 'TFDA',
+    sourceId: 'K0100101',
+    sourceName: '雞蛋(平均值)',
+  },
+  micros: {
+    potassium: 131,
+    calcium: 69,
+    magnesium: 11,
+    iron: 2.1,
+    zinc: 1.5,
+    vitaminA: 158,
+    cholesterol: 420,
+  },
+  isCustom: true,
+  isArchived: false,
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+};
+
 const MOCK_RECIPE: FoodRecipe = {
   id: 'mock-recipe-1',
   name: '雞胸肉義大利麵',
@@ -100,6 +139,24 @@ const MOCK_HYDRATED_FOOD_LOG: HydratedFoodLog = {
   carbs: 0,
   protein: 55.8,
   fat: 6.5,
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+};
+
+const MOCK_GROSS_FOOD_LOG: HydratedFoodLog = {
+  id: 'mock-log-2',
+  date: '2026-11-25',
+  mealType: 'breakfast',
+  entryType: 'item',
+  foodId: 'mock-authority-food-1',
+  foodName: '雞蛋',
+  quantity: 87,
+  grossQuantity: 100,
+  unit: 'g',
+  calories: 121,
+  carbs: 1.1,
+  protein: 11.2,
+  fat: 8.0,
   createdAt: Date.now(),
   updatedAt: Date.now(),
 };
@@ -229,9 +286,11 @@ const DialogRowItem: React.FC<DialogRowItemProps> = ({
 export const DialogsTab: React.FC = () => {
   const confirm = useConfirm();
 
-  // 飲食模組 State (9 項獨立組件)
+  // 飲食模組 State (12 項獨立組件)
+  const [authoritySearchOpen, setAuthoritySearchOpen] = useState(false);
+  const [authorityDetailsOpen, setAuthorityDetailsOpen] = useState(false);
   const [foodFormOpen, setFoodFormOpen] = useState(false);
-  const [foodFormEditMode, setFoodFormEditMode] = useState(false);
+  const [foodFormMode, setFoodFormMode] = useState<'create' | 'edit-custom' | 'edit-authority'>('create');
 
   const [recipeDialogOpen, setRecipeDialogOpen] = useState(false);
   const [recipeDialogMode, setRecipeDialogMode] = useState<
@@ -240,6 +299,7 @@ export const DialogsTab: React.FC = () => {
 
   const [foodRecipeSelectOpen, setFoodRecipeSelectOpen] = useState(false);
   const [editFoodLogOpen, setEditFoodLogOpen] = useState(false);
+  const [editFoodLogMode, setEditFoodLogMode] = useState<'net' | 'gross'>('net');
   const [copyMealOpen, setCopyMealOpen] = useState(false);
   const [copyMealDatePickerOpen, setCopyMealDatePickerOpen] = useState(false);
   const [quickPlaceholderOpen, setQuickPlaceholderOpen] = useState(false);
@@ -272,6 +332,8 @@ export const DialogsTab: React.FC = () => {
   const [initialSyncPreviewOpen, setInitialSyncPreviewOpen] = useState(false);
   const [initialSyncPreviewStep, setInitialSyncPreviewStep] = useState<InitialSyncStep>('STRATEGY');
   const [copyDailyDataOpen, setCopyDailyDataOpen] = useState(false);
+  const [recordedDatePickerOpen, setRecordedDatePickerOpen] = useState(false);
+  const [recordedSelectedDate, setRecordedSelectedDate] = useState<string | null>(null);
   const [pwaGuideOpen, setPwaGuideOpen] = useState(false);
   const [keypadOpen, setKeypadOpen] = useState(false);
   const [keypadVal, setKeypadVal] = useState(150);
@@ -314,11 +376,11 @@ export const DialogsTab: React.FC = () => {
             彈窗型錄
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5 font-sans">
-            全應用程式 28 個業務 Dialog 統一驗收矩陣，支援同組件多形態（新增/編輯、已連線/未連線）整合檢視。
+            全應用程式 31 個業務 Dialog 統一驗收矩陣，支援同組件多形態（新增/編輯、權威/自訂、已連線/未連線）整合檢視。
           </p>
         </div>
         <div className="text-2xs font-mono text-muted-foreground tabular-nums">
-          28 項元件
+          31 項元件
         </div>
       </div>
 
@@ -326,27 +388,48 @@ export const DialogsTab: React.FC = () => {
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-mono text-muted-foreground">
-            飲食與營養 (10)
+            飲食與營養 (12)
           </h3>
         </div>
         <div className="divide-y divide-border rounded-lg border border-border bg-card overflow-hidden shadow-none">
           <DialogRowItem
+            name="權威庫搜尋"
+            component="AuthorityFoodSearchDialog"
+            desc="檢索 18,635 筆六大權威科研食物數據庫並一鍵導入個人庫"
+            badge="Search"
+            onOpen={() => setAuthoritySearchOpen(true)}
+          />
+          <DialogRowItem
+            name="權威元素詳情"
+            component="AuthorityFoodDetailsDialog"
+            desc="權威來源憑證與官方版次、可食率、次級脂肪及微量元素測定"
+            badge="Details"
+            onOpen={() => setAuthorityDetailsOpen(true)}
+          />
+          <DialogRowItem
             name="食材表單"
             component="FoodFormDialog"
-            desc="5 大分類、生重基準折算與度量單位 (支援空白與既有數據)"
+            desc="5 大分類、可食率與權威導入唯讀防護（支援空白／自訂／權威三態）"
             badge="Form"
             actions={[
               {
                 label: '新增',
                 onOpen: () => {
-                  setFoodFormEditMode(false);
+                  setFoodFormMode('create');
                   setFoodFormOpen(true);
                 },
               },
               {
-                label: '編輯',
+                label: '編輯(自訂)',
                 onOpen: () => {
-                  setFoodFormEditMode(true);
+                  setFoodFormMode('edit-custom');
+                  setFoodFormOpen(true);
+                },
+              },
+              {
+                label: '編輯(權威)',
+                onOpen: () => {
+                  setFoodFormMode('edit-authority');
                   setFoodFormOpen(true);
                 },
               },
@@ -398,9 +481,24 @@ export const DialogsTab: React.FC = () => {
           <DialogRowItem
             name="單品日誌"
             component="EditFoodLogDialog"
-            desc="調整已記錄食材的攝入克數與數值"
+            desc="調整已記錄食材的攝入克數，支援可食淨重與毛重雙態切換"
             badge="Log"
-            onOpen={() => setEditFoodLogOpen(true)}
+            actions={[
+              {
+                label: '無損耗',
+                onOpen: () => {
+                  setEditFoodLogMode('net');
+                  setEditFoodLogOpen(true);
+                },
+              },
+              {
+                label: '帶損耗毛重',
+                onOpen: () => {
+                  setEditFoodLogMode('gross');
+                  setEditFoodLogOpen(true);
+                },
+              },
+            ]}
           />
           <DialogRowItem
             name="複製餐點"
@@ -648,6 +746,13 @@ export const DialogsTab: React.FC = () => {
             onOpen={() => setCopyDailyDataOpen(true)}
           />
           <DialogRowItem
+            name="歷史記錄日曆"
+            component="RecordedDatePickerDialog"
+            desc="標點提示已存在記錄的歷史日期，供複製餐點或訓練選取"
+            badge="Picker"
+            onOpen={() => setRecordedDatePickerOpen(true)}
+          />
+          <DialogRowItem
             name="安裝教學"
             component="PwaInstallGuideDialog"
             desc="5 大平台離線安裝圖文教學"
@@ -728,13 +833,36 @@ export const DialogsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* ==================== 實際掛載 24 個 Dialog 實體 ==================== */}
+      {/* ==================== 實際掛載 31 個 Dialog 實體 ==================== */}
+
+      {/* 飲食 0a: 權威科研庫搜尋添加 */}
+      <AuthorityFoodSearchDialog
+        open={authoritySearchOpen}
+        onOpenChange={setAuthoritySearchOpen}
+        onSelectFood={(food) => {
+          toast.show(`已導入「${food.name}」`);
+          setAuthoritySearchOpen(false);
+        }}
+      />
+
+      {/* 飲食 0b: 權威元素數據詳情 */}
+      <AuthorityFoodDetailsDialog
+        food={MOCK_AUTHORITY_FOOD}
+        open={authorityDetailsOpen}
+        onOpenChange={setAuthorityDetailsOpen}
+      />
 
       {/* 飲食 1: 食材表單 */}
       <FoodFormDialog
         open={foodFormOpen}
         onOpenChange={setFoodFormOpen}
-        initialData={foodFormEditMode ? MOCK_FOOD : null}
+        initialData={
+          foodFormMode === 'edit-authority'
+            ? MOCK_AUTHORITY_FOOD
+            : foodFormMode === 'edit-custom'
+              ? MOCK_FOOD
+              : null
+        }
         onSubmit={async () => {
           toast.show('已儲存');
           setFoodFormOpen(false);
@@ -790,7 +918,7 @@ export const DialogsTab: React.FC = () => {
       <EditFoodLogDialog
         open={editFoodLogOpen}
         onOpenChange={setEditFoodLogOpen}
-        log={MOCK_HYDRATED_FOOD_LOG}
+        log={editFoodLogMode === 'gross' ? MOCK_GROSS_FOOD_LOG : MOCK_HYDRATED_FOOD_LOG}
         onSave={async () => {
           toast.show('已更新');
           setEditFoodLogOpen(false);
@@ -1007,6 +1135,21 @@ export const DialogsTab: React.FC = () => {
         onOpenChange={setCopyDailyDataOpen}
         date={new Date().toISOString().slice(0, 10)}
         scope="all"
+      />
+
+      {/* 系統 7b: 歷史記錄日期選擇器 */}
+      <RecordedDatePickerDialog
+        open={recordedDatePickerOpen}
+        onOpenChange={setRecordedDatePickerOpen}
+        title="選擇歷史記錄日期"
+        targetDate={new Date().toISOString().slice(0, 10)}
+        selectedDate={recordedSelectedDate}
+        recordedDates={['2026-11-20', '2026-11-22', '2026-11-24']}
+        onSelectDate={(d) => {
+          setRecordedSelectedDate(d);
+          setRecordedDatePickerOpen(false);
+          toast.show(d);
+        }}
       />
 
       {/* 系統 8: PWA 5 平台安裝教學 */}

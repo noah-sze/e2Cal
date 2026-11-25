@@ -251,7 +251,9 @@
       "grossWeightPrefix": "gross",
       "grossWeightLabel": "Gross Weight",
       "netWeightLabel": "Net Weight",
+      "netWeightPrefix": "Net",
       "refuseRatePrefix": "Refuse",
+      "edibleRate": "Edible Rate",
       "zeroRefuseTip": "This food has 0% inedible refuse",
       "authoritySearchTitle": "Search Authority Foods",
       "authoritySearchSubtitle": "USDA, UKHSA, MEXT, FSANZ, TFDA & CDC scientific food databases (18,635 items)",
@@ -394,6 +396,7 @@
         "sourceId": "Entry ID",
         "sourceName": "Official Name",
         "verifiedAt": "Verified Date",
+        "edition": "Edition",
         "standardBasis": "Standard Basis",
         "standardBasisValue": "Per 100g Edible Portion (Raw)",
         "edibleRate": "Edible Rate",
@@ -404,9 +407,19 @@
         "noMicros": "No additional micronutrient measurements",
         "authorities": {
           "USDA": "U.S. Department of Agriculture (USDA)",
-          "MEXT": "Japan MEXT (Eight-Revision)",
+          "MEXT": "Japan MEXT",
           "TFDA": "Taiwan FDA (TFDA)",
-          "CFCT": "China CDC (CFCT)"
+          "CFCT": "China CDC (CFCT)",
+          "AFCD": "Food Standards ANZ (AFCD)",
+          "CoFID": "UK Health Security Agency (CoFID)"
+        },
+        "editions": {
+          "USDA": "FoodData Central",
+          "MEXT": "8th Revision (2020)",
+          "TFDA": "2024 Edition",
+          "CFCT": "6th Edition",
+          "AFCD": "Release 2",
+          "CoFID": "2021 Edition"
         },
         "micros": {
           "potassium": "Potassium",

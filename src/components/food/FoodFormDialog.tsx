@@ -43,7 +43,8 @@ type KeypadField =
   | 'fiber'
   | 'saturatedFat'
   | 'transFat'
-  | 'sodium';
+  | 'sodium'
+  | 'edibleRate';
 
 interface KeypadConfig {
   field: KeypadField;
@@ -101,6 +102,7 @@ export function FoodFormDialog({
   const { t } = useTranslation();
   const { foodWeightUnit, foodVolumeUnit, energyUnit } = useUnitPreferences();
   const isEdit = !!initialData;
+  const isAuthorityFood = Boolean(initialData?.dataSource);
 
   // 基本資訊狀態
   const [name, setName] = useState('');
@@ -168,6 +170,7 @@ export function FoodFormDialog({
   const [saturatedFat, setSaturatedFat] = useState('');
   const [transFat, setTransFat] = useState('');
   const [sodium, setSodium] = useState('');
+  const [edibleRatePct, setEdibleRatePct] = useState('100');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [keypadConfig, setKeypadConfig] = useState<KeypadConfig | null>(null);
@@ -210,8 +213,8 @@ export function FoodFormDialog({
       setServingSize(convertedServingSize > 0 ? String(convertedServingSize) : '');
       setServingUnit(prefServingUnit);
 
-      // 2. 一律以「份量」模式開啟；底層保存後即徹底遺忘當初輸入基準，如需重照標籤輸入可隨時切換「自定義」
-      setBasisMode('serving');
+      // 2. 權威庫導入食材鎖定原基準份量模式以確保調整預設份量時正確等比折算；一般食材以「份量」模式開啟
+      setBasisMode(initialData.dataSource ? 'custom' : 'serving');
       setBasisUnit(prefServingUnit);
       setBasisSize(convertedServingSize > 0 ? String(convertedServingSize) : '');
 
@@ -229,6 +232,10 @@ export function FoodFormDialog({
       setSaturatedFat(typeof initialData.saturatedFat === 'number' ? String(initialData.saturatedFat) : '');
       setTransFat(typeof initialData.transFat === 'number' ? String(initialData.transFat) : '');
       setSodium(typeof initialData.sodium === 'number' ? String(initialData.sodium) : '');
+      const rawEdible =
+        initialData.edibleRate ??
+        (typeof initialData.refuseRate === 'number' ? Math.max(0, 1 - initialData.refuseRate) : 1);
+      setEdibleRatePct(String(Math.min(100, Math.max(1, Math.round(rawEdible * 100)))));
     } else {
       // 新增模式：完全純淨無初始數值，分類預設為空
       setName('');
@@ -238,6 +245,7 @@ export function FoodFormDialog({
       setServingUnit(foodWeightUnit);
       setBasisMode('serving');
       setBasisSize('');
+      setEdibleRatePct('100');
       setBasisUnit(foodWeightUnit);
       setCalorieUnit(energyUnit);
       setCalories('');
@@ -457,6 +465,21 @@ export function FoodFormDialog({
         });
         break;
       }
+      case 'edibleRate': {
+        const curPct = Math.min(100, Math.max(1, Math.round(Number(edibleRatePct) || 100)));
+        initialKeypadValueRef.current = { value: String(curPct), unit: '%' };
+        setKeypadConfig({
+          field: 'edibleRate',
+          title: t('diet.edibleRate'),
+          value: curPct,
+          unit: '%',
+          allowDecimals: false,
+          maxDecimals: 0,
+          anchorEl: targetEl || null,
+          valueClassName: 'text-foreground',
+        });
+        break;
+      }
     }
   };
 
@@ -516,6 +539,9 @@ export function FoodFormDialog({
       case 'sodium':
         setSodium(formatInt(val));
         break;
+      case 'edibleRate':
+        setEdibleRatePct(String(Math.min(100, Math.max(1, Math.round(val)))));
+        break;
     }
   };
 
@@ -566,6 +592,9 @@ export function FoodFormDialog({
         break;
       case 'sodium':
         setSodium(prevVal);
+        break;
+      case 'edibleRate':
+        setEdibleRatePct(prevVal);
         break;
     }
     setKeypadConfig(null);
@@ -629,6 +658,9 @@ export function FoodFormDialog({
       }
       case 'sodium':
         setSodium(formatInt(val));
+        break;
+      case 'edibleRate':
+        setEdibleRatePct(String(Math.min(100, Math.max(1, Math.round(val)))));
         break;
     }
     setKeypadConfig(null);
@@ -697,6 +729,17 @@ export function FoodFormDialog({
         saturatedFat: normalizedMetricFood.saturatedFat,
         transFat: normalizedMetricFood.transFat,
         sodium: normalizedMetricFood.sodium,
+        ...(!isAuthorityFood
+          ? (() => {
+              const clampedPct = Math.min(100, Math.max(1, Math.round(Number(edibleRatePct) || 100)));
+              const finalEdibleRate = clampedPct / 100;
+              const finalRefuseRate = Math.round((1 - finalEdibleRate) * 1000) / 1000;
+              return {
+                edibleRate: finalEdibleRate,
+                refuseRate: finalRefuseRate,
+              };
+            })()
+          : {}),
       });
 
       onOpenChange(false);
@@ -786,23 +829,37 @@ export function FoodFormDialog({
           externalFocusActive={isAiFocused}
           onExternalFocusDismiss={() => setIsAiFocused(false)}
           externalTopSlot={
-            <ExternalAIAssistant
-              mode="foodLabel"
-              dialogOpen={open && !isSubmitting}
-              focused={isAiFocused}
-              onFocusedChange={setIsAiFocused}
-              onInjectFoodLabel={handleInjectFoodLabel}
-              mockMode={aiMockMode}
-              mockScenario={aiMockScenario}
-              existingBrands={existingBrands}
-            />
+            !isAuthorityFood ? (
+              <ExternalAIAssistant
+                mode="foodLabel"
+                dialogOpen={open && !isSubmitting}
+                focused={isAiFocused}
+                onFocusedChange={setIsAiFocused}
+                onInjectFoodLabel={handleInjectFoodLabel}
+                mockMode={aiMockMode}
+                mockScenario={aiMockScenario}
+                existingBrands={existingBrands}
+              />
+            ) : undefined
           }
         >
 
           <form id={formId} onSubmit={handleSubmit} className="space-y-3.5 pt-3.5 pb-0">
           {/* 表格段落 1: 基本資訊 (共用 SectionCard 內嵌表頭) */}
           <SectionCard title={t('diet.basicInfo')} bodyClassName="text-sm font-sans">
-            {/* 品牌 ｜ 名稱 50/50 分割行 */}
+            {/* 品牌 ｜ 名稱（權威庫導入食材不顯示品牌輸入框，由名稱獨佔全寬） */}
+            {isAuthorityFood ? (
+              <div className="h-10 bg-card relative flex items-stretch min-w-0 focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground focus-within:z-[1] transition-shadow duration-100">
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={namePlaceholder}
+                  aria-label={namePlaceholder}
+                  className="w-full h-full px-3 bg-transparent text-center text-xs font-sans text-foreground font-normal focus:outline-none placeholder:text-muted-foreground/40"
+                />
+              </div>
+            ) : (
               <div className="h-10 grid grid-cols-2 divide-x divide-border bg-card">
                 {/* 品牌 (選填，含既有品牌聯想) */}
                 <div className="relative flex items-stretch min-w-0 focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground focus-within:z-[1] transition-shadow duration-100">
@@ -865,6 +922,7 @@ export function FoodFormDialog({
                   />
                 </div>
               </div>
+            )}
 
               {/* 分類 */}
               <div className="h-10 px-4 flex items-center justify-between">
@@ -923,55 +981,127 @@ export function FoodFormDialog({
                   <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                 </button>
               </div>
+
+              {/* 可食率（權威庫導入食材唯讀展示，手動新增／編輯食材可點擊調整） */}
+              <div className="h-10 px-4 flex items-center justify-between">
+                <span className="text-muted-foreground text-xs">{t('diet.edibleRate')}</span>
+                {isAuthorityFood ? (
+                  <MetricValue
+                    value={edibleRatePct}
+                    unit="%"
+                    valueClassName="font-normal text-foreground text-xs"
+                    unitClassName="text-xs text-muted-foreground"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => openKeypad('edibleRate', e.currentTarget)}
+                    className="h-7 px-3 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none text-foreground"
+                    title={t('diet.edibleRate')}
+                    aria-label={t('diet.edibleRate')}
+                  >
+                    <MetricValue
+                      value={edibleRatePct}
+                      unit="%"
+                      valueClassName="text-foreground font-normal"
+                      unitClassName="text-muted-foreground"
+                    />
+                    <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                  </button>
+                )}
+              </div>
           </SectionCard>
 
-          {/* 表格段落 2: 基準營養素 (共用通用規格卡片) */}
+          {/* 表格段落 1.5: 權威數據來源（僅從權威庫導入的食材編輯時展示） */}
+          {isAuthorityFood && initialData?.dataSource && (
+            <SectionCard title={t('diet.authorityDetails.sourceSection')} bodyClassName="text-xs font-sans">
+              <div className="min-h-10 py-2 px-4 flex items-center justify-between gap-2">
+                <span className="text-muted-foreground shrink-0">
+                  {t('diet.authorityDetails.authority')}
+                </span>
+                <span className="text-foreground font-medium text-right">
+                  {t(
+                    `diet.authorityDetails.authorities.${initialData.dataSource.authority}`,
+                    initialData.dataSource.authority
+                  )}
+                </span>
+              </div>
+
+              <div className="min-h-10 py-2 px-4 flex items-center justify-between gap-2">
+                <span className="text-muted-foreground shrink-0">
+                  {t('diet.authorityDetails.sourceId')}
+                </span>
+                <span className="text-foreground font-mono text-right">
+                  {initialData.dataSource.sourceId}
+                </span>
+              </div>
+
+              {initialData.dataSource.sourceName && (
+                <div className="min-h-10 py-2 px-4 flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground shrink-0">
+                    {t('diet.authorityDetails.sourceName')}
+                  </span>
+                  <span className="text-foreground text-right break-words max-w-[190px]">
+                    {initialData.dataSource.sourceName}
+                  </span>
+                </div>
+              )}
+            </SectionCard>
+          )}
+
+          {/* 表格段落 2: 基準營養素 (權威庫導入食材僅供唯讀檢視，不允許編輯營養價值表) */}
           <NutritionFactsCard
             title={t('diet.servingNutrients')}
+            data={isAuthorityFood ? normalizedMetricFood : undefined}
             action={
-              <div className="h-7 p-0.5 rounded-full border border-border bg-background inline-flex items-center text-xs font-mono select-none shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (basisMode !== 'serving') {
-                      triggerHaptic('selection');
-                      setBasisMode('serving');
-                      setBasisUnit(servingUnit);
-                    }
-                  }}
-                  className={cn(
-                    "h-full px-2.5 rounded-full transition-all cursor-pointer text-[11px] flex items-center justify-center whitespace-nowrap",
-                    basisMode === 'serving'
-                      ? "bg-foreground text-background font-medium shadow-none"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {t('diet.byServing')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (basisMode !== 'custom') {
-                      triggerHaptic('selection');
-                      setBasisMode('custom');
-                    }
-                  }}
-                  className={cn(
-                    "h-full px-2.5 rounded-full transition-all cursor-pointer text-[11px] flex items-center justify-center whitespace-nowrap",
-                    basisMode === 'custom'
-                      ? "bg-foreground text-background font-medium shadow-none"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {t('diet.customBasis')}
-                </button>
-              </div>
+              isAuthorityFood ? null : (
+                <div className="h-7 p-0.5 rounded-full border border-border bg-background inline-flex items-center text-xs font-mono select-none shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (basisMode !== 'serving') {
+                        triggerHaptic('selection');
+                        setBasisMode('serving');
+                        setBasisUnit(servingUnit);
+                      }
+                    }}
+                    className={cn(
+                      "h-full px-2.5 rounded-full transition-all cursor-pointer text-[11px] flex items-center justify-center whitespace-nowrap",
+                      basisMode === 'serving'
+                        ? "bg-foreground text-background font-medium shadow-none"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {t('diet.byServing')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (basisMode !== 'custom') {
+                        triggerHaptic('selection');
+                        setBasisMode('custom');
+                      }
+                    }}
+                    className={cn(
+                      "h-full px-2.5 rounded-full transition-all cursor-pointer text-[11px] flex items-center justify-center whitespace-nowrap",
+                      basisMode === 'custom'
+                        ? "bg-foreground text-background font-medium shadow-none"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {t('diet.customBasis')}
+                  </button>
+                </div>
+              )
             }
             defaultCarbsExpanded={Boolean(sugar !== '' || fiber !== '')}
             defaultFatExpanded={Boolean(saturatedFat !== '' || transFat !== '')}
-            editable={{
-              alwaysShowSubChevrons: true,
-              lockSubPopover: Boolean(keypadConfig),
+            editable={
+              isAuthorityFood
+                ? undefined
+                : {
+                    alwaysShowSubChevrons: true,
+                    lockSubPopover: Boolean(keypadConfig),
               renderValue: (field) => {
                 switch (field) {
                   case 'serving':
@@ -1175,7 +1305,8 @@ export function FoodFormDialog({
                     );
                 }
               },
-            }}
+            }
+            }
           />
 
           {/* 方案 D 徹底無底欄，表單內容直達底部 */}

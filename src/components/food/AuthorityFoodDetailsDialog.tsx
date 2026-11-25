@@ -1,8 +1,14 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, PrecisionDialogContent } from '@/components/ui/dialog';
 import { SectionCard } from '@/components/ui/section-card';
 import { MetricValue } from '@/components/ui/metric-value';
+import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
+import {
+  getCachedAuthorityFood,
+  findAuthorityFood,
+} from '@/services/authorityFoodService';
+import { calculateScaledNutrition } from '@/utils/nutritionMath';
 import type { FoodItem, FoodMicronutrients } from '@/types';
 
 export interface AuthorityFoodDetailsDialogProps {
@@ -59,11 +65,83 @@ export function AuthorityFoodDetailsDialog({
 }: AuthorityFoodDetailsDialogProps) {
   const { t } = useTranslation();
 
-  const dataSource = food.dataSource;
-  const micros = food.micros;
-  const refuseRate = food.refuseRate ?? 0;
-  const edibleRate = food.edibleRate ?? 1.0;
-  const refuseDescription = food.refuseDescription;
+  // 始終查找並展示權威科研庫的官方原始 100g 數據，不受使用者自訂份量或編輯影響
+  const cachedRaw = getCachedAuthorityFood(
+    food.id,
+    food.dataSource?.authority,
+    food.dataSource?.sourceId
+  );
+  const [fetchedRaw, setFetchedRaw] = useState<FoodItem | undefined>(cachedRaw);
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    const syncMatch = getCachedAuthorityFood(
+      food.id,
+      food.dataSource?.authority,
+      food.dataSource?.sourceId
+    );
+    if (syncMatch) {
+      setFetchedRaw(syncMatch);
+      return;
+    }
+    if (food.dataSource) {
+      findAuthorityFood(
+        food.id,
+        food.dataSource.authority,
+        food.dataSource.sourceId
+      ).then((matched) => {
+        if (active && matched) {
+          setFetchedRaw(matched);
+        }
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, [open, food.id, food.dataSource]);
+
+  const rawFood = fetchedRaw ?? food;
+
+  const dataSource = rawFood.dataSource ?? food.dataSource;
+  const micros = rawFood.micros ?? food.micros;
+  const refuseRate = rawFood.refuseRate ?? food.refuseRate ?? 0;
+  const edibleRate = rawFood.edibleRate ?? food.edibleRate ?? 1.0;
+
+  // 若權威原數據尚未非同步載入完成，暫時將使用者份量等比標準化回 100g 作為無縫兜底
+  const displayNutrition = useMemo(() => {
+    if (fetchedRaw) {
+      return {
+        servingSize: fetchedRaw.servingSize || 100,
+        servingUnit: fetchedRaw.servingUnit || 'g',
+        calories: fetchedRaw.calories,
+        carbs: fetchedRaw.carbs,
+        protein: fetchedRaw.protein,
+        fat: fetchedRaw.fat,
+        fiber: fetchedRaw.fiber,
+        sugar: fetchedRaw.sugar,
+        saturatedFat: fetchedRaw.saturatedFat,
+        transFat: fetchedRaw.transFat,
+      };
+    }
+    const baseSize = food.servingSize || 100;
+    const baseUnit = food.servingUnit || 'g';
+    if (baseSize === 100) {
+      return {
+        servingSize: 100,
+        servingUnit: baseUnit,
+        calories: food.calories,
+        carbs: food.carbs,
+        protein: food.protein,
+        fat: food.fat,
+        fiber: food.fiber,
+        sugar: food.sugar,
+        saturatedFat: food.saturatedFat,
+        transFat: food.transFat,
+      };
+    }
+    return calculateScaledNutrition(food, 'per100g');
+  }, [fetchedRaw, food]);
 
   // 過濾具有測定記錄的微量營養素
   const activeMicros = useMemo(() => {
@@ -122,13 +200,13 @@ export function AuthorityFoodDetailsDialog({
                 </div>
               )}
 
-              {dataSource.verifiedAt && (
+              {dataSource.authority && (
                 <div className="min-h-9 py-2 px-3.5 flex items-center justify-between gap-2">
                   <span className="text-muted-foreground text-xs shrink-0">
-                    {t('diet.authorityDetails.verifiedAt')}
+                    {t('diet.authorityDetails.edition')}
                   </span>
                   <span className="text-foreground font-mono text-xs text-right">
-                    {dataSource.verifiedAt}
+                    {t(`diet.authorityDetails.editions.${dataSource.authority}`, '')}
                   </span>
                 </div>
               )}
@@ -147,18 +225,11 @@ export function AuthorityFoodDetailsDialog({
                   <span className="text-muted-foreground text-xs shrink-0">
                     {t('diet.authorityDetails.refuseRate')}
                   </span>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <MetricValue
-                      value={Math.round(refuseRate * 100)}
-                      unit="%"
-                      className="text-foreground"
-                    />
-                    {refuseDescription && (
-                      <span className="text-muted-foreground text-2xs truncate max-w-[120px]">
-                        ({refuseDescription})
-                      </span>
-                    )}
-                  </div>
+                  <MetricValue
+                    value={Math.round(refuseRate * 100)}
+                    unit="%"
+                    className="text-foreground shrink-0"
+                  />
                 </div>
               )}
 
@@ -175,111 +246,13 @@ export function AuthorityFoodDetailsDialog({
             </SectionCard>
           )}
 
-          {/* 2. 核心與次級營養素 (C -> P -> F 律動) */}
-          <SectionCard
+          {/* 2. 核心與次級營養素 (統一由 NutritionFactsCard 渲染，始終顯示官方 100g 原值) */}
+          <NutritionFactsCard
             title={t('diet.authorityDetails.macrosSection')}
-            bodyClassName="text-xs font-sans"
-          >
-            {/* 熱量 */}
-            <div className="h-9 px-3.5 flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">{t('diet.calories')}</span>
-              <MetricValue
-                value={food.calories}
-                unit="kcal"
-                className="text-foreground shrink-0 font-medium"
-              />
-            </div>
-
-            {/* 碳水化合物 */}
-            <div className="h-9 px-3.5 flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">{t('diet.carbs')}</span>
-              <MetricValue
-                value={food.carbs}
-                unit="g"
-                className="text-foreground shrink-0"
-              />
-            </div>
-
-            {/* 膳食纖維 */}
-            {food.fiber !== undefined && food.fiber !== null && (
-              <div className="h-8 px-3.5 flex items-center justify-between gap-2 bg-muted/20">
-                <span className="text-muted-foreground/80 pl-3">└ {t('diet.fiber')}</span>
-                <MetricValue
-                  value={food.fiber}
-                  unit="g"
-                  className="text-muted-foreground shrink-0"
-                />
-              </div>
-            )}
-
-            {/* 糖 */}
-            {food.sugar !== undefined && food.sugar !== null && (
-              <div className="h-8 px-3.5 flex items-center justify-between gap-2 bg-muted/20">
-                <span className="text-muted-foreground/80 pl-3">└ {t('diet.sugar')}</span>
-                <MetricValue
-                  value={food.sugar}
-                  unit="g"
-                  className="text-muted-foreground shrink-0"
-                />
-              </div>
-            )}
-
-            {/* 蛋白質 */}
-            <div className="h-9 px-3.5 flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">{t('diet.protein')}</span>
-              <MetricValue
-                value={food.protein}
-                unit="g"
-                className="text-foreground shrink-0"
-              />
-            </div>
-
-            {/* 脂肪 */}
-            <div className="h-9 px-3.5 flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">{t('diet.fat')}</span>
-              <MetricValue
-                value={food.fat}
-                unit="g"
-                className="text-foreground shrink-0"
-              />
-            </div>
-
-            {/* 飽和脂肪 */}
-            {food.saturatedFat !== undefined && food.saturatedFat !== null && (
-              <div className="h-8 px-3.5 flex items-center justify-between gap-2 bg-muted/20">
-                <span className="text-muted-foreground/80 pl-3">└ {t('diet.saturatedFat')}</span>
-                <MetricValue
-                  value={food.saturatedFat}
-                  unit="g"
-                  className="text-muted-foreground shrink-0"
-                />
-              </div>
-            )}
-
-            {/* 反式脂肪 */}
-            {food.transFat !== undefined && food.transFat !== null && (
-              <div className="h-8 px-3.5 flex items-center justify-between gap-2 bg-muted/20">
-                <span className="text-muted-foreground/80 pl-3">└ {t('diet.transFat')}</span>
-                <MetricValue
-                  value={food.transFat}
-                  unit="g"
-                  className="text-muted-foreground shrink-0"
-                />
-              </div>
-            )}
-
-            {/* 鈉 */}
-            {food.sodium !== undefined && food.sodium !== null && (
-              <div className="h-9 px-3.5 flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">{t('diet.sodium')}</span>
-                <MetricValue
-                  value={food.sodium}
-                  unit="mg"
-                  className="text-foreground shrink-0"
-                />
-              </div>
-            )}
-          </SectionCard>
+            action={null}
+            showFatSub={true}
+            data={displayNutrition}
+          />
 
           {/* 3. 微量元素與礦物質 */}
           <SectionCard
@@ -292,7 +265,7 @@ export function AuthorityFoodDetailsDialog({
                 return (
                   <div
                     key={key}
-                    className="h-9 px-3.5 flex items-center justify-between gap-2"
+                    className="h-10 px-4 flex items-center justify-between gap-2"
                   >
                     <span className="text-muted-foreground truncate">
                       {t(`diet.authorityDetails.micros.${key}`)}

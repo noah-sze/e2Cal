@@ -12,6 +12,7 @@ import {
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/services/db/db';
 import { Button } from '@/components/ui/button';
+import { MetricValue } from '@/components/ui/metric-value';
 import { SectionCard } from '@/components/ui/section-card';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { toast } from '@/components/ui/toast';
@@ -265,6 +266,16 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
     return null;
   }
 
+  const refuseRate = food.refuseRate ?? 0;
+  const edibleRate = food.edibleRate ?? Math.max(0, 1 - refuseRate);
+  const ediblePct = Math.round(edibleRate * 100);
+  const servingFormatted = formatFoodServing(
+    food.servingSize || 100,
+    food.servingUnit || 'g',
+    foodWeightUnit,
+    foodVolumeUnit
+  );
+
   return (
     <div className="w-full max-w-xl mx-auto space-y-4 pb-20">
       {/* 頂部操作按鈕 (Portal 映射至 AppLayout 頂部標頭右側) */}
@@ -343,13 +354,14 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
                     triggerHaptic('light');
                     setIsSourceDetailsOpen(true);
                   }}
-                  className="px-1.5 py-0.5 rounded border border-border/80 bg-background/80 hover:bg-hover hover:border-foreground/30 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-all cursor-pointer select-none inline-flex items-center gap-1 active:scale-95"
+                  className="group px-1.5 py-0.5 rounded border border-transparent hover:border-border/80 hover:bg-background/80 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-all cursor-pointer select-none inline-flex items-center gap-0.5 active:scale-95"
                   title={t('diet.viewAuthorityDetails')}
                   aria-label={t('diet.viewAuthorityDetails')}
                 >
                   <span>
                     {effectiveDataSource.authority} {effectiveDataSource.sourceId}
                   </span>
+                  <ChevronRight className="size-2.5 hidden group-hover:inline-block shrink-0" />
                 </button>
               </>
             )}
@@ -367,11 +379,28 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
           </div>
         </div>
 
-        {/* 第 2 層：B-1 大氣品名帶與特質微徽章 (高度 68px 與指標區塊等高) */}
-        <div className="h-[68px] px-3.5 sm:px-4 border-b border-border flex items-center justify-between gap-2.5 bg-card overflow-hidden">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground truncate min-w-0">
-            {getLocalizedFoodName(food)}
-          </h1>
+        {/* 第 2 層：B-1 大氣品名帶與可食率、特質微徽章 */}
+        <div className="min-h-[68px] py-3 px-3.5 sm:px-4 border-b border-border flex items-center justify-between gap-2.5 bg-card">
+          <div className="flex flex-col min-w-0 gap-1">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground truncate min-w-0">
+              {getLocalizedFoodName(food)}
+            </h1>
+            <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+              <span className="inline-flex items-baseline gap-1.5">
+                <span>{t('diet.perServing')}</span>
+                <MetricValue
+                  value={servingFormatted.size}
+                  unit={servingFormatted.unit}
+                  className="text-foreground"
+                />
+              </span>
+              <span className="text-border select-none">·</span>
+              <span className="inline-flex items-baseline gap-1.5">
+                <span>{t('diet.edibleRate')}</span>
+                <MetricValue value={ediblePct} unit="%" className="text-foreground" />
+              </span>
+            </div>
+          </div>
           {evalRes?.labels && evalRes.labels.length > 0 && (
             <div className="flex items-center gap-1.5 flex-wrap shrink-0">
               {evalRes.labels.map((tag) => (
