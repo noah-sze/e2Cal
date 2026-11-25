@@ -210,8 +210,8 @@ export function evaluateAmountExpression(expr: string, allowNegative = false): s
   try {
     const trimmed = expr.trim();
     if (!trimmed) return '';
-    // Strip trailing operators or dots
-    const cleanExpr = trimmed.replace(/[+\-*/.]+$/, '').trim();
+    // Strip thousand-separator commas and trailing operators or dots
+    const cleanExpr = trimmed.replace(/,/g, '').replace(/[+\-*/.]+$/, '').trim();
     if (!cleanExpr) return '';
 
     // Only allow numbers, +, -, and decimal points
@@ -235,6 +235,19 @@ export function evaluateAmountExpression(expr: string, allowNegative = false): s
     // Ignore syntax errors during typing
   }
   return expr;
+}
+
+/**
+ * 解析數字鍵盤顯示字串（可能含千分位逗號與加減運算式）為數值
+ */
+export function parseKeypadDisplayAmount(valStr: string): number {
+  const normalized = valStr.replace(/,/g, '').trim();
+  if (!normalized) return 0;
+  const evaluated = /[+-]/.test(normalized.replace(/^[+-]/, ''))
+    ? evaluateAmountExpression(normalized, false)
+    : normalized;
+  const parsed = parseFloat(evaluated);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
 /**

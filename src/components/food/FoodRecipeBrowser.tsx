@@ -1018,27 +1018,6 @@ export function FoodRecipeBrowser({
                   <DropdownMenuItem
                     onClick={() => {
                       triggerHaptic('light');
-                      if (onAddAuthorityFood) {
-                        onAddAuthorityFood();
-                      } else {
-                        setIsInternalAuthorityOpen(true);
-                      }
-                    }}
-                    className="flex items-start gap-2.5 p-2 cursor-pointer rounded-md"
-                  >
-                    <Database className="size-4 mt-0.5 text-primary shrink-0" />
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <span className="font-medium text-xs text-foreground">
-                        {t('diet.addAuthorityFood', '權威科研庫搜索添加')}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {t('diet.addAuthorityFoodDesc', 'USDA / MEXT / TFDA / CFCT（1.4 萬條）')}
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      triggerHaptic('light');
                       if (onAddFood) {
                         onAddFood();
                       } else if (onAdd) {
@@ -1054,6 +1033,27 @@ export function FoodRecipeBrowser({
                       </span>
                       <span className="text-[10px] text-muted-foreground">
                         {t('diet.addManualFoodDesc', '自行填寫營養素與自定義食材')}
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      triggerHaptic('light');
+                      if (onAddAuthorityFood) {
+                        onAddAuthorityFood();
+                      } else {
+                        setIsInternalAuthorityOpen(true);
+                      }
+                    }}
+                    className="flex items-start gap-2.5 p-2 cursor-pointer rounded-md"
+                  >
+                    <Database className="size-4 mt-0.5 text-primary shrink-0" />
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <span className="font-medium text-xs text-foreground">
+                        {t('diet.addAuthorityFood', '從權威數據庫搜索添加')}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {t('diet.addAuthorityFoodDesc', '六大權威庫 · 18,635 項')}
                       </span>
                     </div>
                   </DropdownMenuItem>

@@ -30,7 +30,8 @@ import { calculateMealBudget, calculateEffectiveGrams, type WeighingForm } from 
 import { triggerHaptic } from '@/lib/haptics';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { formatEnergy } from '@/utils/unitMath';
-import { evaluateAmountExpression, cn } from '@/lib/utils';
+import { parseKeypadDisplayAmount } from '@/lib/utils';
+import { KeypadWeighingDisplayCard } from '@/components/diet/KeypadWeighingDisplayCard';
 
 export default function Diet() {
   const { t } = useTranslation();
@@ -467,74 +468,25 @@ export default function Diet() {
           onConfirm={handleConfirmAddFood}
           onCancel={handleCancelAddFood}
           renderContextRow={(valStr, currentU) => {
-            let finalValStr = valStr;
-            if (/[+-]/.test(valStr.replace(/^[+-]/, ''))) {
-              finalValStr = evaluateAmountExpression(valStr, false);
-            }
-            const rawQty = parseFloat(finalValStr) || 0;
+            const rawQty = parseKeypadDisplayAmount(valStr);
             const effectiveQty = calculateEffectiveGrams(rawQty, weighingForm, selectedFoodForAdd.edibleRate);
             const macros = calculateIngredientMacros(selectedFoodForAdd, effectiveQty);
             const hasRefuse = Boolean(selectedFoodForAdd.refuseRate && selectedFoodForAdd.refuseRate > 0);
 
             return (
-              <div className="flex flex-col gap-2">
-                <div className="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-muted/40 border border-border/40 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setWeighingForm('net')}
-                    className={cn(
-                      'py-1 px-2 rounded-md font-medium text-xs transition-all',
-                      weighingForm === 'net'
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-                    )}
-                  >
-                    {t('diet.netWeightLabel', '可食淨重')}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!hasRefuse}
-                    onClick={() => {
-                      if (!hasRefuse) return;
-                      setWeighingForm('gross');
-                    }}
-                    title={!hasRefuse ? t('diet.zeroRefuseTip', '此食材無不可食損耗（損耗 0%）') : undefined}
-                    className={cn(
-                      'py-1 px-2 rounded-md font-medium text-xs transition-all',
-                      !hasRefuse
-                        ? 'opacity-35 cursor-not-allowed text-muted-foreground select-none pointer-events-none'
-                        : weighingForm === 'gross'
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-                    )}
-                  >
-                    {t('diet.grossWeightLabel', '毛重')}
-                  </button>
-                </div>
-
-                <div className="px-1 text-[11px] text-muted-foreground font-mono flex items-center justify-between">
-                  <span>
-                    {t('diet.refuseRatePrefix', '可食率')}：{Math.min(100, Math.max(0, Math.round((selectedFoodForAdd.edibleRate ?? (1 - (selectedFoodForAdd.refuseRate || 0))) * 100)))}%
-                  </span>
-                  {hasRefuse && weighingForm === 'gross' && (
-                    <span>{t('diet.netWeightLabel', '可食淨重')} ~ {effectiveQty} {currentU}</span>
-                  )}
-                </div>
-
-                <div className="min-h-10 px-3 py-1.5 rounded-lg bg-muted/50 border border-border/50 flex items-center justify-between">
-                  <span className="text-calories font-bold font-mono text-xs">
-                    {formatEnergy(macros.calories, energyUnit).formatted}
-                  </span>
-                  <div className="flex items-baseline gap-1 font-mono">
-                    <span className="text-xl font-bold tracking-tight text-foreground">
-                      {valStr || '0'}
-                    </span>
-                    <span className="text-xs text-muted-foreground font-medium">
-                      {currentU}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <KeypadWeighingDisplayCard
+                weighingForm={weighingForm}
+                hasRefuse={hasRefuse}
+                edibleRate={selectedFoodForAdd.edibleRate}
+                refuseRate={selectedFoodForAdd.refuseRate}
+                onSelectNet={() => setWeighingForm('net')}
+                onSelectGross={() => setWeighingForm('gross')}
+                calories={macros.calories}
+                energyUnit={energyUnit}
+                valueText={valStr}
+                unit={currentU}
+                effectiveQty={effectiveQty}
+              />
             );
           }}
         />

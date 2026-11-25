@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   evaluateAmountExpression,
   formatDisplayAmount,
+  parseKeypadDisplayAmount,
   sanitizeAmountInput,
 } from './utils';
 
@@ -83,5 +84,26 @@ describe('sanitizeAmountInput', () => {
   it('handles negative flag', () => {
     expect(sanitizeAmountInput('-100', { allowNegative: true })).toBe('-100');
     expect(sanitizeAmountInput('-100', { allowNegative: false })).toBe('100');
+  });
+});
+
+describe('parseKeypadDisplayAmount', () => {
+  it('parses thousand-separated formatted strings without truncating at commas', () => {
+    expect(parseKeypadDisplayAmount('2,555')).toBe(2555);
+    expect(parseKeypadDisplayAmount('1,234.56')).toBe(1234.56);
+    expect(parseKeypadDisplayAmount('1,000,000')).toBe(1000000);
+  });
+
+  it('evaluates formatted math expressions with thousand separators', () => {
+    expect(parseKeypadDisplayAmount('1,000+500')).toBe(1500);
+    expect(parseKeypadDisplayAmount('2,555-555')).toBe(2000);
+    expect(parseKeypadDisplayAmount('1,000+')).toBe(1000);
+  });
+
+  it('returns 0 for empty, negative, or invalid inputs', () => {
+    expect(parseKeypadDisplayAmount('')).toBe(0);
+    expect(parseKeypadDisplayAmount('0')).toBe(0);
+    expect(parseKeypadDisplayAmount('-50')).toBe(0);
+    expect(parseKeypadDisplayAmount('abc')).toBe(0);
   });
 });
