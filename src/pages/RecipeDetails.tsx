@@ -213,7 +213,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
   // 編輯 Dialog 狀態
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  // 獨立快速添加食材流程狀態
+  // 獨立快速添加食物流程狀態
   const [isAddPickerOpen, setIsAddPickerOpen] = useState(false);
   const [pendingFood, setPendingFood] = useState<FoodItem | null>(null);
   const [pendingQuantity, setPendingQuantity] = useState<number>(100);
@@ -438,7 +438,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
           headerActionEl
         )}
 
-      {/* 核心一體化卡片 (與食材詳情頁 1:1 一體化設計) */}
+      {/* 核心一體化卡片 (與食物詳情頁 1:1 一體化設計) */}
       <div className="border border-border rounded-lg overflow-hidden bg-card text-card-foreground shadow-none">
         {/* 第 1 層：B-1 極簡 HUD 規格條 (h-10，與下方 SectionCard 表頭等高) */}
         <div className="h-10 px-4 border-b border-border bg-muted/40 flex items-center justify-between text-xs font-mono">
@@ -581,7 +581,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
         highlights={evalRes?.highlights}
       />
 
-      {/* 食材解構清單 (共用 RecipeIngredientsCard 元件) */}
+      {/* 食物解構清單 (共用 RecipeIngredientsCard 元件) */}
       <RecipeIngredientsCard
         mode="detail"
         title={t('diet.recipeIngredients')}
@@ -626,7 +626,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
         onSubmit={handleEditSubmit}
       />
 
-      {/* 獨立添加食材選擇器 */}
+      {/* 獨立添加食物選擇器 */}
       <FoodRecipeSelectDialog
         open={isAddPickerOpen}
         onOpenChange={(open) => {
@@ -639,7 +639,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
         onSelect={handleSelectFood}
       />
 
-      {/* 獨立添加食材份量鍵盤 */}
+      {/* 獨立添加食物份量鍵盤 */}
       {pendingFood && (
         <NumericKeypadDialog
           open={!!pendingFood}

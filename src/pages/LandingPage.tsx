@@ -415,10 +415,10 @@ export default function LandingPage() {
         </div>
         <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight font-sans text-foreground leading-tight">
           {t('landing.diet.titleLine1', '零摩擦記錄飲食')}
-          <span className="block mt-1 text-muted-foreground font-sans text-xl sm:text-2xl font-normal">{t('landing.diet.titleLine2', '準確食材、一鍵複製、快速估算、滾動均值')}</span>
+          <span className="block mt-1 text-muted-foreground font-sans text-xl sm:text-2xl font-normal">{t('landing.diet.titleLine2', '準確食物、一鍵複製、快速估算、滾動均值')}</span>
         </h2>
         <p className="text-muted-foreground text-sm sm:text-base leading-relaxed font-sans">
-          <BrandText text={t('landing.diet.desc', '記錄飲食不該是繁瑣負擔。e2Cal 針對真實生活打造零阻力記錄流：自煮時依托 420+ 種原型食材準確秤重；規律進餐時一鍵複製昨日餐點；外食聚餐時支援快速粗估。')} />
+          <BrandText text={t('landing.diet.desc', '記錄飲食不該是繁瑣負擔。e2Cal 針對真實生活打造零阻力記錄流：自煮時依托 420+ 種原型食物準確秤重；規律進餐時一鍵複製昨日餐點；外食聚餐時支援快速粗估。')} />
         </p>
       </div>
 
@@ -428,20 +428,20 @@ export default function LandingPage() {
         {/*  左側欄：四大記錄模式介紹 + 底部三大核心指標 (手機端橫向吸附，平板／桌面端自適應雙欄)  */}
         <div className="w-[85vw] max-w-[360px] sm:max-w-[400px] md:w-auto md:max-w-none md:col-span-6 lg:col-span-5 shrink-0 snap-start space-y-4">
           
-          {/*  四大記錄類型介紹單元格 (食材、複製、估算、平均)  */}
+          {/*  四大記錄類型介紹單元格 (食物、複製、估算、平均)  */}
           <div className="border border-border divide-y divide-border rounded-lg bg-background overflow-hidden shadow-none">
-            {/*  類型 1: 原型食材  */}
+            {/*  類型 1: 原型食物  */}
             <div className="p-4 flex flex-col justify-between space-y-1 hover:bg-hover transition-colors">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                  {t('landing.diet.types.raw.tag', '01 // 原型食材')}
+                  {t('landing.diet.types.raw.tag', '01 // 原型食物')}
                 </span>
                 <span className="text-xs font-semibold text-foreground">
                   {t('landing.diet.types.raw.title', '自煮精準記錄')}
                 </span>
               </div>
               <div className="font-sans text-xs text-muted-foreground leading-relaxed">
-                {t('landing.diet.types.raw.desc', '自煮秤重基準。內置 420+ 種原型食材未烹生重常數，以物理克數 (g) 錄入，杜絕吸水與出水誤差。')}
+                {t('landing.diet.types.raw.desc', '自煮秤重基準。內置 420+ 種原型食物未烹生重常數，以物理克數 (g) 錄入，杜絕吸水與出水誤差。')}
               </div>
             </div>
 
@@ -456,7 +456,7 @@ export default function LandingPage() {
                 </span>
               </div>
               <div className="font-sans text-xs text-muted-foreground leading-relaxed">
-                {t('landing.diet.types.copy.desc', '規律飲食無摩擦。當進餐內容高度重複時，一鍵帶入昨日或歷史同餐所有食材配方，零重複手動錄入。')}
+                {t('landing.diet.types.copy.desc', '規律飲食無摩擦。當進餐內容高度重複時，一鍵帶入昨日或歷史同餐所有食物配方，零重複手動錄入。')}
               </div>
             </div>
 
@@ -493,10 +493,10 @@ export default function LandingPage() {
 
           {/*  飲食核心數據指標單元格 (3 欄水平並列底座)  */}
           <div className="grid grid-cols-3 divide-x divide-border border border-border rounded-lg bg-background overflow-hidden shadow-none">
-            {/*  指標 1: 內置食材數量  */}
+            {/*  指標 1: 內置食物數量  */}
             <div className="p-3 bg-background flex flex-col space-y-1 hover:bg-hover transition-colors">
               <div className="text-xs text-muted-foreground uppercase tracking-wider h-4 flex items-center">
-                {t('landing.diet.metrics.foodDb.label', '內置食材庫')}
+                {t('landing.diet.metrics.foodDb.label', '內置食物庫')}
               </div>
               <div className="h-7 sm:h-8 flex items-baseline gap-1 text-xl sm:text-2xl font-semibold tabular-nums text-foreground font-mono">
                 {t('landing.diet.metrics.foodDb.value', '420+')} <span className="text-xs font-normal text-muted-foreground font-sans">{t('landing.diet.metrics.foodDb.unit', '項')}</span>
@@ -515,7 +515,7 @@ export default function LandingPage() {
                 {t('landing.diet.metrics.recipes.value', '∞')} <span className="text-xs font-normal text-muted-foreground font-sans">{t('landing.diet.metrics.recipes.unit', '自訂')}</span>
               </div>
               <div className="font-sans text-xs text-muted-foreground leading-snug">
-                {t('landing.diet.metrics.recipes.desc', '自由組合食材，純 ID 引用無漂移')}
+                {t('landing.diet.metrics.recipes.desc', '自由組合食物，純 ID 引用無漂移')}
               </div>
             </div>
 
@@ -930,7 +930,7 @@ export default function LandingPage() {
               ),
               desc: t(
                 'landing.principles.items.item4.desc',
-                '成品菜估算充滿了不可控的烹調油與吸水率偏差。e2Cal 堅持以原子食材生重為唯一真理源，引導使用者建立真正的克數秤重感知。'
+                '成品菜估算充滿了不可控的烹調油與吸水率偏差。e2Cal 堅持以原子食物生重為唯一真理源，引導使用者建立真正的克數秤重感知。'
               ),
               legacyBad: t(
                 'landing.principles.items.item4.legacyBad',

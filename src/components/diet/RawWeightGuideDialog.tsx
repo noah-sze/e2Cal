@@ -25,7 +25,7 @@ const MEAT_STEPS = [
 ] as const;
 
 /**
- * 首次記錄食材 / 食譜時顯示的生重計算基準說明彈窗（方案 1：動態烹飪手法輪播）
+ * 首次記錄食物 / 食譜時顯示的生重計算基準說明彈窗（方案 1：動態烹飪手法輪播）
  * 須輸入關鍵字（生重 / raw）方可解鎖確認按鈕
  */
 export function RawWeightGuideDialog({
@@ -74,7 +74,7 @@ export function RawWeightGuideDialog({
       >
         <div className="pt-3.5 pb-0 space-y-3.5 select-none">
           <p className="font-sans text-xs text-muted-foreground leading-relaxed">
-            {t('diet.rawWeightGuide.introPrefix', '所有食材一律以「')}
+            {t('diet.rawWeightGuide.introPrefix', '所有食物一律以「')}
             <span className="text-foreground font-medium">
               {t('diet.rawWeightGuide.introHighlight', '未經烹調之生重')}
             </span>

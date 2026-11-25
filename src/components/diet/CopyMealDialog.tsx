@@ -40,7 +40,7 @@ interface CopyableMealItem extends FoodLog {
  * 1. 標準 Precision Modal 幾何（w-[320px] sm:w-[340px]，shadow-none，border border-border，p-4）。
  * 2. 標頭符合規範：左上角 ✕ 圓形關閉按鈕，中間標題純粹為「複製餐點」（去綴詞），右上角 ✓ 圓形確認按鈕。
  * 3. 佈局改用方案 1A（Integrated Header Notch）：移除舊有 40px Tab 欄，在食物滾動容器頂部整合灰底橫欄，左側顯示來源日期（如 11/09 (昨日)），右側膠囊按鈕「更換 ▾」呼出日期選擇器。
- * 4. 食材清單容器（min-h-[220px] max-h-[340px]），條目沿用菜餚詳情（RecipeLogDialog）規格（min-h-12 / 48px），支援勾選、品名截斷與右側常用數字膠囊按鈕（點擊呼出 NumericKeypadDialog 即時調整重量）。
+ * 4. 食物清單容器（min-h-[220px] max-h-[340px]），條目沿用菜餚詳情（RecipeLogDialog）規格（min-h-12 / 48px），支援勾選、品名截斷與右側常用數字膠囊按鈕（點擊呼出 NumericKeypadDialog 即時調整重量）。
  * 5. 即時聯動：數字鍵盤數值變更時即時重算 calories 與底部彙總條。
  * 6. 底部單行彙總條維持無縫自然留白（無分割線）。
  * 7. 二級日期選擇 Dialog 與懸浮數字鍵盤採平級 Flat Sibling 宣告。
@@ -145,7 +145,7 @@ export function CopyMealDialog({
     }
   }, [open, targetDate, targetMealType]);
 
-  // 查詢歷史日期該來源餐別所有食材條目
+  // 查詢歷史日期該來源餐別所有食物條目
   const historicalLogs = useLiveQuery<CopyableMealItem[]>(async () => {
     if (!open || !activeHistoryDate) return [];
     const dailyLog = await db.daily_diet_logs.where('date').equals(activeHistoryDate).first();
@@ -188,7 +188,7 @@ export function CopyMealDialog({
     });
   }, [open, activeHistoryDate, sourceMealType]);
 
-  // 本地可編輯食材清單
+  // 本地可編輯食物清單
   const [items, setItems] = useState<CopyableMealItem[]>([]);
   // 勾選項目的 id 集合
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -293,7 +293,7 @@ export function CopyMealDialog({
 
   const selectedCount = selectedIds.size;
 
-  // 計算已選食材之總熱量
+  // 計算已選食物之總熱量
   const selectedCalories = useMemo(() => {
     if (items.length === 0 || selectedCount === 0) return 0;
     return items
@@ -393,7 +393,7 @@ export function CopyMealDialog({
           return;
         }
 
-        // 實體食材：同一餐、同一食材重複時疊加重量，避免獨立為兩個條目
+        // 實體食物：同一餐、同一食物重複時疊加重量，避免獨立為兩個條目
         if (!newBundleId && item.foodId) {
           const existing = dailyLog.entries.find(
             (e) =>
@@ -473,7 +473,7 @@ export function CopyMealDialog({
           />
 
           <div className="flex flex-col min-h-0">
-            {/* 食材清單容器（方案 B 雙層整合頭：固定高度防切換跳動，超出時內部滾動） */}
+            {/* 食物清單容器（方案 B 雙層整合頭：固定高度防切換跳動，超出時內部滾動） */}
             <div className="h-[300px] shrink-0 flex flex-col mt-5 mb-5 rounded-lg border border-border bg-card overflow-hidden">
             {/* 第一列：滿寬三欄日期步進器（左右切換貼邊，點擊中間開啟月曆） */}
             <div className="h-11 bg-muted/40 border-b border-border grid grid-cols-[44px_1fr_44px] divide-x divide-border items-stretch select-none shrink-0">
@@ -580,7 +580,7 @@ export function CopyMealDialog({
                           !isSelected && 'opacity-40'
                         )}
                       >
-                        {/* 圓形 D 勾選器 + 雙行食材名稱與熱量副標 */}
+                        {/* 圓形 D 勾選器 + 雙行食物名稱與熱量副標 */}
                         <div className="flex items-center gap-2.5 flex-1 min-w-0">
                           <div
                             className={cn(
@@ -646,7 +646,7 @@ export function CopyMealDialog({
               {t('diet.copyMeal.summary', {
                 count: selectedCount,
                 calories: totalCaloriesFormatted,
-                defaultValue: `已選 ${selectedCount} 項食材 · 總計 ${totalCaloriesFormatted}`,
+                defaultValue: `已選 ${selectedCount} 項食物 · 總計 ${totalCaloriesFormatted}`,
               })}
             </span>
           </div>

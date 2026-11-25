@@ -41,23 +41,23 @@ export interface RecipeIngredientsCardProps {
    * - 'edit'：彈窗編輯模式（緊湊列高，點擊名稱觸發 onReplaceItem，右側用量膠囊觸發 onEditQuantity）
    */
   mode?: 'detail' | 'edit';
-  /** 新增食材按鈕回調（提供時於右上角顯示「+ 新增食材」膠囊） */
+  /** 新增食物按鈕回調（提供時於右上角顯示「+ 新增食物」膠囊） */
   onAddIngredient?: () => void;
   /** 詳情模式：點擊整行觸發 */
   onItemClick?: (item: RecipeIngredientItem, index: number) => void;
-  /** 編輯模式：點擊左側名稱替換食材 */
+  /** 編輯模式：點擊左側名稱替換食物 */
   onReplaceItem?: (item: RecipeIngredientItem, index: number) => void;
   /** 編輯模式：點擊右側用量膠囊開啟數字鍵盤 */
   onEditQuantity?: (item: RecipeIngredientItem, index: number, anchorEl: HTMLElement) => void;
-  /** 編輯模式：點擊右側刪除按鈕移除食材 */
+  /** 編輯模式：點擊右側刪除按鈕移除食物 */
   onRemoveItem?: (item: RecipeIngredientItem, index: number) => void;
   className?: string;
 }
 
 /**
- * 單一真理源：構成食材清單卡片元件
+ * 單一真理源：構成食物清單卡片元件
  * 共用於「食譜詳情頁（RecipeDetails）」與「菜餚／食譜彈窗（RecipeDialog）」，
- * 統一 SectionCard 內嵌表頭、新增食材膠囊與條目列表規範。
+ * 統一 SectionCard 內嵌表頭、新增食物膠囊與條目列表規範。
  */
 export function RecipeIngredientsCard({
   items,
@@ -74,7 +74,7 @@ export function RecipeIngredientsCard({
   const { t } = useTranslation();
   const { foodWeightUnit, foodVolumeUnit, energyUnit } = useUnitPreferences();
 
-  const resolvedTitle = title ?? t('diet.recipeIngredients', '構成食材');
+  const resolvedTitle = title ?? t('diet.recipeIngredients', '構成食物');
   const displayTitle = showCount ? `${resolvedTitle} (${items.length})` : resolvedTitle;
 
   const addButton = onAddIngredient ? (
@@ -84,7 +84,7 @@ export function RecipeIngredientsCard({
       className="h-6 px-2.5 rounded-full border border-border/80 bg-card hover:bg-hover font-mono text-xs flex items-center gap-1 transition-colors cursor-pointer text-muted-foreground hover:text-foreground active:scale-95 select-none"
     >
       <Plus className="size-3 text-muted-foreground" />
-      <span>{t('diet.addIngredient', '新增食材')}</span>
+      <span>{t('diet.addIngredient', '新增食物')}</span>
     </button>
   ) : undefined;
 
@@ -104,7 +104,7 @@ export function RecipeIngredientsCard({
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none font-mono"
             >
               <Plus className="size-3.5" />
-              <span>{t('diet.addIngredient', '新增食材')}</span>
+              <span>{t('diet.addIngredient', '新增食物')}</span>
             </button>
           ) : (
             <span className="text-xs text-muted-foreground font-mono">-</span>
@@ -118,7 +118,7 @@ export function RecipeIngredientsCard({
                 key={item.id}
                 className="min-h-12 py-2 px-3 sm:px-4 flex items-center justify-between gap-2 bg-card shrink-0"
               >
-                {/* 左側：食材品名（點擊替換食材） */}
+                {/* 左側：食物品名（點擊替換食物） */}
                 <button
                   type="button"
                   onClick={() => onReplaceItem?.(item, idx)}

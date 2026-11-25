@@ -57,7 +57,7 @@ export function EditFoodLogDialog({
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  // 本地狀態：用量與基準食材資訊
+  // 本地狀態：用量與基準食物資訊
   const { energyUnit } = useUnitPreferences();
   const [quantity, setQuantity] = useState<number>(log?.quantity || 100);
   const [baseFood, setBaseFood] = useState<FoodItem | null>(() => {
@@ -370,7 +370,7 @@ export function EditFoodLogDialog({
               showServingRow={false}
             />
 
-            {/* 食用份量調節與快捷增量複合卡片 (實體食材條目) */}
+            {/* 食用份量調節與快捷增量複合卡片 (實體食物條目) */}
             {!isSystemEntry && (
               <div className="border border-border rounded-lg bg-card divide-y divide-border overflow-hidden shrink-0">
                 {/* 1. 快捷增量操作按鈕組 (嚴格遵循微排版標準) */}

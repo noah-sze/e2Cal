@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback, useDeferredValue } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, ChevronDown, X, SlidersHorizontal, ArrowUpDown, Plus, LayoutGrid, Database, PenLine } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
@@ -30,7 +31,7 @@ export type FoodSelectMode = 'all' | 'foods' | 'recipes';
 export type FoodInteractiveMode = 'manage' | 'select';
 
 export interface FoodRecipeBrowserProps {
-  /** 模式：全部 (可切換)、僅食材、或僅食譜 @default 'all' */
+  /** 模式：全部 (可切換)、僅食物、或僅食譜 @default 'all' */
   mode?: FoodSelectMode;
   /** 當前選中的 Tab (受控模式) */
   activeTab?: 'foods' | 'recipes';
@@ -48,9 +49,9 @@ export interface FoodRecipeBrowserProps {
   isItemDisabled?: (item: FoodItem | FoodRecipe, type: 'food' | 'recipe') => boolean;
   /** 當前在選擇模式下被選中的項目 ID */
   selectedId?: string;
-  /** 新增食材回調 (若提供則在食材工具列右側顯示「新增」按鈕) */
+  /** 新增食物回調 (若提供則在食物工具列右側顯示「新增」按鈕) */
   onAddFood?: () => void;
-  /** 新增權威食材回調 (若提供則在新增選單中觸發) */
+  /** 新增權威食物回調 (若提供則在新增選單中觸發) */
   /** 點擊「權威科研庫搜索添加」或從搜尋列跳轉權威搜尋 */
   onAddAuthorityFood?: (initialQuery?: string) => void;
   /** 新增食譜回調 (若提供則在食譜工具列右側顯示「新增」按鈕) */
@@ -119,7 +120,7 @@ export function FoodRecipeBrowser({
   const currentTab = controlledTab ?? internalTab;
   const viewTab = mode === 'all' ? currentTab : mode;
 
-  // 雙 Tab 惰性掛載 + 保活隱藏（切換食譜 ⇄ 食材時不銷毀重建 DOM，消除切回卡頓）
+  // 雙 Tab 惰性掛載 + 保活隱藏（切換食譜 ⇄ 食物時不銷毀重建 DOM，消除切回卡頓）
   const [hasMountedFoods, setHasMountedFoods] = useState(viewTab === 'foods');
   const [hasMountedRecipes, setHasMountedRecipes] = useState(viewTab === 'recipes');
   if (viewTab === 'foods' && !hasMountedFoods) {
@@ -243,7 +244,7 @@ export function FoodRecipeBrowser({
     return counts;
   }, [tabBaseFoods]);
 
-  // 針對 tabBaseFoods 建立 O(1) 營養特徵標籤快取 Map，徹底避免每次選單切換或過濾時對 422 筆食材全量重複進行昂貴的浮點運算
+  // 針對 tabBaseFoods 建立 O(1) 營養特徵標籤快取 Map，徹底避免每次選單切換或過濾時對 422 筆食物全量重複進行昂貴的浮點運算
   const foodNutritionTagMap = useMemo(() => {
     const map = new Map<string, NutritionTag[]>();
     for (const food of tabBaseFoods) {
@@ -339,7 +340,7 @@ export function FoodRecipeBrowser({
   }, [tabBaseFoods, selectedCategory, selectedNutritionTag, effectiveFoodSearch, foodSortBy, nutritionDisplayMode, foodLastUsedMap, foodNutritionTagMap]);
 
   // ==========================================
-  // 食材分批漸進加載 (Incremental Windowing)
+  // 食物分批漸進加載 (Incremental Windowing)
   // 首屏渲染 20 筆，滾動觸底無感追加，消除大量 DOM 節點一次性渲染卡頓
   // 使用 Callback Ref 確保在 Tab 切換或 DOM 重新掛載時 100% 重新綁定 Observer
   // ==========================================
@@ -631,7 +632,7 @@ export function FoodRecipeBrowser({
                     : 'text-muted-foreground group-hover:text-foreground group-hover:bg-hover'
                 )}
               >
-                {t('diet.ingredientsTab', '食材')}
+                {t('diet.ingredientsTab', '食物')}
               </span>
             </button>
             <button
@@ -666,7 +667,7 @@ export function FoodRecipeBrowser({
               }
               placeholder={
                 viewTab === 'foods'
-                  ? t('diet.searchFoodPlaceholder', '搜尋食材名稱或品牌...')
+                  ? t('diet.searchFoodPlaceholder', '搜尋食物名稱或品牌...')
                   : t('diet.searchRecipePlaceholder', '搜尋食譜名稱...')
               }
               className="w-full h-full pl-9 pr-9 bg-transparent text-xs font-sans text-foreground placeholder:text-muted-foreground focus:outline-none"
@@ -687,7 +688,7 @@ export function FoodRecipeBrowser({
       )}
 
       {/* ========================================================================= */}
-      {/* 視圖 1：單品食材 (Foods) */}
+      {/* 視圖 1：食物 (Foods) */}
       {/* ========================================================================= */}
       {hasMountedFoods && (
         <div className={cn('space-y-2.5 flex-1 min-h-0 flex flex-col', viewTab !== 'foods' && 'hidden')}>
@@ -699,7 +700,7 @@ export function FoodRecipeBrowser({
                 type="text"
                 value={foodSearchQuery}
                 onChange={(e) => setFoodSearchQuery(e.target.value)}
-                placeholder={t('diet.searchFoodPlaceholder', '搜尋食材名稱或品牌...')}
+                placeholder={t('diet.searchFoodPlaceholder', '搜尋食物名稱或品牌...')}
                 className="h-10 pl-9 pr-9 text-xs rounded-lg border-border bg-card text-foreground placeholder:text-muted-foreground focus-visible:border-foreground focus:ring-0 focus-visible:ring-0 shadow-none"
               />
               {foodSearchQuery && (
@@ -994,7 +995,7 @@ export function FoodRecipeBrowser({
               )}
             </div>
 
-            {/* 新增食材按鈕 (靠右對齊，精確匹配過濾列高度與膠囊風格，分流權威科研庫與手動添加) */}
+            {/* 新增食物按鈕 (靠右對齊，精確匹配過濾列高度與膠囊風格，分流權威科研庫與手動添加) */}
             {(onAddFood || onAdd || onAddAuthorityFood) && (
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -1029,7 +1030,7 @@ export function FoodRecipeBrowser({
                         {t('diet.addManualFood', '手動添加')}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
-                        {t('diet.addManualFoodDesc', '自行填寫營養素與自定義食材')}
+                        {t('diet.addManualFoodDesc', '自行填寫營養素與自定義食物')}
                       </span>
                     </div>
                   </DropdownMenuItem>
@@ -1047,10 +1048,10 @@ export function FoodRecipeBrowser({
                     <Database className="size-4 mt-0.5 text-primary shrink-0" />
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <span className="font-medium text-xs text-foreground">
-                        {t('diet.addAuthorityFood', '從權威數據庫搜索添加')}
+                        {t('diet.addAuthorityFood', '搜尋食物資料庫')}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
-                        {t('diet.addAuthorityFoodDesc', '六大權威庫 · 18,635 項')}
+                        {t('diet.addAuthorityFoodDesc', '六大機構 · 18,635 項')}
                       </span>
                     </div>
                   </DropdownMenuItem>
@@ -1059,7 +1060,7 @@ export function FoodRecipeBrowser({
             )}
           </div>
 
-          {/* 食材清單容器 */}
+          {/* 食物清單容器 */}
           <div
             className={cn(
               'border border-border rounded-lg overflow-hidden bg-card text-card-foreground flex-1 min-h-0 flex flex-col',
@@ -1075,7 +1076,12 @@ export function FoodRecipeBrowser({
             </div>
 
             {/* 滾動內容區 */}
-            <div className="divide-y divide-border overflow-y-auto flex-1 min-h-0">
+            <div
+              className={cn(
+                'divide-y divide-border overflow-y-auto flex-1 min-h-0',
+                filteredFoods.length === 0 && 'flex flex-col'
+              )}
+            >
               {(() => {
                 const trimmedFoodQuery = foodSearchQuery.trim();
                 const authoritySearchButton =
@@ -1099,8 +1105,11 @@ export function FoodRecipeBrowser({
                   ) : null;
 
                 if (filteredFoods.length === 0) {
+                  const canAddFoodInEmpty =
+                    !trimmedFoodQuery && !showFoodArchived && (onAddFood || onAdd || onAddAuthorityFood);
+
                   return (
-                    <div className="p-8 flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+                    <div className="flex-1 p-8 flex flex-col items-center justify-center gap-4 text-center text-sm text-muted-foreground">
                       <span>
                         {trimmedFoodQuery
                           ? t('common.noResults', '無搜尋結果')
@@ -1109,6 +1118,44 @@ export function FoodRecipeBrowser({
                           : t('settings.noCustomFoods')}
                       </span>
                       {authoritySearchButton}
+                      {canAddFoodInEmpty && (
+                        <div className="w-full max-w-[260px] flex flex-col gap-2">
+                          <Button
+                            type="button"
+                            variant="default"
+                            className="w-full h-auto min-h-9.5 py-2 px-3.5 gap-2 font-sans cursor-pointer whitespace-normal"
+                            onClick={() => {
+                              triggerHaptic('light');
+                              if (onAddAuthorityFood) {
+                                onAddAuthorityFood();
+                              } else {
+                                setIsInternalAuthorityOpen(true);
+                              }
+                            }}
+                          >
+                            <Database className="size-4 shrink-0" />
+                            <span>{t('diet.addAuthorityFood', '搜尋食物資料庫')}</span>
+                          </Button>
+                          {(onAddFood || onAdd) && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full h-auto min-h-9.5 py-2 px-3.5 gap-2 font-sans cursor-pointer whitespace-normal"
+                              onClick={() => {
+                                triggerHaptic('light');
+                                if (onAddFood) {
+                                  onAddFood();
+                                } else if (onAdd) {
+                                  onAdd('food');
+                                }
+                              }}
+                            >
+                              <PenLine className="size-4 shrink-0" />
+                              <span>{t('diet.addManualFood', '手動添加')}</span>
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 }
@@ -1463,14 +1510,41 @@ export function FoodRecipeBrowser({
             </div>
 
             {/* 滾動內容區 */}
-            <div className="divide-y divide-border overflow-y-auto flex-1 min-h-0">
+            <div
+              className={cn(
+                'divide-y divide-border overflow-y-auto flex-1 min-h-0',
+                filteredRecipes.length === 0 && 'flex flex-col'
+              )}
+            >
               {filteredRecipes.length === 0 ? (
-                <div className="p-8 text-center text-sm text-muted-foreground">
-                  {recipeSearchQuery.trim()
-                    ? t('common.noResults', '無搜尋結果')
-                    : showRecipeArchived
-                    ? t('settings.noArchivedRecipes')
-                    : t('diet.noRecipes')}
+                <div className="flex-1 p-8 flex flex-col items-center justify-center gap-4 text-center text-sm text-muted-foreground">
+                  <span>
+                    {recipeSearchQuery.trim()
+                      ? t('common.noResults', '無搜尋結果')
+                      : showRecipeArchived
+                      ? t('settings.noArchivedRecipes')
+                      : t('diet.noRecipes')}
+                  </span>
+                  {!recipeSearchQuery.trim() && !showRecipeArchived && (onAddRecipe || onAdd) && (
+                    <div className="w-full max-w-[260px] flex flex-col gap-2">
+                      <Button
+                        type="button"
+                        variant="default"
+                        className="w-full h-auto min-h-9.5 py-2 px-3.5 gap-2 font-sans cursor-pointer whitespace-normal"
+                        onClick={() => {
+                          triggerHaptic('light');
+                          if (onAddRecipe) {
+                            onAddRecipe();
+                          } else if (onAdd) {
+                            onAdd('recipe');
+                          }
+                        }}
+                      >
+                        <Plus className="size-4 shrink-0" />
+                        <span>{t('diet.addRecipe', '新增食譜')}</span>
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>

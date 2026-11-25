@@ -433,7 +433,7 @@ export default function Settings() {
             </Select>
           </div>
 
-          {/* 食材重量 */}
+          {/* 食物重量 */}
           <div className="usage-row">
             <span className="text-sm font-normal text-foreground">{t('settings.unitFoodWeight')}</span>
             <Select

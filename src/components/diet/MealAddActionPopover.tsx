@@ -53,7 +53,7 @@ export function MealActionMenuContent({
         {t(`diet.${mealType}`)}
       </div>
 
-      {/* 第 1 項：記錄食材 / 食譜 */}
+      {/* 第 1 項：記錄食物 / 食譜 */}
       <button
         type="button"
         onClick={onSelectSearch}
@@ -65,11 +65,11 @@ export function MealActionMenuContent({
         <div className="flex-1 min-w-0 select-none">
           <div className="flex items-center gap-1.5 leading-tight">
             <span className="text-xs font-medium text-foreground tracking-tight">
-              {t('diet.actionMenu.searchTitle', '記錄食材 / 食譜')}
+              {t('diet.actionMenu.searchTitle', '記錄食物 / 食譜')}
             </span>
           </div>
           <div className="text-2xs text-muted-foreground leading-normal mt-0.5 truncate">
-            {t('diet.actionMenu.searchDesc', '搜尋單品食材或自訂食譜')}
+            {t('diet.actionMenu.searchDesc', '搜尋食物或自訂食譜')}
           </div>
         </div>
       </button>
@@ -149,7 +149,7 @@ export function MealActionMenuContent({
 /**
  * 緊貼按鈕的 Popover（方案 A）：
  * 點擊四大餐別橫欄右側的「+」按鈕時，彈出緊貼「+」按鈕下方的 Precision Popover 分流選單。
- * 1. 記錄食材 / 食譜。
+ * 1. 記錄食物 / 食譜。
  * 2. 複製餐點。
  * 3. 快速估算（整體顏色更淡，低使用場景）。
  * 4. 算我正常吃（整體顏色更淡，低使用場景）。

@@ -152,7 +152,7 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
     return logs.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   }, [dailyLogs, id, food]);
 
-  // 檢查此食材是否被食譜組合引用（直接從記憶體快取 allRecipes 同步計算，0 IndexedDB 查詢）
+  // 檢查此食物是否被食譜組合引用（直接從記憶體快取 allRecipes 同步計算，0 IndexedDB 查詢）
   const referencingRecipes = useMemo(() => {
     if (!id) return [];
     return allRecipes.filter((r) => r.ingredients.some((ing) => ing.foodId === id));
@@ -546,7 +546,7 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
         highlights={evalRes?.highlights}
       />
 
-      {/* 包含此食材的食譜組合 */}
+      {/* 包含此食物的食譜組合 */}
       <SectionCard title={t('diet.relatedRecipes')}>
         {referencingRecipes.length === 0 ? (
           <div className="p-4 text-center text-xs font-mono text-muted-foreground">
@@ -578,7 +578,7 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
         )}
       </SectionCard>
 
-      {/* 編輯食材 Dialog (FoodFormDialog 共用組件) */}
+      {/* 編輯食物 Dialog (FoodFormDialog 共用組件) */}
       <FoodFormDialog
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
@@ -586,7 +586,7 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
         onSubmit={handleEditSubmit}
       />
 
-      {/* 權威食材元素數據詳細 Dialog */}
+      {/* 權威食物元素數據詳細 Dialog */}
       {effectiveFood && (
         <AuthorityFoodDetailsDialog
           food={effectiveFood}

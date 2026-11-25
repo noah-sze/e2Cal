@@ -407,7 +407,7 @@ export const DialogsTab: React.FC = () => {
             onOpen={() => setAuthorityDetailsOpen(true)}
           />
           <DialogRowItem
-            name="食材表單"
+            name="食物表單"
             component="FoodFormDialog"
             desc="5 大分類、可食率與權威導入唯讀防護（支援空白／自訂／權威三態）"
             badge="Form"
@@ -472,16 +472,16 @@ export const DialogsTab: React.FC = () => {
             ]}
           />
           <DialogRowItem
-            name="食材/菜餚選擇器"
+            name="食物/菜餚選擇器"
             component="FoodRecipeSelectDialog"
-            desc="雙 Tab 食材與菜餚快速檢索與多語系比對"
+            desc="雙 Tab 食物與菜餚快速檢索與多語系比對"
             badge="Selector"
             onOpen={() => setFoodRecipeSelectOpen(true)}
           />
           <DialogRowItem
             name="單品日誌"
             component="EditFoodLogDialog"
-            desc="調整已記錄食材的攝入克數，支援可食淨重與毛重雙態切換"
+            desc="調整已記錄食物的攝入克數，支援可食淨重與毛重雙態切換"
             badge="Log"
             actions={[
               {
@@ -503,7 +503,7 @@ export const DialogsTab: React.FC = () => {
           <DialogRowItem
             name="複製餐點"
             component="CopyMealDialog"
-            desc="複製過往餐點條目，四餐別切換與雙行食材清單"
+            desc="複製過往餐點條目，四餐別切換與雙行食物清單"
             badge="Copy"
             onOpen={() => setCopyMealOpen(true)}
           />
@@ -852,7 +852,7 @@ export const DialogsTab: React.FC = () => {
         onOpenChange={setAuthorityDetailsOpen}
       />
 
-      {/* 飲食 1: 食材表單 */}
+      {/* 飲食 1: 食物表單 */}
       <FoodFormDialog
         open={foodFormOpen}
         onOpenChange={setFoodFormOpen}
@@ -904,7 +904,7 @@ export const DialogsTab: React.FC = () => {
         }}
       />
 
-      {/* 飲食 4: 食材/食譜選擇器 */}
+      {/* 飲食 4: 食物/食譜選擇器 */}
       <FoodRecipeSelectDialog
         open={foodRecipeSelectOpen}
         onOpenChange={setFoodRecipeSelectOpen}
@@ -914,7 +914,7 @@ export const DialogsTab: React.FC = () => {
         }}
       />
 
-      {/* 飲食 5: 編輯食材記錄 */}
+      {/* 飲食 5: 編輯食物記錄 */}
       <EditFoodLogDialog
         open={editFoodLogOpen}
         onOpenChange={setEditFoodLogOpen}

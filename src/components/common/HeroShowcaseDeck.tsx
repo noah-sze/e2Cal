@@ -82,7 +82,7 @@ export function HeroShowcaseDeck() {
       <div className="absolute left-[140px] xl:left-[160px] top-0 w-[310px] xl:w-[335px] rounded-xl border border-border bg-card overflow-hidden shadow-none z-10">
         
         <DeckWindowChrome
-          moduleLabel={t('landing.deck.foodDetails', '食材詳情')}
+          moduleLabel={t('landing.deck.foodDetails', '食物詳情')}
           syncedLabel={syncedLabel}
         />
 
@@ -95,7 +95,7 @@ export function HeroShowcaseDeck() {
             {/* 第 1 層：HUD 規格條 */}
             <div className="h-7 px-3 bg-muted flex items-center justify-between text-xs font-mono">
               <span className="uppercase tracking-widest text-xs text-muted-foreground font-medium">
-                {t('landing.deck.rawFoodHud', '天然原型食材 · 生重')}
+                {t('landing.deck.rawFoodHud', '天然原型食物 · 生重')}
               </span>
               <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 tracking-wide font-medium">
                 {t('landing.deck.active', '使用中')}

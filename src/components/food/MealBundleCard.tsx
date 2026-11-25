@@ -171,7 +171,7 @@ export function MealBundleCard({
         </div>
       </div>
 
-      {/* 展開後的原子食材清單 */}
+      {/* 展開後的原子食物清單 */}
       {isExpanded && (
         <div className="border-t border-border bg-background/50 divide-y divide-border/40 pl-6 sm:pl-7 pr-3.5 sm:pr-4 py-1">
           {logs.map((item) => {

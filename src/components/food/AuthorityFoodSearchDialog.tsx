@@ -29,7 +29,7 @@ export interface AuthorityFoodSearchDialogProps {
   open: boolean;
   /** 彈窗開關狀態變更回調 */
   onOpenChange: (open: boolean) => void;
-  /** 選取回調：單筆導入後回傳該食材物件（例如在食物選擇彈窗中直接選取並繼續記錄） */
+  /** 選取回調：單筆導入後回傳該食物物件（例如在食物選擇彈窗中直接選取並繼續記錄） */
   onSelectFood?: (food: FoodItem) => void;
   /** 自訂初始搜尋關鍵字 */
   initialQuery?: string;
@@ -72,7 +72,7 @@ const AUTHORITY_SPEC_ROWS = [
     labelKey: 'diet.authoritySpecScopeLabel',
     labelFallback: '檢索範圍',
     valueKey: 'diet.authoritySpecScopeValue',
-    valueFallback: '六大權威庫 · 100% 離線',
+    valueFallback: '六大機構 · 100% 離線',
   },
 ] as const;
 
@@ -298,7 +298,7 @@ export function AuthorityFoodSearchDialog({
             {/* 1. 標準精密標頭 (h-7，無分割線) */}
             <div className="px-4 pt-4 pb-1">
               <DialogPrecisionHeader
-                title={t('diet.authorityTitleShort', '權威數據庫')}
+                title={t('diet.authorityTitleShort', '食物資料庫')}
                 onClose={() => onOpenChange(false)}
                 cancelAriaLabel={t('common.close')}
               />
@@ -450,7 +450,7 @@ export function AuthorityFoodSearchDialog({
                 </SectionCard>
 
                 <SectionCard
-                  title={t('diet.authorityDataCoverage', '權威庫數據')}
+                  title={t('diet.authorityDataCoverage', '收錄範圍')}
                   action={
                     <span className="font-mono tabular-nums">
                       {stats ? (

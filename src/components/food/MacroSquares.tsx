@@ -185,7 +185,7 @@ function MacroSquareCell({
  * - 等寬 w-11 (44px)
  * - 等寬字體 font-mono
  * - 支援滑鼠懸停與點擊展開碳水（糖 / 膳食纖維）與脂肪（飽和脂肪 / 反式脂肪）次要元素 Popover
- * - 支援 variant: default (食材管理頁面高飽和) 與 subtle (首頁微光減噪)
+ * - 支援 variant: default (食物管理頁面高飽和) 與 subtle (首頁微光減噪)
  */
 export const MacroSquares = React.memo(function MacroSquares({
   protein,

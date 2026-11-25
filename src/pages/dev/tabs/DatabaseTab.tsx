@@ -151,7 +151,7 @@ function calcThermodynamics(food: FoodItem): ThermodynamicsResult {
 }
 
 // ============================================================================
-// 主組件 DatabaseTab (六大權威科研食材庫瀏覽器)
+// 主組件 DatabaseTab (六大權威科研食物庫瀏覽器)
 // ============================================================================
 
 export function DatabaseTab() {
@@ -304,7 +304,7 @@ export function DatabaseTab() {
     setExpandedFoodId((prev) => (prev === foodId ? null : foodId));
   };
 
-  // 導入單一食材至本地庫
+  // 導入單一食物至本地庫
   const handleImportToLocal = async (food: FoodItem) => {
     try {
       await importAuthorityFoodToDatabase(food);
@@ -315,7 +315,7 @@ export function DatabaseTab() {
     }
   };
 
-  // 匯出當前篩選食材為 JSON
+  // 匯出當前篩選食物為 JSON
   const handleExportJson = () => {
     const dataStr =
       'data:text/json;charset=utf-8,' +
@@ -560,7 +560,7 @@ export function DatabaseTab() {
         </div>
       </section>
 
-      {/* 4. 食材條目清單 */}
+      {/* 4. 食物條目清單 */}
       <section className="space-y-2">
         <div className="flex items-center justify-between text-xs font-mono text-muted-foreground px-1">
           <span>
@@ -573,11 +573,11 @@ export function DatabaseTab() {
         {isLoading ? (
           <div className="border border-border rounded-lg bg-card p-12 text-center text-xs font-mono text-muted-foreground">
             <RefreshCw className="w-5 h-5 mx-auto mb-2 animate-spin text-muted-foreground" />
-            正在加載 18,635 筆權威科研食材庫...
+            正在加載 18,635 筆權威科研食物庫...
           </div>
         ) : filteredFoods.length === 0 ? (
           <div className="border border-border rounded-lg bg-card p-12 text-center text-xs font-mono text-muted-foreground">
-            無符合條件之權威食材條目
+            無符合條件之權威食物條目
           </div>
         ) : (
           <div className="space-y-1.5">

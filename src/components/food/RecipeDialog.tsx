@@ -164,7 +164,7 @@ export function RecipeDialog({
     return Boolean(getInMemoryRecipesCache()?.some((r) => r.id === effectiveBundleId));
   });
 
-  // 次級彈窗狀態（數字鍵盤、食材選擇器）
+  // 次級彈窗狀態（數字鍵盤、食物選擇器）
   const [keypadConfig, setKeypadConfig] = useState<KeypadConfig | null>(null);
   const initialKeypadValueRef = useRef<number>(0);
   const isKeypadConfirmedRef = useRef(false);
@@ -172,7 +172,7 @@ export function RecipeDialog({
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [replacingIndex, setReplacingIndex] = useState<number | null>(null);
 
-  // 全量食材快速查詢索引
+  // 全量食物快速查詢索引
   const foodMap = useMemo(() => {
     const map = new Map<string, FoodItem>();
     allFoods.forEach((f) => map.set(f.id, f));
@@ -198,7 +198,7 @@ export function RecipeDialog({
     }
   }, [isRecipeVariant, open, effectiveBundleId]);
 
-  // 初始化表單與食材清單
+  // 初始化表單與食物清單
   useEffect(() => {
     if (!open) {
       setKeypadConfig(null);
@@ -271,7 +271,7 @@ export function RecipeDialog({
           id: log.id,
           originalLogId: log.id,
           foodId: log.foodId,
-          foodName: log.foodName || '未知食材',
+          foodName: log.foodName || '未知食物',
           quantity: qty,
           unit: log.unit || 'g',
           baseFood: log.foodId && cachedFoodMap ? cachedFoodMap.get(log.foodId) || null : null,
@@ -318,7 +318,7 @@ export function RecipeDialog({
     foodVolumeUnit,
   ]);
 
-  // 單項食材即時營養素計算（自動折算英制為公制）
+  // 單項食物即時營養素計算（自動折算英制為公制）
   const getIngredientMacros = useCallback(
     (item: UnifiedIngredientRow) => {
       const targetFood = item.baseFood || (item.foodId ? foodMap.get(item.foodId) : null);
@@ -387,7 +387,7 @@ export function RecipeDialog({
     }).highlights;
   }, [totals]);
 
-  // 食材清單防重複禁用 ID 列表
+  // 食物清單防重複禁用 ID 列表
   const disabledFoodIds = useMemo(() => {
     const filtered =
       replacingIndex !== null && replacingIndex >= 0 && replacingIndex < ingredients.length
@@ -396,7 +396,7 @@ export function RecipeDialog({
     return filtered.map((row) => row.foodId).filter(Boolean) as string[];
   }, [ingredients, replacingIndex]);
 
-  // 新增／替換食材觸發
+  // 新增／替換食物觸發
   const handleOpenAddIngredient = () => {
     if (!isRecipeVariant) triggerHaptic('light');
     setReplacingIndex(null);
@@ -409,7 +409,7 @@ export function RecipeDialog({
     setIsPickerOpen(true);
   };
 
-  // 食材選擇回調
+  // 食物選擇回調
   const handleSelectFood = (item: FoodItem | FoodRecipe) => {
     const food = item as FoodItem;
     if (disabledFoodIds.includes(food.id)) return;
@@ -459,7 +459,7 @@ export function RecipeDialog({
     }
   };
 
-  // 移除食材（允許清空至 0 項，此時送出按鈕將自動禁用）
+  // 移除食物（允許清空至 0 項，此時送出按鈕將自動禁用）
   const handleRemoveIngredient = (index: number) => {
     triggerHaptic('light');
     setIngredients((prev) => prev.filter((_, idx) => idx !== index));
@@ -685,7 +685,7 @@ export function RecipeDialog({
         }}
       />
 
-      {/* 表格段落 3：構成食材清單 (共用 RecipeIngredientsCard) */}
+      {/* 表格段落 3：構成食物清單 (共用 RecipeIngredientsCard) */}
       <RecipeIngredientsCard
         mode="edit"
         showCount={true}
@@ -772,7 +772,7 @@ export function RecipeDialog({
         />
       )}
 
-      {/* 次級食材選擇器（平鋪兄弟節點聲明，停用巢狀新增以防組件遞迴） */}
+      {/* 次級食物選擇器（平鋪兄弟節點聲明，停用巢狀新增以防組件遞迴） */}
       {isPickerOpen && (
         <FoodRecipeSelectDialog
           open={isPickerOpen}

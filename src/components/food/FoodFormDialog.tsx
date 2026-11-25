@@ -84,7 +84,7 @@ export interface FoodFormDialogProps {
 }
 
 /**
- * 領域共用組件：新增與編輯單品食材表單彈窗
+ * 領域共用組件：新增與編輯食物表單彈窗
  * 嚴格遵循 Design Standards 規範：
  * - 1:1 復刻 CategoryDetails「基準營養素」Vercel Usage List (divide-y divide-border)
  * - 每行高度精確維持 h-10 px-4
@@ -226,7 +226,7 @@ export function FoodFormDialog({
       );
       setServingUnit(prefServingUnit);
 
-      // 2. 權威庫導入食材鎖定原基準份量模式以確保調整預設份量時正確等比折算；一般食材以「份量」模式開啟
+      // 2. 權威庫導入食物鎖定原基準份量模式以確保調整預設份量時正確等比折算；一般食物以「份量」模式開啟
       setBasisMode(initialData.dataSource ? 'custom' : 'serving');
       setBasisUnit(prefServingUnit);
       setBasisSize(convertedServingSize > 0 ? String(convertedServingSize) : '');
@@ -888,7 +888,7 @@ export function FoodFormDialog({
 
               {/* 表格段落 1: 基本資訊 (共用 SectionCard 內嵌表頭) */}
               <SectionCard title={t('diet.basicInfo')} bodyClassName="text-sm font-sans">
-            {/* 品牌 ｜ 名稱（權威庫導入食材不顯示品牌輸入框，由名稱獨佔全寬） */}
+            {/* 品牌 ｜ 名稱（權威庫導入食物不顯示品牌輸入框，由名稱獨佔全寬） */}
             {isAuthorityFood ? (
               <div className="h-10 bg-card relative flex items-stretch min-w-0 focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground focus-within:z-[1] transition-shadow duration-100">
                 <input
@@ -951,7 +951,7 @@ export function FoodFormDialog({
                   />
                 </div>
 
-                {/* 食材名稱 (必填) */}
+                {/* 食物名稱 (必填) */}
                 <div className="relative flex items-stretch min-w-0 focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground focus-within:z-[1] transition-shadow duration-100">
                   <input
                     type="text"
@@ -1028,7 +1028,7 @@ export function FoodFormDialog({
                 </button>
               </div>
 
-              {/* 可食率（含權威庫導入食材皆可依實際處理形態微調，不影響每 100 g 純可食部營養常數） */}
+              {/* 可食率（含權威庫導入食物皆可依實際處理形態微調，不影響每 100 g 純可食部營養常數） */}
               <div className="h-10 px-4 flex items-center justify-between">
                 <span className="text-muted-foreground text-xs">{t('diet.edibleRate')}</span>
                 <button
@@ -1049,7 +1049,7 @@ export function FoodFormDialog({
               </div>
           </SectionCard>
 
-          {/* 表格段落 2: 基準營養素 (權威庫導入食材僅供唯讀檢視，不允許編輯營養價值表) */}
+          {/* 表格段落 2: 基準營養素 (權威庫導入食物僅供唯讀檢視，不允許編輯營養價值表) */}
           <NutritionFactsCard
             title={t('diet.servingNutrients')}
             data={isAuthorityFood ? normalizedMetricFood : undefined}

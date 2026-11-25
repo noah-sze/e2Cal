@@ -280,7 +280,7 @@ export default function Diet() {
     setCopyMealType(type);
   };
 
-  // 選擇食材或食譜回調
+  // 選擇食物或食譜回調
   const handleSelectFoodOrRecipe = (
     item: FoodItem | FoodRecipe,
     type: 'food' | 'recipe'
@@ -297,7 +297,7 @@ export default function Diet() {
     }
   };
 
-  // 確認新增單品食材
+  // 確認新增食物
   const handleConfirmAddFood = async (val: number, unit?: string) => {
     if (!selectedFoodForAdd || !targetMealTypeForAdd) return;
     const foodToAdd = selectedFoodForAdd;
@@ -325,7 +325,7 @@ export default function Diet() {
     });
   };
 
-  // 取消新增單品食材 (保留選擇彈窗開啟，方便返回)
+  // 取消新增食物 (保留選擇彈窗開啟，方便返回)
   const handleCancelAddFood = () => {
     setSelectedFoodForAdd(null);
   };
@@ -450,7 +450,7 @@ export default function Diet() {
         onSelect={handleSelectFoodOrRecipe}
       />
 
-      {/* 選擇食材後的數字輸入鍵盤 Dialog (第二層彈窗 zIndex={80}) */}
+      {/* 選擇食物後的數字輸入鍵盤 Dialog (第二層彈窗 zIndex={80}) */}
       {selectedFoodForAdd && (
         <NumericKeypadDialog
           open={!!selectedFoodForAdd}
@@ -492,7 +492,7 @@ export default function Diet() {
         />
       )}
 
-      {/* 選擇食譜後的構成食材與重量調整 Dialog (共用通用 RecipeDialog，第二層彈窗 zIndex={70}) */}
+      {/* 選擇食譜後的構成食物與重量調整 Dialog (共用通用 RecipeDialog，第二層彈窗 zIndex={70}) */}
       {selectedRecipeForStaging && (
         <RecipeDialog
           variant="log"
@@ -514,7 +514,7 @@ export default function Diet() {
         />
       )}
 
-      {/* 首次點擊「食材 / 食譜」顯示之生重計算基準說明 Dialog */}
+      {/* 首次點擊「食物 / 食譜」顯示之生重計算基準說明 Dialog */}
       <RawWeightGuideDialog
         open={isRawWeightGuideOpen}
         onOpenChange={setIsRawWeightGuideOpen}

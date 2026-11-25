@@ -33,7 +33,7 @@ export default function Categories({ isDetailOpen = false }: CategoriesProps) {
   const confirm = useConfirm();
   const navigate = useNavigate();
 
-  // 頂部視圖切換：食材 vs 食譜 (純客戶端 Session 記憶狀態，不污染 URL，遵守 Rule 4)
+  // 頂部視圖切換：食物 vs 食譜 (純客戶端 Session 記憶狀態，不污染 URL，遵守 Rule 4)
   const { foodBrowser, setFoodTab } = useBrowserStateStore();
   const viewTab = foodBrowser.activeTab;
 
@@ -180,7 +180,7 @@ export default function Categories({ isDetailOpen = false }: CategoriesProps) {
                       {t('diet.addManualFood', '手動添加')}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
-                      {t('diet.addManualFoodDesc', '自行填寫營養素與自定義食材')}
+                      {t('diet.addManualFoodDesc', '自行填寫營養素與自定義食物')}
                     </span>
                   </div>
                 </DropdownMenuItem>
@@ -194,10 +194,10 @@ export default function Categories({ isDetailOpen = false }: CategoriesProps) {
                   <Database className="size-4 mt-0.5 text-primary shrink-0" />
                   <div className="flex flex-col gap-0.5 min-w-0">
                     <span className="font-medium text-xs text-foreground">
-                      {t('diet.addAuthorityFood', '從權威數據庫搜索添加')}
+                      {t('diet.addAuthorityFood', '搜尋食物資料庫')}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
-                      {t('diet.addAuthorityFoodDesc', '六大權威庫 · 18,635 項')}
+                      {t('diet.addAuthorityFoodDesc', '六大機構 · 18,635 項')}
                     </span>
                   </div>
                 </DropdownMenuItem>

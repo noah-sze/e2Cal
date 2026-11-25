@@ -113,7 +113,7 @@ export const RecipeListItem = React.memo(function RecipeListItem({
         className
       )}
     >
-      {/* 左側：食譜名稱與食材數/熱量副標題 */}
+      {/* 左側：食譜名稱與食物數/熱量副標題 */}
       <button
         type="button"
         disabled={disabled}

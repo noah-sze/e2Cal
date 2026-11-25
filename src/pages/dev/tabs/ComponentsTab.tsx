@@ -38,7 +38,7 @@ const MOCK_NUTRITION_DATA: NutritionFactsData = {
   sodium: 0,
 };
 
-// Mock 構成食材清單（雞胸肉義大利麵範例）
+// Mock 構成食物清單（雞胸肉義大利麵範例）
 const MOCK_RECIPE_INGREDIENTS: RecipeIngredientItem[] = [
   {
     id: 'mock-ing-1',

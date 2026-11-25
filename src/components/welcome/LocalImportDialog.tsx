@@ -198,7 +198,7 @@ export function LocalImportDialog({
                 <div className="grid grid-cols-2 gap-2">
                   <div className="p-2.5 rounded-lg border border-border bg-card">
                     <div className="text-[10px] text-muted-foreground font-sans">
-                      {t('initialSync.summaryFoods', '食材庫')}
+                      {t('initialSync.summaryFoods', '食物庫')}
                     </div>
                     <div className="text-sm font-semibold text-foreground font-mono mt-0.5">
                       {stagedData.foods.length}

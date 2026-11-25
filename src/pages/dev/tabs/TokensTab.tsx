@@ -576,7 +576,7 @@ export const TokensTab: React.FC<TokensTabProps> = ({
           {[
             { token: 'text-3xs', px: '9.1px', sample: 'DELTOID 0.6' },
             { token: 'text-2xs', px: '10.1px', sample: 'CARBS 210G · PROTEIN 150G' },
-            { token: 'text-xs', px: '11.2px', sample: '新增食材與課表記錄' },
+            { token: 'text-xs', px: '11.2px', sample: '新增食物與課表記錄' },
             { token: 'text-sm', px: '14.0px', sample: '特級初榨橄欖油 100 g 884 kcal' },
             { token: 'text-base', px: '16.0px', sample: '今日熱量盈餘 +250 kcal' },
             { token: 'text-lg', px: '18.0px', sample: '78.5 kg · EWMA' },

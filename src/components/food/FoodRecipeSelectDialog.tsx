@@ -37,8 +37,8 @@ export interface FoodRecipeSelectDialogProps {
   onOpenChange: (open: boolean) => void;
   /**
    * 選擇模式：
-   * - 'all': 同時支援食材與食譜（提供頂部 Tab 切換）
-   * - 'foods': 僅選擇食材（隱藏頂部 Tab）
+   * - 'all': 同時支援食物與食譜（提供頂部 Tab 切換）
+   * - 'foods': 僅選擇食物（隱藏頂部 Tab）
    * - 'recipes': 僅選擇食譜（隱藏頂部 Tab）
    * @default 'all'
    */
@@ -65,7 +65,7 @@ export interface FoodRecipeSelectDialogProps {
   disabledIds?: string[];
   /** 自訂項目是否禁用的判斷函數 */
   isItemDisabled?: (item: FoodItem | FoodRecipe, type: 'food' | 'recipe') => boolean;
-  /** 是否允許在此彈窗中直接新增食材與食譜 @default true */
+  /** 是否允許在此彈窗中直接新增食物與食譜 @default true */
   allowAdd?: boolean;
 }
 
@@ -86,7 +86,7 @@ export function FoodRecipeSelectDialog({
   const { addFood } = useFoods();
   const { addRecipe } = useRecipes();
 
-  // 內部 Tab 狀態與新增食材/食譜次級彈窗狀態
+  // 內部 Tab 狀態與新增食物/食譜次級彈窗狀態
   const [activeTab, setActiveTab] = useState<'foods' | 'recipes'>(
     mode === 'recipes' ? 'recipes' : 'foods'
   );
@@ -116,7 +116,7 @@ export function FoodRecipeSelectDialog({
 
   const defaultTitle =
     mode === 'foods'
-      ? t('diet.ingredientsTab', '食材')
+      ? t('diet.ingredientsTab', '食物')
       : mode === 'recipes'
       ? t('diet.recipesTab', '食譜')
       : t('common.select', '選擇');
@@ -227,7 +227,7 @@ export function FoodRecipeSelectDialog({
                             {t('diet.addManualFood', '手動添加')}
                           </span>
                           <span className="text-[10px] text-muted-foreground">
-                            {t('diet.addManualFoodDesc', '自行填寫營養素與自定義食材')}
+                            {t('diet.addManualFoodDesc', '自行填寫營養素與自定義食物')}
                           </span>
                         </div>
                       </DropdownMenuItem>
@@ -242,10 +242,10 @@ export function FoodRecipeSelectDialog({
                         <Database className="size-4 mt-0.5 text-primary shrink-0" />
                         <div className="flex flex-col gap-0.5 min-w-0">
                           <span className="font-medium text-xs text-foreground">
-                            {t('diet.addAuthorityFood', '從權威數據庫搜索添加')}
+                            {t('diet.addAuthorityFood', '搜尋食物資料庫')}
                           </span>
                           <span className="text-[10px] text-muted-foreground">
-                            {t('diet.addAuthorityFoodDesc', '六大權威庫 · 18,635 項')}
+                            {t('diet.addAuthorityFoodDesc', '六大機構 · 18,635 項')}
                           </span>
                         </div>
                       </DropdownMenuItem>

@@ -19,7 +19,7 @@ export interface AuthorityFoodDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   /** 若提供，於標頭右上角顯示添加按鈕（未導入顯示 +，已導入顯示 ✓） */
   onAdd?: (food: FoodItem) => void;
-  /** 標記該食材是否已在食物庫 */
+  /** 標記該食物是否已在食物庫 */
   isImported?: boolean;
   overlayClassName?: string;
   className?: string;
@@ -60,7 +60,7 @@ const MICRONUTRIENT_CONFIG: MicronutrientItemConfig[] = [
 ];
 
 /**
- * 食材元素數據詳細彈窗 (Authority Food Elements & Micronutrients Dialog)
+ * 食物元素數據詳細彈窗 (Authority Food Elements & Micronutrients Dialog)
  * 嚴格符合 e2Cal 核心準則：
  * 1. 鎖定標準 320px 寬度、16px 緊湊邊距、0 陰影、Instant Pop。
  * 2. 宏量與次級營養素遵循 C -> P -> F 核心律動。
