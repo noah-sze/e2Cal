@@ -87,11 +87,24 @@ export function ThemeProvider({
       return
     }
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-    const handleChange = (event: MediaQueryListEvent) => {
-      setSystemTheme(event.matches ? "dark" : "light")
+    const syncSystemTheme = () => {
+      const next = mediaQuery.matches ? "dark" : "light"
+      setSystemTheme((prev) => (prev === next ? prev : next))
     }
-    mediaQuery.addEventListener("change", handleChange)
-    return () => mediaQuery.removeEventListener("change", handleChange)
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        syncSystemTheme()
+      }
+    }
+
+    mediaQuery.addEventListener("change", syncSystemTheme)
+    window.addEventListener("pageshow", syncSystemTheme)
+    document.addEventListener("visibilitychange", handleVisibility)
+    return () => {
+      mediaQuery.removeEventListener("change", syncSystemTheme)
+      window.removeEventListener("pageshow", syncSystemTheme)
+      document.removeEventListener("visibilitychange", handleVisibility)
+    }
   }, [])
 
   const theme: Theme = scope === "landing" ? landingTheme : appTheme
@@ -104,15 +117,19 @@ export function ThemeProvider({
 
   useLayoutEffect(() => {
     const root = window.document.documentElement
+    const themeColor = resolvedTheme === "dark" ? "#000000" : "#ffffff"
 
     root.classList.remove("light", "dark")
     root.classList.add(resolvedTheme)
+    root.style.colorScheme = resolvedTheme
+    root.style.backgroundColor = themeColor
 
-    // Dynamically synchronize <meta name="theme-color"> with active theme
-    const themeColorMetas = document.querySelectorAll('meta[name="theme-color"]')
-    themeColorMetas.forEach((meta) => {
-      meta.setAttribute("content", resolvedTheme === "dark" ? "#000000" : "#ffffff")
-    })
+    // Synchronize single <meta name="theme-color"> with active theme
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]')
+    if (themeColorMeta) {
+      themeColorMeta.removeAttribute("media")
+      themeColorMeta.setAttribute("content", themeColor)
+    }
   }, [resolvedTheme])
 
   const value: ThemeProviderState = {

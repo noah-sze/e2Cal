@@ -8,8 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="e2Cal" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>e2Cal</title>
     <script>
@@ -61,19 +60,23 @@
         root.classList.remove('light', 'dark');
         root.classList.add(resolvedTheme);
         var themeColor = resolvedTheme === 'dark' ? '#000000' : '#ffffff';
-        var themeColorMetas = document.querySelectorAll('meta[name="theme-color"]');
-        for (var i = 0; i < themeColorMetas.length; i++) {
-          themeColorMetas[i].setAttribute('content', themeColor);
+        root.style.colorScheme = resolvedTheme;
+        root.style.backgroundColor = themeColor;
+        var themeColorMeta = document.querySelector('meta[name="theme-color"]');
+        if (themeColorMeta) {
+          themeColorMeta.setAttribute('content', themeColor);
         }
       })();
     </script>
     <style>
       :root,
       html.light {
+        color-scheme: light;
         --app-bg: #ffffff;
         --app-fg: #000000;
       }
       html.dark {
+        color-scheme: dark;
         --app-bg: #000000;
         --app-fg: #ffffff;
       }
