@@ -93,6 +93,7 @@ export function FoodRecipeSelectDialog({
   const [isAddFoodOpen, setIsAddFoodOpen] = useState(false);
   const [isAddRecipeOpen, setIsAddRecipeOpen] = useState(false);
   const [isAuthoritySearchOpen, setIsAuthoritySearchOpen] = useState(false);
+  const [authorityInitialQuery, setAuthorityInitialQuery] = useState('');
 
   const effectiveTab: 'foods' | 'recipes' =
     mode === 'foods' ? 'foods' : mode === 'recipes' ? 'recipes' : activeTab;
@@ -216,6 +217,7 @@ export function FoodRecipeSelectDialog({
                       <DropdownMenuItem
                         onClick={() => {
                           triggerHaptic('light');
+                          setAuthorityInitialQuery('');
                           setIsAuthoritySearchOpen(true);
                         }}
                         className="flex items-start gap-2.5 p-2 cursor-pointer rounded-md"
@@ -277,6 +279,10 @@ export function FoodRecipeSelectDialog({
               disabledIds={disabledIds}
               isItemDisabled={isItemDisabled}
               onItemClick={handleItemClick}
+              onAddAuthorityFood={(searchQuery) => {
+                setAuthorityInitialQuery(searchQuery ?? '');
+                setIsAuthoritySearchOpen(true);
+              }}
               freezeSort={open}
               className="flex-1 min-h-0"
               listContainerClassName="flex-1 min-h-0"
@@ -286,10 +292,11 @@ export function FoodRecipeSelectDialog({
       </Dialog>
 
       {/* 次級彈窗：平鋪兄弟節點聲明 (No Nested Dialogs)，條件掛載徹底防止遞迴無限渲染 */}
-      {allowAdd && isAuthoritySearchOpen && (
+      {isAuthoritySearchOpen && (
         <AuthorityFoodSearchDialog
           open={isAuthoritySearchOpen}
           onOpenChange={setIsAuthoritySearchOpen}
+          initialQuery={authorityInitialQuery}
           onSelectFood={(food) => handleItemClick(food, 'food')}
           zIndex={secondaryZIndex}
           overlayClassName={secondaryZIndexClass}

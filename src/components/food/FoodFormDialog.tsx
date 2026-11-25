@@ -28,6 +28,7 @@ import { matchesAutocomplete } from '@/utils/multilingualSearch';
 import { ChevronRight } from 'lucide-react';
 import { SectionCard } from '@/components/ui/section-card';
 import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
+import { AuthorityFoodDetailsDialog } from '@/components/food/AuthorityFoodDetailsDialog';
 import { MetricValue } from '@/components/ui/metric-value';
 import { ExternalAIAssistant } from '@/components/ai/ExternalAIAssistant';
 import type { NutritionLabelParseResult } from '@/types/ai';
@@ -75,6 +76,8 @@ export interface FoodFormDialogProps {
   className?: string;
   /** 自訂彈窗層級數值 (例如 80) */
   zIndex?: number;
+  /** 權威庫導入草稿模式：保留營養素與 100g 基準，但清空名稱、分類與預設份量由使用者自填 */
+  prefillBlankBasics?: boolean;
   /** Dev 測試專用：模擬外部 AI 請求 */
   aiMockMode?: boolean;
   aiMockScenario?: 'success' | 'error';
@@ -96,6 +99,7 @@ export function FoodFormDialog({
   overlayClassName,
   className,
   zIndex,
+  prefillBlankBasics = false,
   aiMockMode,
   aiMockScenario,
 }: FoodFormDialogProps) {
@@ -103,6 +107,7 @@ export function FoodFormDialog({
   const { foodWeightUnit, foodVolumeUnit, energyUnit } = useUnitPreferences();
   const isEdit = !!initialData;
   const isAuthorityFood = Boolean(initialData?.dataSource);
+  const elevatedOverlayZClass = zIndex && zIndex >= 80 ? 'z-[100]' : undefined;
 
   // 基本資訊狀態
   const [name, setName] = useState('');
@@ -174,15 +179,17 @@ export function FoodFormDialog({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [keypadConfig, setKeypadConfig] = useState<KeypadConfig | null>(null);
+  const [isAuthorityDetailsOpen, setIsAuthorityDetailsOpen] = useState(false);
 
   // 當彈窗開啟或 initialData 改變時，將底層公制 SI 真值依當前偏好單位回填（一律以「份量」模式呈現）
   useEffect(() => {
     if (!open) return;
+    setIsAuthorityDetailsOpen(false);
 
     if (initialData) {
-      setName(initialData.name || '');
-      setCategory(initialData.category || 'natural');
-      setBrand(initialData.brand || '');
+      setName(prefillBlankBasics ? '' : initialData.name || '');
+      setCategory(prefillBlankBasics ? '' : initialData.category || 'natural');
+      setBrand(prefillBlankBasics ? '' : initialData.brand || '');
       setCalorieUnit(energyUnit);
 
       // 1. 份量依使用者當前偏好單位從底層公制 SI 即時換算呈現
@@ -210,7 +217,13 @@ export function FoodFormDialog({
         }
       }
 
-      setServingSize(convertedServingSize > 0 ? String(convertedServingSize) : '');
+      setServingSize(
+        prefillBlankBasics
+          ? ''
+          : convertedServingSize > 0
+            ? String(convertedServingSize)
+            : ''
+      );
       setServingUnit(prefServingUnit);
 
       // 2. 權威庫導入食材鎖定原基準份量模式以確保調整預設份量時正確等比折算；一般食材以「份量」模式開啟
@@ -751,7 +764,7 @@ export function FoodFormDialog({
   // 處理主彈窗開關事件：當次級懸浮鍵盤 (keypadConfig) 處於開啟狀態時，
   // 阻斷因鍵盤內部選單、單位切換或外部焦點轉移觸發的主彈窗非預期關閉
   const handleDialogOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen && keypadConfig) {
+    if (!nextOpen && (keypadConfig || isAuthorityDetailsOpen)) {
       return;
     }
     onOpenChange(nextOpen);
@@ -825,7 +838,11 @@ export function FoodFormDialog({
           submitAriaLabel={isEdit ? t('common.save') : t('common.add')}
           cancelAriaLabel={t('common.cancel')}
           overlayClassName={overlayClassName || (zIndex ? `z-[${zIndex}]` : "z-[70]")}
-          className={cn(zIndex ? `z-[${zIndex}]` : "z-[70]", className)}
+          className={cn(
+            'max-h-[85vh]',
+            zIndex ? `z-[${zIndex}]` : 'z-[70]',
+            className
+          )}
           externalFocusActive={isAiFocused}
           onExternalFocusDismiss={() => setIsAiFocused(false)}
           externalTopSlot={
@@ -844,9 +861,35 @@ export function FoodFormDialog({
           }
         >
 
-          <form id={formId} onSubmit={handleSubmit} className="space-y-3.5 pt-3.5 pb-0">
-          {/* 表格段落 1: 基本資訊 (共用 SectionCard 內嵌表頭) */}
-          <SectionCard title={t('diet.basicInfo')} bodyClassName="text-sm font-sans">
+          <form id={formId} onSubmit={handleSubmit}>
+            <div className="space-y-3.5 pt-3.5 pb-0 no-scrollbar pr-0.5">
+              {/* 權威來源膠囊（置於基本資訊卡片上方，點擊展開權威元素數據） */}
+              {isAuthorityFood && initialData?.dataSource && (
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('selection');
+                      setIsAuthorityDetailsOpen(true);
+                    }}
+                    className="h-6 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer text-muted-foreground hover:text-foreground active:scale-95 select-none max-w-full"
+                    title={t('diet.viewAuthorityDetails')}
+                  >
+                    <span className="font-sans text-muted-foreground/80 shrink-0">
+                      {t('diet.sourceLabel', '來源')}
+                    </span>
+                    <span className="h-3 w-px bg-border/80 shrink-0" aria-hidden="true" />
+                    <span className="truncate">
+                      {initialData.dataSource.authority}
+                      {initialData.dataSource.sourceId ? ` · ${initialData.dataSource.sourceId}` : ''}
+                    </span>
+                    <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                  </button>
+                </div>
+              )}
+
+              {/* 表格段落 1: 基本資訊 (共用 SectionCard 內嵌表頭) */}
+              <SectionCard title={t('diet.basicInfo')} bodyClassName="text-sm font-sans">
             {/* 品牌 ｜ 名稱（權威庫導入食材不顯示品牌輸入框，由名稱獨佔全寬） */}
             {isAuthorityFood ? (
               <div className="h-10 bg-card relative flex items-stretch min-w-0 focus-within:ring-1 focus-within:ring-inset focus-within:ring-foreground focus-within:z-[1] transition-shadow duration-100">
@@ -951,7 +994,12 @@ export function FoodFormDialog({
                       {category ? t(`diet.foodCategory.${category}`) : '-'}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent align="end" className="min-w-36">
+                  <SelectContent
+                    align="end"
+                    positionerClassName={elevatedOverlayZClass}
+                    backdropClassName={elevatedOverlayZClass}
+                    className={cn('min-w-36', elevatedOverlayZClass)}
+                  >
                     <SelectItem value="natural">{t('diet.foodCategory.natural')}</SelectItem>
                     <SelectItem value="processed">{t('diet.foodCategory.processed')}</SelectItem>
                     <SelectItem value="beverage">{t('diet.foodCategory.beverage')}</SelectItem>
@@ -1011,43 +1059,6 @@ export function FoodFormDialog({
                 )}
               </div>
           </SectionCard>
-
-          {/* 表格段落 1.5: 權威數據來源（僅從權威庫導入的食材編輯時展示） */}
-          {isAuthorityFood && initialData?.dataSource && (
-            <SectionCard title={t('diet.authorityDetails.sourceSection')} bodyClassName="text-xs font-sans">
-              <div className="min-h-10 py-2 px-4 flex items-center justify-between gap-2">
-                <span className="text-muted-foreground shrink-0">
-                  {t('diet.authorityDetails.authority')}
-                </span>
-                <span className="text-foreground font-medium text-right">
-                  {t(
-                    `diet.authorityDetails.authorities.${initialData.dataSource.authority}`,
-                    initialData.dataSource.authority
-                  )}
-                </span>
-              </div>
-
-              <div className="min-h-10 py-2 px-4 flex items-center justify-between gap-2">
-                <span className="text-muted-foreground shrink-0">
-                  {t('diet.authorityDetails.sourceId')}
-                </span>
-                <span className="text-foreground font-mono text-right">
-                  {initialData.dataSource.sourceId}
-                </span>
-              </div>
-
-              {initialData.dataSource.sourceName && (
-                <div className="min-h-10 py-2 px-4 flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground shrink-0">
-                    {t('diet.authorityDetails.sourceName')}
-                  </span>
-                  <span className="text-foreground text-right break-words max-w-[190px]">
-                    {initialData.dataSource.sourceName}
-                  </span>
-                </div>
-              )}
-            </SectionCard>
-          )}
 
           {/* 表格段落 2: 基準營養素 (權威庫導入食材僅供唯讀檢視，不允許編輯營養價值表) */}
           <NutritionFactsCard
@@ -1308,6 +1319,7 @@ export function FoodFormDialog({
             }
             }
           />
+            </div>
 
           {/* 方案 D 徹底無底欄，表單內容直達底部 */}
         </form>
@@ -1356,7 +1368,7 @@ export function FoodFormDialog({
           sideOffset={6}
           initialFocus={false}
           finalFocus={false}
-          positionerClassName="z-[95]"
+          positionerClassName={elevatedOverlayZClass ?? 'z-[95]'}
           className="w-44 p-1 gap-0.5 max-h-44 overflow-y-auto no-scrollbar rounded-lg border border-border bg-popover text-popover-foreground shadow-none"
         >
           {brandSuggestions.map((b, idx) => (
@@ -1383,6 +1395,16 @@ export function FoodFormDialog({
         </PopoverContent>
       )}
     </Popover>
+    {/* 權威數據詳情彈窗 (平級兄弟節點，點擊基本資訊來源膠囊展開) */}
+    {isAuthorityFood && initialData && isAuthorityDetailsOpen && (
+      <AuthorityFoodDetailsDialog
+        food={initialData}
+        open={isAuthorityDetailsOpen}
+        onOpenChange={setIsAuthorityDetailsOpen}
+        overlayClassName={elevatedOverlayZClass ?? 'z-[95]'}
+        className={elevatedOverlayZClass ?? 'z-[95]'}
+      />
+    )}
     </>
   );
 }

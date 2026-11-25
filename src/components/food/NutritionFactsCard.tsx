@@ -227,7 +227,7 @@ export function NutritionFactsCard({
           <SubNutrientsPopover
             align="start"
             alignOffset={16}
-            positionerClassName="z-[70]"
+            positionerClassName="z-[95]"
             lockOpen={Boolean(editable?.lockSubPopover)}
             rows={buildCarbsSubRows(t, sugarVal, fiberVal).map((row, idx) => ({
               ...row,
@@ -329,7 +329,7 @@ export function NutritionFactsCard({
           <SubNutrientsPopover
             align="start"
             alignOffset={16}
-            positionerClassName="z-[70]"
+            positionerClassName="z-[95]"
             lockOpen={Boolean(editable?.lockSubPopover)}
             rows={buildFatSubRows(t, satFatVal, transFatVal).map((row, idx) => ({
               ...row,

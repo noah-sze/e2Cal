@@ -11,9 +11,10 @@ import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
 import { HoldToDeleteButton } from '@/components/ui/HoldToDeleteButton';
 import { db } from '@/services/db/db';
 import type { HydratedFoodLog, FoodItem } from '@/types';
-import { formatDisplayAmount, cn } from '@/lib/utils';
+import { formatDisplayAmount, evaluateAmountExpression, cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
-import { roundTo, gToOz, ozToG, flOzToMl, mlToFlOz } from '@/utils/unitMath';
+import { roundTo, gToOz, ozToG, flOzToMl, mlToFlOz, formatEnergy } from '@/utils/unitMath';
+import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { calculateEffectiveGrams, type WeighingForm } from '@/utils/nutritionMath';
 import { calculateIngredientMacros } from '@/utils/recipeMath';
 import { evaluateNutritionalHighlight } from '@/utils/nutritionEvaluation';
@@ -56,6 +57,7 @@ export function EditFoodLogDialog({
   const navigate = useNavigate();
 
   // 本地狀態：用量與基準食材資訊
+  const { energyUnit } = useUnitPreferences();
   const [quantity, setQuantity] = useState<number>(log?.quantity || 100);
   const [baseFood, setBaseFood] = useState<FoodItem | null>(() => {
     if (!log?.foodId) return null;
@@ -286,6 +288,21 @@ export function EditFoodLogDialog({
   const step1 = isOunceUnit ? 1 : isKgUnit ? 0.05 : 50;
   const step2 = isOunceUnit ? 2 : isKgUnit ? 0.1 : 100;
 
+  // 共用增量邏輯：依當前稱重模式決定加在「毛重」或「淨重」上，並同步折算另一方
+  const applyDelta = (delta: number) => {
+    if (weighingForm === 'gross' && baseFood?.edibleRate && baseFood.edibleRate > 0 && baseFood.edibleRate < 1) {
+      const currentGross = grossQuantity && grossQuantity > 0
+        ? grossQuantity
+        : roundTo(quantity / baseFood.edibleRate, 2);
+      const nextGross = roundTo(currentGross + delta, 2);
+      setGrossQuantity(nextGross);
+      setQuantity(calculateEffectiveGrams(nextGross, 'gross', baseFood.edibleRate));
+      return;
+    }
+
+    setQuantity((prev) => roundTo((prev || 0) + delta, 2));
+  };
+
   // 快捷加一份處理 (單位若一致直接相加；若不一致則轉換)
   const handleAddOneServing = () => {
     triggerHaptic('light');
@@ -301,35 +318,23 @@ export function EditFoodLogDialog({
         added = flOzToMl(baseServingSize);
       }
     }
-    setQuantity((prev) => {
-      const nextNet = roundTo((prev || 0) + added, 2);
-      if (weighingForm === 'gross' && baseFood?.edibleRate && baseFood.edibleRate > 0 && baseFood.edibleRate < 1) {
-        setGrossQuantity(roundTo(nextNet / baseFood.edibleRate, 1));
-      }
-      return nextNet;
-    });
+    applyDelta(added);
   };
 
   const handleMultiplyTwo = () => {
     triggerHaptic('light');
-    setQuantity((prev) => {
-      const nextNet = roundTo((prev || 0) * 2, 2);
-      if (weighingForm === 'gross' && grossQuantity && grossQuantity > 0) {
-        setGrossQuantity(roundTo(grossQuantity * 2, 1));
-      }
-      return nextNet;
-    });
+    if (weighingForm === 'gross' && grossQuantity && grossQuantity > 0) {
+      const nextGross = roundTo(grossQuantity * 2, 2);
+      setGrossQuantity(nextGross);
+      setQuantity(calculateEffectiveGrams(nextGross, 'gross', baseFood?.edibleRate));
+      return;
+    }
+    setQuantity((prev) => roundTo((prev || 0) * 2, 2));
   };
 
   const handleAddStep = (stepVal: number) => {
     triggerHaptic('light');
-    setQuantity((prev) => {
-      const nextNet = roundTo((prev || 0) + stepVal, 2);
-      if (weighingForm === 'gross' && baseFood?.edibleRate && baseFood.edibleRate > 0 && baseFood.edibleRate < 1) {
-        setGrossQuantity(roundTo(nextNet / baseFood.edibleRate, 1));
-      }
-      return nextNet;
-    });
+    applyDelta(stepVal);
   };
 
   const handleTitleClick = () => {
@@ -355,32 +360,6 @@ export function EditFoodLogDialog({
         >
           {/* 表單主體 (支援滑動檢視完整營養素) */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 pt-3.5 pr-0.5">
-            {/* 權威資料庫來源與損耗提示 */}
-            {baseFood?.dataSource && (
-              <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-muted/40 border border-border/50 text-[11px] text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <span>數據來源：</span>
-                  <span className="font-medium text-foreground">
-                    {baseFood.dataSource.authority === 'CFCT'
-                      ? '中國 CDC'
-                      : baseFood.dataSource.authority === 'MEXT'
-                        ? '日本 MEXT'
-                        : baseFood.dataSource.authority === 'AFCD'
-                          ? '澳洲 FSANZ'
-                          : baseFood.dataSource.authority === 'CoFID'
-                            ? '英國 UKHSA'
-                            : baseFood.dataSource.authority}
-                  </span>
-                  {baseFood.dataSource.sourceId && (
-                    <span className="font-mono text-muted-foreground/75 text-[10px]">({baseFood.dataSource.sourceId})</span>
-                  )}
-                </span>
-                <span className="font-mono text-[10px] text-muted-foreground/80">
-                  {t('diet.refuseRatePrefix', '不可食損耗')}：{Boolean(baseFood.refuseRate && baseFood.refuseRate > 0) ? `${Math.round((baseFood.refuseRate || 0) * 100)}%` : '0%'}
-                </span>
-              </div>
-            )}
-
             {/* 即時營養成分卡片 (共用通用規格卡片，下方已有份量調整故隱藏基準行) */}
             <NutritionFactsCard
               title={t('diet.servingNutrients', '營養成分')}
@@ -465,16 +444,26 @@ export function EditFoodLogDialog({
                     className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none"
                     title={t('diet.clickToEnter', '點擊輸入數值')}
                   >
-                    <MetricValue
-                      value={formatDisplayAmount(String(quantity)) || '0'}
-                      unit={log.unit || 'g'}
-                      valueClassName="font-normal text-foreground"
-                      unitClassName="text-[11px]"
-                    />
-                    {Boolean(weighingForm === 'gross' && grossQuantity && grossQuantity > 0 && Math.round(grossQuantity) !== Math.round(quantity)) && (
-                      <span className="text-[10px] text-muted-foreground/75 font-mono">
-                        ({t('diet.grossWeightPrefix', '毛')} {formatDisplayAmount(String(grossQuantity))})
+                    {weighingForm === 'gross' && grossQuantity && grossQuantity > 0 ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="text-[11px] font-sans text-muted-foreground">
+                          {t('diet.grossWeightLabel', '毛重')}
+                        </span>
+                        <span className="h-3 w-px bg-border/80 shrink-0" aria-hidden="true" />
+                        <MetricValue
+                          value={formatDisplayAmount(String(grossQuantity)) || '0'}
+                          unit={log.unit || 'g'}
+                          valueClassName="font-normal text-foreground"
+                          unitClassName="text-[11px]"
+                        />
                       </span>
+                    ) : (
+                      <MetricValue
+                        value={formatDisplayAmount(String(quantity)) || '0'}
+                        unit={log.unit || 'g'}
+                        valueClassName="font-normal text-foreground"
+                        unitClassName="text-[11px]"
+                      />
                     )}
                     <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                   </button>
@@ -515,9 +504,16 @@ export function EditFoodLogDialog({
           onConfirm={handleKeypadConfirm}
           onCancel={handleKeypadCancel}
           renderContextRow={(valStr, currentU) => {
-            const rawQty = parseFloat(valStr) || 0;
+            let finalValStr = valStr;
+            if (/[+-]/.test(valStr.replace(/^[+-]/, ''))) {
+              finalValStr = evaluateAmountExpression(valStr, false);
+            }
+            const rawQty = parseFloat(finalValStr) || 0;
             const effectiveQty = calculateEffectiveGrams(rawQty, weighingForm, baseFood?.edibleRate);
             const hasRefuse = Boolean(baseFood?.refuseRate && baseFood.refuseRate > 0);
+            const displayCalories = baseFood
+              ? calculateIngredientMacros(baseFood, effectiveQty).calories
+              : roundTo(((log.calories || 0) / Math.max(log.quantity || 1, 1)) * effectiveQty, 1);
 
             return (
               <div className="flex flex-col gap-2">
@@ -561,10 +557,25 @@ export function EditFoodLogDialog({
                   </button>
                 </div>
                 <div className="px-1 text-[11px] text-muted-foreground font-mono flex items-center justify-between">
-                  <span>{t('diet.refuseRatePrefix', '不可食損耗')}：{hasRefuse ? `${Math.round((baseFood?.refuseRate || 0) * 100)}%` : '0%'}</span>
+                  <span>
+                    {t('diet.refuseRatePrefix', '可食率')}：{Math.min(100, Math.max(0, Math.round(((baseFood?.edibleRate ?? (1 - (baseFood?.refuseRate || 0)))) * 100)))}%
+                  </span>
                   {hasRefuse && weighingForm === 'gross' && (
                     <span>{t('diet.netWeightLabel', '可食淨重')} ~ {effectiveQty} {currentU}</span>
                   )}
+                </div>
+                <div className="min-h-10 px-3 py-1.5 rounded-lg bg-muted/50 border border-border/50 flex items-center justify-between">
+                  <span className="text-calories font-bold font-mono text-xs">
+                    {formatEnergy(displayCalories, energyUnit).formatted}
+                  </span>
+                  <div className="flex items-baseline gap-1 font-mono">
+                    <span className="text-xl font-bold tracking-tight text-foreground">
+                      {valStr || '0'}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-medium">
+                      {currentU}
+                    </span>
+                  </div>
                 </div>
               </div>
             );

@@ -598,25 +598,12 @@ export function DietView({
                           ) : (
                             <>
                               {(() => {
-                                const s = formatFoodServing(item.quantity || 0, item.unit || 'g', foodWeightUnit, foodVolumeUnit);
-                                const hasGross =
-                                  typeof item.grossQuantity === 'number' &&
-                                  item.grossQuantity > 0 &&
-                                  Math.round(item.grossQuantity) !== Math.round(item.quantity || 0);
-                                const grossServing = hasGross
-                                  ? formatFoodServing(item.grossQuantity || 0, item.unit || 'g', foodWeightUnit, foodVolumeUnit)
-                                  : null;
-                                return (
-                                  <span className="inline-flex items-center gap-1">
-                                    <MetricValue value={s.size} unit={s.unit} unitClassName="text-[10px]" />
-                                    {grossServing && (
-                                      <span className="text-[10px] text-muted-foreground/60 font-mono tracking-tight">
-                                        ({t('diet.grossWeightPrefix', '毛')} {grossServing.size}
-                                        {grossServing.unit !== s.unit ? grossServing.unit : ''})
-                                      </span>
-                                    )}
-                                  </span>
-                                );
+                                const displayQty =
+                                  typeof item.grossQuantity === 'number' && item.grossQuantity > 0
+                                    ? item.grossQuantity
+                                    : item.quantity || 0;
+                                const s = formatFoodServing(displayQty, item.unit || 'g', foodWeightUnit, foodVolumeUnit);
+                                return <MetricValue value={s.size} unit={s.unit} unitClassName="text-[10px]" />;
                               })()}
                               <span className="text-border">·</span>
                               <span

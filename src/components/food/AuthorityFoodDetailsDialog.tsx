@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Plus, Check } from 'lucide-react';
 import { Dialog, PrecisionDialogContent } from '@/components/ui/dialog';
+import { triggerHaptic } from '@/lib/haptics';
 import { SectionCard } from '@/components/ui/section-card';
 import { MetricValue } from '@/components/ui/metric-value';
 import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
@@ -15,6 +17,12 @@ export interface AuthorityFoodDetailsDialogProps {
   food: FoodItem;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** 若提供，於標頭右上角顯示添加按鈕（未導入顯示 +，已導入顯示 ✓） */
+  onAdd?: (food: FoodItem) => void;
+  /** 標記該食材是否已在食物庫 */
+  isImported?: boolean;
+  overlayClassName?: string;
+  className?: string;
 }
 
 interface MicronutrientItemConfig {
@@ -62,6 +70,10 @@ export function AuthorityFoodDetailsDialog({
   food,
   open,
   onOpenChange,
+  onAdd,
+  isImported = false,
+  overlayClassName,
+  className,
 }: AuthorityFoodDetailsDialogProps) {
   const { t } = useTranslation();
 
@@ -151,12 +163,40 @@ export function AuthorityFoodDetailsDialog({
     );
   }, [micros]);
 
+  const headerRightAction = onAdd ? (
+    isImported ? (
+      <span
+        title={t('diet.importedShort')}
+        aria-label={t('diet.importedShort')}
+        className="size-7 rounded-full border border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 inline-flex items-center justify-center select-none shrink-0"
+      >
+        <Check className="size-3.5" strokeWidth={2.2} />
+      </span>
+    ) : (
+      <button
+        type="button"
+        onClick={() => {
+          triggerHaptic('selection');
+          onAdd(fetchedRaw ?? food);
+        }}
+        title={t('diet.importShort')}
+        aria-label={t('diet.importShort')}
+        className="size-7 rounded-full border border-border bg-card text-foreground hover:border-foreground hover:bg-hover active:scale-95 transition-all cursor-pointer inline-flex items-center justify-center shrink-0"
+      >
+        <Plus className="size-3.5" />
+      </button>
+    )
+  ) : undefined;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <PrecisionDialogContent
         title={t('diet.authorityDetails.title')}
         onClose={() => onOpenChange(false)}
         cancelAriaLabel={t('common.close')}
+        rightAction={headerRightAction}
+        overlayClassName={overlayClassName}
+        className={className}
       >
         <div className="pt-3.5 pb-0 space-y-3 select-none max-h-[70vh] overflow-y-auto pr-0.5">
           {/* 1. 權威來源憑證卡片 */}
@@ -215,8 +255,10 @@ export function AuthorityFoodDetailsDialog({
                 <span className="text-muted-foreground text-xs shrink-0">
                   {t('diet.authorityDetails.standardBasis')}
                 </span>
-                <span className="text-foreground text-xs text-right">
-                  {t('diet.authorityDetails.standardBasisValue')}
+                <span className="inline-flex items-baseline gap-1.5 text-foreground text-xs text-right">
+                  <span>{t('diet.authoritySpecUnitPrefix', '每')}</span>
+                  <MetricValue value={100} unit="g" unitClassName="text-foreground" />
+                  <span>{t('diet.authoritySpecUnitSuffix', '純可食部')}</span>
                 </span>
               </div>
 

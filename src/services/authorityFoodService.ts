@@ -121,6 +121,46 @@ export async function searchAuthorityFoods(
   });
 }
 
+export interface AuthorityStats {
+  total: number;
+  byAuthority: Record<AuthoritySource, number>;
+}
+
+let cachedAuthorityStats: AuthorityStats | null = null;
+
+/**
+ * 統計並快取六大權威科研庫的實際條目數量分佈
+ */
+export async function getAuthorityStats(): Promise<AuthorityStats> {
+  if (cachedAuthorityStats) {
+    return cachedAuthorityStats;
+  }
+
+  const foods = await getAuthorityFoods();
+  const byAuthority: Record<AuthoritySource, number> = {
+    USDA: 0,
+    TFDA: 0,
+    CFCT: 0,
+    MEXT: 0,
+    AFCD: 0,
+    CoFID: 0,
+  };
+
+  for (const f of foods) {
+    const auth = f.dataSource?.authority;
+    if (auth && auth in byAuthority) {
+      byAuthority[auth as AuthoritySource] += 1;
+    }
+  }
+
+  cachedAuthorityStats = {
+    total: foods.length,
+    byAuthority,
+  };
+
+  return cachedAuthorityStats;
+}
+
 /**
  * 同步從記憶體快取查詢對應的權威科研原始條目（若尚未載入快取則回傳 undefined）
  */

@@ -12,6 +12,7 @@ import {
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/services/db/db';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { MetricValue } from '@/components/ui/metric-value';
 import { SectionCard } from '@/components/ui/section-card';
 import { useConfirm } from '@/components/ui/confirm-dialog';
@@ -379,14 +380,14 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
           </div>
         </div>
 
-        {/* 第 2 層：B-1 大氣品名帶與可食率、特質微徽章 */}
+        {/* 第 2 層：B-1 大氣品名帶與可食率、特質微徽章（標題永遠優先，窄寬度自動摺疊標籤） */}
         <div className="min-h-[68px] py-3 px-3.5 sm:px-4 border-b border-border flex items-center justify-between gap-2.5 bg-card">
-          <div className="flex flex-col min-w-0 gap-1">
+          <div className="flex-1 min-w-0 flex flex-col gap-1">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground truncate min-w-0">
               {getLocalizedFoodName(food)}
             </h1>
             <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-              <span className="inline-flex items-baseline gap-1.5">
+              <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
                 <span>{t('diet.perServing')}</span>
                 <MetricValue
                   value={servingFormatted.size}
@@ -395,27 +396,71 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
                 />
               </span>
               <span className="text-border select-none">·</span>
-              <span className="inline-flex items-baseline gap-1.5">
+              <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
                 <span>{t('diet.edibleRate')}</span>
                 <MetricValue value={ediblePct} unit="%" className="text-foreground" />
               </span>
             </div>
           </div>
-          {evalRes?.labels && evalRes.labels.length > 0 && (
-            <div className="flex items-center gap-1.5 flex-wrap shrink-0">
-              {evalRes.labels.map((tag) => (
-                <span
-                  key={tag}
-                  className={cn(
-                    "text-[11px] font-mono border px-1.5 py-0.5 rounded font-medium",
-                    getNutritionTagBadgeClass(tag)
-                  )}
-                >
-                  {t(`diet.nutritionTags.${tag}`)}
-                </span>
-              ))}
-            </div>
-          )}
+          {evalRes?.labels && evalRes.labels.length > 0 && (() => {
+            const labels = evalRes.labels;
+            return (
+              <div className="shrink-0 max-w-[46%] sm:max-w-[55%] flex items-center justify-end gap-1.5">
+                {labels.slice(0, 2).map((tag, idx) => (
+                  <span
+                    key={tag}
+                    className={cn(
+                      "text-[11px] font-mono border px-1.5 py-0.5 rounded font-medium whitespace-nowrap truncate",
+                      idx === 1 && "hidden sm:inline-flex",
+                      getNutritionTagBadgeClass(tag)
+                    )}
+                  >
+                    {t(`diet.nutritionTags.${tag}`)}
+                  </span>
+                ))}
+
+                {labels.length > 1 && (
+                  <Popover>
+                    <PopoverTrigger
+                      render={
+                        <button
+                          type="button"
+                          onClick={() => triggerHaptic('light')}
+                          className={cn(
+                            "text-[11px] font-mono border border-border bg-muted/40 hover:bg-hover text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded font-medium whitespace-nowrap shrink-0 cursor-pointer transition-colors",
+                            labels.length <= 2 ? "inline-flex sm:hidden" : "inline-flex"
+                          )}
+                        >
+                          <span className="sm:hidden">+{labels.length - 1}</span>
+                          <span className="hidden sm:inline">+{labels.length - 2}</span>
+                        </button>
+                      }
+                    />
+                    <PopoverContent
+                      align="end"
+                      side="bottom"
+                      sideOffset={6}
+                      className="w-auto max-w-[260px] p-2 bg-popover border border-border rounded-lg shadow-none"
+                    >
+                      <div className="flex flex-wrap gap-1.5">
+                        {labels.map((tag) => (
+                          <span
+                            key={tag}
+                            className={cn(
+                              "text-[11px] font-mono border px-1.5 py-0.5 rounded font-medium whitespace-nowrap",
+                              getNutritionTagBadgeClass(tag)
+                            )}
+                          >
+                            {t(`diet.nutritionTags.${tag}`)}
+                          </span>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* 第 3 層：三大指標三欄分割卡片 (高度 68px 與品名帶等高，支援 1w/30d/3m/6m/1y/all 切換) */}

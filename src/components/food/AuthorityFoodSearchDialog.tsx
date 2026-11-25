@@ -1,14 +1,17 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, X, Database, Plus, Check, Loader2, Sparkles } from 'lucide-react';
+import { Search, X, Plus, Check } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
+  DialogPrecisionHeader,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { SectionCard } from '@/components/ui/section-card';
+import { MetricValue } from '@/components/ui/metric-value';
+import { MacroSquares } from '@/components/food/MacroSquares';
+import { AuthorityFoodDetailsDialog } from '@/components/food/AuthorityFoodDetailsDialog';
+import { FoodFormDialog, type FoodFormData } from '@/components/food/FoodFormDialog';
 import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
 import { cn } from '@/lib/utils';
@@ -16,7 +19,9 @@ import type { FoodItem, AuthoritySource } from '@/types';
 import { useFoods } from '@/hooks/useFoods';
 import {
   searchAuthorityFoods,
+  getAuthorityStats,
   importAuthorityFoodToDatabase,
+  type AuthorityStats,
 } from '@/services/authorityFoodService';
 
 export interface AuthorityFoodSearchDialogProps {
@@ -37,16 +42,42 @@ export interface AuthorityFoodSearchDialogProps {
 
 type AuthorityFilter = 'all' | AuthoritySource;
 
-const POPULAR_RECOMMENDATIONS = [
-  '去皮雞胸肉',
-  '雞蛋',
-  '牛腱',
-  '鮭魚',
-  '燕麥片',
-  '西蘭花',
-  '酪梨',
-  '糙米飯',
+const AUTHORITY_FILTERS: readonly AuthorityFilter[] = [
+  'all',
+  'USDA',
+  'TFDA',
+  'CFCT',
+  'MEXT',
+  'AFCD',
+  'CoFID',
 ];
+
+const AUTHORITY_SOURCES: readonly AuthoritySource[] = [
+  'USDA',
+  'CoFID',
+  'MEXT',
+  'TFDA',
+  'CFCT',
+  'AFCD',
+];
+
+const AUTHORITY_SPEC_ROWS = [
+  {
+    labelKey: 'diet.authoritySpecStateLabel',
+    labelFallback: '預設狀態',
+    valueKey: 'diet.authoritySpecStateValue',
+    valueFallback: '未標註熟製者，一律為生重',
+  },
+  {
+    labelKey: 'diet.authoritySpecScopeLabel',
+    labelFallback: '檢索範圍',
+    valueKey: 'diet.authoritySpecScopeValue',
+    valueFallback: '六大權威庫 · 100% 離線',
+  },
+] as const;
+
+const SEARCH_MIN_DURATION_MS = 1000;
+const SKELETON_NAME_WIDTHS = ['w-28', 'w-36', 'w-32', 'w-40', 'w-32'] as const;
 
 export function AuthorityFoodSearchDialog({
   open,
@@ -58,94 +89,150 @@ export function AuthorityFoodSearchDialog({
   className,
 }: AuthorityFoodSearchDialogProps) {
   const { t } = useTranslation();
-  const { customFoods, presetFoods } = useFoods();
+  const { allFoods } = useFoods();
 
   const [query, setQuery] = useState(initialQuery);
   const [activeFilter, setActiveFilter] = useState<AuthorityFilter>('all');
+  const [stats, setStats] = useState<AuthorityStats | null>(null);
   const [results, setResults] = useState<FoodItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [importingId, setImportingId] = useState<string | null>(null);
+  const [settledQuery, setSettledQuery] = useState('');
   const [locallyImportedIds, setLocallyImportedIds] = useState<Set<string>>(new Set());
-
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [previewFood, setPreviewFood] = useState<FoodItem | null>(null);
+  const [importDraftFood, setImportDraftFood] = useState<FoodItem | null>(null);
+  const searchSeqRef = useRef(0);
+  const lastExecutedRef = useRef<{ query: string; filter: AuthorityFilter } | null>(null);
 
   // 現存本機食物 ID 集合（快速比對「已在食物庫」）
   const existingFoodIdSet = useMemo(() => {
     const set = new Set<string>();
-    customFoods.forEach((f) => set.add(f.id));
-    presetFoods.forEach((f) => set.add(f.id));
+    allFoods.forEach((f) => set.add(f.id));
     locallyImportedIds.forEach((id) => set.add(id));
     return set;
-  }, [customFoods, presetFoods, locallyImportedIds]);
+  }, [allFoods, locallyImportedIds]);
 
-  // 重置狀態與聚焦
+  const executeSearch = async (
+    searchTerm: string,
+    filter: AuthorityFilter,
+    skipAnimation = false
+  ) => {
+    const trimmed = searchTerm.trim();
+    const seq = ++searchSeqRef.current;
+
+    if (!trimmed) {
+      lastExecutedRef.current = null;
+      setIsSearching(false);
+      setResults([]);
+      setSettledQuery('');
+      return;
+    }
+
+    lastExecutedRef.current = { query: trimmed, filter };
+    if (!skipAnimation) {
+      setIsSearching(true);
+    }
+
+    try {
+      const data = skipAnimation
+        ? await searchAuthorityFoods(trimmed, 80, filter)
+        : (
+            await Promise.all([
+              searchAuthorityFoods(trimmed, 80, filter),
+              new Promise<void>((resolve) => setTimeout(resolve, SEARCH_MIN_DURATION_MS)),
+            ])
+          )[0];
+      if (seq !== searchSeqRef.current) return;
+      setResults(data);
+      setSettledQuery(trimmed);
+    } catch (err) {
+      if (seq !== searchSeqRef.current) return;
+      console.error('[AuthoritySearch] 搜尋出錯:', err);
+      setResults([]);
+      setSettledQuery(trimmed);
+    } finally {
+      if (seq === searchSeqRef.current) {
+        setIsSearching(false);
+      }
+    }
+  };
+
+  // 重置狀態（嚴格禁止自動聚焦輸入框，避免手機鍵盤遮擋）
   useEffect(() => {
     if (open) {
       setQuery(initialQuery);
       setLocallyImportedIds(new Set());
+      setPreviewFood(null);
+      setImportDraftFood(null);
       if (initialQuery.trim()) {
-        executeSearch(initialQuery, activeFilter);
+        executeSearch(initialQuery, activeFilter, false);
       } else {
+        searchSeqRef.current += 1;
+        lastExecutedRef.current = null;
+        setIsSearching(false);
         setResults([]);
-        setHasSearched(false);
+        setSettledQuery('');
       }
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 100);
+      if (!stats) {
+        getAuthorityStats().then(setStats).catch(() => {});
+      }
+    } else {
+      searchSeqRef.current += 1;
+      lastExecutedRef.current = null;
+      setIsSearching(false);
+      setSettledQuery('');
     }
   }, [open, initialQuery]);
 
-  // 搜尋函式
-  const executeSearch = async (searchTerm: string, filter: AuthorityFilter) => {
-    const trimmed = searchTerm.trim();
+  // 響應式搜尋：關鍵字變更時播放至少 1s 搜索動畫；僅切換來源分類時即時過濾不播放動畫
+  useEffect(() => {
+    if (!open) return;
+    const trimmed = query.trim();
     if (!trimmed) {
+      searchSeqRef.current += 1;
+      lastExecutedRef.current = null;
+      setIsSearching(false);
       setResults([]);
-      setHasSearched(false);
+      setSettledQuery('');
       return;
     }
 
-    setIsSearching(true);
-    setHasSearched(true);
-    try {
-      const data = await searchAuthorityFoods(trimmed, 60, filter);
-      setResults(data);
-    } catch (err) {
-      console.error('[AuthoritySearch] 搜尋出錯:', err);
-      setResults([]);
-    } finally {
-      setIsSearching(false);
+    if (
+      lastExecutedRef.current?.query === trimmed &&
+      lastExecutedRef.current?.filter === activeFilter
+    ) {
+      return;
     }
-  };
 
-  // 延遲響應式搜尋
-  useEffect(() => {
-    if (!open) return;
+    if (settledQuery === trimmed) {
+      executeSearch(trimmed, activeFilter, true);
+      return;
+    }
+
     const timer = setTimeout(() => {
-      if (query.trim()) {
-        executeSearch(query, activeFilter);
-      } else {
-        setResults([]);
-        setHasSearched(false);
-      }
-    }, 180);
+      executeSearch(trimmed, activeFilter, false);
+    }, 160);
 
     return () => clearTimeout(timer);
-  }, [query, activeFilter, open]);
+  }, [query, activeFilter, open, settledQuery]);
 
-  // 處理單筆導入
-  const handleImport = async (food: FoodItem) => {
-    triggerHaptic('selection');
-    setImportingId(food.id);
+  // 經由 FoodFormDialog 編輯名稱、分類與確認後寫入資料庫
+  const handleFormImportSubmit = async (formData: FoodFormData) => {
+    if (!importDraftFood) return;
+    const targetFood = importDraftFood;
+    const mergedFood: FoodItem = {
+      ...targetFood,
+      ...formData,
+      id: targetFood.id,
+      dataSource: targetFood.dataSource ?? formData.dataSource,
+    };
 
     try {
-      const imported = await importAuthorityFoodToDatabase(food);
+      const imported = await importAuthorityFoodToDatabase(mergedFood);
       triggerHaptic('success');
-      toast.show(
-        t('diet.importedFoodToast', '已導入「{{name}}」至食物庫', { name: food.name })
-      );
+      toast.show(t('diet.importedFoodToast', { name: mergedFood.name }));
 
-      setLocallyImportedIds((prev) => new Set(prev).add(food.id));
+      setLocallyImportedIds((prev) => new Set(prev).add(targetFood.id));
+      setImportDraftFood(null);
 
       if (onSelectFood) {
         onSelectFood(imported);
@@ -153,254 +240,352 @@ export function AuthorityFoodSearchDialog({
       }
     } catch (err) {
       console.error('[AuthoritySearch] 導入失敗:', err);
-      toast.show(t('common.error', '導入失敗'));
-    } finally {
-      setImportingId(null);
+      toast.show(t('common.error'));
     }
   };
 
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && (previewFood || importDraftFood)) return;
+    onOpenChange(nextOpen);
+  };
+
   const zIndexClass = `z-[${zIndex}]`;
+  const detailZIndexClass = `z-[${zIndex + 10}]`;
+  const trimmedQuery = query.trim();
+  const isInitialEmpty = !trimmedQuery;
+  const isLoadingView = !isInitialEmpty && (isSearching || settledQuery !== trimmedQuery);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={cn(
-          'flex flex-col max-h-[85vh] h-[640px] sm:max-w-lg p-0 gap-0 overflow-hidden',
-          zIndexClass,
-          className
-        )}
-        overlayClassName={cn(zIndexClass, overlayClassName)}
-      >
-        {/* 標頭區域 */}
-        <DialogHeader className="p-4 pb-3 border-b border-border/60 shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <Database className="size-4" />
-              </div>
-              <div>
-                <DialogTitle className="text-base font-semibold text-foreground">
-                  {t('diet.authoritySearchTitle', '權威科研庫搜索添加')}
-                </DialogTitle>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {t(
-                    'diet.authoritySearchSubtitle',
-                    '收錄 USDA、台灣 TFDA、中國 CDC 共 11,683 筆權威科研數據'
-                  )}
-                </p>
-              </div>
-            </div>
-            <DialogClose className="p-1.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
-              <X className="size-4" />
-            </DialogClose>
-          </div>
-
-          {/* 搜尋欄 */}
-          <div className="relative mt-3 flex items-center">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-            <Input
-              ref={searchInputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('diet.authoritySearchPlaceholder', '搜尋食材名稱（如：去皮雞胸、Salmon、牛腱、燕麥）...')}
-              className="h-10 pl-9 pr-9 text-xs rounded-lg border-border bg-card text-foreground placeholder:text-muted-foreground focus-visible:border-foreground focus:ring-0 focus-visible:ring-0 shadow-none"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                <X className="size-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* 數據源切換過濾膠囊 */}
-          <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto no-scrollbar py-0.5">
-            {(
-              [
-                { id: 'all', label: t('diet.authoritySourceAll', '全部 (1.8 萬)') },
-                { id: 'USDA', label: 'USDA (7,793)' },
-                { id: 'CoFID', label: '英國 UKHSA (2,886)' },
-                { id: 'MEXT', label: '日本 MEXT (2,478)' },
-                { id: 'TFDA', label: 'TFDA (2,213)' },
-                { id: 'CFCT', label: '中國 CDC (1,677)' },
-                { id: 'AFCD', label: '澳洲 FSANZ (1,588)' },
-              ] as const
-            ).map((src) => (
-              <button
-                key={src.id}
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setActiveFilter(src.id);
-                }}
-                className={cn(
-                  'px-2.5 py-1 rounded-full text-[11px] font-mono transition-all border shrink-0 cursor-pointer',
-                  activeFilter === src.id
-                    ? 'bg-foreground text-background border-foreground font-medium shadow-xs'
-                    : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
-                )}
-              >
-                {src.label}
-              </button>
-            ))}
-          </div>
-        </DialogHeader>
-
-        {/* 搜尋結果列表 / 推薦列表 */}
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar p-3 space-y-2">
-          {/* 搜尋中狀態 */}
-          {isSearching && results.length === 0 && (
-            <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-              <Loader2 className="size-5 animate-spin text-primary" />
-              <span className="text-xs font-mono">
-                {t('common.loading', '正在檢索 1.4 萬條權威科研數據...')}
-              </span>
-            </div>
+    <>
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+        <DialogContent
+          showCloseButton={false}
+          initialFocus={false}
+          className={cn(
+            'flex flex-col w-[440px] max-w-[calc(100vw-24px)] sm:w-[440px] sm:max-w-[440px] h-[580px] max-h-[85vh] p-0 sm:p-0 gap-0 overflow-hidden bg-card border border-border shadow-none select-none',
+            zIndexClass,
+            className
           )}
+          overlayClassName={cn(zIndexClass, overlayClassName)}
+        >
+          {/* 1 & 2. 頂部標頭與搜尋過濾區 */}
+          <div data-slot="dialog-header" className="shrink-0 bg-card">
+            {/* 1. 標準精密標頭 (h-7，無分割線) */}
+            <div className="px-4 pt-4 pb-1">
+              <DialogPrecisionHeader
+                title={t('diet.authorityTitleShort', '權威數據庫')}
+                onClose={() => onOpenChange(false)}
+                cancelAriaLabel={t('common.close')}
+              />
+            </div>
 
-          {/* 空查詢狀態：顯示推薦常用科研食材 */}
-          {!query.trim() && !hasSearched && (
-            <div className="py-4 px-1 space-y-4">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                <Sparkles className="size-3.5 text-primary" />
-                <span>{t('diet.popularAuthorityStaples', '常用權威食材推薦')}</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {POPULAR_RECOMMENDATIONS.map((foodName) => (
+            {/* 2. 搜尋欄與機構單行過濾條 */}
+            <div className="px-4 py-2.5 border-b border-border space-y-2 bg-card">
+              <div className="relative flex items-center">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t('diet.authoritySearchPlaceholder')}
+                  className="h-9 pl-8 pr-8 text-xs rounded-md border-border bg-background text-foreground placeholder:text-muted-foreground/60 focus-visible:border-foreground focus:ring-0 focus-visible:ring-0 shadow-none"
+                />
+                {query && (
                   <button
-                    key={foodName}
+                    type="button"
+                    onClick={() => setQuery('')}
+                    aria-label={t('common.clear', '清除')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 size-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-hover cursor-pointer"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                {AUTHORITY_FILTERS.map((auth) => (
+                  <button
+                    key={auth}
                     type="button"
                     onClick={() => {
                       triggerHaptic('light');
-                      setQuery(foodName);
+                      setActiveFilter(auth);
                     }}
-                    className="px-3 py-1.5 rounded-lg border border-border/70 hover:border-foreground/30 bg-card hover:bg-muted text-xs text-foreground cursor-pointer transition-colors active:scale-95"
+                    className={cn(
+                      'h-6 px-2 rounded text-[11px] font-mono transition-colors shrink-0 cursor-pointer',
+                      activeFilter === auth
+                        ? 'bg-foreground text-background font-medium'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-hover'
+                    )}
                   >
-                    {foodName}
+                    {auth === 'all' ? t('common.all', '全部') : auth}
                   </button>
                 ))}
               </div>
-
-              <div className="mt-6 p-3 rounded-lg bg-muted/30 border border-border/50 text-[11px] text-muted-foreground space-y-1">
-                <div className="font-medium text-foreground">💡 權威食材庫特性</div>
-                <ul className="list-disc list-inside space-y-0.5 opacity-90 pl-0.5">
-                  <li>嚴格採用公制克重（100g 基準），精確科研化測量</li>
-                  <li>自動標註骨頭、果皮等不可食損耗率（Refuse Rate），支援毛重稱重自動折算</li>
-                  <li>單筆點選導入，保持本機食材庫極簡純淨，不污染日常清單</li>
-                </ul>
-              </div>
             </div>
-          )}
+          </div>
 
-          {/* 無匹配結果 */}
-          {!isSearching && hasSearched && results.length === 0 && (
-            <div className="py-16 text-center space-y-1">
-              <p className="text-xs text-muted-foreground">
-                {t('diet.noAuthorityFoodsFound', '在權威科研庫中未找到「{{query}}」', {
-                  query,
-                })}
-              </p>
-              <p className="text-[11px] text-muted-foreground/60">
-                {t('diet.tryOtherKeywords', '可嘗試更換關鍵字、英文名稱或切換權威來源')}
-              </p>
-            </div>
-          )}
-
-          {/* 列表渲染 */}
-          {results.map((food) => {
-            const isImported = existingFoodIdSet.has(food.id);
-            const isCurrentImporting = importingId === food.id;
-            const authorityLabel =
-              food.dataSource?.authority === 'CFCT'
-                ? '中國 CDC'
-                : food.dataSource?.authority === 'MEXT'
-                  ? '日本 MEXT'
-                  : food.dataSource?.authority === 'AFCD'
-                    ? '澳洲 FSANZ'
-                    : food.dataSource?.authority === 'CoFID'
-                      ? '英國 UKHSA'
-                      : food.dataSource?.authority || 'USDA';
-
-            return (
-              <div
-                key={food.id}
-                onClick={() => !isImported && !isCurrentImporting && handleImport(food)}
-                className={cn(
-                  'p-3 rounded-lg border border-border/70 bg-card transition-all flex items-center justify-between gap-2.5',
-                  isImported
-                    ? 'opacity-80 bg-muted/20'
-                    : 'hover:border-foreground/30 hover:bg-hover active:bg-active cursor-pointer'
-                )}
-              >
-                <div className="flex flex-col gap-1 min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-medium text-xs text-foreground truncate">
-                      {food.name}
-                    </span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono shrink-0">
-                      {authorityLabel}
-                    </span>
-                    {Boolean(food.refuseRate && food.refuseRate > 0) && (
-                      <span className="text-[9px] px-1 py-0.5 rounded bg-muted/60 text-muted-foreground/80 font-mono shrink-0">
-                        損耗 {Math.round((food.refuseRate ?? 0) * 100)}%
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[11px] text-muted-foreground font-mono flex items-center gap-1.5 flex-wrap">
-                    <span>{food.calories} kcal</span>
-                    <span>·</span>
-                    <span>P {food.protein}g</span>
-                    <span>·</span>
-                    <span>F {food.fat}g</span>
-                    <span>·</span>
-                    <span>C {food.carbs}g</span>
-                    {Boolean(food.fiber && food.fiber > 0) && (
-                      <>
-                        <span>·</span>
-                        <span>纖維 {food.fiber}g</span>
-                      </>
-                    )}
-                  </div>
+          {/* 3. 內容區域 */}
+          <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar p-4 bg-background/40">
+            {/* 搜尋中狀態（方案 A：1:1 等高骨架屏掃描，含 debounce 等待零空白過渡） */}
+            {isLoadingView && (
+              <div className="border border-border rounded-lg overflow-hidden bg-card">
+                <div className="h-10 px-4 bg-muted/40 border-b border-border flex items-center justify-between text-xs text-muted-foreground font-mono">
+                  <span>-</span>
+                  <span>{t('common.loading')}</span>
                 </div>
 
-                <div className="shrink-0">
-                  {isImported ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-muted text-muted-foreground font-medium select-none">
-                      <Check className="size-3 text-emerald-500" />
-                      <span>{t('diet.alreadyInLibrary', '已在食物庫')}</span>
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={isCurrentImporting}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleImport(food);
-                      }}
-                      className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 active:scale-95 transition-all cursor-pointer whitespace-nowrap shadow-xs"
+                <div className="divide-y divide-border">
+                  {SKELETON_NAME_WIDTHS.map((widthClass, idx) => (
+                    <div
+                      key={idx}
+                      className="min-h-16 py-2.5 px-4 flex items-center justify-between gap-2.5"
                     >
-                      {isCurrentImporting ? (
-                        <Loader2 className="size-3 animate-spin" />
-                      ) : (
-                        <Plus className="size-3" />
-                      )}
-                      <span>
-                        {onSelectFood
-                          ? t('diet.importAndSelect', '選取導入')
-                          : t('diet.importToLibrary', '導入食物庫')}
-                      </span>
-                    </button>
-                  )}
+                      <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                        <div className="h-2.5 w-16 rounded bg-muted animate-pulse" />
+                        <div className={cn('h-3.5 rounded bg-muted animate-pulse', widthClass)} />
+                        <div className="h-2.5 w-12 rounded bg-muted animate-pulse" />
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* 桌面端三格骨架 */}
+                        <div className="hidden md:flex items-center gap-2">
+                          <div className="w-11 h-9 rounded border border-border bg-muted/40 animate-pulse" />
+                          <div className="w-11 h-9 rounded border border-border bg-muted/40 animate-pulse" />
+                          <div className="w-11 h-9 rounded border border-border bg-muted/40 animate-pulse" />
+                        </div>
+
+                        {/* 手機端垂直三階微堆疊骨架 */}
+                        <div className="flex md:hidden flex-col items-end gap-1 w-[50px]">
+                          <div className="h-2.5 w-11 rounded bg-muted animate-pulse" />
+                          <div className="h-2.5 w-11 rounded bg-muted animate-pulse" />
+                          <div className="h-2.5 w-11 rounded bg-muted animate-pulse" />
+                        </div>
+
+                        <div className="size-7 rounded-full border border-border bg-muted/40 animate-pulse shrink-0" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </DialogContent>
-    </Dialog>
+            )}
+
+            {/* 首頁卡片：採用標準 SectionCard 呈現化驗基準與權威庫數據分佈 */}
+            {isInitialEmpty && (
+              <div className="space-y-3">
+                <SectionCard title={t('diet.authorityDataSpecTitle', '化驗基準')}>
+                  <div className="min-h-10 py-2 px-4 flex items-center justify-between gap-3 text-xs">
+                    <span className="text-muted-foreground shrink-0">
+                      {t('diet.authoritySpecUnitLabel', '計量基準')}
+                    </span>
+                    <span className="inline-flex items-baseline gap-1.5 font-sans text-foreground text-right">
+                      <span>{t('diet.authoritySpecUnitPrefix', '每')}</span>
+                      <MetricValue value={100} unit="g" unitClassName="text-foreground" />
+                      <span>{t('diet.authoritySpecUnitSuffix', '純可食部')}</span>
+                    </span>
+                  </div>
+                  {AUTHORITY_SPEC_ROWS.map((row) => (
+                    <div
+                      key={row.labelKey}
+                      className="min-h-10 py-2 px-4 flex items-center justify-between gap-3 text-xs"
+                    >
+                      <span className="text-muted-foreground shrink-0">
+                        {t(row.labelKey, row.labelFallback)}
+                      </span>
+                      <span className="font-mono text-foreground text-right">
+                        {t(row.valueKey, row.valueFallback)}
+                      </span>
+                    </div>
+                  ))}
+                </SectionCard>
+
+                <SectionCard
+                  title={t('diet.authorityDataCoverage', '權威庫數據')}
+                  action={
+                    <span className="font-mono tabular-nums">
+                      {stats ? (
+                        <MetricValue
+                          value={stats.total.toLocaleString()}
+                          unit={t('common.items')}
+                        />
+                      ) : (
+                        '-'
+                      )}
+                    </span>
+                  }
+                >
+                  {AUTHORITY_SOURCES.map((auth) => {
+                    const count = stats?.byAuthority[auth];
+                    return (
+                      <div
+                        key={auth}
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setActiveFilter(auth);
+                        }}
+                        className={cn(
+                          'min-h-10 py-2 px-4 flex items-center justify-between gap-2 text-xs transition-colors cursor-pointer hover:bg-hover',
+                          activeFilter === auth && 'bg-muted/40'
+                        )}
+                      >
+                        <span className="text-foreground truncate">
+                          {t(`diet.authorityDetails.authorities.${auth}`, auth)}
+                        </span>
+                        <span className="font-mono tabular-nums text-muted-foreground shrink-0">
+                          {count !== undefined ? count.toLocaleString() : '-'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </SectionCard>
+              </div>
+            )}
+
+            {/* 搜尋結果卡片 (0 筆時亦保留卡片骨架，僅顯示 0 項與單破折號) */}
+            {!isInitialEmpty && !isLoadingView && (
+              <div className="border border-border rounded-lg overflow-hidden bg-card">
+                <div className="h-10 px-4 bg-muted/40 border-b border-border flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="font-mono tabular-nums">
+                    {t('common.itemCount', { count: results.length })}
+                  </span>
+                  <span className="text-[11px] font-mono">
+                    {activeFilter === 'all' ? '100g' : `${activeFilter} · 100g`}
+                  </span>
+                </div>
+
+                {results.length === 0 ? (
+                  <div className="p-8 text-center text-sm text-muted-foreground">
+                    {t('common.noResults', '無搜尋結果')}
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border">
+                  {results.map((food) => {
+                    const isImported = existingFoodIdSet.has(food.id);
+                    const refuseRate = food.refuseRate ?? 0;
+                    const edibleRate = food.edibleRate ?? Math.max(0, 1 - refuseRate);
+                    const ediblePct = Math.round(edibleRate * 100);
+                    const authority = food.dataSource?.authority || 'USDA';
+
+                    return (
+                      <div
+                        key={food.id}
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setPreviewFood(food);
+                        }}
+                        className={cn(
+                          'min-h-16 py-2.5 px-4 flex items-center justify-between gap-2.5 transition-colors cursor-pointer',
+                          isImported
+                            ? 'bg-muted/20 hover:bg-hover'
+                            : 'hover:bg-hover active:bg-muted/50'
+                        )}
+                      >
+                        <div className="flex flex-col gap-1 min-w-0 flex-1">
+                          <div className="text-[10px] font-mono tabular-nums text-muted-foreground flex items-center gap-1.5 leading-none">
+                            <span>{authority}</span>
+                            {ediblePct < 100 && (
+                              <>
+                                <span>·</span>
+                                <span>
+                                  {t('diet.edibleShort')} {ediblePct}%
+                                </span>
+                              </>
+                            )}
+                          </div>
+
+                          <div className="font-medium text-sm text-foreground tracking-tight leading-snug">
+                            {food.name}
+                          </div>
+
+                          <div className="text-[11px] font-mono tabular-nums text-muted-foreground leading-none">
+                            <MetricValue
+                              value={food.calories}
+                              unit="kcal"
+                              valueClassName="text-foreground/90"
+                              unitClassName="text-muted-foreground"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <MacroSquares
+                            protein={food.protein}
+                            carbs={food.carbs}
+                            fat={food.fat}
+                            sugar={food.sugar}
+                            fiber={food.fiber}
+                            saturatedFat={food.saturatedFat}
+                            transFat={food.transFat}
+                          />
+
+                          {isImported ? (
+                            <span
+                              title={t('diet.importedShort')}
+                              aria-label={t('diet.importedShort')}
+                              className="size-7 rounded-full border border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 inline-flex items-center justify-center select-none shrink-0"
+                            >
+                              <Check className="size-3.5" strokeWidth={2.2} />
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                triggerHaptic('selection');
+                                setImportDraftFood(food);
+                              }}
+                              title={onSelectFood ? t('diet.importAndSelect') : t('diet.importShort')}
+                              aria-label={onSelectFood ? t('diet.importAndSelect') : t('diet.importShort')}
+                              className="size-7 rounded-full border border-border bg-card text-foreground hover:border-foreground hover:bg-hover active:scale-95 transition-all cursor-pointer inline-flex items-center justify-center shrink-0"
+                            >
+                              <Plus className="size-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 平級兄弟節點：權威元素數據預覽彈窗 */}
+      {previewFood && (
+        <AuthorityFoodDetailsDialog
+          food={previewFood}
+          open={Boolean(previewFood)}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) setPreviewFood(null);
+          }}
+          isImported={existingFoodIdSet.has(previewFood.id)}
+          onAdd={(targetFood) => {
+            setPreviewFood(null);
+            setImportDraftFood(targetFood);
+          }}
+          overlayClassName={detailZIndexClass}
+          className={detailZIndexClass}
+        />
+      )}
+
+      {/* 平級兄弟節點：編輯名稱、分類後再添加至食物庫 */}
+      {importDraftFood && (
+        <FoodFormDialog
+          open={Boolean(importDraftFood)}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) setImportDraftFood(null);
+          }}
+          initialData={importDraftFood}
+          prefillBlankBasics
+          zIndex={zIndex + 10}
+          overlayClassName={detailZIndexClass}
+          className={detailZIndexClass}
+          onSubmit={handleFormImportSubmit}
+        />
+      )}
+    </>
   );
 }

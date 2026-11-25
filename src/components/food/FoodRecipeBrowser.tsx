@@ -25,7 +25,6 @@ import { compareByRecentActivityThenName } from '@/utils/activitySorting';
 import { useBrowserStateStore, type FoodSortOption } from '@/store/useBrowserStateStore';
 import { useAppStore } from '@/store/useAppStore';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
-import { searchAuthorityFoods, importAuthorityFoodToDatabase } from '@/services/authorityFoodService';
 
 export type FoodSelectMode = 'all' | 'foods' | 'recipes';
 export type FoodInteractiveMode = 'manage' | 'select';
@@ -52,7 +51,8 @@ export interface FoodRecipeBrowserProps {
   /** 新增食材回調 (若提供則在食材工具列右側顯示「新增」按鈕) */
   onAddFood?: () => void;
   /** 新增權威食材回調 (若提供則在新增選單中觸發) */
-  onAddAuthorityFood?: () => void;
+  /** 點擊「權威科研庫搜索添加」或從搜尋列跳轉權威搜尋 */
+  onAddAuthorityFood?: (initialQuery?: string) => void;
   /** 新增食譜回調 (若提供則在食譜工具列右側顯示「新增」按鈕) */
   onAddRecipe?: () => void;
   /** 整合的新增回調 (根據當前 Tab 自動派發) */
@@ -94,6 +94,7 @@ export function FoodRecipeBrowser({
 }: FoodRecipeBrowserProps) {
   const { t } = useTranslation();
   const [isInternalAuthorityOpen, setIsInternalAuthorityOpen] = useState(false);
+  const [internalAuthorityQuery, setInternalAuthorityQuery] = useState('');
 
   // 建立快速查詢已禁用 ID 集合
   const disabledIdSet = useMemo(() => new Set(disabledIds || []), [disabledIds]);
@@ -200,35 +201,6 @@ export function FoodRecipeBrowser({
   const setFoodSearchQuery = isManage
     ? (query: string) => setFoodBrowserState({ foodSearchQuery: query })
     : setLocalFoodSearchQuery;
-
-  // 權威庫二級擴展檢索狀態
-  const [isAuthorityExpanded, setIsAuthorityExpanded] = useState(false);
-  const [authorityResults, setAuthorityResults] = useState<FoodItem[]>([]);
-  const [isAuthoritySearching, setIsAuthoritySearching] = useState(false);
-
-  useEffect(() => {
-    setIsAuthorityExpanded(false);
-    setAuthorityResults([]);
-  }, [foodSearchQuery]);
-
-  const handleTriggerAuthoritySearch = async () => {
-    if (!foodSearchQuery.trim()) return;
-    triggerHaptic('light');
-    setIsAuthoritySearching(true);
-    setIsAuthorityExpanded(true);
-    try {
-      const results = await searchAuthorityFoods(foodSearchQuery);
-      setAuthorityResults(results);
-    } finally {
-      setIsAuthoritySearching(false);
-    }
-  };
-
-  const handleSelectAuthorityFood = async (food: FoodItem) => {
-    triggerHaptic('selection');
-    const imported = await importAuthorityFoodToDatabase(food);
-    onItemClick?.(imported, 'food');
-  };
 
   const showFoodArchived = isManage ? foodBrowser.showFoodArchived : localShowFoodArchived;
   const setShowFoodArchived = isManage
@@ -1107,117 +1079,74 @@ export function FoodRecipeBrowser({
 
             {/* 滾動內容區 */}
             <div className="divide-y divide-border overflow-y-auto flex-1 min-h-0">
-              {filteredFoods.length === 0 ? (
-                <div className="p-8 text-center text-sm text-muted-foreground">
-                  {foodSearchQuery.trim()
-                    ? t('common.noResults', '無搜尋結果')
-                    : showFoodArchived
-                    ? t('settings.noArchivedFoods')
-                    : t('settings.noCustomFoods')}
-                </div>
-              ) : (
-                <>
-                  {visibleFoods.map((food) => {
-                    const isDisabled = checkIsFoodDisabled(food);
-                    return (
-                      <FoodListItem
-                        key={food.id}
-                        food={food}
-                        disabled={isDisabled}
-                        selected={interactiveMode === 'select' && selectedId === food.id}
-                        onSelect={handleSelectFood}
-                        nutritionDisplayMode={nutritionDisplayMode}
-                        foodWeightUnit={foodWeightUnit}
-                        foodVolumeUnit={foodVolumeUnit}
-                        energyUnit={energyUnit}
-                      />
-                    );
-                  })}
-                  {visibleFoodCount < filteredFoods.length && (
-                    <div
-                      ref={foodSentinelRef}
-                      className="h-8 flex items-center justify-center text-xs text-muted-foreground font-mono shrink-0 pointer-events-none"
-                      aria-hidden="true"
-                    />
-                  )}
-                </>
-              )}
-
-              {/* 二級權威科研庫擴展搜尋入口 (僅在有搜尋詞且非歸檔模式時展示) */}
-              {!showFoodArchived && foodSearchQuery.trim().length > 0 && (
-                <div className="p-3 border-t border-border/60 bg-muted/20">
-                  {!isAuthorityExpanded ? (
+              {(() => {
+                const trimmedFoodQuery = foodSearchQuery.trim();
+                const authoritySearchButton =
+                  !showFoodArchived && trimmedFoodQuery.length > 0 ? (
                     <button
                       type="button"
-                      onClick={handleTriggerAuthoritySearch}
-                      className="w-full py-2.5 px-3 rounded-lg border border-dashed border-border/80 hover:border-foreground/40 bg-card hover:bg-hover transition-colors flex items-center justify-between text-xs text-muted-foreground hover:text-foreground cursor-pointer select-none"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        if (onAddAuthorityFood) {
+                          onAddAuthorityFood(trimmedFoodQuery);
+                        } else {
+                          setInternalAuthorityQuery(trimmedFoodQuery);
+                          setIsInternalAuthorityOpen(true);
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-full text-xs font-mono transition-all border border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border py-1 px-3 cursor-pointer select-none active:scale-95"
                     >
-                      <span className="flex items-center gap-1.5 font-medium">
-                        <Search className="size-3.5" />
-                        <span>在權威科研庫中查找更多「{foodSearchQuery.trim()}」</span>
-                      </span>
-                      <span className="text-[10px] font-mono text-muted-foreground/60">
-                        {t('diet.addAuthorityFoodDesc', 'USDA / MEXT / TFDA / CFCT（1.4 萬條）')}
-                      </span>
+                      <Search className="size-3 opacity-60 shrink-0" />
+                      <span>{t('diet.searchInAuthority', { query: trimmedFoodQuery })}</span>
                     </button>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                        <span className="font-medium flex items-center gap-1">
-                          <span>權威科研庫搜尋結果</span>
-                          {isAuthoritySearching && <span className="animate-pulse">...</span>}
-                        </span>
-                        <span className="text-[10px] font-mono">共 {authorityResults.length} 筆</span>
-                      </div>
-                      {authorityResults.length === 0 && !isAuthoritySearching ? (
-                        <div className="p-4 text-center text-xs text-muted-foreground">
-                          權威庫中亦無匹配條目
-                        </div>
-                      ) : (
-                        <div className="divide-y divide-border/60 border border-border/60 rounded-lg overflow-hidden bg-card">
-                          {authorityResults.map((item) => (
-                            <div
-                              key={item.id}
-                              onClick={() => handleSelectAuthorityFood(item)}
-                              className="p-3 hover:bg-hover active:bg-active cursor-pointer transition-colors flex items-center justify-between"
-                            >
-                              <div className="flex flex-col gap-0.5 min-w-0 pr-2">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="font-medium text-xs text-foreground truncate max-w-[220px]">
-                                    {item.name}
-                                  </span>
-                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono shrink-0">
-                                    {item.dataSource?.authority === 'CFCT'
-                                      ? '中國 CDC'
-                                      : item.dataSource?.authority === 'MEXT'
-                                        ? '日本 MEXT'
-                                        : item.dataSource?.authority === 'AFCD'
-                                          ? '澳洲 FSANZ'
-                                          : item.dataSource?.authority === 'CoFID'
-                                            ? '英國 UKHSA'
-                                            : item.dataSource?.authority}
-                                  </span>
-                                  {Boolean(item.refuseRate && item.refuseRate > 0) && (
-                                    <span className="text-[9px] px-1 py-0.5 rounded bg-muted/60 text-muted-foreground/80 font-mono shrink-0">
-                                      損耗 {Math.round((item.refuseRate ?? 0) * 100)}%
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-[11px] text-muted-foreground font-mono">
-                                  {item.calories} kcal · P {item.protein}g · F {item.fat}g · C {item.carbs}g
-                                </div>
-                              </div>
-                              <span className="text-[11px] px-2.5 py-1 rounded-md bg-primary/10 text-primary font-medium shrink-0 hover:bg-primary/20 transition-colors whitespace-nowrap">
-                                選取導入
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                  ) : null;
+
+                if (filteredFoods.length === 0) {
+                  return (
+                    <div className="p-8 flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+                      <span>
+                        {trimmedFoodQuery
+                          ? t('common.noResults', '無搜尋結果')
+                          : showFoodArchived
+                          ? t('settings.noArchivedFoods')
+                          : t('settings.noCustomFoods')}
+                      </span>
+                      {authoritySearchButton}
                     </div>
-                  )}
-                </div>
-              )}
+                  );
+                }
+
+                return (
+                  <>
+                    {visibleFoods.map((food) => {
+                      const isDisabled = checkIsFoodDisabled(food);
+                      return (
+                        <FoodListItem
+                          key={food.id}
+                          food={food}
+                          disabled={isDisabled}
+                          selected={interactiveMode === 'select' && selectedId === food.id}
+                          onSelect={handleSelectFood}
+                          nutritionDisplayMode={nutritionDisplayMode}
+                          foodWeightUnit={foodWeightUnit}
+                          foodVolumeUnit={foodVolumeUnit}
+                          energyUnit={energyUnit}
+                        />
+                      );
+                    })}
+                    {visibleFoodCount < filteredFoods.length && (
+                      <div
+                        ref={foodSentinelRef}
+                        className="h-8 flex items-center justify-center text-xs text-muted-foreground font-mono shrink-0 pointer-events-none"
+                        aria-hidden="true"
+                      />
+                    )}
+                    {authoritySearchButton && (
+                      <div className="p-3 flex justify-center">{authoritySearchButton}</div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -1586,6 +1515,7 @@ export function FoodRecipeBrowser({
       <AuthorityFoodSearchDialog
         open={isInternalAuthorityOpen}
         onOpenChange={setIsInternalAuthorityOpen}
+        initialQuery={internalAuthorityQuery}
         onSelectFood={handleSelectFood}
       />
     </div>
