@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Dialog, PrecisionDialogContent } from '@/components/ui/dialog';
 import { SectionCard } from '@/components/ui/section-card';
 import { HoldToDeleteButton } from '@/components/ui/HoldToDeleteButton';
-import { db } from '@/services/db/db';
+import { wipeAllSiteData } from '@/services/storage/wipeSiteData';
 import { triggerHaptic } from '@/lib/haptics';
 import { toast } from '@/components/ui/toast';
 import { AlertTriangle, Trash2 } from 'lucide-react';
@@ -34,19 +34,19 @@ export function ClearDataModal({ isOpen, onClose }: ClearDataModalProps) {
     triggerHaptic('warning');
 
     try {
-      // 1. 執行出廠重置核心 (清除日誌與自定義實體、恢復預設實體、斷開雲端、清空快取)
-      await db.resetToFactoryDefaults();
+      // 1. 執行瀏覽器級全量網站數據抹除 (IndexedDB、Storage、Cookies、快取與同步憑證)
+      await wipeAllSiteData();
 
       toast.show(t('settings.dataCleared'));
 
-      // 2. 延遲 300ms 後重載並跳轉至首頁儀表板，以 100% 首次打開的純淨環境重新加載
+      // 2. 延遲 300ms 後以 replace 跳轉至首頁，模擬全新訪客首次開啟網站並避免歷史堆疊回退至殘留狀態
       setTimeout(() => {
         if (typeof window !== 'undefined') {
-          window.location.href = '/';
+          window.location.replace('/');
         }
       }, 300);
     } catch (err) {
-      console.error('Failed to reset database:', err);
+      console.error('Failed to wipe site data:', err);
       toast.show(t('common.error'));
       setIsClearing(false);
     }

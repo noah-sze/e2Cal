@@ -45,6 +45,14 @@ export function syncUserProfileCache(baseInfo: UserBaseInfo | null, latestWeight
   }
 }
 
+/**
+ * 清空使用者個人資料模組級記憶體快取
+ */
+export function clearUserProfileCache(): void {
+  inMemoryBaseInfoCache = null;
+  inMemoryLatestWeightCache = null;
+}
+
 export function useUserProfile() {
   const { bodyWeightUnit } = useUnitPreferences();
 

@@ -1,7 +1,10 @@
+import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/services/db/db';
 import type { Exercise } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+
+const EMPTY_EXERCISES: Exercise[] = [];
 
 /**
  * 模組級動作記憶體注水快取 (In-Memory Hydration Cache)
@@ -81,30 +84,64 @@ export function useExercises(equipmentFilter?: string, searchQuery = '') {
   );
 
   // 核心即時注水：若 useLiveQuery 仍在等待微任務/IPC 回調，直接同步採用記憶體快照
-  const allExercises = allExercisesList ?? inMemoryExercisesCache ?? [];
-  const activeExercises = allExercises.filter((item) => !item.isArchived);
-  const archivedExercises = allExercises.filter((item) => item.isArchived);
+  const allExercises = allExercisesList ?? inMemoryExercisesCache ?? EMPTY_EXERCISES;
 
-  const customExercises = activeExercises.filter((item) => item.isCustom);
-  const presetExercises = activeExercises.filter((item) => !item.isCustom);
+  const {
+    activeExercises,
+    archivedExercises,
+    customExercises,
+    presetExercises,
+    archivedCustomExercises,
+    archivedPresetExercises,
+  } = useMemo(() => {
+    const active: Exercise[] = [];
+    const archived: Exercise[] = [];
+    const custom: Exercise[] = [];
+    const preset: Exercise[] = [];
+    const archivedCustom: Exercise[] = [];
+    const archivedPreset: Exercise[] = [];
 
-  const archivedCustomExercises = archivedExercises.filter((item) => item.isCustom);
-  const archivedPresetExercises = archivedExercises.filter((item) => !item.isCustom);
+    for (const item of allExercises) {
+      if (item.isArchived) {
+        archived.push(item);
+        if (item.isCustom) archivedCustom.push(item);
+        else archivedPreset.push(item);
+      } else {
+        active.push(item);
+        if (item.isCustom) custom.push(item);
+        else preset.push(item);
+      }
+    }
+
+    return {
+      activeExercises: active,
+      archivedExercises: archived,
+      customExercises: custom,
+      presetExercises: preset,
+      archivedCustomExercises: archivedCustom,
+      archivedPresetExercises: archivedPreset,
+    };
+  }, [allExercises]);
 
   // 根據搜尋與器械過濾
-  const filteredActiveExercises = activeExercises.filter((item) => {
-    if (equipmentFilter && equipmentFilter !== 'all') {
-      if (item.equipment !== equipmentFilter) return false;
+  const filteredActiveExercises = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if ((!equipmentFilter || equipmentFilter === 'all') && !q) {
+      return activeExercises;
     }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      return (
-        item.name.toLowerCase().includes(q) ||
-        (item.notes && item.notes.toLowerCase().includes(q))
-      );
-    }
-    return true;
-  });
+    return activeExercises.filter((item) => {
+      if (equipmentFilter && equipmentFilter !== 'all' && item.equipment !== equipmentFilter) {
+        return false;
+      }
+      if (q) {
+        return (
+          item.name.toLowerCase().includes(q) ||
+          Boolean(item.notes && item.notes.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    });
+  }, [activeExercises, equipmentFilter, searchQuery]);
 
   const addExercise = async (
     data: Omit<Exercise, 'id' | 'createdAt' | 'updatedAt' | 'isCustom' | 'isArchived'> & {

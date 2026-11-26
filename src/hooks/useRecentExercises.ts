@@ -9,6 +9,16 @@ let inMemoryExerciseLastUsedMap: Map<string, number> | null = null;
 let inMemoryRoutineLastUsedMap: Map<string, number> | null = null;
 
 /**
+ * 清空最近使用動作與課表的記憶體快取
+ */
+export function clearRecentExercisesCache(): void {
+  inMemoryRecentExerciseIds = null;
+  inMemoryRecentRoutineIds = null;
+  inMemoryExerciseLastUsedMap = null;
+  inMemoryRoutineLastUsedMap = null;
+}
+
+/**
  * 從歷史訓練日誌中提取去重、按最後訓練時間倒序排列的動作與組合 ID 列表及最後使用時間映射 (Pure Function)
  */
 export function extractRecentExerciseAndRoutineIds(workoutLogs: WorkoutLog[]): {

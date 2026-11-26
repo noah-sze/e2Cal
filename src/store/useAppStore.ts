@@ -7,11 +7,6 @@ interface AppState {
   selectedDate: string; // YYYY-MM-DD
   setSelectedDate: (date: string) => void;
 
-  isSyncing: boolean;
-  lastSyncTime: string | null;
-  setSyncing: (isSyncing: boolean) => void;
-  setLastSyncTime: (time: string) => void;
-
   // 營養數據顯示基準（每份 vs 每 100g）
   nutritionDisplayMode: NutritionDisplayMode;
   setNutritionDisplayMode: (mode: NutritionDisplayMode) => void;
@@ -33,11 +28,6 @@ export const useAppStore = create<AppState>()(
         set({ selectedDate });
       },
 
-      isSyncing: false,
-      lastSyncTime: null,
-      setSyncing: (isSyncing) => set({ isSyncing }),
-      setLastSyncTime: (lastSyncTime) => set({ lastSyncTime }),
-
       nutritionDisplayMode: 'serving',
       setNutritionDisplayMode: (nutritionDisplayMode) => set({ nutritionDisplayMode }),
 
@@ -51,7 +41,6 @@ export const useAppStore = create<AppState>()(
       name: 'e2cal-app-storage',
       // selectedDate 永遠作為純內存會話狀態，絕不持久化至 localStorage，保證重開應用必定位至今天
       partialize: (state) => ({
-        lastSyncTime: state.lastSyncTime,
         hidePwaInstallPrompt: state.hidePwaInstallPrompt,
         nutritionDisplayMode: state.nutritionDisplayMode,
         hasConfirmedRawWeight: state.hasConfirmedRawWeight,

@@ -419,6 +419,52 @@ export async function getAuthorityStats(): Promise<AuthorityStats> {
   return cachedAuthorityStats;
 }
 
+interface AuthorityFoodIndex {
+  byId: Map<string, FoodItem>;
+  bySource: Map<string, FoodItem>;
+}
+
+const authorityIndexCache = new WeakMap<FoodItem[], AuthorityFoodIndex>();
+
+function getAuthorityFoodIndex(list: FoodItem[]): AuthorityFoodIndex {
+  const cached = authorityIndexCache.get(list);
+  if (cached) return cached;
+
+  const byId = new Map<string, FoodItem>();
+  const bySource = new Map<string, FoodItem>();
+  for (const item of list) {
+    if (!byId.has(item.id)) {
+      byId.set(item.id, item);
+    }
+    if (item.dataSource?.authority && item.dataSource.sourceId) {
+      const sourceKey = `${item.dataSource.authority}\0${item.dataSource.sourceId}`;
+      if (!bySource.has(sourceKey)) {
+        bySource.set(sourceKey, item);
+      }
+    }
+  }
+  const index: AuthorityFoodIndex = { byId, bySource };
+  authorityIndexCache.set(list, index);
+  return index;
+}
+
+function lookupAuthorityFoodInList(
+  list: FoodItem[],
+  id?: string,
+  authority?: AuthoritySource,
+  sourceId?: string
+): FoodItem | undefined {
+  const index = getAuthorityFoodIndex(list);
+  if (id) {
+    const byIdHit = index.byId.get(id);
+    if (byIdHit) return byIdHit;
+  }
+  if (authority && sourceId) {
+    return index.bySource.get(`${authority}\0${sourceId}`);
+  }
+  return undefined;
+}
+
 /**
  * 同步從記憶體快取查詢對應的權威科研原始條目（若尚未載入快取則回傳 undefined）
  */
@@ -430,14 +476,7 @@ export function getCachedAuthorityFood(
   const locale = resolveAuthorityLocale();
   const list = cachedFoodsByLocale[locale] ?? cachedFoodsByLocale[lastActiveLocale];
   if (!list) return undefined;
-  return (
-    (id ? list.find((f) => f.id === id) : undefined) ||
-    (authority && sourceId
-      ? list.find(
-          (f) => f.dataSource?.authority === authority && f.dataSource?.sourceId === sourceId
-        )
-      : undefined)
-  );
+  return lookupAuthorityFoodInList(list, id, authority, sourceId);
 }
 
 /**
@@ -449,14 +488,7 @@ export async function findAuthorityFood(
   sourceId?: string
 ): Promise<FoodItem | undefined> {
   const foods = await getAuthorityFoods();
-  return (
-    (id ? foods.find((f) => f.id === id) : undefined) ||
-    (authority && sourceId
-      ? foods.find(
-          (f) => f.dataSource?.authority === authority && f.dataSource?.sourceId === sourceId
-        )
-      : undefined)
-  );
+  return lookupAuthorityFoodInList(foods, id, authority, sourceId);
 }
 
 /**

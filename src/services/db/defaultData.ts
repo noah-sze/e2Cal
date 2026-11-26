@@ -1,4 +1,3 @@
-import type { FoodItem, FoodRecipe } from '@/types';
 import type { E2CalDatabase } from './db';
 import { clearDropboxTokens } from '@/services/sync/dropboxAuth';
 import { clearFoodsCache } from '@/hooks/useFoods';
@@ -17,51 +16,6 @@ export { DEFAULT_EXERCISE_IDS, DEFAULT_EXERCISES };
 
 export const PRIMARY_USER_ID = '2848673b-dd09-4d1c-893a-bc501b79122a';
 export const DEFAULT_USER_PROFILE_ID = '36789f9a-551b-4b58-9984-dd26b50a2e71';
-
-// 預設食物庫已徹底刪除，食物 100% 由使用者自建或自 1.8 萬筆權威庫選取導入
-export const DEFAULT_FOOD_IDS: Record<string, string> = {};
-
-export const DEFAULT_RECIPE_IDS = {
-  tomato_egg: '4156a9b9-5fa1-4a7e-bda3-fa373bdd51b2',
-  oat_bowl: '4fb4b671-6bd5-4446-b556-8f3cd456c191',
-  chicken_rice_box: 'd6f594b7-9379-463b-9b86-894dd72279f0',
-} as const;
-
-// 歷史 slug ID 至標準確定性 UUID 映射字典
-export const LEGACY_ID_TO_UUID_MAP: Record<string, string> = {
-  // Recipes
-  recipe_tomato_egg: DEFAULT_RECIPE_IDS.tomato_egg,
-  recipe_oat_bowl: DEFAULT_RECIPE_IDS.oat_bowl,
-  recipe_chicken_rice_box: DEFAULT_RECIPE_IDS.chicken_rice_box,
-
-  // Equipments
-  barbell: DEFAULT_EQUIPMENT_IDS.barbell,
-  dumbbell: DEFAULT_EQUIPMENT_IDS.dumbbell,
-  kettlebell: DEFAULT_EQUIPMENT_IDS.kettlebell,
-  specialty_bar: DEFAULT_EQUIPMENT_IDS.specialty_bar,
-  cable: DEFAULT_EQUIPMENT_IDS.cable,
-  pin_loaded_machine: DEFAULT_EQUIPMENT_IDS.pin_loaded_machine,
-  plate_loaded_machine: DEFAULT_EQUIPMENT_IDS.plate_loaded_machine,
-  smith_machine: DEFAULT_EQUIPMENT_IDS.smith_machine,
-  leg_press: DEFAULT_EQUIPMENT_IDS.leg_press,
-  hack_squat: DEFAULT_EQUIPMENT_IDS.hack_squat,
-  bodyweight: DEFAULT_EQUIPMENT_IDS.bodyweight,
-  weighted_bodyweight: DEFAULT_EQUIPMENT_IDS.weighted_bodyweight,
-  resistance_band: DEFAULT_EQUIPMENT_IDS.resistance_band,
-  gymnastic_rings: DEFAULT_EQUIPMENT_IDS.gymnastic_rings,
-  cardio_machine: DEFAULT_EQUIPMENT_IDS.cardio_machine,
-  other: DEFAULT_EQUIPMENT_IDS.other,
-
-  // Users
-  primary_user: PRIMARY_USER_ID,
-  'default-user-profile': DEFAULT_USER_PROFILE_ID,
-};
-
-// 系統預設食材庫完全清空，由使用者依個人需求自主打造個人庫
-export const DEFAULT_FOODS: Omit<FoodItem, 'createdAt' | 'updatedAt'>[] = [];
-
-// 預設食譜（菜餚）庫已完全清空，所有複合料理皆由使用者依個人烹飪習慣自訂
-export const DEFAULT_RECIPES: Omit<FoodRecipe, 'createdAt' | 'updatedAt'>[] = [];
 
 /**
  * 恢復預設數據 (無害補齊缺失項目，不覆蓋用戶已修改內容與自訂項目)

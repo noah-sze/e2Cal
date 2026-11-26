@@ -273,6 +273,14 @@ export function onDatabaseMutated(listener: () => void): () => void {
   };
 }
 
+/**
+ * 清除所有資料庫變更監聽器（供全量清空網站數據前徹底靜默背景同步使用）
+ */
+export function clearDatabaseMutationListeners(): void {
+  dbMutationListeners.clear();
+  pendingMutationMicrotask = false;
+}
+
 function registerSyncMutationHooks(database: E2CalDatabase): void {
   const entityTables: Array<{ key?: SyncTombstoneTable; table: Table }> = [
     { table: database.user_base_info },

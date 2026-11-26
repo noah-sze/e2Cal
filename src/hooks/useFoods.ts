@@ -1,7 +1,10 @@
+import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/services/db/db';
 import type { FoodItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+
+const EMPTY_FOODS: FoodItem[] = [];
 
 /**
  * 模組級食材記憶體注水快取 (In-Memory Hydration Cache)
@@ -81,26 +84,55 @@ export function useFoods(searchQuery = '') {
   );
 
   // 核心即時注水：若 useLiveQuery 仍在等待微任務/IPC 回調，直接同步採用記憶體快照
-  const allFoods = allFoodsList ?? inMemoryFoodsCache ?? [];
-  const activeFoods = allFoods.filter((item) => !item.isArchived);
-  const archivedFoods = allFoods.filter((item) => item.isArchived);
+  const allFoods = allFoodsList ?? inMemoryFoodsCache ?? EMPTY_FOODS;
 
-  const customFoods = activeFoods.filter((item) => item.isCustom);
-  const presetFoods = activeFoods.filter((item) => !item.isCustom);
+  const {
+    activeFoods,
+    archivedFoods,
+    customFoods,
+    presetFoods,
+    archivedCustomFoods,
+    archivedPresetFoods,
+  } = useMemo(() => {
+    const active: FoodItem[] = [];
+    const archived: FoodItem[] = [];
+    const custom: FoodItem[] = [];
+    const preset: FoodItem[] = [];
+    const archivedCustom: FoodItem[] = [];
+    const archivedPreset: FoodItem[] = [];
 
-  const archivedCustomFoods = archivedFoods.filter((item) => item.isCustom);
-  const archivedPresetFoods = archivedFoods.filter((item) => !item.isCustom);
+    for (const item of allFoods) {
+      if (item.isArchived) {
+        archived.push(item);
+        if (item.isCustom) archivedCustom.push(item);
+        else archivedPreset.push(item);
+      } else {
+        active.push(item);
+        if (item.isCustom) custom.push(item);
+        else preset.push(item);
+      }
+    }
+
+    return {
+      activeFoods: active,
+      archivedFoods: archived,
+      customFoods: custom,
+      presetFoods: preset,
+      archivedCustomFoods: archivedCustom,
+      archivedPresetFoods: archivedPreset,
+    };
+  }, [allFoods]);
 
   // 支援搜尋關鍵字過濾之可用食物清單
-  const filteredActiveFoods = searchQuery.trim()
-    ? activeFoods.filter((item) => {
-        const q = searchQuery.toLowerCase().trim();
-        return (
-          item.name.toLowerCase().includes(q) ||
-          (item.brand && item.brand.toLowerCase().includes(q))
-        );
-      })
-    : activeFoods;
+  const filteredActiveFoods = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return activeFoods;
+    return activeFoods.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        Boolean(item.brand && item.brand.toLowerCase().includes(q))
+    );
+  }, [activeFoods, searchQuery]);
 
   const addFood = async (
     data: Omit<FoodItem, 'id' | 'createdAt' | 'updatedAt' | 'isCustom' | 'isArchived'> & {

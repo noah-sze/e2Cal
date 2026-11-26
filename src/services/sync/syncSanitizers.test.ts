@@ -8,11 +8,9 @@ import {
   sanitizeWorkoutRoutine,
   sanitizeUserBaseInfo,
 } from './syncSanitizers';
-import {
-  DEFAULT_RECIPE_IDS,
-  PRIMARY_USER_ID,
-} from '../db/defaultData';
+import { PRIMARY_USER_ID } from '../db/defaultData';
 
+const TEST_RECIPE_ID = 'd6f594b7-9379-463b-9b86-894dd72279f0';
 const TEST_CHICKEN_ID = 'e1364b57-12b9-5de6-a00d-7cad72609881';
 const TEST_OIL_ID = 'f2475c68-23ca-6ef7-b11e-8dbe8371a992';
 
@@ -20,7 +18,7 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
   describe('sanitizeRecipe', () => {
     it('徹底剔除食材中的 foodName 快照與菜餚根級別的 description', () => {
       const dirtyRecipe = {
-        id: DEFAULT_RECIPE_IDS.chicken_rice_box,
+        id: TEST_RECIPE_ID,
         name: '經典低脂雞胸便當',
         description: '標準乾淨減脂主食，可選配微量烹調油',
         ingredients: [
@@ -48,7 +46,7 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
       const cleaned = sanitizeRecipe(dirtyRecipe);
 
       expect(cleaned).toEqual({
-        id: DEFAULT_RECIPE_IDS.chicken_rice_box,
+        id: TEST_RECIPE_ID,
         name: '經典低脂雞胸便當',
         ingredients: [
           { foodId: TEST_CHICKEN_ID, quantity: 150, unit: 'g', isOptional: false },
@@ -383,7 +381,7 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
             mealType: 'breakfast',
             foodId: TEST_CHICKEN_ID,
             foodName: '雞胸肉',
-            bundleId: DEFAULT_RECIPE_IDS.chicken_rice_box,
+            bundleId: TEST_RECIPE_ID,
             bundleName: '經典低脂雞胸便當',
             quantity: 150,
             unit: 'g',
@@ -412,7 +410,7 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
         mealType: 'breakfast',
         entryType: 'item',
         foodId: TEST_CHICKEN_ID,
-        bundleId: DEFAULT_RECIPE_IDS.chicken_rice_box,
+        bundleId: TEST_RECIPE_ID,
         quantity: 150,
         unit: 'g',
         createdAt: 1000,

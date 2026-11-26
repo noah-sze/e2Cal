@@ -1,9 +1,13 @@
+import { useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/services/db/db';
 import type { FoodRecipe, FoodItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { calculateRecipeTotals, type RecipeTotals } from '@/utils/recipeMath';
 import { getInMemoryFoodsCache, setInMemoryFoodsCache } from '@/hooks/useFoods';
+
+const EMPTY_RECIPES: FoodRecipe[] = [];
+const EMPTY_FOODS: FoodItem[] = [];
 
 /**
  * 模組級菜餚記憶體注水快取 (In-Memory Hydration Cache)
@@ -59,36 +63,67 @@ export function useRecipes(searchQuery = '') {
   );
 
   // 核心即時注水：若 useLiveQuery 仍在等待微任務/IPC 回調，直接同步採用記憶體快照
-  const allRecipes = allRecipesList ?? inMemoryRecipesCache ?? [];
-  const allFoods = allFoodsList ?? getInMemoryFoodsCache() ?? [];
+  const allRecipes = allRecipesList ?? inMemoryRecipesCache ?? EMPTY_RECIPES;
+  const allFoods = allFoodsList ?? getInMemoryFoodsCache() ?? EMPTY_FOODS;
 
   // 構建 foodMap 供純函數計算引用
-  const foodMap = new Map<string, FoodItem>();
-  allFoods.forEach((f) => {
-    foodMap.set(f.id, f);
-  });
+  const foodMap = useMemo(() => {
+    const map = new Map<string, FoodItem>();
+    for (const f of allFoods) {
+      map.set(f.id, f);
+    }
+    return map;
+  }, [allFoods]);
 
-  const activeRecipes = allRecipes.filter((r) => !r.isArchived);
-  const archivedRecipes = allRecipes.filter((r) => r.isArchived);
+  const {
+    activeRecipes,
+    archivedRecipes,
+    customRecipes,
+    presetRecipes,
+    archivedCustomRecipes,
+    archivedPresetRecipes,
+  } = useMemo(() => {
+    const active: FoodRecipe[] = [];
+    const archived: FoodRecipe[] = [];
+    const custom: FoodRecipe[] = [];
+    const preset: FoodRecipe[] = [];
+    const archivedCustom: FoodRecipe[] = [];
+    const archivedPreset: FoodRecipe[] = [];
 
-  const customRecipes = activeRecipes.filter((r) => r.isCustom);
-  const presetRecipes = activeRecipes.filter((r) => !r.isCustom);
+    for (const r of allRecipes) {
+      if (r.isArchived) {
+        archived.push(r);
+        if (r.isCustom) archivedCustom.push(r);
+        else archivedPreset.push(r);
+      } else {
+        active.push(r);
+        if (r.isCustom) custom.push(r);
+        else preset.push(r);
+      }
+    }
 
-  const archivedCustomRecipes = archivedRecipes.filter((r) => r.isCustom);
-  const archivedPresetRecipes = archivedRecipes.filter((r) => !r.isCustom);
+    return {
+      activeRecipes: active,
+      archivedRecipes: archived,
+      customRecipes: custom,
+      presetRecipes: preset,
+      archivedCustomRecipes: archivedCustom,
+      archivedPresetRecipes: archivedPreset,
+    };
+  }, [allRecipes]);
 
-  const filteredActiveRecipes = searchQuery.trim()
-    ? activeRecipes.filter((r) => {
-        const q = searchQuery.toLowerCase().trim();
-        return (
-          r.name.toLowerCase().includes(q) ||
-          r.ingredients.some((ing) => {
-            const food = foodMap.get(ing.foodId);
-            return food?.name.toLowerCase().includes(q);
-          })
-        );
-      })
-    : activeRecipes;
+  const filteredActiveRecipes = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return activeRecipes;
+    return activeRecipes.filter(
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.ingredients.some((ing) => {
+          const food = foodMap.get(ing.foodId);
+          return food?.name.toLowerCase().includes(q);
+        })
+    );
+  }, [activeRecipes, foodMap, searchQuery]);
 
   const addRecipe = async (
     data: Omit<FoodRecipe, 'id' | 'createdAt' | 'updatedAt' | 'isArchived'> & {
@@ -140,12 +175,15 @@ export function useRecipes(searchQuery = '') {
   /**
    * 計算特定菜餚當前的精準總營養素
    */
-  const getRecipeMacros = (
-    recipe: FoodRecipe,
-    options?: { excludedIndices?: number[]; excludeAllOptional?: boolean }
-  ): RecipeTotals => {
-    return calculateRecipeTotals(recipe, foodMap, options);
-  };
+  const getRecipeMacros = useCallback(
+    (
+      recipe: FoodRecipe,
+      options?: { excludedIndices?: number[]; excludeAllOptional?: boolean }
+    ): RecipeTotals => {
+      return calculateRecipeTotals(recipe, foodMap, options);
+    },
+    [foodMap]
+  );
 
   return {
     allRecipes,

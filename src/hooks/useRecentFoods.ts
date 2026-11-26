@@ -9,6 +9,16 @@ let inMemoryFoodLastUsedMap: Map<string, number> | null = null;
 let inMemoryRecipeLastUsedMap: Map<string, number> | null = null;
 
 /**
+ * 清空最近使用食材與食譜的記憶體快取
+ */
+export function clearRecentFoodsCache(): void {
+  inMemoryRecentFoodIds = null;
+  inMemoryRecentRecipeIds = null;
+  inMemoryFoodLastUsedMap = null;
+  inMemoryRecipeLastUsedMap = null;
+}
+
+/**
  * 從歷史飲食日誌中提取去重、按最後使用時間倒序排列的食材與食譜 ID 列表及最後使用時間映射 (Pure Function)
  */
 export function extractRecentFoodAndRecipeIds(dailyLogs: DailyDietLog[]): {

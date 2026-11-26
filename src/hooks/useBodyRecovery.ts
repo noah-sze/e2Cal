@@ -1,19 +1,33 @@
 import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { format, parseISO, subDays } from 'date-fns';
 import { db } from '@/services/db/db';
-import { calculateBodyRecovery, type BodyRecoverySummary } from '@/utils/recoveryMath';
+import {
+  calculateBodyRecovery,
+  LARGE_MUSCLE_RECOVERY_DAYS,
+  type BodyRecoverySummary,
+} from '@/utils/recoveryMath';
 import type { Exercise } from '@/types';
+
+function getRecoveryLookbackStartDate(referenceDate: string): string {
+  const parsed = parseISO(referenceDate);
+  if (Number.isNaN(parsed.getTime())) return referenceDate;
+  return format(subDays(parsed, LARGE_MUSCLE_RECOVERY_DAYS), 'yyyy-MM-dd');
+}
 
 /**
  * 人體肌肉恢復狀態 Hook (純粹客觀日曆天數模型 - 方案 A)
  * @param referenceDate 選定日期 (YYYY-MM-DD)
  */
 export function useBodyRecovery(referenceDate: string) {
-  // 查詢全部訓練記錄與動作庫 (保證 Dexie 任何異動均能即時同步觸發計算)
+  // 僅查詢恢復窗口內的訓練記錄 (避免全表掃描) 與動作庫
   const liveData = useLiveQuery(
     async () => {
-      const logs = await db.workout_logs.toArray();
-      const exercises = await db.exercises.toArray();
+      const startDate = getRecoveryLookbackStartDate(referenceDate);
+      const [logs, exercises] = await Promise.all([
+        db.workout_logs.where('date').between(startDate, referenceDate, true, true).toArray(),
+        db.exercises.toArray(),
+      ]);
       return { logs, exercises };
     },
     [referenceDate]
@@ -32,10 +46,7 @@ export function useBodyRecovery(referenceDate: string) {
       exerciseMap.set(ex.id, ex);
     }
 
-    // 篩選出日期小於等於參考日期的歷史與當日記錄
-    const relevantLogs = logs.filter((l) => l.date <= referenceDate);
-
-    return calculateBodyRecovery(relevantLogs, {
+    return calculateBodyRecovery(logs, {
       referenceDate,
       exerciseMap,
     });

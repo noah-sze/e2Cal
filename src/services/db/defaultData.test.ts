@@ -2,17 +2,11 @@ import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_EQUIPMENTS,
   DEFAULT_EXERCISES,
-  DEFAULT_FOODS,
-  DEFAULT_RECIPES,
   PRIMARY_USER_ID,
   DEFAULT_USER_PROFILE_ID,
 } from './defaultData';
 
 describe('系統預設數據完整性與零預設食物架構測試', () => {
-  it('預設食物與菜餚庫出廠為空，由使用者 100% 自主打造專屬庫', () => {
-    expect(DEFAULT_FOODS).toHaveLength(0);
-    expect(DEFAULT_RECIPES).toHaveLength(0);
-  });
 
   it('所有默認器械與動作實體之 ID 均必須符合標準 RFC 4122 UUID 格式', () => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -91,8 +85,8 @@ describe('系統預設數據完整性與零預設食物架構測試', () => {
         workout_logs: createMockTable('workout_logs'),
         body_metrics: createMockTable('body_metrics'),
         routines: createMockTable('routines'),
-        foods: createMockTable('foods', DEFAULT_FOODS),
-        recipes: createMockTable('recipes', DEFAULT_RECIPES),
+        foods: createMockTable('foods', []),
+        recipes: createMockTable('recipes', []),
         exercises: createMockTable('exercises', DEFAULT_EXERCISES),
         equipments: createMockTable('equipments', DEFAULT_EQUIPMENTS),
         user_profile: createMockTable('user_profile'),

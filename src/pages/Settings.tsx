@@ -93,6 +93,7 @@ export default function Settings() {
     connectDropbox,
     disconnectDropbox,
     syncNow: dropboxSyncNow,
+    overwriteRemote: dropboxOverwriteRemote,
   } = useDropboxSync();
 
   const currentLang = i18n.resolvedLanguage || i18n.language || 'en';
@@ -913,6 +914,7 @@ export default function Settings() {
         onConnectDropbox={connectDropbox}
         onDisconnectDropbox={disconnectDropbox}
         onSyncNow={dropboxSyncNow}
+        onOverwriteRemote={dropboxOverwriteRemote}
       />
 
       {/* 清除本地資料高防呆確認彈窗 (平級兄弟節點聲明) */}

@@ -152,4 +152,21 @@ describe('authorityFoodService localization & bilingual search', () => {
     expect(limited.items).toHaveLength(1);
     expect(limited.total).toBe(2);
   });
+
+  it('findAuthorityFood & getCachedAuthorityFood resolve by id or authority+sourceId in O(1)', async () => {
+    const { findAuthorityFood, getCachedAuthorityFood } = await import('./authorityFoodService');
+    const byId = await findAuthorityFood('tfda-egg-1');
+    expect(byId?.id).toBe('tfda-egg-1');
+
+    const bySource = await findAuthorityFood(undefined, 'USDA', '05062');
+    expect(bySource?.id).toBe('usda-chicken-1');
+
+    // Fallback to authority+sourceId when id misses
+    const fallback = await findAuthorityFood('non-existent-id', 'USDA', '05062');
+    expect(fallback?.id).toBe('usda-chicken-1');
+
+    expect(getCachedAuthorityFood('tfda-egg-1')?.id).toBe('tfda-egg-1');
+    expect(getCachedAuthorityFood(undefined, 'USDA', '05062')?.id).toBe('usda-chicken-1');
+    expect(await findAuthorityFood('missing')).toBeUndefined();
+  });
 });

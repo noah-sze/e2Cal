@@ -2093,6 +2093,16 @@ export function clearPendingAutoSync(): void {
 }
 
 /**
+ * 取消已排程但尚未執行的防抖自動同步計時器
+ */
+export function cancelScheduledAutoSync(): void {
+  if (autoSyncTimeout) {
+    clearTimeout(autoSyncTimeout);
+    autoSyncTimeout = null;
+  }
+}
+
+/**
  * 安排防抖自動同步 (本地有數據變更後自動執行局部增量推送)
  */
 export function scheduleAutoSync(delayMs = 2000): void {

@@ -709,12 +709,19 @@ for (const [s, t] of S2T_PAIRS) {
   T2S_MAP.set(t, s);
 }
 
+function hasNonAscii(str: string): boolean {
+  for (let i = 0; i < str.length; i++) {
+    if (str.charCodeAt(i) > 0x7f) return true;
+  }
+  return false;
+}
+
 /**
  * 將字串中的簡體字轉換為繁體字
  */
 export function toTraditional(str: string): string {
   if (!str) return '';
-  if (!/[^\x00-\x7F]/.test(str)) return str;
+  if (!hasNonAscii(str)) return str;
 
   let result = '';
   for (const ch of str) {
@@ -728,7 +735,7 @@ export function toTraditional(str: string): string {
  */
 export function toSimplified(str: string): string {
   if (!str) return '';
-  if (!/[^\x00-\x7F]/.test(str)) return str;
+  if (!hasNonAscii(str)) return str;
 
   let result = '';
   for (const ch of str) {
@@ -826,7 +833,7 @@ export interface SearchTarget {
 export function matchesMultilingual(
   query: string,
   target: SearchTarget,
-  type?: 'food' | 'exercise'
+  _type?: 'food' | 'exercise'
 ): boolean {
   if (!query || !target || !target.name) return false;
 
@@ -846,7 +853,7 @@ export function matchesMultilingual(
     return true;
   }
 
-  const isQueryAscii = !/[^\x00-\x7F]/.test(cleanQuery);
+  const isQueryAscii = !hasNonAscii(cleanQuery);
 
   // 2. 簡繁雙向正規化比對 (Bilateral Simplified/Traditional match)
   // 若 query 為純 ASCII（如英文、拼音縮寫），不可能包含繁簡字，跳過高開銷比對
@@ -963,7 +970,7 @@ export function matchesMultilingual(
     const queryTokens = cleanQuery.split(/[\s_+,-]+/).filter(Boolean);
     if (queryTokens.length > 1) {
       const allTokensMatch = queryTokens.every((token) =>
-        matchesMultilingual(token, target, type)
+        matchesMultilingual(token, target)
       );
       if (allTokensMatch) return true;
     }
