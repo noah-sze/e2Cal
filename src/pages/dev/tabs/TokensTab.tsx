@@ -92,7 +92,7 @@ const FontFamilyControl: React.FC<FontFamilyControlProps> = ({
           </CopySnippet>
         </div>
         <div className="text-2xs text-muted-foreground mt-0.5 truncate font-mono">
-          <span className="text-foreground/70">有效值：</span>
+          <span>有效值：</span>
           <span className={fontFamilyClass}>{activeValue}</span>
         </div>
       </div>
@@ -224,7 +224,7 @@ export const TokensTab: React.FC<TokensTabProps> = ({
               variant="outline"
               size="sm"
               onClick={resetTokens}
-              className="h-7 text-xs font-mono text-destructive hover:bg-destructive/10 border-border shadow-none"
+              className="h-7 text-xs font-mono text-destructive hover:bg-destructive-subtle border-border shadow-none"
             >
               全部還原
             </Button>
@@ -266,16 +266,16 @@ export const TokensTab: React.FC<TokensTabProps> = ({
               <span className="text-3xs font-mono text-muted-foreground">C · P · F</span>
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="px-1.5 py-0.5 text-2xs font-mono font-medium rounded border border-carbs/20 bg-carbs/10 text-carbs">
+              <span className="px-1.5 py-0.5 text-2xs font-mono font-medium rounded border border-carbs-subtle-border bg-carbs-subtle-bg text-carbs">
                 碳水 <MetricValue value="210" unit="g" unitClassName="text-current opacity-80" />
               </span>
-              <span className="px-1.5 py-0.5 text-2xs font-mono font-medium rounded border border-protein/20 bg-protein/10 text-protein">
+              <span className="px-1.5 py-0.5 text-2xs font-mono font-medium rounded border border-protein-subtle-border bg-protein-subtle-bg text-protein">
                 蛋白質 <MetricValue value="150" unit="g" unitClassName="text-current opacity-80" />
               </span>
-              <span className="px-1.5 py-0.5 text-2xs font-mono font-medium rounded border border-fat/20 bg-fat/10 text-fat">
+              <span className="px-1.5 py-0.5 text-2xs font-mono font-medium rounded border border-fat-subtle-border bg-fat-subtle-bg text-fat">
                 脂肪 <MetricValue value="55" unit="g" unitClassName="text-current opacity-80" />
               </span>
-              <span className="px-1.5 py-0.5 text-2xs font-mono font-medium rounded border border-sodium/20 bg-sodium/10 text-sodium">
+              <span className="px-1.5 py-0.5 text-2xs font-mono font-medium rounded border border-sodium-subtle-border bg-sodium-subtle-bg text-sodium">
                 鈉 <MetricValue value="1,800" unit="mg" unitClassName="text-current opacity-80" />
               </span>
             </div>

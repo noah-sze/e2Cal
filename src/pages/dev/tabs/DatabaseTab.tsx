@@ -5,13 +5,21 @@ import {
   Download,
   ChevronDown,
   ChevronUp,
-  Sparkles,
+  FlaskConical,
   Plus,
   Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { MetricValue } from '@/components/ui/metric-value';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from '@/components/ui/toast';
 import { CopySnippet } from '../components/CopySnippet';
 import { db } from '@/services/db/db';
@@ -154,6 +162,16 @@ function calcThermodynamics(food: FoodItem): ThermodynamicsResult {
 // 主組件 DatabaseTab (六大權威科研食物庫瀏覽器)
 // ============================================================================
 
+type SortByOption =
+  | 'default'
+  | 'calories-desc'
+  | 'calories-asc'
+  | 'protein-desc'
+  | 'carbs-desc'
+  | 'fat-desc'
+  | 'refuse-desc'
+  | 'source-asc';
+
 export function DatabaseTab() {
   const [authorityFoods, setAuthorityFoods] = useState<FoodItem[]>([]);
   const [localFoodIds, setLocalFoodIds] = useState<Set<string>>(new Set());
@@ -165,9 +183,7 @@ export function DatabaseTab() {
   const [selectedAuthority, setSelectedAuthority] = useState<string>('all');
   const [refuseFilter, setRefuseFilter] = useState<'all' | 'with-refuse' | 'zero-refuse'>('all');
   const [filterMicrosOnly, setFilterMicrosOnly] = useState(false);
-  const [sortBy, setSortBy] = useState<
-    'default' | 'calories-desc' | 'calories-asc' | 'protein-desc' | 'carbs-desc' | 'fat-desc' | 'refuse-desc' | 'source-asc'
-  >('default');
+  const [sortBy, setSortBy] = useState<SortByOption>('default');
 
   // UI 展開與分頁
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
@@ -375,42 +391,49 @@ export function DatabaseTab() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-xs">
           <div className="border border-border rounded-lg bg-card p-3 space-y-1">
             <span className="text-3xs text-muted-foreground uppercase tracking-wider">權威總條目</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-semibold tabular-nums text-foreground">
-                {stats.total.toLocaleString()}
-              </span>
-              <span className="text-3xs text-muted-foreground">條</span>
+            <div>
+              <MetricValue
+                value={stats.total.toLocaleString()}
+                unit="條"
+                valueClassName="text-lg font-semibold text-foreground"
+                unitClassName="text-3xs"
+              />
             </div>
-            <div className="text-3xs text-muted-foreground flex gap-1">
+            <div className="text-3xs text-muted-foreground flex items-baseline gap-1">
               <span>本地庫:</span>
-              <span className="text-foreground">{localFoodIds.size} 條已導入</span>
+              <MetricValue
+                value={localFoodIds.size}
+                unit="條已導入"
+                valueClassName="text-foreground"
+                unitClassName="text-3xs"
+              />
             </div>
           </div>
 
           <div className="border border-border rounded-lg bg-card p-3 space-y-1">
             <span className="text-3xs text-muted-foreground uppercase tracking-wider">損耗率測定</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-semibold tabular-nums text-foreground">
-                {stats.refuseCount.toLocaleString()}
-              </span>
-              <span className="text-3xs text-muted-foreground">
-                ({stats.total > 0 ? Math.round((stats.refuseCount / stats.total) * 100) : 0}%)
-              </span>
+            <div>
+              <MetricValue
+                value={stats.refuseCount.toLocaleString()}
+                unit={`(${stats.total > 0 ? Math.round((stats.refuseCount / stats.total) * 100) : 0}%)`}
+                valueClassName="text-lg font-semibold text-foreground"
+                unitClassName="text-3xs"
+              />
             </div>
             <div className="text-3xs text-muted-foreground">
-              帶皮/帶核/帶骨解剖損耗
+              帶皮 / 帶核 / 帶骨解剖損耗
             </div>
           </div>
 
           <div className="border border-border rounded-lg bg-card p-3 space-y-1">
             <span className="text-3xs text-muted-foreground uppercase tracking-wider">微量元素測定</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-semibold tabular-nums text-foreground">
-                {stats.microsCount.toLocaleString()}
-              </span>
-              <span className="text-3xs text-muted-foreground">
-                ({stats.total > 0 ? Math.round((stats.microsCount / stats.total) * 100) : 0}%)
-              </span>
+            <div>
+              <MetricValue
+                value={stats.microsCount.toLocaleString()}
+                unit={`(${stats.total > 0 ? Math.round((stats.microsCount / stats.total) * 100) : 0}%)`}
+                valueClassName="text-lg font-semibold text-foreground"
+                unitClassName="text-3xs"
+              />
             </div>
             <div className="text-3xs text-muted-foreground">
               含維生素與電解質分析
@@ -528,6 +551,7 @@ export function DatabaseTab() {
 
           {/* 僅看微量元素開關 */}
           <button
+            type="button"
             onClick={() => {
               setFilterMicrosOnly((prev) => !prev);
               setVisibleCount(BATCH_SIZE);
@@ -538,25 +562,26 @@ export function DatabaseTab() {
                 : 'bg-card text-muted-foreground border-border hover:text-foreground'
             }`}
           >
-            <Sparkles className="w-3 h-3" />
+            <FlaskConical className="w-3 h-3" />
             僅微量元素
           </button>
 
           {/* 排序方式 */}
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="h-7 px-2 bg-card border border-border rounded-md text-3xs font-mono text-muted-foreground hover:text-foreground focus:outline-none"
-          >
-            <option value="default">預設排序</option>
-            <option value="calories-desc">熱量：由高到低</option>
-            <option value="calories-asc">熱量：由低到高</option>
-            <option value="protein-desc">蛋白質：由高到低</option>
-            <option value="carbs-desc">碳水：由高到低</option>
-            <option value="fat-desc">脂肪：由高到低</option>
-            <option value="refuse-desc">損耗率：由高到低</option>
-            <option value="source-asc">來源代碼：升冪</option>
-          </select>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortByOption)}>
+            <SelectTrigger className="h-7 w-auto min-w-36 px-2.5 bg-card border-border rounded-md text-3xs font-mono text-muted-foreground hover:text-foreground shadow-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="font-mono text-xs">
+              <SelectItem value="default">預設排序</SelectItem>
+              <SelectItem value="calories-desc">熱量：由高到低</SelectItem>
+              <SelectItem value="calories-asc">熱量：由低到高</SelectItem>
+              <SelectItem value="protein-desc">蛋白質：由高到低</SelectItem>
+              <SelectItem value="carbs-desc">碳水：由高到低</SelectItem>
+              <SelectItem value="fat-desc">脂肪：由高到低</SelectItem>
+              <SelectItem value="refuse-desc">損耗率：由高到低</SelectItem>
+              <SelectItem value="source-asc">來源代碼：升冪</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </section>
 
@@ -591,7 +616,7 @@ export function DatabaseTab() {
                 <div
                   key={food.id}
                   className={`border rounded-lg bg-card transition-colors ${
-                    isExpanded ? 'border-foreground/40' : 'border-border hover:border-foreground/20'
+                    isExpanded ? 'border-foreground' : 'border-border hover:bg-hover'
                   }`}
                 >
                   {/* 卡片標頭列 */}
@@ -600,7 +625,7 @@ export function DatabaseTab() {
                     className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 cursor-pointer select-none"
                   >
                     <div className="flex items-start sm:items-center gap-2.5 min-w-0">
-                      <div className="w-7 h-7 rounded border border-border flex items-center justify-center shrink-0 font-mono text-3xs font-semibold bg-secondary/30">
+                      <div className="w-7 h-7 rounded border border-border flex items-center justify-center shrink-0 font-mono text-3xs font-semibold bg-muted">
                         {sourceAuth}
                       </div>
 
@@ -625,7 +650,7 @@ export function DatabaseTab() {
                           ) : null}
 
                           {isImported && (
-                            <Badge variant="outline" className="text-3xs font-mono border-emerald-500/40 text-emerald-500 py-0 h-4">
+                            <Badge variant="outline" className="text-3xs font-mono border-emerald-500 text-emerald-500 py-0 h-4">
                               <Check className="w-2.5 h-2.5 mr-0.5" />
                               已在本地
                             </Badge>
@@ -641,20 +666,24 @@ export function DatabaseTab() {
                     </div>
 
                     {/* 右側數值看板 (C -> P -> F 嚴格順序) */}
-                    <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 font-mono text-xs pt-1 sm:pt-0 border-t sm:border-t-0 border-border/50">
+                    <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 font-mono text-xs pt-1 sm:pt-0 border-t sm:border-t-0 border-border">
                       <div className="flex items-center gap-2 text-3xs">
                         <span className="text-muted-foreground">
-                          C: <span className="text-foreground">{food.carbs}</span>g
+                          C: <MetricValue value={food.carbs} unit="g" valueClassName="text-foreground" unitClassName="text-3xs" />
                         </span>
                         <span className="text-muted-foreground">
-                          P: <span className="text-foreground">{food.protein}</span>g
+                          P: <MetricValue value={food.protein} unit="g" valueClassName="text-foreground" unitClassName="text-3xs" />
                         </span>
                         <span className="text-muted-foreground">
-                          F: <span className="text-foreground">{food.fat}</span>g
+                          F: <MetricValue value={food.fat} unit="g" valueClassName="text-foreground" unitClassName="text-3xs" />
                         </span>
-                        <span className="text-foreground font-semibold ml-1">
-                          {food.calories} <span className="text-3xs font-normal text-muted-foreground">kcal</span>
-                        </span>
+                        <MetricValue
+                          value={food.calories}
+                          unit="kcal"
+                          className="ml-1"
+                          valueClassName="text-foreground font-semibold"
+                          unitClassName="text-3xs"
+                        />
                       </div>
 
                       <div className="flex items-center gap-1.5">
@@ -684,7 +713,7 @@ export function DatabaseTab() {
 
                   {/* 展開之深度檢視抽屜 (Deep Inspector) */}
                   {isExpanded && (
-                    <div className="border-t border-border bg-secondary/10 p-3.5 space-y-3 font-mono text-xs">
+                    <div className="border-t border-border bg-muted p-3.5 space-y-3 font-mono text-xs">
                       {/* 抽屜內部分頁標籤 */}
                       <div className="flex items-center gap-1 border-b border-border pb-2 text-3xs">
                         <button

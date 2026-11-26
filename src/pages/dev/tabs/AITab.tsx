@@ -84,27 +84,27 @@ export function AITab() {
 
         <div className="border border-border rounded-lg bg-card p-4 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs font-mono">
           <div>
-            <div className="text-muted-foreground text-[11px]">KEY STATUS</div>
+            <div className="text-muted-foreground text-2xs">KEY STATUS</div>
             <div className="mt-0.5">
-              <Badge variant={isConfigured ? 'default' : 'outline'} className="font-mono text-[10px]">
+              <Badge variant={isConfigured ? 'default' : 'outline'} className="font-mono text-3xs">
                 {isConfigured ? 'CONFIGURED' : 'EMPTY'}
               </Badge>
             </div>
           </div>
           <div>
-            <div className="text-muted-foreground text-[11px]">PROVIDER</div>
+            <div className="text-muted-foreground text-2xs">PROVIDER</div>
             <div className="font-medium mt-0.5 truncate">{activeProfile?.name ?? '-'}</div>
           </div>
           <div>
-            <div className="text-muted-foreground text-[11px]">PROTOCOL</div>
+            <div className="text-muted-foreground text-2xs">PROTOCOL</div>
             <div className="font-medium mt-0.5">{active.protocol}</div>
           </div>
           <div>
-            <div className="text-muted-foreground text-[11px]">MODEL</div>
+            <div className="text-muted-foreground text-2xs">MODEL</div>
             <div className="font-medium mt-0.5 truncate">{active.model}</div>
           </div>
           <div>
-            <div className="text-muted-foreground text-[11px]">BASE URL</div>
+            <div className="text-muted-foreground text-2xs">BASE URL</div>
             <div className="font-medium mt-0.5 truncate" title={active.baseUrl}>
               {active.baseUrl}
             </div>
@@ -147,7 +147,7 @@ export function AITab() {
           </div>
         </div>
 
-        <div className="border border-border rounded-lg bg-muted/20 p-6 flex flex-col items-center gap-4">
+        <div className="border border-border rounded-lg bg-muted p-6 flex flex-col items-center gap-4">
           <div className="w-[320px] max-w-full">
             <ExternalAIAssistant
               mode={sandboxMode}
@@ -161,7 +161,7 @@ export function AITab() {
 
           {lastInjectedPayload && (
             <div className="w-full border border-border rounded-lg bg-card p-3 space-y-1.5">
-              <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+              <div className="flex items-center justify-between text-2xs font-mono text-muted-foreground">
                 <span>LAST INJECTED PAYLOAD</span>
                 <button
                   type="button"
@@ -171,7 +171,7 @@ export function AITab() {
                   清除
                 </button>
               </div>
-              <pre className="text-[11px] font-mono text-foreground overflow-x-auto leading-relaxed">
+              <pre className="text-2xs font-mono text-foreground overflow-x-auto leading-relaxed">
                 {JSON.stringify(lastInjectedPayload, null, 2)}
               </pre>
             </div>
