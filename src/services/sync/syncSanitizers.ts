@@ -1,5 +1,8 @@
 import type {
+  AuthoritySource,
+  FoodDataSource,
   FoodItem,
+  FoodMicronutrients,
   FoodRecipe,
   FoodLog,
   FoodLogEntryType,
@@ -18,9 +21,90 @@ function asRecord(input: unknown): Record<string, unknown> {
   return typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
 }
 
+const VALID_AUTHORITIES: ReadonlySet<AuthoritySource> = new Set([
+  'USDA',
+  'CFCT',
+  'TFDA',
+  'MEXT',
+  'AFCD',
+  'CoFID',
+]);
+
+const MICRONUTRIENT_KEYS: ReadonlyArray<keyof FoodMicronutrients> = [
+  'potassium',
+  'calcium',
+  'magnesium',
+  'iron',
+  'zinc',
+  'selenium',
+  'vitaminA',
+  'vitaminC',
+  'vitaminD',
+  'vitaminE',
+  'vitaminB1',
+  'vitaminB2',
+  'vitaminB3',
+  'vitaminB6',
+  'vitaminB12',
+  'folate',
+  'cholesterol',
+  'omega3EPA',
+  'omega3DHA',
+  'omega3ALA',
+  'leucine',
+];
+
+/** 將廢棄率或可食率正規化至 [0, 1]，無效值則剔除 */
+function sanitizeRate(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  const num = Number(value);
+  if (!Number.isFinite(num)) return undefined;
+  return Math.min(1, Math.max(0, num));
+}
+
+/** 清洗權威資料庫溯源資訊 */
+function sanitizeFoodDataSource(rawInput: unknown): FoodDataSource | undefined {
+  if (typeof rawInput !== 'object' || rawInput === null) return undefined;
+  const ds = asRecord(rawInput);
+  if (typeof ds.authority !== 'string' || !VALID_AUTHORITIES.has(ds.authority as AuthoritySource)) {
+    return undefined;
+  }
+  const sourceId = typeof ds.sourceId === 'string' ? ds.sourceId.trim() : '';
+  if (!sourceId) return undefined;
+
+  const sourceName = typeof ds.sourceName === 'string' ? ds.sourceName.trim() : '';
+  const verifiedAt = typeof ds.verifiedAt === 'string' ? ds.verifiedAt.trim() : '';
+
+  return {
+    authority: ds.authority as AuthoritySource,
+    sourceId,
+    ...(sourceName ? { sourceName } : {}),
+    ...(verifiedAt ? { verifiedAt } : {}),
+  };
+}
+
+/** 清洗微量元素儲備庫，僅保留有效非負數值 */
+function sanitizeFoodMicronutrients(rawInput: unknown): FoodMicronutrients | undefined {
+  if (typeof rawInput !== 'object' || rawInput === null) return undefined;
+  const rawMicros = asRecord(rawInput);
+  const cleaned: FoodMicronutrients = {};
+  let hasAny = false;
+
+  for (const key of MICRONUTRIENT_KEYS) {
+    const val = rawMicros[key];
+    if (val === undefined || val === null || val === '') continue;
+    const num = Number(val);
+    if (!Number.isFinite(num) || num < 0) continue;
+    cleaned[key] = num;
+    hasAny = true;
+  }
+
+  return hasAny ? cleaned : undefined;
+}
+
 /**
  * 清洗單品食材：強制收斂為純淨公制 SI（g / ml、kcal），徹底剔除歷史殘留的 rawNutrition / labelBasisSize / labelBasisUnit
- * 同步完整保留各次級營養素（sugar, fiber, saturatedFat, transFat, sodium）
+ * 同步完整保留各次級營養素、稱重廢棄/可食率、權威資料庫溯源與微量元素
  */
 export function sanitizeFoodItem(rawInput: unknown): FoodItem {
   const raw = asRecord(rawInput);
@@ -42,6 +126,13 @@ export function sanitizeFoodItem(rawInput: unknown): FoodItem {
   const rawTransFat = raw.transFat !== undefined ? Number(raw.transFat) : undefined;
   const rawSodium = raw.sodium !== undefined ? Number(raw.sodium) : undefined;
 
+  const refuseRate = sanitizeRate(raw.refuseRate);
+  const edibleRate = sanitizeRate(raw.edibleRate);
+  const refuseDescription =
+    typeof raw.refuseDescription === 'string' ? raw.refuseDescription.trim() : '';
+  const dataSource = sanitizeFoodDataSource(raw.dataSource);
+  const micros = sanitizeFoodMicronutrients(raw.micros);
+
   return {
     id: rawId,
     name: String(raw.name || '').trim(),
@@ -62,6 +153,11 @@ export function sanitizeFoodItem(rawInput: unknown): FoodItem {
       ? { transFat: Math.max(0, rawTransFat) }
       : {}),
     ...(rawSodium !== undefined && !Number.isNaN(rawSodium) ? { sodium: Math.max(0, rawSodium) } : {}),
+    ...(refuseRate !== undefined ? { refuseRate } : {}),
+    ...(edibleRate !== undefined ? { edibleRate } : {}),
+    ...(refuseDescription ? { refuseDescription } : {}),
+    ...(dataSource ? { dataSource } : {}),
+    ...(micros ? { micros } : {}),
     isCustom,
     isArchived: Boolean(raw.isArchived),
     createdAt: Number(raw.createdAt) || Date.now(),
@@ -275,17 +371,34 @@ export function sanitizeWorkoutLog(logInput: unknown): WorkoutLog {
             sets: Array.isArray(group.sets)
               ? group.sets.map((sInput: unknown, idx: number) => {
                   const s = asRecord(sInput);
+                  const rawWeight =
+                    s.weight !== undefined && s.weight !== null && s.weight !== ''
+                      ? Number(s.weight)
+                      : undefined;
+                  const rawReps =
+                    s.reps !== undefined && s.reps !== null && s.reps !== ''
+                      ? Number(s.reps)
+                      : undefined;
+                  const rawRev =
+                    s.rev !== undefined && s.rev !== null && s.rev !== ''
+                      ? Number(s.rev)
+                      : undefined;
                   return {
                     id: String(s.id || `set-${idx}`),
                     setNumber: Number(s.setNumber) || idx + 1,
-                    weight: Number(s.weight) || 0,
-                    reps: Number(s.reps) || 0,
+                    ...(rawWeight !== undefined && Number.isFinite(rawWeight)
+                      ? { weight: rawWeight }
+                      : {}),
+                    ...(rawReps !== undefined && Number.isFinite(rawReps) ? { reps: rawReps } : {}),
                     isCompleted: Boolean(s.isCompleted),
                     ...(s.rpe !== undefined ? { rpe: Number(s.rpe) } : {}),
                     ...(s.durationSeconds !== undefined ? { durationSeconds: Number(s.durationSeconds) } : {}),
                     ...(s.distanceKm !== undefined ? { distanceKm: Number(s.distanceKm) } : {}),
                     ...(s.isWarmup !== undefined ? { isWarmup: Boolean(s.isWarmup) } : {}),
                     ...(s.updatedAt !== undefined ? { updatedAt: Number(s.updatedAt) } : {}),
+                    ...(rawRev !== undefined && Number.isInteger(rawRev) && rawRev >= 0
+                      ? { rev: rawRev }
+                      : {}),
                   };
                 })
               : [],

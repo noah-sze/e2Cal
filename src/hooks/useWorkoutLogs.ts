@@ -88,9 +88,6 @@ export function useWorkoutLogs(date?: string) {
     const newWorkout: WorkoutLog = {
       date: data.date,
       routineId: data.routineId,
-      startTime: data.startTime,
-      endTime: data.endTime,
-      durationMinutes: data.durationMinutes,
       exercises: cleanExercises.map((g) => ({
         ...g,
         sets: (g.sets || []).map((s) => ({ ...s, updatedAt: s.updatedAt ?? now })),

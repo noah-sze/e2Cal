@@ -137,7 +137,6 @@ export interface ExportWorkoutExercise {
 
 export interface ExportWorkoutSession {
   routineTitle?: string;
-  durationMinutes?: number;
   exercises: ExportWorkoutExercise[];
 }
 
@@ -616,9 +615,6 @@ function buildWorkoutSection(
 
     return {
       ...(routineTitle ? { routineTitle } : {}),
-      ...(typeof w.durationMinutes === 'number' && w.durationMinutes > 0
-        ? { durationMinutes: w.durationMinutes }
-        : {}),
       exercises,
     };
   });

@@ -93,30 +93,46 @@ export function sanitizeEquipment(rawInput: unknown): Equipment {
   };
 }
 
+/** 僅保留有限數值，剔除 null、空字串與 NaN / Infinity */
+function finiteOrUndefined(val: unknown): number | undefined {
+  if (val === undefined || val === null || val === '') return undefined;
+  const num = Number(val);
+  return Number.isFinite(num) ? num : undefined;
+}
+
 export function sanitizeBodyMetric(rawInput: unknown): BodyMetric {
   const raw = asRecord(rawInput);
   const rawId = String(raw.id || uuidv4());
+  const weight = finiteOrUndefined(raw.weight);
+  const bodyFat = finiteOrUndefined(raw.bodyFat) ?? finiteOrUndefined(raw.bodyFatPercentage);
+  const muscleMass = finiteOrUndefined(raw.muscleMass);
+  const waistCm = finiteOrUndefined(raw.waistCm);
+  const hipsCm = finiteOrUndefined(raw.hipsCm);
+  const chestCm = finiteOrUndefined(raw.chestCm);
+  const shouldersCm = finiteOrUndefined(raw.shouldersCm);
+  const armsCm = finiteOrUndefined(raw.armsCm);
+  const thighsCm = finiteOrUndefined(raw.thighsCm);
+  const calvesCm = finiteOrUndefined(raw.calvesCm);
+  const waterMl = finiteOrUndefined(raw.waterMl);
+  const rev = finiteOrUndefined(raw.rev);
+
   return {
     id: rawId,
     date: String(raw.date || ''),
-    ...(raw.weight !== undefined ? { weight: Number(raw.weight) } : {}),
-    ...(raw.bodyFat !== undefined
-      ? { bodyFat: Number(raw.bodyFat) }
-      : raw.bodyFatPercentage !== undefined
-      ? { bodyFat: Number(raw.bodyFatPercentage) }
-      : {}),
-    ...(raw.muscleMass !== undefined ? { muscleMass: Number(raw.muscleMass) } : {}),
-    ...(raw.waistCm !== undefined ? { waistCm: Number(raw.waistCm) } : {}),
-    ...(raw.hipsCm !== undefined ? { hipsCm: Number(raw.hipsCm) } : {}),
-    ...(raw.chestCm !== undefined ? { chestCm: Number(raw.chestCm) } : {}),
-    ...(raw.shouldersCm !== undefined ? { shouldersCm: Number(raw.shouldersCm) } : {}),
-    ...(raw.armsCm !== undefined ? { armsCm: Number(raw.armsCm) } : {}),
-    ...(raw.thighsCm !== undefined ? { thighsCm: Number(raw.thighsCm) } : {}),
-    ...(raw.calvesCm !== undefined ? { calvesCm: Number(raw.calvesCm) } : {}),
-    ...(raw.waterMl !== undefined ? { waterMl: Number(raw.waterMl) } : {}),
+    ...(weight !== undefined ? { weight } : {}),
+    ...(bodyFat !== undefined ? { bodyFat } : {}),
+    ...(muscleMass !== undefined ? { muscleMass } : {}),
+    ...(waistCm !== undefined ? { waistCm } : {}),
+    ...(hipsCm !== undefined ? { hipsCm } : {}),
+    ...(chestCm !== undefined ? { chestCm } : {}),
+    ...(shouldersCm !== undefined ? { shouldersCm } : {}),
+    ...(armsCm !== undefined ? { armsCm } : {}),
+    ...(thighsCm !== undefined ? { thighsCm } : {}),
+    ...(calvesCm !== undefined ? { calvesCm } : {}),
+    ...(waterMl !== undefined ? { waterMl } : {}),
     createdAt: Number(raw.createdAt) || Date.now(),
     updatedAt: Number(raw.updatedAt) || Date.now(),
-    ...(raw.rev !== undefined ? { rev: Number(raw.rev) } : {}),
+    ...(rev !== undefined ? { rev } : {}),
   };
 }
 

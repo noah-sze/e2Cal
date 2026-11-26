@@ -368,4 +368,26 @@ describe('importBackup', () => {
     const emptyBlob = new Blob(['not a zip'], { type: 'text/plain' });
     await expect(importBackup(emptyBlob)).rejects.toThrow('INVALID_BACKUP_FILE');
   });
+
+  it('sanitizeBodyMetric 應過濾 NaN、null 與空字串，並保留有效數值', async () => {
+    const { sanitizeBodyMetric } = await import('./importBackup');
+    const cleaned = sanitizeBodyMetric({
+      id: 'bm-1',
+      date: '2026-11-08',
+      weight: 70.5,
+      bodyFat: null,
+      bodyFatPercentage: '',
+      waistCm: Number.NaN,
+      chestCm: '98.5',
+      armsCm: 'invalid',
+      rev: 2,
+    });
+
+    expect(cleaned.weight).toBe(70.5);
+    expect(cleaned.chestCm).toBe(98.5);
+    expect(cleaned.rev).toBe(2);
+    expect('bodyFat' in cleaned).toBe(false);
+    expect('waistCm' in cleaned).toBe(false);
+    expect('armsCm' in cleaned).toBe(false);
+  });
 });

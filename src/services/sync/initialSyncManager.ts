@@ -1,4 +1,10 @@
-import { db, withAutoSyncSuppressed } from '@/services/db/db';
+import {
+  db,
+  withAutoSyncSuppressed,
+  getLocalEntityTombstones,
+  setLocalEntityTombstones,
+  type EntityTombstoneMap,
+} from '@/services/db/db';
 import type {
   FoodItem,
   FoodRecipe,
@@ -13,6 +19,7 @@ import type {
 import {
   listRemoteFolder,
   downloadJsonFile,
+  uploadJsonFile,
   type DropboxFileMetadata,
 } from './dropboxClient';
 import {
@@ -40,6 +47,7 @@ import i18n from '@/i18n/config';
 import { toast } from '@/components/ui/toast';
 import {
   mergeEntities,
+  mergeEntityTombstoneMaps,
   mergeWorkoutLogs,
   mergeDietLogsByDate,
   getNormalizedTimestamp,
@@ -94,6 +102,8 @@ interface StagedData {
   workoutLogs: WorkoutLog[];
   bodyMetrics: BodyMetric[];
   revs: Record<string, string>;
+  tombstones: EntityTombstoneMap;
+  tombstonesChangedRemote: boolean;
 }
 
 interface InitialSyncStaging {
@@ -122,6 +132,8 @@ let staging: InitialSyncStaging = {
     workoutLogs: [],
     bodyMetrics: [],
     revs: {},
+    tombstones: {},
+    tombstonesChangedRemote: false,
   },
 };
 
@@ -182,6 +194,8 @@ export async function startInitialSync(
       workoutLogs: [],
       bodyMetrics: [],
       revs: {},
+      tombstones: {},
+      tombstonesChangedRemote: false,
     },
   };
 
@@ -374,7 +388,15 @@ async function executeDownloadQueue(): Promise<void> {
     (f) => f.name.endsWith('.json') && !f.name.endsWith('manifest.json')
   );
 
+  const staged = staging.downloaded;
+  let remoteTombstones: EntityTombstoneMap = {};
+
   if (jsonFiles.length === 0) {
+    const nowTs = Date.now();
+    const localTombstones = getLocalEntityTombstones(nowTs);
+    const mTomb = mergeEntityTombstoneMaps(localTombstones, remoteTombstones, nowTs);
+    staged.tombstones = mTomb.merged;
+    staged.tombstonesChangedRemote = mTomb.changedRemote;
     await executeAtomicCommit();
     return;
   }
@@ -386,8 +408,6 @@ async function executeDownloadQueue(): Promise<void> {
     totalFilesCount: total,
     downloadedFilesCount: 0,
   });
-
-  const staged = staging.downloaded;
 
   try {
     for (const file of jsonFiles) {
@@ -428,6 +448,9 @@ async function executeDownloadQueue(): Promise<void> {
       } else if (path.startsWith('/body/metrics/')) {
         const data = await downloadJsonFile<BodyMetric[]>(path);
         if (data) staged.bodyMetrics.push(...data);
+      } else if (path === '/deleted_entities.json') {
+        const data = await downloadJsonFile<EntityTombstoneMap>(path);
+        if (data) remoteTombstones = data;
       }
 
       staged.revs[path] = file.rev;
@@ -439,6 +462,12 @@ async function executeDownloadQueue(): Promise<void> {
         progressPercent: percent,
       });
     }
+
+    const nowTs = Date.now();
+    const localTombstones = getLocalEntityTombstones(nowTs);
+    const mTomb = mergeEntityTombstoneMaps(localTombstones, remoteTombstones, nowTs);
+    staged.tombstones = mTomb.merged;
+    staged.tombstonesChangedRemote = mTomb.changedRemote;
 
     await executeAtomicCommit();
   } catch (err: unknown) {
@@ -534,8 +563,11 @@ async function executeAtomicCommit(): Promise<void> {
       )
       );
       setCachedRevs(staged.revs);
+      setLocalEntityTombstones(staged.tombstones);
     } else {
       // 合併 (merge)
+      const nowTs = Date.now();
+      const tombstones = staged.tombstones;
       await withAutoSyncSuppressed(() =>
         db.transaction(
         'rw',
@@ -574,35 +606,61 @@ async function executeAtomicCommit(): Promise<void> {
           ]);
 
           const mBase = mergeEntities(localBaseInfos, staged.baseInfos);
-          const mFood = mergeEntities(localFoods, staged.foods);
-          const mRecipe = mergeEntities(localRecipes, staged.recipes);
+          const mFood = mergeEntities(localFoods, staged.foods, tombstones.foods, nowTs);
+          const mRecipe = mergeEntities(localRecipes, staged.recipes, tombstones.recipes, nowTs);
           const mDiet = mergeDietLogsByDate(localDietLogs, staged.dailyDietLogs);
-          const mEx = mergeEntities(localExercises, staged.exercises);
-          const mEq = mergeEntities(localEquipments, staged.equipments);
-          const mRoutine = mergeEntities(localRoutines, staged.routines);
-          const mWLogs = mergeWorkoutLogs(localWorkoutLogs, staged.workoutLogs);
-          const mMetrics = mergeEntities(localMetrics, staged.bodyMetrics);
+          const mEx = mergeEntities(localExercises, staged.exercises, tombstones.exercises, nowTs);
+          const mEq = mergeEntities(localEquipments, staged.equipments, tombstones.equipments, nowTs);
+          const mRoutine = mergeEntities(localRoutines, staged.routines, tombstones.routines, nowTs);
+          const mWLogs = mergeWorkoutLogs(localWorkoutLogs, staged.workoutLogs, tombstones.workout_logs, nowTs);
+          const mMetrics = mergeEntities(localMetrics, staged.bodyMetrics, tombstones.body_metrics, nowTs);
 
           if (mBase.merged.length) await db.user_base_info.bulkPut(mBase.merged);
+          if (mFood.deletedIds.length) {
+            await db.foods.bulkDelete(mFood.deletedIds);
+            clearFoodsCache();
+          }
           if (mFood.merged.length) {
             await db.foods.bulkPut(mFood.merged);
             clearFoodsCache();
           }
+          if (mRecipe.deletedIds.length) {
+            await db.recipes.bulkDelete(mRecipe.deletedIds);
+            clearRecipesCache();
+          }
           if (mRecipe.merged.length) await db.recipes.bulkPut(mRecipe.merged);
           if (mDiet.merged.length) await db.daily_diet_logs.bulkPut(mDiet.merged);
+          if (mEx.deletedIds.length) {
+            await db.exercises.bulkDelete(mEx.deletedIds);
+            clearExercisesCache();
+          }
           if (mEx.merged.length) await db.exercises.bulkPut(mEx.merged);
+          if (mEq.deletedIds.length) await db.equipments.bulkDelete(mEq.deletedIds);
           if (mEq.merged.length) await db.equipments.bulkPut(mEq.merged);
+          if (mRoutine.deletedIds.length) await db.routines.bulkDelete(mRoutine.deletedIds);
           if (mRoutine.merged.length) await db.routines.bulkPut(mRoutine.merged);
+          if (mWLogs.deletedIds.length) await db.workout_logs.bulkDelete(mWLogs.deletedIds);
           if (mWLogs.merged.length) await db.workout_logs.bulkPut(mWLogs.merged);
+          if (mMetrics.deletedIds.length) await db.body_metrics.bulkDelete(mMetrics.deletedIds);
           if (mMetrics.merged.length) await db.body_metrics.bulkPut(mMetrics.merged);
         }
       )
       );
 
+      setLocalEntityTombstones(staged.tombstones);
+
       // 合併後上傳全量數據確保雲端與本機雙向一致
       const cachedRevs = { ...getCachedRevs(), ...staged.revs };
       const pushedTimes = getPushedTimes();
       await uploadAllLocalData(now, cachedRevs, pushedTimes);
+      if (staged.tombstonesChangedRemote) {
+        cachedRevs['/deleted_entities.json'] = await uploadJsonFile(
+          '/deleted_entities.json',
+          staged.tombstones,
+          cachedRevs['/deleted_entities.json']
+        );
+        pushedTimes['deleted_entities'] = now;
+      }
       setCachedRevs(cachedRevs);
       setPushedTimes(pushedTimes);
     }
@@ -673,6 +731,8 @@ export function cancelInitialSync(): void {
       workoutLogs: [],
       bodyMetrics: [],
       revs: {},
+      tombstones: {},
+      tombstonesChangedRemote: false,
     },
   };
 

@@ -272,6 +272,68 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
       expect((cleaned.exercises[0] as any).category).toBeUndefined();
       expect((cleaned.exercises[0] as any).notes).toBeUndefined();
     });
+
+    it('應保留組數 rev（非負整數）並維持有氧/計時組之 weight/reps 可選性，不強行轉為 0', () => {
+      const log = {
+        id: 'wlog-cardio',
+        date: '2026-11-06',
+        exercises: [
+          {
+            exerciseId: 'ex_run',
+            sets: [
+              {
+                id: 's-cardio',
+                setNumber: 1,
+                durationSeconds: 1800,
+                distanceKm: 5,
+                isCompleted: true,
+                rev: 3,
+              },
+              {
+                id: 's-zero',
+                setNumber: 2,
+                weight: 0,
+                reps: 0,
+                isCompleted: true,
+                rev: 0,
+              },
+              {
+                id: 's-bad-rev',
+                setNumber: 3,
+                weight: Number.NaN,
+                reps: '',
+                isCompleted: false,
+                rev: -1,
+              },
+            ],
+          },
+        ],
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+
+      const cleaned = sanitizeWorkoutLog(log);
+      const sets = cleaned.exercises[0].sets;
+
+      expect(sets[0]).toEqual({
+        id: 's-cardio',
+        setNumber: 1,
+        durationSeconds: 1800,
+        distanceKm: 5,
+        isCompleted: true,
+        rev: 3,
+      });
+      expect('weight' in sets[0]).toBe(false);
+      expect('reps' in sets[0]).toBe(false);
+
+      expect(sets[1].weight).toBe(0);
+      expect(sets[1].reps).toBe(0);
+      expect(sets[1].rev).toBe(0);
+
+      expect('weight' in sets[2]).toBe(false);
+      expect('reps' in sets[2]).toBe(false);
+      expect('rev' in sets[2]).toBe(false);
+    });
   });
 
   describe('sanitizeUserBaseInfo', () => {
@@ -469,6 +531,92 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
       expect(cleaned.saturatedFat).toBe(3.1);
       expect(cleaned.transFat).toBe(0);
       expect(cleaned.sodium).toBe(142);
+    });
+
+    it('應完整保留 refuseRate, edibleRate, refuseDescription, dataSource 與 micros', () => {
+      const authorityFood = {
+        id: 'food-authority-1',
+        name: '帶骨雞腿',
+        category: 'natural',
+        servingSize: 100,
+        servingUnit: 'g',
+        calories: 165,
+        carbs: 0,
+        protein: 19.2,
+        fat: 9.4,
+        refuseRate: 0.21,
+        edibleRate: 0.79,
+        refuseDescription: ' bone 21% ',
+        dataSource: {
+          authority: 'TFDA',
+          sourceId: 'TFDA-00123',
+          sourceName: '肉雞帶骨腿肉',
+          verifiedAt: '2026-01-01',
+        },
+        micros: {
+          potassium: 240,
+          iron: 1.1,
+          zinc: 1.8,
+        },
+        isCustom: false,
+      };
+
+      const cleaned = sanitizeFoodItem(authorityFood);
+      expect(cleaned.refuseRate).toBe(0.21);
+      expect(cleaned.edibleRate).toBe(0.79);
+      expect(cleaned.refuseDescription).toBe('bone 21%');
+      expect(cleaned.dataSource).toEqual({
+        authority: 'TFDA',
+        sourceId: 'TFDA-00123',
+        sourceName: '肉雞帶骨腿肉',
+        verifiedAt: '2026-01-01',
+      });
+      expect(cleaned.micros).toEqual({
+        potassium: 240,
+        iron: 1.1,
+        zinc: 1.8,
+      });
+    });
+
+    it('應對無效或超界之 refuseRate/edibleRate、非法 authority 與無效 micros 進行安全鉗制或剔除', () => {
+      const invalidFood = {
+        id: 'food-invalid-meta',
+        name: '測試食材',
+        category: 'natural',
+        servingSize: 100,
+        servingUnit: 'g',
+        calories: 100,
+        carbs: 10,
+        protein: 10,
+        fat: 2,
+        refuseRate: 1.5,
+        edibleRate: -0.2,
+        refuseDescription: '   ',
+        dataSource: {
+          authority: 'UNKNOWN_DB',
+          sourceId: '123',
+        },
+        micros: {
+          potassium: -10,
+          iron: Number.NaN,
+        },
+        isCustom: true,
+      };
+
+      const cleaned = sanitizeFoodItem(invalidFood);
+      expect(cleaned.refuseRate).toBe(1);
+      expect(cleaned.edibleRate).toBe(0);
+      expect('refuseDescription' in cleaned).toBe(false);
+      expect('dataSource' in cleaned).toBe(false);
+      expect('micros' in cleaned).toBe(false);
+
+      const nanRateFood = sanitizeFoodItem({
+        ...invalidFood,
+        refuseRate: Number.NaN,
+        dataSource: { authority: 'USDA', sourceId: '   ' },
+      });
+      expect('refuseRate' in nanRateFood).toBe(false);
+      expect('dataSource' in nanRateFood).toBe(false);
     });
   });
 });

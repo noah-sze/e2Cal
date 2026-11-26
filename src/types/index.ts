@@ -318,6 +318,7 @@ export interface WorkoutSet {
   isWarmup?: boolean;
   isCompleted: boolean;
   updatedAt?: number;
+  rev?: number;
 }
 
 /**
@@ -342,9 +343,6 @@ export interface WorkoutLog {
   id: string;
   date: string; // YYYY-MM-DD
   routineId?: string; // 課表 ID（選填，若由課表載入）
-  startTime?: number;
-  endTime?: number;
-  durationMinutes?: number;
   exercises: WorkoutExerciseGroup[];
   /** 組數級刪除墓碑 (setId -> deletedAt timestamp)，用於多端同時編輯同一訓練日誌防復活 */
   deletedSetIds?: Record<string, number>;
@@ -373,7 +371,6 @@ export interface BodyMetric {
   thighsCm?: number;
   calvesCm?: number;
   waterMl?: number;
-  notes?: string;
   createdAt: number;
   updatedAt: number;
   rev?: number;

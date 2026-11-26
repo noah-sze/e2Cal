@@ -192,16 +192,24 @@ export function getNormalizedTimestamp(ts?: number | string): number {
 function preserveNutrientsIfMissing<T>(chosen: T, fallback: T): T {
   const c = chosen as Record<string, unknown>;
   const f = fallback as Record<string, unknown>;
-  const keys = ['sugar', 'fiber', 'saturatedFat', 'transFat', 'sodium'] as const;
+  const numericKeys = ['sugar', 'fiber', 'saturatedFat', 'transFat', 'sodium', 'refuseRate', 'edibleRate'] as const;
+  const metaKeys = ['refuseDescription', 'dataSource', 'micros'] as const;
   let enhanced = false;
   let result: Record<string, unknown> | null = null;
-  for (const k of keys) {
-    if (result ? result[k] === undefined : c[k] === undefined) {
+  for (const k of numericKeys) {
+    if ((result ? result[k] : c[k]) === undefined) {
       if (typeof f[k] === 'number' && !Number.isNaN(f[k])) {
         if (!result) result = { ...c };
         result[k] = f[k];
         enhanced = true;
       }
+    }
+  }
+  for (const k of metaKeys) {
+    if ((result ? result[k] : c[k]) === undefined && f[k] !== undefined) {
+      if (!result) result = { ...c };
+      result[k] = f[k];
+      enhanced = true;
     }
   }
   return enhanced && result ? (result as T) : chosen;
@@ -438,12 +446,15 @@ function mergeDietEntries(
         const localEntryRev = localEntry.rev || 1;
         const remoteEntryRev = remoteEntry.rev || 1;
 
-        if (remoteEntryTime > localEntryTime || (remoteEntryTime === localEntryTime && remoteEntryRev > localEntryRev)) {
+        if (
+          remoteEntryRev > localEntryRev ||
+          (remoteEntryRev === localEntryRev && remoteEntryTime > localEntryTime)
+        ) {
           mergedEntries.push(remoteEntry);
           entriesChangedLocal = true;
         } else if (
-          localEntryTime > remoteEntryTime ||
-          (localEntryTime === remoteEntryTime && localEntryRev > remoteEntryRev)
+          localEntryRev > remoteEntryRev ||
+          (localEntryRev === remoteEntryRev && localEntryTime > remoteEntryTime)
         ) {
           mergedEntries.push(localEntry);
           entriesChangedRemote = true;
@@ -650,10 +661,14 @@ function mergeTwoWorkoutLogs(
           changedRemote = true;
         } else {
           if (delTs > 0 && latestTime > delTs) delete finalDeleted[setId];
-          if (rSetTime > lSetTime) {
+          const lSetRevRaw = (lSet as { rev?: unknown }).rev;
+          const rSetRevRaw = (rSet as { rev?: unknown }).rev;
+          const lSetRev = typeof lSetRevRaw === 'number' && Number.isFinite(lSetRevRaw) ? lSetRevRaw : 1;
+          const rSetRev = typeof rSetRevRaw === 'number' && Number.isFinite(rSetRevRaw) ? rSetRevRaw : 1;
+          if (rSetRev > lSetRev || (rSetRev === lSetRev && rSetTime > lSetTime)) {
             mergedSets.push(rSet);
             changedLocal = true;
-          } else if (lSetTime > rSetTime) {
+          } else if (lSetRev > rSetRev || (lSetRev === rSetRev && lSetTime > rSetTime)) {
             mergedSets.push(lSet);
             changedRemote = true;
           } else {
@@ -677,11 +692,6 @@ function mergeTwoWorkoutLogs(
     id: localLog.id,
     date: localLog.date,
     ...(headerSource.routineId ? { routineId: headerSource.routineId } : {}),
-    ...(headerSource.startTime !== undefined ? { startTime: headerSource.startTime } : {}),
-    ...(headerSource.endTime !== undefined ? { endTime: headerSource.endTime } : {}),
-    ...(headerSource.durationMinutes !== undefined
-      ? { durationMinutes: headerSource.durationMinutes }
-      : {}),
     exercises: mergedGroups,
     ...(hasDeleted ? { deletedSetIds: finalDeleted } : {}),
     createdAt: Math.min(
@@ -942,7 +952,17 @@ export async function uploadAllLocalData(
     bodyManifestData
   );
 
-  // 7. 全域清單 manifest.json
+  // 7. 跨端實體刪除墓碑 (/deleted_entities.json)
+  const localTombstones = getLocalEntityTombstones(Date.now());
+  if (Object.keys(localTombstones).length > 0) {
+    cachedRevs[DELETED_ENTITIES_PATH] = await uploadJsonFile(
+      DELETED_ENTITIES_PATH,
+      localTombstones
+    );
+    pushedTimes['deleted_entities'] = now;
+  }
+
+  // 8. 全域清單 manifest.json
   await uploadManifestFile(cachedRevs);
 }
 
@@ -1246,7 +1266,7 @@ export async function executeSync(
             if (dedupedDailyDietLogs.length) await db.daily_diet_logs.bulkPut(dedupedDailyDietLogs);
             if (exercises?.length) await db.exercises.bulkPut(exercises);
             if (equipments?.length) await db.equipments.bulkPut(equipments);
-            if (routines?.length) await db.routines.bulkPut(routines);
+            if (routines?.length) await db.routines.bulkPut(routines.map(sanitizeWorkoutRoutine));
             if (allWorkoutLogs.length) await db.workout_logs.bulkPut(allWorkoutLogs.map(sanitizeWorkoutLog));
             if (allBodyMetrics.length) await db.body_metrics.bulkPut(allBodyMetrics);
           }
@@ -1405,13 +1425,14 @@ export async function executeSync(
     // 7. 檢查 routines
     const routinesMeta = remoteFileMap.get('/workout/routines.json');
     if (routinesMeta && cachedRevs['/workout/routines.json'] !== routinesMeta.rev) {
-      const remoteList = (await downloadJsonFile<WorkoutRoutine[]>('/workout/routines.json')) || [];
+      const rawRemote = (await downloadJsonFile<WorkoutRoutine[]>('/workout/routines.json')) || [];
+      const remoteList = rawRemote.map(sanitizeWorkoutRoutine);
       const localList = await db.routines.toArray();
       const m = mergeEntities(localList, remoteList, mergedTombstones.routines, nowTs);
       if (m.hasLocalChanges) {
         await withAutoSyncSuppressed(async () => {
           if (m.deletedIds.length) await db.routines.bulkDelete(m.deletedIds);
-          if (m.merged.length) await db.routines.bulkPut(m.merged);
+          if (m.merged.length) await db.routines.bulkPut(m.merged.map(sanitizeWorkoutRoutine));
         });
         hasLocalModified = true;
       }
@@ -1423,6 +1444,7 @@ export async function executeSync(
     }
 
     // 8. 檢查 daily_diet_logs 各日分卷 (/nutrition/logs/YYYY-MM-DD.json)
+    const dirtyDietBuckets = new Set<string>();
     const remoteFoodBuckets = remoteFiles.filter(
       (f) =>
         f.path_lower.startsWith('/nutrition/logs/') &&
@@ -1461,11 +1483,14 @@ export async function executeSync(
               const mergedLog = { ...m.merged[0], id: localLog.id };
               await withAutoSyncSuppressed(() => db.daily_diet_logs.put(mergedLog));
               hasLocalModified = true;
-              pushedTimes[`diet_log_${bucket}`] = now;
-              pushedTimes[`diet_log_${bucket}_count`] = String(mergedLog.entries.length);
+              if (!m.hasRemoteChanges) {
+                pushedTimes[`diet_log_${bucket}`] = now;
+                pushedTimes[`diet_log_${bucket}_count`] = String(mergedLog.entries.length);
+              }
             }
             if (m.hasRemoteChanges) {
               hasRemoteModified = true;
+              dirtyDietBuckets.add(bucket);
             }
             if (!m.hasLocalChanges && !m.hasRemoteChanges) {
               pushedTimes[`diet_log_${bucket}`] = now;
@@ -1671,7 +1696,7 @@ export async function executeSync(
       const isTimeUpdated = !lastPushed || maxUpdated > getNormalizedTimestamp(lastPushed);
       const isMissingOnRemote = !cachedRevs[bucketPath];
 
-      if (isTimeUpdated || isCountChanged || isMissingOnRemote) {
+      if (isTimeUpdated || isCountChanged || isMissingOnRemote || dirtyDietBuckets.has(bucket)) {
         cachedRevs[bucketPath] = await uploadJsonFile(
           bucketPath,
           sanitizeDailyDietLog(dLog),
@@ -1735,6 +1760,18 @@ export async function executeSync(
       };
     }
 
+    for (const bMeta of remoteWorkoutBuckets) {
+      const bucket = bMeta.name.replace('.json', '');
+      if (!groupedLocalWorkoutLogs[bucket] && pushedTimes[`workout_log_${bucket}_count`] !== '0') {
+        const bucketPath = bMeta.path_lower;
+        cachedRevs[bucketPath] = await uploadJsonFile(bucketPath, [], cachedRevs[bucketPath]);
+        delete pushedTimes[`workout_log_${bucket}`];
+        pushedTimes[`workout_log_${bucket}_count`] = '0';
+        workoutLogsChanged = true;
+        hasRemoteModified = true;
+      }
+    }
+
     if (workoutLogsChanged || !cachedRevs['/workout/logs/manifest.json']) {
       const workoutManifest: BucketManifest = {
         version: 1,
@@ -1779,6 +1816,18 @@ export async function executeSync(
         count: bMetrics.length,
         updatedAt: maxUpdated,
       };
+    }
+
+    for (const bMeta of remoteBodyBuckets) {
+      const bucket = bMeta.name.replace('.json', '');
+      if (!groupedLocalMetrics[bucket] && pushedTimes[`body_metric_${bucket}_count`] !== '0') {
+        const bucketPath = bMeta.path_lower;
+        cachedRevs[bucketPath] = await uploadJsonFile(bucketPath, [], cachedRevs[bucketPath]);
+        delete pushedTimes[`body_metric_${bucket}`];
+        pushedTimes[`body_metric_${bucket}_count`] = '0';
+        bodyMetricsChanged = true;
+        hasRemoteModified = true;
+      }
     }
 
     if (bodyMetricsChanged || !cachedRevs['/body/metrics/manifest.json']) {

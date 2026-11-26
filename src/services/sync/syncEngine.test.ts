@@ -914,6 +914,14 @@ describe('syncErrorReason & Toast handling', () => {
     const toastSpy = vi.spyOn(toast, 'show');
 
     // Mock db tables
+    vi.spyOn(db.foods, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.recipes, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.daily_diet_logs, 'count').mockResolvedValue(1 as never);
+    vi.spyOn(db.exercises, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.equipments, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.routines, 'count').mockResolvedValue(1 as never);
+    vi.spyOn(db.workout_logs, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.body_metrics, 'count').mockResolvedValue(0 as never);
     vi.spyOn(db.user_base_info, 'toArray').mockResolvedValue([] as never);
     vi.spyOn(db.foods, 'toArray').mockResolvedValue([] as never);
     vi.spyOn(db.foods, 'bulkPut').mockResolvedValue([] as never);
@@ -980,6 +988,274 @@ describe('syncErrorReason & Toast handling', () => {
     const res3 = await executeSync('auto');
     expect(res3.success).toBe(false);
     expect(_getConflictRetryCount()).toBe(0);
+  });
+
+  it('preserves refuseRate, edibleRate, refuseDescription, dataSource, and micros during mergeEntities', () => {
+    interface TestFoodMeta {
+      id: string;
+      name: string;
+      rev: number;
+      updatedAt: number;
+      refuseRate?: number;
+      edibleRate?: number;
+      refuseDescription?: string;
+      dataSource?: { authority: 'USDA'; sourceId: string };
+      micros?: { potassiumMg?: number };
+    }
+    const local: TestFoodMeta[] = [
+      {
+        id: 'food-meta-1',
+        name: 'Chicken Wing',
+        rev: 1,
+        updatedAt: 1000,
+        refuseRate: 0.35,
+        edibleRate: 0.65,
+        refuseDescription: 'bones',
+        dataSource: { authority: 'USDA', sourceId: '171477' },
+        micros: { potassiumMg: 210 },
+      },
+    ];
+    const remote: TestFoodMeta[] = [
+      {
+        id: 'food-meta-1',
+        name: 'Chicken Wing Updated',
+        rev: 2,
+        updatedAt: 2000,
+      },
+    ];
+    const res = mergeEntities(local, remote);
+    expect(res.merged[0].name).toBe('Chicken Wing Updated');
+    expect(res.merged[0].refuseRate).toBe(0.35);
+    expect(res.merged[0].edibleRate).toBe(0.65);
+    expect(res.merged[0].refuseDescription).toBe('bones');
+    expect(res.merged[0].dataSource).toEqual({ authority: 'USDA', sourceId: '171477' });
+    expect(res.merged[0].micros).toEqual({ potassiumMg: 210 });
+  });
+
+  it('prioritizes rev over updatedAt for DietEntry and WorkoutSet LWW', () => {
+    const localDiet: DailyDietLog[] = [
+      {
+        id: 'd-1',
+        date: '2026-11-26',
+        meta: { activityLevel: 1.55, macroSplit: { carbs: 40, protein: 30, fat: 30 } },
+        entries: [
+          {
+            id: 'e-1',
+            date: '2026-11-26',
+            mealType: 'breakfast',
+            foodId: 'f1',
+            quantity: 100,
+            unit: 'g',
+            rev: 3,
+            createdAt: 1000,
+            updatedAt: 1000,
+          },
+        ],
+        createdAt: 1000,
+        updatedAt: 1000,
+      },
+    ];
+    const remoteDiet: DailyDietLog[] = [
+      {
+        id: 'd-1',
+        date: '2026-11-26',
+        meta: { activityLevel: 1.55, macroSplit: { carbs: 40, protein: 30, fat: 30 } },
+        entries: [
+          {
+            id: 'e-1',
+            date: '2026-11-26',
+            mealType: 'breakfast',
+            foodId: 'f1',
+            quantity: 250,
+            unit: 'g',
+            rev: 2,
+            createdAt: 1000,
+            updatedAt: 9999,
+          },
+        ],
+        createdAt: 1000,
+        updatedAt: 9999,
+      },
+    ];
+    const dietMerged = mergeDietLogsByDate(localDiet, remoteDiet);
+    expect(dietMerged.merged[0].entries[0].quantity).toBe(100);
+    expect(dietMerged.hasRemoteChanges).toBe(true);
+
+    const localW: WorkoutLog[] = [
+      {
+        id: 'w-rev',
+        date: '2026-11-26',
+        exercises: [
+          {
+            exerciseId: 'ex-1',
+            sets: [{ id: 's-1', setNumber: 1, weight: 80, reps: 8, isCompleted: true, rev: 4, updatedAt: 1000 } as WorkoutLog['exercises'][number]['sets'][number]],
+          },
+        ],
+        createdAt: 1000,
+        updatedAt: 1000,
+      },
+    ];
+    const remoteW: WorkoutLog[] = [
+      {
+        id: 'w-rev',
+        date: '2026-11-26',
+        exercises: [
+          {
+            exerciseId: 'ex-1',
+            sets: [{ id: 's-1', setNumber: 1, weight: 60, reps: 10, isCompleted: true, rev: 2, updatedAt: 9999 } as WorkoutLog['exercises'][number]['sets'][number]],
+          },
+        ],
+        createdAt: 1000,
+        updatedAt: 9999,
+      },
+    ];
+    const wMerged = mergeWorkoutLogs(localW, remoteW);
+    expect(wMerged.merged[0].exercises[0].sets[0].weight).toBe(80);
+    expect(wMerged.hasRemoteChanges).toBe(true);
+  });
+
+  it('uploads merged DailyDietLog on concurrent edit, sanitizes routines on Auto Pull, and empties deleted workout/body buckets', async () => {
+    setStoredTokens({
+      access_token: 'valid_token',
+      expires_in: 14400,
+      expires_at: Date.now() + 14400 * 1000,
+    });
+    localStorage.setItem(
+      'e2cal_dropbox_cached_revs',
+      JSON.stringify({
+        '/workout/logs/2026-11-25.json': 'rev_w1',
+        '/body/metrics/2026-11-25.json': 'rev_b1',
+      })
+    );
+    localStorage.setItem(
+      'e2cal_dropbox_pushed_times',
+      JSON.stringify({
+        'workout_log_2026-11-25_count': '1',
+        'body_metric_2026-11-25_count': '1',
+      })
+    );
+
+    const localDietLog: DailyDietLog = {
+      id: 'diet-local',
+      date: '2026-11-26',
+      meta: { activityLevel: 1.55, macroSplit: { carbs: 40, protein: 30, fat: 30 } },
+      entries: [
+        { id: 'local-e1', date: '2026-11-26', mealType: 'breakfast', foodId: 'f1', quantity: 100, unit: 'g', createdAt: 1000, updatedAt: 1000 },
+      ],
+      createdAt: 1000,
+      updatedAt: 1000,
+      rev: 1,
+    };
+    const remoteDietLog: DailyDietLog = {
+      id: 'diet-remote',
+      date: '2026-11-26',
+      meta: { activityLevel: 1.55, macroSplit: { carbs: 40, protein: 30, fat: 30 } },
+      entries: [
+        { id: 'remote-e2', date: '2026-11-26', mealType: 'lunch', foodId: 'f2', quantity: 150, unit: 'g', createdAt: 2000, updatedAt: 2000 },
+      ],
+      createdAt: 2000,
+      updatedAt: 2000,
+      rev: 2,
+    };
+
+    vi.spyOn(db.foods, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.recipes, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.daily_diet_logs, 'count').mockResolvedValue(1 as never);
+    vi.spyOn(db.exercises, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.equipments, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.routines, 'count').mockResolvedValue(1 as never);
+    vi.spyOn(db.workout_logs, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.body_metrics, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.user_base_info, 'toArray').mockResolvedValue([] as never);
+    vi.spyOn(db.foods, 'toArray').mockResolvedValue([] as never);
+    vi.spyOn(db.recipes, 'toArray').mockResolvedValue([] as never);
+    vi.spyOn(db.exercises, 'toArray').mockResolvedValue([] as never);
+    vi.spyOn(db.equipments, 'toArray').mockResolvedValue([] as never);
+    vi.spyOn(db.routines, 'toArray').mockResolvedValue([] as never);
+    const routinesBulkPut = vi.spyOn(db.routines, 'bulkPut').mockResolvedValue([] as never);
+    vi.spyOn(db.daily_diet_logs, 'where').mockReturnValue({
+      equals: () => ({ first: async () => localDietLog }),
+    } as never);
+    vi.spyOn(db.daily_diet_logs, 'put').mockResolvedValue('diet-local' as never);
+    vi.spyOn(db.daily_diet_logs, 'toArray').mockResolvedValue([
+      {
+        ...localDietLog,
+        entries: [...localDietLog.entries, ...remoteDietLog.entries],
+        updatedAt: 2000,
+        rev: 2,
+      },
+    ] as never);
+    vi.spyOn(db.workout_logs, 'filter').mockReturnValue({ toArray: async () => [] } as never);
+    vi.spyOn(db.workout_logs, 'toArray').mockResolvedValue([] as never);
+    vi.spyOn(db.body_metrics, 'filter').mockReturnValue({ toArray: async () => [] } as never);
+    vi.spyOn(db.body_metrics, 'toArray').mockResolvedValue([] as never);
+
+    const uploadedPayloads: Record<string, unknown> = {};
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+      const u = String(url);
+      if (u.includes('files/list_folder')) {
+        return new Response(
+          JSON.stringify({
+            entries: [
+              { '.tag': 'file', name: 'routines.json', path_lower: '/workout/routines.json', rev: 'rev_r1' },
+              { '.tag': 'file', name: '2026-11-26.json', path_lower: '/nutrition/logs/2026-11-26.json', rev: 'rev_d1' },
+              { '.tag': 'file', name: '2026-11-25.json', path_lower: '/workout/logs/2026-11-25.json', rev: 'rev_w1' },
+              { '.tag': 'file', name: '2026-11-25.json', path_lower: '/body/metrics/2026-11-25.json', rev: 'rev_b1' },
+            ],
+            has_more: false,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      const headers = (init?.headers ?? {}) as Record<string, string>;
+      if (u.includes('files/download')) {
+        const arg = String(headers['Dropbox-API-Arg'] || '');
+        if (arg.includes('/workout/routines.json')) {
+          return new Response(
+            JSON.stringify([
+              { id: 'rt-1', name: 'Push', exercises: [{ exerciseId: 'ex-1', defaultSets: 4 }], createdAt: 1000, updatedAt: 1000 },
+            ]),
+            { status: 200, headers: { 'Dropbox-API-Result': JSON.stringify({ rev: 'rev_r1' }) } }
+          );
+        }
+        if (arg.includes('/nutrition/logs/2026-11-26.json')) {
+          return new Response(JSON.stringify(remoteDietLog), {
+            status: 200,
+            headers: { 'Dropbox-API-Result': JSON.stringify({ rev: 'rev_d1' }) },
+          });
+        }
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { 'Dropbox-API-Result': JSON.stringify({ rev: 'rev_empty' }) },
+        });
+      }
+      if (u.includes('files/upload')) {
+        const arg = JSON.parse(headers['Dropbox-API-Arg'] || '{}');
+        const bodyText =
+          init?.body instanceof Blob
+            ? await init.body.text()
+            : typeof init?.body === 'string'
+              ? init.body
+              : new TextDecoder().decode(init?.body as ArrayBuffer);
+        uploadedPayloads[arg.path] = JSON.parse(bodyText);
+        return new Response(JSON.stringify({ rev: 'rev_new' }), { status: 200 });
+      }
+      return new Response('{}', { status: 200 });
+    });
+
+    const res = await executeSync('auto');
+    expect(res.success).toBe(true);
+    // 1. Concurrent DailyDietLog merge uploaded
+    const uploadedDiet = uploadedPayloads['/nutrition/logs/2026-11-26.json'] as DailyDietLog;
+    expect(uploadedDiet).toBeDefined();
+    expect(uploadedDiet.entries.map((e) => e.id)).toEqual(['local-e1', 'remote-e2']);
+    // 2. Routine sanitized on Auto Pull (no defaultSets)
+    expect(routinesBulkPut).toHaveBeenCalled();
+    const savedRoutines = routinesBulkPut.mock.calls[0][0];
+    expect('defaultSets' in savedRoutines[0].exercises[0]).toBe(false);
+    // 3. Empty workout & body buckets uploaded as []
+    expect(uploadedPayloads['/workout/logs/2026-11-25.json']).toEqual([]);
+    expect(uploadedPayloads['/body/metrics/2026-11-25.json']).toEqual([]);
   });
 });
 
