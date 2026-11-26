@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, Unlink, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -46,12 +45,6 @@ export function DropboxSyncDialog({
   actionLabel,
 }: DropboxSyncDialogProps) {
   const { t } = useTranslation();
-  const [confirmOverwriteRemote, setConfirmOverwriteRemote] = useState(false);
-
-  const handleDialogOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) setConfirmOverwriteRemote(false);
-    onOpenChange(nextOpen);
-  };
 
   const resolvedTitle =
     title ??
@@ -78,10 +71,10 @@ export function DropboxSyncDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <PrecisionDialogContent
         title={resolvedTitle}
-        onClose={() => handleDialogOpenChange(false)}
+        onClose={() => onOpenChange(false)}
         overlayClassName="z-[70]"
         className="z-[70]"
       >
@@ -176,51 +169,19 @@ export function DropboxSyncDialog({
                 )}
 
                 {(onOverwriteRemote || onSyncNow) && (
-                  confirmOverwriteRemote ? (
-                    <div className="border border-border rounded-lg p-3 bg-muted space-y-2.5">
-                      <p className="text-xs text-muted-foreground leading-relaxed font-sans">
-                        {t('settings.overwriteRemoteConfirm')}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={isSyncing}
-                          onClick={() => setConfirmOverwriteRemote(false)}
-                          className="flex-1 h-8 text-xs font-mono shadow-none"
-                        >
-                          {t('common.cancel')}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          disabled={isSyncing || !isOnline}
-                          onClick={() => {
-                            setConfirmOverwriteRemote(false);
-                            void (onOverwriteRemote
-                              ? onOverwriteRemote()
-                              : onSyncNow?.('overwrite_remote'));
-                          }}
-                          className="flex-1 h-8 text-xs font-mono shadow-none"
-                        >
-                          {t('settings.confirmOverwriteRemote')}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full h-9 text-xs font-medium rounded-lg"
-                      onClick={() => setConfirmOverwriteRemote(true)}
-                      disabled={isSyncing || !isOnline}
-                    >
-                      <UploadCloud className="size-3.5 mr-1.5" />
-                      <span>{t('settings.overwriteRemote')}</span>
-                    </Button>
-                  )
+                  <HoldToDeleteButton
+                    variant="destructive"
+                    disabled={isSyncing || !isOnline}
+                    text={t('settings.holdToOverwriteRemote', '長按全量覆寫雲端')}
+                    icon={<UploadCloud className="size-3.5 shrink-0" strokeWidth={1.8} />}
+                    hintText={t('initialSync.holdHint', '長按 0.5 秒確認')}
+                    onConfirm={() => {
+                      void (onOverwriteRemote
+                        ? onOverwriteRemote()
+                        : onSyncNow?.('overwrite_remote'));
+                    }}
+                    className="rounded-lg"
+                  />
                 )}
 
                 {onDisconnectDropbox && (

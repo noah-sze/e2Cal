@@ -1144,6 +1144,7 @@
       "forceRefreshOffline": "离线无法刷新",
       "forceRefreshConfirmDesc": "清除静态资源缓存并重新加载应用，本机数据不受影响。",
       "overwriteRemote": "全量覆写云端",
+      "holdToOverwriteRemote": "长按全量覆写云端",
       "overwriteRemoteConfirm": "以本机数据全量覆写 Dropbox 云端文件。",
       "confirmOverwriteRemote": "确认覆写"
     },

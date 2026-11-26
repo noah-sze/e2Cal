@@ -1144,6 +1144,7 @@
       "forceRefreshOffline": "Offline, cannot refresh",
       "forceRefreshConfirmDesc": "Clear static asset cache and reload the app. Local data stays intact.",
       "overwriteRemote": "Overwrite Cloud",
+      "holdToOverwriteRemote": "Hold to Overwrite Cloud",
       "overwriteRemoteConfirm": "Overwrite all Dropbox files with local data.",
       "confirmOverwriteRemote": "Overwrite"
     },
