@@ -431,73 +431,71 @@ export default function LandingPage() {
           {/*  四大記錄類型介紹單元格 (食物、複製、估算、平均)  */}
           <div className="border border-border divide-y divide-border rounded-lg bg-background overflow-hidden shadow-none">
             {/*  類型 1: 原型食物  */}
-            <div className="p-4 flex flex-col justify-between space-y-1 hover:bg-hover transition-colors">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                  {t('landing.diet.types.raw.tag', '01 // 原型食物')}
-                </span>
-                <span className="text-xs font-semibold text-foreground">
-                  {t('landing.diet.types.raw.title', '自煮精準記錄')}
+            <div className="p-4 flex flex-col space-y-1.5 hover:bg-hover transition-colors">
+              <div className="min-h-5 flex items-center">
+                <span className="font-mono text-xs font-semibold text-foreground uppercase tracking-wider leading-[1.38]">
+                  {t('landing.diet.types.raw.tag', '01 // 食材記錄')}
                 </span>
               </div>
-              <div className="font-sans text-xs text-muted-foreground leading-relaxed">
+              <div className="font-sans text-xs font-medium text-foreground leading-[1.38]">
+                {t('landing.diet.types.raw.title', '自煮備餐 · 準確記錄')}
+              </div>
+              <div className="font-sans text-xs text-muted-foreground leading-[1.38]">
                 {t('landing.diet.types.raw.desc', '自煮秤重基準。內置 420+ 種原型食物未烹生重常數，以物理克數 (g) 錄入，杜絕吸水與出水誤差。')}
               </div>
             </div>
 
             {/*  類型 2: 一鍵複製  */}
-            <div className="p-4 flex flex-col justify-between space-y-1 hover:bg-hover transition-colors">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+            <div className="p-4 flex flex-col space-y-1.5 hover:bg-hover transition-colors">
+              <div className="min-h-5 flex items-center">
+                <span className="font-mono text-xs font-semibold text-foreground uppercase tracking-wider leading-[1.38]">
                   {t('landing.diet.types.copy.tag', '02 // 一鍵複製')}
                 </span>
-                <span className="text-xs font-semibold text-foreground">
-                  {t('landing.diet.types.copy.title', '複用記錄')}
-                </span>
               </div>
-              <div className="font-sans text-xs text-muted-foreground leading-relaxed">
+              <div className="font-sans text-xs font-medium text-foreground leading-[1.38]">
+                {t('landing.diet.types.copy.title', '日常重複 · 一鍵複用')}
+              </div>
+              <div className="font-sans text-xs text-muted-foreground leading-[1.38]">
                 {t('landing.diet.types.copy.desc', '規律飲食無摩擦。當進餐內容高度重複時，一鍵帶入昨日或歷史同餐所有食物配方，零重複手動錄入。')}
               </div>
             </div>
 
             {/*  類型 3: 快速估算  */}
-            <div className="p-4 flex flex-col justify-between space-y-1 hover:bg-hover transition-colors">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+            <div className="p-4 flex flex-col space-y-1.5 hover:bg-hover transition-colors">
+              <div className="min-h-5 flex items-center gap-2">
+                <span className="font-mono text-xs font-semibold text-foreground uppercase tracking-wider leading-[1.38]">
                   {t('landing.diet.types.estimate.tag', '03 // 快速估算')}
                 </span>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded border border-foreground bg-foreground text-background font-mono text-3xs font-semibold leading-none whitespace-nowrap">
-                    {t('landing.diet.types.estimate.aiBadge')}
-                  </span>
-                  <span className="text-xs font-semibold text-foreground">
-                    {t('landing.diet.types.estimate.title', '外賣、聚餐')}
-                  </span>
-                </div>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded border border-foreground bg-foreground text-background font-mono text-3xs font-semibold leading-none whitespace-nowrap">
+                  {t('landing.diet.types.estimate.aiBadge')}
+                </span>
               </div>
-              <div className="font-sans text-xs text-muted-foreground leading-relaxed">
+              <div className="font-sans text-xs font-medium text-foreground leading-[1.38]">
+                {t('landing.diet.types.estimate.title', '外賣聚餐 · 粗略估算')}
+              </div>
+              <div className="font-sans text-xs text-muted-foreground leading-[1.38]">
                 {t('landing.diet.types.estimate.desc', '社交聚餐零焦慮。外食或無法秤重情境，依連鎖門市與場景秒級預設熱量與三大元素，過濾記錄壓力。')}
               </div>
             </div>
 
             {/*  類型 4: 滾動平均  */}
-            <div className="p-4 flex flex-col justify-between space-y-1 hover:bg-hover transition-colors">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+            <div className="p-4 flex flex-col space-y-1.5 hover:bg-hover transition-colors">
+              <div className="min-h-5 flex items-center">
+                <span className="font-mono text-xs font-semibold text-foreground uppercase tracking-wider leading-[1.38]">
                   {t('landing.diet.types.average.tag', '04 // 滾動平均')}
                 </span>
-                <span className="text-xs font-semibold text-foreground">
-                  {t('landing.diet.types.average.title', '懶得記')}
-                </span>
               </div>
-              <div className="font-sans text-xs text-muted-foreground leading-relaxed">
+              <div className="font-sans text-xs font-medium text-foreground leading-[1.38]">
+                {t('landing.diet.types.average.title', '忙碌略過 · 均值代入')}
+              </div>
+              <div className="font-sans text-xs text-muted-foreground leading-[1.38]">
                 {t('landing.diet.types.average.desc', '算我正常吃模式。依 7 日與 30 日歷史攝入自動代入平均預算，客觀平滑水分滯留與單日進食波動。')}
               </div>
             </div>
           </div>
 
-          {/*  飲食核心數據指標單元格 (3 欄水平並列底座)  */}
-          <div className="grid grid-cols-3 divide-x divide-border border border-border rounded-lg bg-background overflow-hidden shadow-none">
+          {/*  飲食核心數據指標單元格 (手機版一行一個，平板／桌面版 3 欄水平並列)  */}
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border border border-border rounded-lg bg-background overflow-hidden shadow-none">
             {/*  指標 1: 內置食物數量  */}
             <div className="p-3 bg-background flex flex-col space-y-1 hover:bg-hover transition-colors">
               <div className="text-xs text-muted-foreground uppercase tracking-wider h-4 flex items-center">

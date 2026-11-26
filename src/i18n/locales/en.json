@@ -1491,24 +1491,24 @@
         "desc": "Nutrition tracking should never be a chore. e2Cal skips preset bloat—import on demand from 6 authority databases (18,635 offline entries) with net and gross weighing, one-tap copy, and quick estimates.",
         "types": {
           "raw": {
-            "tag": "01 // Authority DB",
-            "title": "Raw & Net-Gross Scale",
+            "tag": "01 // Ingredient Log",
+            "title": "Home Cooking · Exact Logging",
             "desc": "Zero preset bloat. Import from 18,635 offline lab entries across 6 authority databases with net and gross refuse conversion."
           },
           "copy": {
             "tag": "02 // Copy Meal",
-            "title": "Zero-Effort Routine",
+            "title": "Routine Meals · Quick Reuse",
             "desc": "Frictionless routine eating. Duplicate past identical meals with a single tap, zero manual re-entry."
           },
           "estimate": {
             "tag": "03 // Quick Estimate",
-            "title": "Takeout & Social",
+            "title": "Dining Out · Rough Estimate",
             "aiBadge": "AI Assistant",
             "desc": "Zero anxiety when dining out. Preset calories and macros for common meals in seconds."
           },
           "average": {
             "tag": "04 // Rolling Average",
-            "title": "Effortless Average",
+            "title": "Busy Days · Auto Average",
             "desc": "Default to regular intake. Smooth out daily fluid retention and fluctuations with 7-day and 30-day averages."
           }
         },
