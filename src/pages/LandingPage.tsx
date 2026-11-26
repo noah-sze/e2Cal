@@ -462,13 +462,18 @@ export default function LandingPage() {
 
             {/*  類型 3: 快速估算  */}
             <div className="p-4 flex flex-col justify-between space-y-1 hover:bg-hover transition-colors">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
                   {t('landing.diet.types.estimate.tag', '03 // 快速估算')}
                 </span>
-                <span className="text-xs font-semibold text-foreground">
-                  {t('landing.diet.types.estimate.title', '外賣、聚餐')}
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded border border-foreground bg-foreground text-background font-mono text-3xs font-semibold leading-none whitespace-nowrap">
+                    {t('landing.diet.types.estimate.aiBadge')}
+                  </span>
+                  <span className="text-xs font-semibold text-foreground">
+                    {t('landing.diet.types.estimate.title', '外賣、聚餐')}
+                  </span>
+                </div>
               </div>
               <div className="font-sans text-xs text-muted-foreground leading-relaxed">
                 {t('landing.diet.types.estimate.desc', '社交聚餐零焦慮。外食或無法秤重情境，依連鎖門市與場景秒級預設熱量與三大元素，過濾記錄壓力。')}

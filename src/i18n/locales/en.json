@@ -1183,7 +1183,6 @@
     "keypad": {
       "clear": "Clear",
       "collapse": "Collapse",
-      "clear": "Clear",
       "backspace": "Backspace",
       "calculate": "Calculate",
       "done": "Done",
@@ -1480,13 +1479,13 @@
       "diet": {
         "tag": "[ 01 / Diet ]",
         "titleLine1": "Frictionless Nutrition Logging",
-        "titleLine2": "Accurate Ingredients, One-Tap Copy, Quick Estimate, Rolling Average",
-        "desc": "Nutrition tracking should never be a chore. e2Cal offers four flexible workflows: weighed raw ingredients, one-tap copy from yesterday, quick estimates for dining out, and historical rolling averages.",
+        "titleLine2": "User Library, Net & Gross Weighing, One-Tap Copy, Quick Estimate",
+        "desc": "Nutrition tracking should never be a chore. e2Cal skips preset bloat—import on demand from 6 authority databases (18,635 offline entries) with net and gross weighing, one-tap copy, and quick estimates.",
         "types": {
           "raw": {
-            "tag": "01 // Raw Food",
-            "title": "Precision Home Cooking",
-            "desc": "Physical scale baseline. Built-in constants for 420+ raw ingredients by grams, eliminating water retention bias."
+            "tag": "01 // Authority DB",
+            "title": "Raw & Net-Gross Scale",
+            "desc": "Zero preset bloat. Import from 18,635 offline lab entries across 6 authority databases with net and gross refuse conversion."
           },
           "copy": {
             "tag": "02 // Copy Meal",
@@ -1496,6 +1495,7 @@
           "estimate": {
             "tag": "03 // Quick Estimate",
             "title": "Takeout & Social",
+            "aiBadge": "AI Assistant",
             "desc": "Zero anxiety when dining out. Preset calories and macros for common meals in seconds."
           },
           "average": {
@@ -1506,10 +1506,10 @@
         },
         "metrics": {
           "foodDb": {
-            "label": "Food Library",
-            "value": "420+",
-            "unit": "items",
-            "desc": "Raw weight baseline, zero cooked variance"
+            "label": "Authority DBs",
+            "value": "18,635",
+            "unit": "entries",
+            "desc": "6 lab databases, on-demand offline import"
           },
           "recipes": {
             "label": "Custom Recipes",
@@ -1532,8 +1532,8 @@
       "workout": {
         "tag": "[ 02 / Workout ]",
         "titleLine1": "Strength Biomechanics & Sets",
-        "titleLine2": "Anatomy Heatmaps, Effective Sets & Pure Math e1RM",
-        "desc": "Strict separation of warm-up and working sets. Accurate weight and reps with battle-tested Brzycki / Epley e1RM formulas and weekly effective volume distribution.",
+        "titleLine2": "17-Muscle Recovery Heatmap, Effective Sets & e1RM",
+        "desc": "Strict separation of warm-up and working sets. Computes e1RM via Brzycki and maps 17 muscle groups across 3 functional roles and a 4-stage recovery model.",
         "cards": {
           "anatomyLabel": "Muscle Recovery",
           "setsLabel": "Sets Log",
@@ -1543,8 +1543,8 @@
       "body": {
         "tag": "[ 03 / Body ]",
         "titleLine1": "Filter Fluid Noise, Reveal Real Progress",
-        "titleLine2": "7-Day Smoothed EMA, Body Circumferences & Objective Trends",
-        "desc": "Fluid retention and sodium intake can swing body weight by 1-2 kg. e2Cal filters out noise with mathematical smoothing while tracking body circumferences.",
+        "titleLine2": "EWMA Smoothed Trend, 7 Body Metrics & Circumferences",
+        "desc": "Fluid and sodium shifts can swing daily weight by 1–2 kg. e2Cal applies EWMA smoothing and thermodynamic energy balance alongside 7 objective metrics and 6 circumferences.",
         "chartHeader": "WEIGHT TREND",
         "chartFooter": "Solid line: 7-day EMA trend · Hollow dots: daily raw readings",
         "todayHeader": "DAILY SNAPSHOT",
@@ -1554,13 +1554,13 @@
         "tag": "[ 04 / Analytics ]",
         "titleLine1": "Zero Blackbox AI Inside",
         "titleLine2": "Full Freedom Outside",
-        "desc": "No unverified AI scores or ratings. e2Cal provides instant objective metrics and formats them cleanly: export structured text for ChatGPT / Claude, or generate crisp high-resolution images."
+        "desc": "No unverified AI scores or ratings. e2Cal outputs instant objective facts in 3 open formats: zero-noise Markdown prompts, open-schema JSON, and 2x Retina PNG cards. Analysis stays 100% yours."
       },
       "sync": {
         "tag": "[ 05 / Sync ]",
         "titleLine1": "Data 100% Yours. Snappy Offline",
         "titleLine2": "Full Offline Operation, Private Dropbox Sync & Single-File Backup",
-        "desc": "Your physiological data never passes through third-party cloud servers. Sync peer-to-peer with your personal Dropbox account, fully functional offline.",
+        "desc": "Data stays in local IndexedDB with zero third-party servers. Sync via Dropbox PKCE with entry-level LWW merge, run offline as a PWA, or export a full ZIP.",
         "specs": {
           "engineLabel": "Local Engine",
           "engineValue": "IndexedDB · Offline Ready",
@@ -1617,7 +1617,7 @@
           "item4": {
             "tag": "04 // No Vague Dish Calorie Estimates",
             "title": "Reject the “1 Bowl Beef Noodles = 750 kcal” Lie",
-            "desc": "Dish guessing is riddled with unpredictable cooking oil and water absorption bias. e2Cal grounds everything in raw ingredient constants.",
+            "desc": "Dish guessing hides unpredictable oil and water absorption bias. e2Cal anchors every entry to per-100 g edible raw weight with net and gross conversion.",
             "legacyTitle": "Dish Database",
             "legacyBad": "Fixed estimate: 1 Bowl Beef Noodles = 750 kcal",
             "factTitle": "Ingredient Breakdown",
@@ -1641,11 +1641,11 @@
           },
           "ui": {
             "label": "UI & Typography",
-            "desc": "Flat zero-shadow system with offline monospace fonts"
+            "desc": "Flat zero-shadow UI with 100% local self-hosted fonts"
           },
           "storage": {
             "label": "Local Storage",
-            "desc": "Persistent browser database with safe schema migrations"
+            "desc": "Persistent browser storage with Dexie v34 migrations"
           },
           "sync": {
             "label": "Offline & Sync",
@@ -1653,7 +1653,7 @@
           },
           "quality": {
             "label": "Math & Quality",
-            "desc": "Pure math functions guarded by 546 automated unit tests"
+            "desc": "Pure math functions guarded by 660 automated unit tests"
           }
         },
         "cards": {
@@ -1679,7 +1679,7 @@
             "title": "03 // Pure Math & Rigor",
             "point1Title": "Transparent Algorithms",
             "point1Desc": "e1RM, EMA weight trends, and energy ratios computed with pure math.",
-            "point2Title": "540+ Unit Tests",
+            "point2Title": "660 Unit Tests",
             "point2Desc": "Guaranteed 100% passing test suite covering edge cases.",
             "point3Title": "Zero Behavioral Interference",
             "point3Desc": "Presents objective physiological facts without unsolicited ratings."
@@ -1750,7 +1750,7 @@
           "json": "JSON · OPEN SCHEMA"
         }
       },
-      "themeToggle": "Toggle light/dark mode",
+      "themeToggle": "Switch appearance",
       "demoData": {
         "greeting": "Good evening, Jason",
         "inclineBenchPress": "Incline Barbell Bench Press",
