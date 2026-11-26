@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, ChevronRight, ChevronDown, Zap, Plus, History, PieChart, LayoutGrid } from 'lucide-react';
+import { Activity, ChevronRight, ChevronDown, Zap, Plus, History, PieChart, Atom } from 'lucide-react';
 import type { MealType, HydratedFoodLog, FoodRecipe, EnergyUnit, FoodWeightUnit, FoodVolumeUnit } from '@/types';
 import { MealBundleCard } from '@/components/food/MealBundleCard';
 import { MacroSquares } from '@/components/food/MacroSquares';
@@ -403,10 +403,10 @@ export function DietView({
                 type="button"
                 onClick={() => triggerHaptic('light')}
                 aria-label={t('diet.nutrientDetails')}
-                className="h-6 px-2.5 rounded-full border border-border/80 bg-muted/20 hover:bg-muted/50 text-2xs sm:text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition-colors cursor-pointer select-none active:scale-95"
+                title={t('diet.nutrientDetails')}
+                className="size-6 rounded-full border border-border/80 bg-muted/20 hover:bg-muted/50 text-muted-foreground hover:text-foreground inline-flex items-center justify-center transition-colors cursor-pointer select-none active:scale-95"
               >
-                <LayoutGrid className="size-3 shrink-0" />
-                <span>{t('diet.nutrientDetails')}</span>
+                <Atom className="size-3.5 shrink-0" />
               </PopoverTrigger>
               <PopoverContent
                 align="start"

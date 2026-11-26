@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { formatFoodDisplayName } from '@/utils/foodNaming';
 import { getLocalizedFoodName } from '@/utils/defaultLocalization';
 import { useAppStore } from '@/store/useAppStore';
-import { calculateScaledNutrition } from '@/utils/nutritionMath';
+import { calculateFoodLogNutrients, calculateScaledNutrition } from '@/utils/nutritionMath';
 import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
 import { AuthorityFoodDetailsDialog } from '@/components/food/AuthorityFoodDetailsDialog';
 import { FoodFormDialog, type FoodFormData } from '@/components/food/FoodFormDialog';
@@ -145,7 +145,16 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
     for (const daily of dailyLogs) {
       for (const entry of daily.entries) {
         if (entry.foodId === id) {
-          logs.push({ ...entry, date: daily.date });
+          const computed = calculateFoodLogNutrients(food, entry.quantity || 0, entry.unit || 'g');
+          logs.push({
+            ...entry,
+            date: daily.date,
+            calories: computed.calories,
+            carbs: computed.carbs,
+            protein: computed.protein,
+            fat: computed.fat,
+            sodium: computed.sodium,
+          });
         }
       }
     }
@@ -463,11 +472,11 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
           })()}
         </div>
 
-        {/* 第 3 層：三大指標三欄分割卡片 (高度 68px 與品名帶等高，支援 1w/30d/3m/6m/1y/all 切換) */}
-        <div className="grid grid-cols-3 divide-x divide-border border-b border-border bg-card h-[68px]">
+        {/* 第 3 層：三大指標卡片 (手機版：總攝入獨佔首行，次數與最大量並排次行；平板／桌面版：三欄水平並排) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 border-b border-border bg-card">
           {/* 1. 總攝入 */}
-          <div className="h-[68px] px-2.5 sm:px-4 py-2.5 flex flex-col justify-between overflow-hidden">
-            <div className="flex items-center justify-between">
+          <div className="col-span-2 sm:col-span-1 min-h-[68px] px-3 sm:px-4 py-2.5 flex flex-col justify-between border-b border-border sm:border-b-0 sm:border-r">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-normal text-muted-foreground truncate">
                 {t('stats.totalIntake')}
               </span>
@@ -487,8 +496,8 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
           </div>
 
           {/* 2. 次數 */}
-          <div className="h-[68px] px-2.5 sm:px-4 py-2.5 flex flex-col justify-between overflow-hidden">
-            <div className="flex items-center justify-between">
+          <div className="min-h-[68px] px-3 sm:px-4 py-2.5 flex flex-col justify-between border-r border-border">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-normal text-muted-foreground truncate">
                 {t('stats.frequency')}
               </span>
@@ -508,7 +517,7 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
           </div>
 
           {/* 3. 最大量 */}
-          <div className="h-[68px] px-2.5 sm:px-4 py-2.5 flex flex-col justify-between overflow-hidden">
+          <div className="min-h-[68px] px-3 sm:px-4 py-2.5 flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-normal text-muted-foreground truncate">
                 {t('stats.maxDaily')}

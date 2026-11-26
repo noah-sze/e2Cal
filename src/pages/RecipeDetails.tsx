@@ -23,7 +23,7 @@ import { useConfirm } from '@/components/ui/confirm-dialog';
 import { cn } from '@/lib/utils';
 import { calculateIngredientMacros, calculateRecipeTotals } from '@/utils/recipeMath';
 import { useAppStore } from '@/store/useAppStore';
-import { calculateScaledNutrition } from '@/utils/nutritionMath';
+import { calculateFoodLogNutrients, calculateScaledNutrition } from '@/utils/nutritionMath';
 import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
 import { RecipeDialog, type RecipeFormData } from '@/components/food/RecipeDialog';
 import { FoodRecipeSelectDialog } from '@/components/food/FoodRecipeSelectDialog';
@@ -119,13 +119,21 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
     for (const daily of dailyLogs) {
       for (const entry of daily.entries) {
         if (entry.bundleId === recipe.id) {
-          logs.push({ ...entry, date: daily.date });
+          const itemFood = entry.foodId ? foodMap.get(entry.foodId) : undefined;
+          const computed = itemFood
+            ? calculateFoodLogNutrients(itemFood, entry.quantity || 0, entry.unit || 'g')
+            : null;
+          logs.push({
+            ...entry,
+            date: daily.date,
+            calories: computed ? computed.calories : (entry.calories || 0),
+          });
         }
       }
     }
 
     return logs.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  }, [dailyLogs, recipe]);
+  }, [dailyLogs, recipe, foodMap]);
 
   // 刪除防護契約：有歷史記錄時不可刪除
   const hasUsage = relatedFoodLogs.length > 0;
@@ -486,11 +494,11 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
           )}
         </div>
 
-        {/* 第 3 層：三大指標三欄分割卡片 (高度 68px 與品名帶等高，支援 1w/30d/3m/6m/1y/all 切換) */}
-        <div className="grid grid-cols-3 divide-x divide-border border-b border-border bg-card h-[68px]">
+        {/* 第 3 層：三大指標卡片 (手機版：總攝入獨佔首行，次數與最大量並排次行；平板／桌面版：三欄水平並排) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 border-b border-border bg-card">
           {/* 1. 總攝入 */}
-          <div className="h-[68px] px-2.5 sm:px-4 py-2.5 flex flex-col justify-between overflow-hidden">
-            <div className="flex items-center justify-between">
+          <div className="col-span-2 sm:col-span-1 min-h-[68px] px-3 sm:px-4 py-2.5 flex flex-col justify-between border-b border-border sm:border-b-0 sm:border-r">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-normal text-muted-foreground truncate">
                 {t('stats.totalIntake')}
               </span>
@@ -510,8 +518,8 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
           </div>
 
           {/* 2. 次數 */}
-          <div className="h-[68px] px-2.5 sm:px-4 py-2.5 flex flex-col justify-between overflow-hidden">
-            <div className="flex items-center justify-between">
+          <div className="min-h-[68px] px-3 sm:px-4 py-2.5 flex flex-col justify-between border-r border-border">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-normal text-muted-foreground truncate">
                 {t('stats.frequency')}
               </span>
@@ -531,7 +539,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
           </div>
 
           {/* 3. 最大量 */}
-          <div className="h-[68px] px-2.5 sm:px-4 py-2.5 flex flex-col justify-between overflow-hidden">
+          <div className="min-h-[68px] px-3 sm:px-4 py-2.5 flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-normal text-muted-foreground truncate">
                 {t('stats.maxDaily')}
