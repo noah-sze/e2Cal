@@ -1138,7 +1138,11 @@
       "unlockE2eeDesc": "Cloud storage is protected with E2EE. Enter your sync passphrase to unlock local keys.",
       "unlockE2eePlaceholder": "Enter encryption passphrase...",
       "unlockE2eeBtn": "Unlock & Sync",
-      "unlockFailed": "Incorrect passphrase"
+      "unlockFailed": "Incorrect passphrase",
+      "forceRefresh": "Force Refresh",
+      "forceRefreshing": "Refreshing",
+      "forceRefreshOffline": "Offline, cannot refresh",
+      "forceRefreshConfirmDesc": "Clear static asset cache and reload the app. Local data stays intact."
     },
     "stats": {
       "allTime": "All",

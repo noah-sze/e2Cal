@@ -1138,7 +1138,11 @@
       "unlockE2eeDesc": "雲端資料庫已啟用 E2EE 加密保護。請輸入您的同步主密碼以解鎖本地金鑰。",
       "unlockE2eePlaceholder": "輸入加密主密碼...",
       "unlockE2eeBtn": "解鎖並同步",
-      "unlockFailed": "密碼錯誤，無法解鎖"
+      "unlockFailed": "密碼錯誤，無法解鎖",
+      "forceRefresh": "強制刷新",
+      "forceRefreshing": "刷新中",
+      "forceRefreshOffline": "離線無法刷新",
+      "forceRefreshConfirmDesc": "清除靜態資源快取並重新載入應用，本機數據不受影響。"
     },
     "stats": {
       "allTime": "全部",

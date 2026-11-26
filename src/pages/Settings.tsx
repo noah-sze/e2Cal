@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight } from 'lucide-react';
 import { APP_ROUTES } from '@/utils/navigation';
+import { forceRefreshApp, formatBuildTime } from '@/utils/pwaRefresh';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  PrecisionDialogContent,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -63,6 +70,19 @@ export default function Settings() {
   const [isClearDataModalOpen, setIsClearDataModalOpen] = useState(false);
   const [isImportStrategyModalOpen, setIsImportStrategyModalOpen] = useState(false);
   const [stagedBackupData, setStagedBackupData] = useState<ParsedBackupData | null>(null);
+  const [forceRefreshDialogOpen, setForceRefreshDialogOpen] = useState(false);
+  const [isRefreshingApp, setIsRefreshingApp] = useState(false);
+
+  const handleForceRefresh = async () => {
+    if (isRefreshingApp) return;
+    setIsRefreshingApp(true);
+    const result = await forceRefreshApp();
+    if (result === 'offline') {
+      setIsRefreshingApp(false);
+      setForceRefreshDialogOpen(false);
+      toast.show(t('settings.forceRefreshOffline'));
+    }
+  };
   const [stagedLocalBase, setStagedLocalBase] = useState<UserBaseInfo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {
@@ -814,9 +834,73 @@ export default function Settings() {
       </section>
 
       {/* 頁尾版本標記 */}
-      <div className="pt-4 text-center font-mono text-xs text-muted-foreground/50">
-        <BrandWordmark variant="inline" /> v1.0.0
+      <div className="pt-4 flex justify-center">
+        <button
+          type="button"
+          onClick={() => setForceRefreshDialogOpen(true)}
+          className="flex flex-col items-center gap-1 text-center font-mono text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        >
+          <div>
+            <BrandWordmark variant="inline" /> v{__APP_VERSION__} · {__COMMIT_HASH__}
+          </div>
+          <div className="text-2xs tabular-nums opacity-80">
+            {formatBuildTime(__BUILD_TIME__)}
+          </div>
+        </button>
       </div>
+
+      {/* 強制刷新確認彈窗 */}
+      <Dialog
+        open={forceRefreshDialogOpen}
+        onOpenChange={(open) => {
+          if (!isRefreshingApp) setForceRefreshDialogOpen(open);
+        }}
+      >
+        <PrecisionDialogContent
+          title={t('settings.forceRefresh')}
+          onClose={() => {
+            if (!isRefreshingApp) setForceRefreshDialogOpen(false);
+          }}
+          cancelDisabled={isRefreshingApp}
+          onSubmit={() => void handleForceRefresh()}
+          submitDisabled={isRefreshingApp}
+          submitAriaLabel={isRefreshingApp ? t('settings.forceRefreshing') : t('settings.forceRefresh')}
+          cancelAriaLabel={t('common.cancel')}
+        >
+          <div className="pt-3.5 space-y-3">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {t('settings.forceRefreshConfirmDesc')}
+            </p>
+            <div className="rounded border border-border bg-muted px-3 py-2 font-mono text-2xs text-muted-foreground space-y-0.5 tabular-nums">
+              <div>
+                <BrandWordmark variant="inline" /> v{__APP_VERSION__} · {__COMMIT_HASH__}
+              </div>
+              <div>{formatBuildTime(__BUILD_TIME__)}</div>
+            </div>
+            <DialogFooter className="flex-row gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isRefreshingApp}
+                onClick={() => setForceRefreshDialogOpen(false)}
+                className="flex-1 h-8 text-xs font-mono shadow-none"
+              >
+                {t('common.cancel')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={isRefreshingApp}
+                onClick={() => void handleForceRefresh()}
+                className="flex-1 h-8 text-xs font-mono shadow-none"
+              >
+                {isRefreshingApp ? t('settings.forceRefreshing') : t('settings.forceRefresh')}
+              </Button>
+            </DialogFooter>
+          </div>
+        </PrecisionDialogContent>
+      </Dialog>
 
       {/* Dropbox 同步設定彈窗 (遵循 ui-guidelines 平級兄弟節點聲明) */}
       <DropboxSyncDialog
