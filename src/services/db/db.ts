@@ -119,7 +119,7 @@ export class E2CalDatabase extends Dexie {
    * 徹底出廠重置：清空所有業務日誌與自定義資料，恢復預設實體與個人出廠狀態，斷開雲端同步
    */
   async resetToFactoryDefaults() {
-    return await resetDatabaseToFactory(this);
+    return await withAutoSyncSuppressed(() => resetDatabaseToFactory(this));
   }
 
   /**

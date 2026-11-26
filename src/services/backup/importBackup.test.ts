@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import JSZip from 'jszip';
 import { importBackup, parseBackupFile } from './importBackup';
-import { db } from '@/services/db/db';
+import { db, withAutoSyncSuppressed } from '@/services/db/db';
 import { PRIMARY_USER_ID } from '@/services/db/defaultData';
 
 vi.mock('@/services/db/db', () => ({
+  withAutoSyncSuppressed: vi.fn(async (fn: () => Promise<unknown>) => await fn()),
   db: {
     user_base_info: { bulkPut: vi.fn(), clear: vi.fn() },
     user_profile: {
@@ -250,6 +251,7 @@ describe('importBackup', () => {
     const result = await importBackup(blob, 'overwrite');
 
     expect(result.success).toBe(true);
+    expect(withAutoSyncSuppressed).toHaveBeenCalledTimes(1);
     expect(db.foods.clear).toHaveBeenCalled();
     expect(db.daily_diet_logs.clear).toHaveBeenCalled();
     expect(db.workout_logs.clear).toHaveBeenCalled();

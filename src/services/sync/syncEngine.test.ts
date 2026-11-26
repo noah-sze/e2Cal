@@ -1438,5 +1438,55 @@ describe('syncErrorReason & Toast handling', () => {
     expect(getCachedRevs()['/stale/old.json']).toBeUndefined();
     expect(getCachedRevs()['/nutrition/foods.json']).toBeDefined();
   });
+
+  it('executeSync("overwrite_remote") deletes stale remote /deleted_entities.json when local tombstones are empty', async () => {
+    setStoredTokens({
+      access_token: 'valid_token',
+      expires_in: 14400,
+      expires_at: Date.now() + 14400 * 1000,
+    });
+    localStorage.removeItem('e2cal_deleted_entity_tombstones');
+
+    vi.spyOn(db.foods, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.recipes, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.daily_diet_logs, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.exercises, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.equipments, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.routines, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.workout_logs, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.body_metrics, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.user_base_info, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.foods, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.recipes, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.daily_diet_logs, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.exercises, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.equipments, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.routines, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.workout_logs, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.body_metrics, 'toArray').mockResolvedValue([]);
+
+    const uploadedPaths: string[] = [];
+    const deletedPaths: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+      const u = String(url);
+      const headers = (init?.headers || {}) as Record<string, string>;
+      if (u.includes('files/upload')) {
+        const arg = JSON.parse(headers['Dropbox-API-Arg'] || '{}');
+        uploadedPaths.push(arg.path);
+        return new Response(JSON.stringify({ rev: `rev_${uploadedPaths.length}` }), { status: 200 });
+      }
+      if (u.includes('files/delete_v2')) {
+        const body = JSON.parse(String(init?.body || '{}'));
+        deletedPaths.push(body.path);
+        return new Response('{}', { status: 200 });
+      }
+      return new Response('{}', { status: 200 });
+    });
+
+    const res = await executeSync('overwrite_remote');
+    expect(res.success).toBe(true);
+    expect(uploadedPaths).not.toContain('/deleted_entities.json');
+    expect(deletedPaths).toContain('/deleted_entities.json');
+  });
 });
 

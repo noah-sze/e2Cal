@@ -138,6 +138,7 @@ export async function resetDatabaseToFactory(db: E2CalDatabase): Promise<void> {
     localStorage.removeItem('e2cal_dropbox_last_sync');
     localStorage.removeItem('e2cal_dropbox_cached_revs');
     localStorage.removeItem('e2cal_dropbox_pushed_times');
+    localStorage.removeItem('e2cal_deleted_entity_tombstones');
     localStorage.removeItem('e2cal-app-storage');
     localStorage.removeItem('e2cal-in-app-nav-storage');
     localStorage.removeItem('e2cal-ui-theme');

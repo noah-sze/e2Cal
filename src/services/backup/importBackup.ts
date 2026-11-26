@@ -1,6 +1,6 @@
 import type JSZip from 'jszip';
 import { v4 as uuidv4 } from 'uuid';
-import { db } from '@/services/db/db';
+import { db, withAutoSyncSuppressed } from '@/services/db/db';
 import {
   sanitizeFoodItem,
   sanitizeUserBaseInfo,
@@ -315,70 +315,72 @@ export async function executeImport(
     total,
   } = data;
 
-  await db.transaction(
-    'rw',
-    [
-      db.user_base_info,
-      db.user_profile,
-      db.foods,
-      db.recipes,
-      db.daily_diet_logs,
-      db.exercises,
-      db.equipments,
-      db.routines,
-      db.workout_logs,
-      db.body_metrics,
-    ],
-    async () => {
-      // 若為完全覆蓋策略，先清空所有相關資料庫表
-      if (strategy === 'overwrite') {
-        await Promise.all([
-          db.user_base_info.clear(),
-          db.user_profile.clear(),
-          db.foods.clear(),
-          db.recipes.clear(),
-          db.daily_diet_logs.clear(),
-          db.exercises.clear(),
-          db.equipments.clear(),
-          db.routines.clear(),
-          db.workout_logs.clear(),
-          db.body_metrics.clear(),
-        ]);
-      } else {
-        // 合併策略：飲食日誌防重，若該日已存在日誌，沿用其 ID 防範 &date 唯一鍵衝突
-        for (const log of dailyDietLogs) {
-          const existing = await db.daily_diet_logs.where('date').equals(log.date).first();
-          if (existing) {
-            log.id = existing.id;
+  await withAutoSyncSuppressed(() =>
+    db.transaction(
+      'rw',
+      [
+        db.user_base_info,
+        db.user_profile,
+        db.foods,
+        db.recipes,
+        db.daily_diet_logs,
+        db.exercises,
+        db.equipments,
+        db.routines,
+        db.workout_logs,
+        db.body_metrics,
+      ],
+      async () => {
+        // 若為完全覆蓋策略，先清空所有相關資料庫表
+        if (strategy === 'overwrite') {
+          await Promise.all([
+            db.user_base_info.clear(),
+            db.user_profile.clear(),
+            db.foods.clear(),
+            db.recipes.clear(),
+            db.daily_diet_logs.clear(),
+            db.exercises.clear(),
+            db.equipments.clear(),
+            db.routines.clear(),
+            db.workout_logs.clear(),
+            db.body_metrics.clear(),
+          ]);
+        } else {
+          // 合併策略：飲食日誌防重，若該日已存在日誌，沿用其 ID 防範 &date 唯一鍵衝突
+          for (const log of dailyDietLogs) {
+            const existing = await db.daily_diet_logs.where('date').equals(log.date).first();
+            if (existing) {
+              log.id = existing.id;
+            }
           }
         }
-      }
 
-      if (baseInfos.length > 0) {
-        await db.user_base_info.bulkPut(baseInfos);
-        // 同步更新 user_profile 表保持 UI 即時響應
-        const primary = baseInfos[0];
-        const existingProfile = await db.user_profile.toCollection().first();
-        if (existingProfile) {
-          await db.user_profile.update(existingProfile.id, {
-            name: primary.name,
-            gender: primary.gender,
-            birthDate: primary.birthDate,
-            heightCm: primary.heightCm,
-            updatedAt: Date.now(),
-          });
+        if (baseInfos.length > 0) {
+          await db.user_base_info.bulkPut(baseInfos);
+          // 同步更新 user_profile 表保持 UI 即時響應
+          const primary = baseInfos[0];
+          const existingProfile = await db.user_profile.toCollection().first();
+          if (existingProfile) {
+            await db.user_profile.update(existingProfile.id, {
+              name: primary.name,
+              gender: primary.gender,
+              birthDate: primary.birthDate,
+              heightCm: primary.heightCm,
+              updatedAt: Date.now(),
+            });
+          }
         }
-      }
 
-      if (foods.length > 0) await db.foods.bulkPut(foods);
-      if (recipes.length > 0) await db.recipes.bulkPut(recipes);
-      if (dailyDietLogs.length > 0) await db.daily_diet_logs.bulkPut(dailyDietLogs);
-      if (exercises.length > 0) await db.exercises.bulkPut(exercises);
-      if (equipments.length > 0) await db.equipments.bulkPut(equipments);
-      if (routines.length > 0) await db.routines.bulkPut(routines);
-      if (workoutLogs.length > 0) await db.workout_logs.bulkPut(workoutLogs);
-      if (bodyMetrics.length > 0) await db.body_metrics.bulkPut(bodyMetrics);
-    }
+        if (foods.length > 0) await db.foods.bulkPut(foods);
+        if (recipes.length > 0) await db.recipes.bulkPut(recipes);
+        if (dailyDietLogs.length > 0) await db.daily_diet_logs.bulkPut(dailyDietLogs);
+        if (exercises.length > 0) await db.exercises.bulkPut(exercises);
+        if (equipments.length > 0) await db.equipments.bulkPut(equipments);
+        if (routines.length > 0) await db.routines.bulkPut(routines);
+        if (workoutLogs.length > 0) await db.workout_logs.bulkPut(workoutLogs);
+        if (bodyMetrics.length > 0) await db.body_metrics.bulkPut(bodyMetrics);
+      }
+    )
   );
 
   return {

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   DEFAULT_EQUIPMENTS,
   DEFAULT_EXERCISES,
@@ -93,8 +93,27 @@ describe('系統預設數據完整性與零預設食物架構測試', () => {
         user_base_info: createMockTable('user_base_info'),
       };
 
-      const { resetDatabaseToFactory } = await import('./defaultData');
-      await resetDatabaseToFactory(mockDb);
+      const store: Record<string, string> = {
+        e2cal_deleted_entity_tombstones: JSON.stringify({ foods: { 'old-id': 123456 } }),
+      };
+      vi.stubGlobal('localStorage', {
+        getItem: (k: string) => store[k] ?? null,
+        setItem: (k: string, v: string) => {
+          store[k] = v;
+        },
+        removeItem: (k: string) => {
+          delete store[k];
+        },
+      });
+
+      try {
+        const { resetDatabaseToFactory } = await import('./defaultData');
+        await resetDatabaseToFactory(mockDb);
+
+        expect(store.e2cal_deleted_entity_tombstones).toBeUndefined();
+      } finally {
+        vi.unstubAllGlobals();
+      }
 
       expect(mockClearMap.daily_diet_logs).toBe(true);
       expect(mockClearMap.workout_logs).toBe(true);

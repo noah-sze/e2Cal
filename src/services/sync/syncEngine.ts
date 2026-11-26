@@ -24,6 +24,7 @@ import {
   listRemoteFolder,
   downloadJsonFile,
   uploadJsonFile,
+  deleteRemotePath,
   getSyncErrorReasonKey,
   formatSyncErrorMessage,
   type SyncErrorReasonKey,
@@ -1020,6 +1021,10 @@ export async function uploadAllLocalData(
       localTombstones
     );
     pushedTimes['deleted_entities'] = now;
+  } else {
+    await deleteRemotePath(DELETED_ENTITIES_PATH);
+    delete cachedRevs[DELETED_ENTITIES_PATH];
+    delete pushedTimes['deleted_entities'];
   }
 
   // 8. 全域清單 manifest.json
