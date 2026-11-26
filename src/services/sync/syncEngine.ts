@@ -192,10 +192,11 @@ export function getNormalizedTimestamp(ts?: number | string): number {
 function preserveNutrientsIfMissing<T>(chosen: T, fallback: T): T {
   const c = chosen as Record<string, unknown>;
   const f = fallback as Record<string, unknown>;
-  const numericKeys = ['sugar', 'fiber', 'saturatedFat', 'transFat', 'sodium', 'refuseRate', 'edibleRate'] as const;
+  const numericKeys = ['refuseRate', 'edibleRate'] as const;
   const metaKeys = ['refuseDescription', 'dataSource', 'micros'] as const;
   let enhanced = false;
   let result: Record<string, unknown> | null = null;
+
   for (const k of numericKeys) {
     if ((result ? result[k] : c[k]) === undefined) {
       if (typeof f[k] === 'number' && !Number.isNaN(f[k])) {
@@ -212,6 +213,65 @@ function preserveNutrientsIfMissing<T>(chosen: T, fallback: T): T {
       enhanced = true;
     }
   }
+
+  if (
+    typeof c.macros === 'object' &&
+    c.macros !== null &&
+    typeof f.macros === 'object' &&
+    f.macros !== null
+  ) {
+    const cMacros = c.macros as Record<string, unknown>;
+    const fMacros = f.macros as Record<string, unknown>;
+    const nextMacros: Record<string, unknown> = { ...cMacros };
+    let macrosEnhanced = false;
+
+    const backfillSub = (
+      groupKey: 'carbs' | 'fat',
+      subKeys: readonly string[]
+    ) => {
+      const cGroup = cMacros[groupKey];
+      const fGroup = fMacros[groupKey];
+      if (
+        typeof cGroup === 'object' &&
+        cGroup !== null &&
+        typeof fGroup === 'object' &&
+        fGroup !== null
+      ) {
+        const cg = cGroup as Record<string, unknown>;
+        const fg = fGroup as Record<string, unknown>;
+        let nextGroup: Record<string, unknown> | null = null;
+        for (const sk of subKeys) {
+          if ((nextGroup ? nextGroup[sk] : cg[sk]) === undefined) {
+            if (typeof fg[sk] === 'number' && !Number.isNaN(fg[sk])) {
+              if (!nextGroup) nextGroup = { ...cg };
+              nextGroup[sk] = fg[sk];
+            }
+          }
+        }
+        if (nextGroup) {
+          nextMacros[groupKey] = nextGroup;
+          macrosEnhanced = true;
+        }
+      }
+    };
+
+    backfillSub('carbs', ['sugar', 'fiber']);
+    backfillSub('fat', ['saturated', 'trans']);
+
+    if (nextMacros.sodium === undefined) {
+      if (typeof fMacros.sodium === 'number' && !Number.isNaN(fMacros.sodium)) {
+        nextMacros.sodium = fMacros.sodium;
+        macrosEnhanced = true;
+      }
+    }
+
+    if (macrosEnhanced) {
+      if (!result) result = { ...c };
+      result.macros = nextMacros;
+      enhanced = true;
+    }
+  }
+
   return enhanced && result ? (result as T) : chosen;
 }
 

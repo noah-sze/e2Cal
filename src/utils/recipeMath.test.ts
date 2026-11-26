@@ -8,10 +8,12 @@ describe('recipeMath 核心純函數測試', () => {
     name: '牛番茄',
     servingSize: 100,
     servingUnit: 'g',
-    calories: 18,
-    protein: 0.9,
-    carbs: 3.9,
-    fat: 0.2,
+    macros: {
+      calories: 18,
+      carbs: { total: 3.9 },
+      protein: 0.9,
+      fat: { total: 0.2 },
+    },
     isCustom: false,
     createdAt: 0,
     updatedAt: 0,
@@ -20,12 +22,14 @@ describe('recipeMath 核心純函數測試', () => {
   const mockEgg: FoodItem = {
     id: 'food_egg',
     name: '雞蛋',
-    servingSize: 50,
+    servingSize: 50, // 參考單顆重量，macros 仍為每 100g SSOT
     servingUnit: 'g',
-    calories: 72,
-    protein: 6.3,
-    carbs: 0.4,
-    fat: 4.8,
+    macros: {
+      calories: 144,
+      carbs: { total: 0.8 },
+      protein: 12.6,
+      fat: { total: 9.6 },
+    },
     isCustom: false,
     createdAt: 0,
     updatedAt: 0,
@@ -34,12 +38,14 @@ describe('recipeMath 核心純函數測試', () => {
   const mockOil: FoodItem = {
     id: 'food_oil',
     name: '食用植物油',
-    servingSize: 10,
+    servingSize: 10, // 參考一匙重量，macros 仍為每 100g SSOT
     servingUnit: 'g',
-    calories: 90,
-    protein: 0,
-    carbs: 0,
-    fat: 10,
+    macros: {
+      calories: 900,
+      carbs: { total: 0 },
+      protein: 0,
+      fat: { total: 100 },
+    },
     isCustom: false,
     createdAt: 0,
     updatedAt: 0,
@@ -60,10 +66,15 @@ describe('recipeMath 核心純函數測試', () => {
       expect(calculateIngredientMacros(mockTomato, NaN)).toEqual({ calories: 0, protein: 0, carbs: 0, fat: 0 });
     });
 
-    it('邊界情況：食材為 undefined 或 servingSize 為 0', () => {
+    it('邊界情況：食材為 undefined 時回傳全 0，且 servingSize 為 0 不影響 per-100g 計算', () => {
       expect(calculateIngredientMacros(undefined, 100)).toEqual({ calories: 0, protein: 0, carbs: 0, fat: 0 });
-      const badServingFood = { ...mockTomato, servingSize: 0 };
-      expect(calculateIngredientMacros(badServingFood, 100)).toEqual({ calories: 0, protein: 0, carbs: 0, fat: 0 });
+      const zeroServingFood = { ...mockTomato, servingSize: 0 };
+      expect(calculateIngredientMacros(zeroServingFood, 100)).toEqual({
+        calories: 18,
+        protein: 0.9,
+        carbs: 3.9,
+        fat: 0.2,
+      });
     });
   });
 
@@ -134,14 +145,13 @@ describe('recipeMath 核心純函數測試', () => {
         name: '燕麥',
         servingSize: 100,
         servingUnit: 'g',
-        calories: 380,
-        protein: 13,
-        carbs: 68,
-        fat: 7,
-        sugar: 1,
-        fiber: 10,
-        saturatedFat: 1.5,
-        sodium: 5,
+        macros: {
+          calories: 380,
+          carbs: { total: 68, sugar: 1, fiber: 10 },
+          protein: 13,
+          fat: { total: 7, saturated: 1.5 },
+          sodium: 5,
+        },
         isCustom: false,
         createdAt: 0,
         updatedAt: 0,

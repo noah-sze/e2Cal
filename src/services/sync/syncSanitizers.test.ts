@@ -474,13 +474,14 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
 
       expect(cleaned.servingUnit).toBe('ml');
       expect(cleaned.servingSize).toBe(236.59);
-      expect(cleaned.calories).toBe(120);
+      expect(cleaned.macros.calories).toBe(Math.round((120 * 100) / 236.59));
+      expect('calories' in cleaned).toBe(false);
       expect('rawNutrition' in cleaned).toBe(false);
       expect('labelBasisSize' in cleaned).toBe(false);
       expect('labelBasisUnit' in cleaned).toBe(false);
     });
 
-    it('應完整保留自訂食材次級營養素（sugar, fiber, saturatedFat, transFat, sodium）', () => {
+    it('應完整保留自訂食材次級營養素並將舊版非 100g 扁平格式一次換算為每 100g', () => {
       const foodWithSub = {
         id: 'food_custom_sub',
         name: '特製燕麥棒',
@@ -500,11 +501,64 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
       };
 
       const cleaned = sanitizeFoodItem(foodWithSub);
-      expect(cleaned.sugar).toBe(12.5);
-      expect(cleaned.fiber).toBe(4.2);
-      expect(cleaned.saturatedFat).toBe(1.1);
-      expect(cleaned.transFat).toBe(0);
-      expect(cleaned.sodium).toBe(80);
+      expect(cleaned.macros.calories).toBe(400);
+      expect(cleaned.macros.carbs).toEqual({ total: 60, sugar: 25, fiber: 8.4 });
+      expect(cleaned.macros.protein).toBe(20);
+      expect(cleaned.macros.fat).toEqual({ total: 10, saturated: 2.2, trans: 0 });
+      expect(cleaned.macros.sodium).toBe(160);
+    });
+
+    it('當食材已具備巢狀 macros 物件時，清洗應保持冪等且不重複依 servingSize 換算', () => {
+      const foodWithMacros = {
+        id: 'food_macros_idempotent',
+        name: '能量棒',
+        category: 'processed',
+        servingSize: 50,
+        servingUnit: 'g',
+        macros: {
+          calories: 400,
+          carbs: { total: 60, sugar: 25, fiber: 8.4 },
+          protein: 20,
+          fat: { total: 10, saturated: 2.2, trans: 0 },
+          sodium: 160,
+        },
+        isCustom: true,
+      };
+
+      const cleaned = sanitizeFoodItem(foodWithMacros);
+      expect(cleaned.servingSize).toBe(50);
+      expect(cleaned.macros.calories).toBe(400);
+      expect(cleaned.macros.carbs).toEqual({ total: 60, sugar: 25, fiber: 8.4 });
+      expect(cleaned.macros.fat).toEqual({ total: 10, saturated: 2.2, trans: 0 });
+      expect(cleaned.macros.sodium).toBe(160);
+    });
+
+    it('當食材為中間態扁平 macros 物件時，應自動升級為巢狀 carbs/fat 且不重複換算', () => {
+      const intermediateFood = {
+        id: 'food_intermediate_macros',
+        name: '中間態能量棒',
+        category: 'processed',
+        servingSize: 50,
+        servingUnit: 'g',
+        macros: {
+          calories: 400,
+          carbs: 60,
+          protein: 20,
+          fat: 10,
+          sugar: 25,
+          fiber: 8.4,
+          saturatedFat: 2.2,
+          transFat: 0,
+          sodium: 160,
+        },
+        isCustom: true,
+      };
+
+      const cleaned = sanitizeFoodItem(intermediateFood);
+      expect(cleaned.macros.calories).toBe(400);
+      expect(cleaned.macros.carbs).toEqual({ total: 60, sugar: 25, fiber: 8.4 });
+      expect(cleaned.macros.fat).toEqual({ total: 10, saturated: 2.2, trans: 0 });
+      expect(cleaned.macros.sodium).toBe(160);
     });
 
     it('當食材次級營養素齊全時，清洗應正確保留數值', () => {
@@ -514,23 +568,21 @@ describe('syncSanitizers (同步與持久化邊界純粹度清洗)', () => {
         category: 'natural',
         servingSize: 100,
         servingUnit: 'g',
-        calories: 143,
-        carbs: 0.7,
-        protein: 12.6,
-        fat: 9.5,
-        fiber: 0,
-        sugar: 0.4,
-        saturatedFat: 3.1,
-        transFat: 0,
-        sodium: 142,
+        macros: {
+          calories: 143,
+          carbs: { total: 0.7, fiber: 0, sugar: 0.4 },
+          protein: 12.6,
+          fat: { total: 9.5, saturated: 3.1, trans: 0 },
+          sodium: 142,
+        },
         isCustom: true,
       };
 
       const cleaned = sanitizeFoodItem(foodItem);
-      expect(cleaned.sugar).toBe(0.4);
-      expect(cleaned.saturatedFat).toBe(3.1);
-      expect(cleaned.transFat).toBe(0);
-      expect(cleaned.sodium).toBe(142);
+      expect(cleaned.macros.carbs.sugar).toBe(0.4);
+      expect(cleaned.macros.fat.saturated).toBe(3.1);
+      expect(cleaned.macros.fat.trans).toBe(0);
+      expect(cleaned.macros.sodium).toBe(142);
     });
 
     it('應完整保留 refuseRate, edibleRate, refuseDescription, dataSource 與 micros', () => {

@@ -256,10 +256,12 @@ describe('Multi-Device Dropbox Sync Simulation', () => {
           category: 'natural',
           servingSize: 100,
           servingUnit: 'g',
-          calories: 191,
-          protein: 18.3,
-          carbs: 0,
-          fat: 12.6,
+          macros: {
+            calories: 191,
+            protein: 18.3,
+            carbs: { total: 0 },
+            fat: { total: 12.6 },
+          },
           refuseRate: 0.31,
           edibleRate: 0.69,
           refuseDescription: 'bone 31%',
@@ -295,7 +297,10 @@ describe('Multi-Device Dropbox Sync Simulation', () => {
     // B edits the food (e.g. adjusts calories & rev) with a fresh timestamp > pushedTimes['foods']
     devB.tables.foods[0] = {
       ...devB.tables.foods[0],
-      calories: 195,
+      macros: {
+        ...devB.tables.foods[0].macros,
+        calories: 195,
+      },
       updatedAt: Date.now() + 5000,
       rev: 2,
     };
@@ -303,7 +308,7 @@ describe('Multi-Device Dropbox Sync Simulation', () => {
     await syncDevice(devB);
     await syncDevice(devA);
 
-    expect(devA.tables.foods[0].calories).toBe(195);
+    expect(devA.tables.foods[0].macros.calories).toBe(195);
     expect(devA.tables.foods[0].refuseRate).toBe(0.31);
     expect(devA.tables.foods[0].dataSource?.authority).toBe('TFDA');
     expect(devA.tables.foods[0].micros?.potassium).toBe(210);
@@ -441,10 +446,12 @@ describe('Multi-Device Dropbox Sync Simulation', () => {
       category: 'natural',
       servingSize: 100,
       servingUnit: 'g',
-      calories: 100,
-      protein: 10,
-      carbs: 10,
-      fat: 2,
+      macros: {
+        calories: 100,
+        protein: 10,
+        carbs: { total: 10 },
+        fat: { total: 2 },
+      },
       isCustom: true,
       createdAt: 1000,
       updatedAt: 1000,
@@ -560,10 +567,12 @@ describe('Multi-Device Dropbox Sync Simulation', () => {
       category: 'natural',
       servingSize: 100,
       servingUnit: 'g',
-      calories: 100,
-      protein: 10,
-      carbs: 10,
-      fat: 2,
+      macros: {
+        calories: 100,
+        protein: 10,
+        carbs: { total: 10 },
+        fat: { total: 2 },
+      },
       isCustom: true,
       createdAt: 1000,
       updatedAt: 1000,

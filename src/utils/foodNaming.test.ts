@@ -232,10 +232,12 @@ describe('resolveFoodLogTitle (系統分類條目動態解析)', () => {
       id: 'food-1',
       name: '全麥吐司',
       brand: '曼可頓',
-      calories: 250,
-      protein: 8,
-      carbs: 45,
-      fat: 3,
+      macros: {
+        calories: 250,
+        carbs: { total: 45 },
+        protein: 8,
+        fat: { total: 3 },
+      },
       servingSize: 100,
       servingUnit: 'g',
     } as FoodItem;
@@ -259,10 +261,12 @@ describe('resolveFoodLogTitle (系統分類條目動態解析)', () => {
     const mockFoodWithoutBrand: FoodItem = {
       id: 'food-2',
       name: '水煮蛋',
-      calories: 70,
-      protein: 6,
-      carbs: 1,
-      fat: 5,
+      macros: {
+        calories: 140,
+        carbs: { total: 2 },
+        protein: 12,
+        fat: { total: 10 },
+      },
       servingSize: 50,
       servingUnit: 'g',
     } as FoodItem;

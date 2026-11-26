@@ -102,9 +102,21 @@ function sanitizeFoodMicronutrients(rawInput: unknown): FoodMicronutrients | und
   return hasAny ? cleaned : undefined;
 }
 
+function sanitizeOptionalMacro(
+  val: unknown,
+  scale: number,
+  decimals: number
+): number | undefined {
+  if (val === undefined || val === null || val === '') return undefined;
+  const num = Number(val);
+  if (!Number.isFinite(num)) return undefined;
+  const factor = 10 ** decimals;
+  return Math.round(Math.max(0, num) * scale * factor) / factor;
+}
+
 /**
- * 清洗單品食材：強制收斂為純淨公制 SI（g / ml、kcal），徹底剔除歷史殘留的 rawNutrition / labelBasisSize / labelBasisUnit
- * 同步完整保留各次級營養素、稱重廢棄/可食率、權威資料庫溯源與微量元素
+ * 清洗單品食材：強制收斂為純淨公制 SI（g / ml、kcal），將營養常數統一收斂於 per-100g/100ml 之 macros 物件
+ * 若為歷史扁平格式 (!raw.macros) 則自動依 servingSize 換算至 100g/100ml 基準；若已有 macros 則冪等清洗不重複換算
  */
 export function sanitizeFoodItem(rawInput: unknown): FoodItem {
   const raw = asRecord(rawInput);
@@ -119,12 +131,51 @@ export function sanitizeFoodItem(rawInput: unknown): FoodItem {
   );
 
   const isCustom = raw.isCustom !== undefined ? Boolean(raw.isCustom) : true;
-  const rawSugar = raw.sugar !== undefined ? Number(raw.sugar) : undefined;
-  const rawFiber = raw.fiber !== undefined ? Number(raw.fiber) : undefined;
-  const rawSaturatedFat =
-    raw.saturatedFat !== undefined ? Number(raw.saturatedFat) : undefined;
-  const rawTransFat = raw.transFat !== undefined ? Number(raw.transFat) : undefined;
-  const rawSodium = raw.sodium !== undefined ? Number(raw.sodium) : undefined;
+  const hasMacrosObj =
+    typeof raw.macros === 'object' && raw.macros !== null && !Array.isArray(raw.macros);
+  const macroSrc = hasMacrosObj ? asRecord(raw.macros) : raw;
+  const scale =
+    !hasMacrosObj && metricServing.servingSize > 0 && metricServing.servingSize !== 100
+      ? 100 / metricServing.servingSize
+      : 1;
+
+  const carbsSrc =
+    typeof macroSrc.carbs === 'object' && macroSrc.carbs !== null && !Array.isArray(macroSrc.carbs)
+      ? asRecord(macroSrc.carbs)
+      : null;
+  const fatSrc =
+    typeof macroSrc.fat === 'object' && macroSrc.fat !== null && !Array.isArray(macroSrc.fat)
+      ? asRecord(macroSrc.fat)
+      : null;
+
+  const carbsTotal = sanitizeOptionalMacro(carbsSrc ? carbsSrc.total : macroSrc.carbs, scale, 1) ?? 0;
+  const sugar = sanitizeOptionalMacro(carbsSrc ? carbsSrc.sugar : macroSrc.sugar, scale, 1);
+  const fiber = sanitizeOptionalMacro(carbsSrc ? carbsSrc.fiber : macroSrc.fiber, scale, 1);
+
+  const fatTotal = sanitizeOptionalMacro(fatSrc ? fatSrc.total : macroSrc.fat, scale, 1) ?? 0;
+  const saturated = sanitizeOptionalMacro(
+    fatSrc ? fatSrc.saturated : macroSrc.saturatedFat,
+    scale,
+    1
+  );
+  const trans = sanitizeOptionalMacro(fatSrc ? fatSrc.trans : macroSrc.transFat, scale, 1);
+  const sodium = sanitizeOptionalMacro(macroSrc.sodium, scale, 0);
+
+  const macros = {
+    calories: Math.round(Math.max(0, Number(macroSrc.calories) || 0) * scale),
+    carbs: {
+      total: carbsTotal,
+      ...(sugar !== undefined ? { sugar } : {}),
+      ...(fiber !== undefined ? { fiber } : {}),
+    },
+    protein: sanitizeOptionalMacro(macroSrc.protein, scale, 1) ?? 0,
+    fat: {
+      total: fatTotal,
+      ...(saturated !== undefined ? { saturated } : {}),
+      ...(trans !== undefined ? { trans } : {}),
+    },
+    ...(sodium !== undefined ? { sodium } : {}),
+  };
 
   const refuseRate = sanitizeRate(raw.refuseRate);
   const edibleRate = sanitizeRate(raw.edibleRate);
@@ -140,19 +191,7 @@ export function sanitizeFoodItem(rawInput: unknown): FoodItem {
     ...(raw.brand ? { brand: String(raw.brand).trim() } : {}),
     servingSize: metricServing.servingSize,
     servingUnit: metricServing.servingUnit,
-    calories: Math.max(0, Number(raw.calories) || 0),
-    protein: Math.max(0, Number(raw.protein) || 0),
-    carbs: Math.max(0, Number(raw.carbs) || 0),
-    fat: Math.max(0, Number(raw.fat) || 0),
-    ...(rawSugar !== undefined && !Number.isNaN(rawSugar) ? { sugar: Math.max(0, rawSugar) } : {}),
-    ...(rawFiber !== undefined && !Number.isNaN(rawFiber) ? { fiber: Math.max(0, rawFiber) } : {}),
-    ...(rawSaturatedFat !== undefined && !Number.isNaN(rawSaturatedFat)
-      ? { saturatedFat: Math.max(0, rawSaturatedFat) }
-      : {}),
-    ...(rawTransFat !== undefined && !Number.isNaN(rawTransFat)
-      ? { transFat: Math.max(0, rawTransFat) }
-      : {}),
-    ...(rawSodium !== undefined && !Number.isNaN(rawSodium) ? { sodium: Math.max(0, rawSodium) } : {}),
+    macros,
     ...(refuseRate !== undefined ? { refuseRate } : {}),
     ...(edibleRate !== undefined ? { edibleRate } : {}),
     ...(refuseDescription ? { refuseDescription } : {}),

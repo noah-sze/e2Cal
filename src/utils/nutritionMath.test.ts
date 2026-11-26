@@ -559,7 +559,7 @@ describe('nutritionMath - normalizeServingToMetric', () => {
 });
 
 describe('nutritionMath - normalizeFoodInputToMetric', () => {
-  it('回歸測試：100g / 1000 kJ 依份量或自定義基準保存後，一律轉為公制 100g / 239.01 kcal', () => {
+  it('回歸測試：100g / 1000 kJ 依份量或自定義基準保存後，一律轉為 per-100g 公制 macros / 239.01 kcal', () => {
     const servingRes = normalizeFoodInputToMetric({
       servingSize: 100,
       servingUnit: 'g',
@@ -574,12 +574,15 @@ describe('nutritionMath - normalizeFoodInputToMetric', () => {
     expect(servingRes).toEqual({
       servingSize: 100,
       servingUnit: 'g',
-      calories: 239.01,
-      carbs: 20,
-      protein: 10,
-      fat: 5,
+      macros: {
+        calories: 239.01,
+        carbs: { total: 20 },
+        protein: 10,
+        fat: { total: 5 },
+      },
     });
 
+    // servingSize = 50g 但輸入基準為每 100g -> macros 維持 per 100g SSOT，servingSize 保留 50
     const customRes = normalizeFoodInputToMetric({
       servingSize: 50,
       servingUnit: 'g',
@@ -596,14 +599,40 @@ describe('nutritionMath - normalizeFoodInputToMetric', () => {
     expect(customRes).toEqual({
       servingSize: 50,
       servingUnit: 'g',
-      calories: 119.5,
-      carbs: 10,
-      protein: 5,
-      fat: 2.5,
+      macros: {
+        calories: 239.01,
+        carbs: { total: 20 },
+        protein: 10,
+        fat: { total: 5 },
+      },
     });
   });
 
-  it('英制份量（2 oz）搭配公制標籤基準（每 100 g / 1000 kJ）跨單位換算並收斂為純公制 g 與 kcal', () => {
+  it('依每份 (50g) 輸入時，macros 自動換算為每 100g SSOT 並保留參考份量 50g', () => {
+    const res = normalizeFoodInputToMetric({
+      servingSize: 50,
+      servingUnit: 'g',
+      basisMode: 'serving',
+      calories: 194,
+      energyUnit: 'kcal',
+      carbs: 29.7,
+      protein: 7,
+      fat: 4,
+      category: 'processed',
+    });
+    expect(res).toEqual({
+      servingSize: 50,
+      servingUnit: 'g',
+      macros: {
+        calories: 388,
+        carbs: { total: 59.4 },
+        protein: 14,
+        fat: { total: 8 },
+      },
+    });
+  });
+
+  it('英制份量（2 oz）搭配公制標籤基準（每 100 g / 1000 kJ）跨單位換算並收斂為 per-100g macros', () => {
     const res = normalizeFoodInputToMetric({
       servingSize: 2,
       servingUnit: 'oz',
@@ -617,13 +646,13 @@ describe('nutritionMath - normalizeFoodInputToMetric', () => {
       fat: 10,
       category: 'processed',
     });
-    // 2 oz = 56.70 g, ratio = 0.567, 1000 kJ = 239.0057 kcal -> 135.52 kcal
+    // 2 oz = 56.70 g 保留作參考份量；macros 錨定於每 100g (1000 kJ = 239.01 kcal)
     expect(res.servingUnit).toBe('g');
     expect(res.servingSize).toBe(56.7);
-    expect(res.calories).toBe(135.52);
-    expect(res.carbs).toBe(22.68);
-    expect(res.protein).toBe(11.34);
-    expect(res.fat).toBe(5.67);
+    expect(res.macros.calories).toBe(239.01);
+    expect(res.macros.carbs.total).toBe(40);
+    expect(res.macros.protein).toBe(20);
+    expect(res.macros.fat.total).toBe(10);
   });
 
   it('邊界防護：基準為 0 或負數數值時不產生 NaN / Infinity', () => {
@@ -642,10 +671,50 @@ describe('nutritionMath - normalizeFoodInputToMetric', () => {
     expect(res).toEqual({
       servingSize: 100,
       servingUnit: 'g',
-      calories: 0,
-      carbs: 0,
-      protein: 0,
-      fat: 0,
+      macros: {
+        calories: 0,
+        carbs: { total: 0 },
+        protein: 0,
+        fat: { total: 0 },
+      },
+    });
+  });
+
+  it('FoodItem.macros 與 servingSize 解耦：calculateScaledNutrition 與 calculateFoodLogNutrients 均以 per-100g 推算', () => {
+    const oats = {
+      servingSize: 50,
+      servingUnit: 'g',
+      macros: {
+        calories: 388,
+        carbs: { total: 59.4 },
+        protein: 14,
+        fat: { total: 8 },
+      },
+    };
+
+    expect(calculateScaledNutrition(oats, 'per100g')).toEqual({
+      calories: 388,
+      carbs: 59.4,
+      protein: 14,
+      fat: 8,
+      servingSize: 100,
+      servingUnit: 'g',
+    });
+
+    expect(calculateScaledNutrition(oats, 'serving')).toEqual({
+      calories: 194,
+      carbs: 29.7,
+      protein: 7,
+      fat: 4,
+      servingSize: 50,
+      servingUnit: 'g',
+    });
+
+    expect(calculateFoodLogNutrients(oats, 50, 'g')).toEqual({
+      calories: 194,
+      carbs: 29.7,
+      protein: 7,
+      fat: 4,
     });
   });
 });
@@ -737,13 +806,13 @@ describe('nutritionMath - 次級營養素擴充與純函數推算', () => {
       sodium: 500,
     });
 
-    // ratio = 50 / 100 = 0.5
+    // per-100g SSOT: macros 直接對應每 100g
     expect(res.servingSize).toBe(50);
-    expect(res.fiber).toBe(3);
-    expect(res.sugar).toBe(5);
-    expect(res.saturatedFat).toBe(1.5);
-    expect(res.transFat).toBe(0);
-    expect(res.sodium).toBe(250);
+    expect(res.macros.carbs.fiber).toBe(6);
+    expect(res.macros.carbs.sugar).toBe(10);
+    expect(res.macros.fat.saturated).toBe(3);
+    expect(res.macros.fat.trans).toBe(0);
+    expect(res.macros.sodium).toBe(500);
   });
 
   it('calculateNetCarbs 正確推算淨碳水並具備下限 0 防護', () => {

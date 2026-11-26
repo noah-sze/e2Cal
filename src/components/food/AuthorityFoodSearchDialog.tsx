@@ -559,7 +559,7 @@ export function AuthorityFoodSearchDialog({
 
                           <div className="text-[11px] font-mono tabular-nums text-muted-foreground leading-none">
                             <MetricValue
-                              value={food.calories}
+                              value={food.macros.calories}
                               unit="kcal"
                               valueClassName="text-foreground/90"
                               unitClassName="text-muted-foreground"
@@ -569,13 +569,13 @@ export function AuthorityFoodSearchDialog({
 
                         <div className="flex items-center gap-2 shrink-0">
                           <MacroSquares
-                            protein={food.protein}
-                            carbs={food.carbs}
-                            fat={food.fat}
-                            sugar={food.sugar}
-                            fiber={food.fiber}
-                            saturatedFat={food.saturatedFat}
-                            transFat={food.transFat}
+                            protein={food.macros.protein}
+                            carbs={food.macros.carbs.total}
+                            fat={food.macros.fat.total}
+                            sugar={food.macros.carbs.sugar}
+                            fiber={food.macros.carbs.fiber}
+                            saturatedFat={food.macros.fat.saturated}
+                            transFat={food.macros.fat.trans}
                           />
 
                           {isImported ? (

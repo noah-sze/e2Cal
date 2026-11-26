@@ -43,22 +43,36 @@ export interface FoodMicronutrients {
   leucine?: number; // 亮氨酸 (mg)
 }
 
+export interface FoodCarbsMacros {
+  total: number;
+  sugar?: number;
+  fiber?: number;
+}
+
+export interface FoodFatMacros {
+  total: number;
+  saturated?: number;
+  trans?: number;
+}
+
+export interface FoodMacros {
+  calories: number;
+  carbs: FoodCarbsMacros;
+  protein: number;
+  fat: FoodFatMacros;
+  sodium?: number;
+}
+
 export interface FoodItem {
   id: string;
   name: string;
   category?: FoodCategory; // 天然食材 | 工業食品 | 飲品 | 食用油 | 調味品
   brand?: string;
+  /** 參考份量數值（純 UX/預設份量元數據，與 macros 100g/100ml 基準完全解耦） */
   servingSize: number;
   servingUnit: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  fiber?: number;
-  sugar?: number;
-  saturatedFat?: number;
-  transFat?: number;
-  sodium?: number;
+  /** 每 100g（液體為每 100ml）純可食部核心巨量與次級營養素 (SSOT) */
+  macros: FoodMacros;
   isCustom: boolean;
   isArchived?: boolean;
 

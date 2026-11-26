@@ -10,7 +10,6 @@ import {
   getCachedAuthorityFood,
   findAuthorityFood,
 } from '@/services/authorityFoodService';
-import { calculateScaledNutrition } from '@/utils/nutritionMath';
 import type { FoodItem, FoodMicronutrients } from '@/types';
 
 export interface AuthorityFoodDetailsDialogProps {
@@ -120,39 +119,22 @@ export function AuthorityFoodDetailsDialog({
   const refuseRate = rawFood.refuseRate ?? food.refuseRate ?? 0;
   const edibleRate = rawFood.edibleRate ?? food.edibleRate ?? 1.0;
 
-  // 若權威原數據尚未非同步載入完成，暫時將使用者份量等比標準化回 100g 作為無縫兜底
+  // 始終以每 100g/100ml 的 macros 為唯一真理源展示
   const displayNutrition = useMemo(() => {
-    if (fetchedRaw) {
-      return {
-        servingSize: fetchedRaw.servingSize || 100,
-        servingUnit: fetchedRaw.servingUnit || 'g',
-        calories: fetchedRaw.calories,
-        carbs: fetchedRaw.carbs,
-        protein: fetchedRaw.protein,
-        fat: fetchedRaw.fat,
-        fiber: fetchedRaw.fiber,
-        sugar: fetchedRaw.sugar,
-        saturatedFat: fetchedRaw.saturatedFat,
-        transFat: fetchedRaw.transFat,
-      };
-    }
-    const baseSize = food.servingSize || 100;
-    const baseUnit = food.servingUnit || 'g';
-    if (baseSize === 100) {
-      return {
-        servingSize: 100,
-        servingUnit: baseUnit,
-        calories: food.calories,
-        carbs: food.carbs,
-        protein: food.protein,
-        fat: food.fat,
-        fiber: food.fiber,
-        sugar: food.sugar,
-        saturatedFat: food.saturatedFat,
-        transFat: food.transFat,
-      };
-    }
-    return calculateScaledNutrition(food, 'per100g');
+    const source = fetchedRaw ?? food;
+    const baseUnit = source.servingUnit || (source.category === 'beverage' ? 'ml' : 'g');
+    return {
+      servingSize: 100,
+      servingUnit: baseUnit,
+      calories: source.macros.calories,
+      carbs: source.macros.carbs.total,
+      protein: source.macros.protein,
+      fat: source.macros.fat.total,
+      fiber: source.macros.carbs.fiber,
+      sugar: source.macros.carbs.sugar,
+      saturatedFat: source.macros.fat.saturated,
+      transFat: source.macros.fat.trans,
+    };
   }, [fetchedRaw, food]);
 
   // 過濾具有測定記錄的微量營養素

@@ -1,15 +1,22 @@
-import type { FoodCategory, NutritionTag } from '@/types';
+import type { FoodCategory, FoodMacros, NutritionTag } from '@/types';
 
-export interface NutritionEvaluationInput {
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  fiber?: number | null;
-  servingSize?: number;
-  servingUnit?: string;
-  category?: FoodCategory;
-}
+export type NutritionEvaluationInput =
+  | {
+      calories: number;
+      protein: number;
+      carbs: number;
+      fat: number;
+      fiber?: number | null;
+      servingSize?: number;
+      servingUnit?: string;
+      category?: FoodCategory;
+    }
+  | {
+      macros: FoodMacros;
+      servingSize?: number;
+      servingUnit?: string;
+      category?: FoodCategory;
+    };
 
 export interface NutritionEvaluationResult {
   labels: NutritionTag[];
@@ -49,6 +56,25 @@ export function calculateMacroPercentages(carbs: number, protein: number, fat: n
 
 const evaluationCache = new WeakMap<NutritionEvaluationInput, NutritionEvaluationResult>();
 
+function extractEvaluationMacros(food: NutritionEvaluationInput): {
+  calories: number;
+  carbs: number;
+  protein: number;
+  fat: number;
+  fiber?: number | null;
+} {
+  if ('macros' in food) {
+    return {
+      calories: food.macros.calories,
+      carbs: food.macros.carbs.total,
+      protein: food.macros.protein,
+      fat: food.macros.fat.total,
+      fiber: food.macros.carbs.fiber,
+    };
+  }
+  return food;
+}
+
 /**
  * 客觀營養角色多標籤與數值點亮評估函數 (純函數，無副作用；以 WeakMap 依物件參照快取結果)
  */
@@ -58,11 +84,12 @@ export function evaluateNutritionalHighlight(food: NutritionEvaluationInput): Nu
     return cached;
   }
 
-  const calories = Math.max(0, food.calories || 0);
-  const carbs = Math.max(0, food.carbs || 0);
-  const protein = Math.max(0, food.protein || 0);
-  const fat = Math.max(0, food.fat || 0);
-  const fiber = typeof food.fiber === 'number' && !isNaN(food.fiber) ? Math.max(0, food.fiber) : 0;
+  const flat = extractEvaluationMacros(food);
+  const calories = Math.max(0, flat.calories || 0);
+  const carbs = Math.max(0, flat.carbs || 0);
+  const protein = Math.max(0, flat.protein || 0);
+  const fat = Math.max(0, flat.fat || 0);
+  const fiber = typeof flat.fiber === 'number' && !isNaN(flat.fiber) ? Math.max(0, flat.fiber) : 0;
 
   const { carbsPct, proteinPct, fatPct } = calculateMacroPercentages(carbs, protein, fat);
 
@@ -74,7 +101,8 @@ export function evaluateNutritionalHighlight(food: NutritionEvaluationInput): Nu
   };
 
   const isLiquid = (food.servingUnit || 'g').toLowerCase().includes('ml') || food.category === 'beverage';
-  const servingAmount = food.servingSize && food.servingSize > 0 ? food.servingSize : 100;
+  const isPer100Anchored = 'macros' in food;
+  const servingAmount = isPer100Anchored ? 100 : (food.servingSize && food.servingSize > 0 ? food.servingSize : 100);
   const factor = 100 / servingAmount;
 
   const calPer100 = calories * factor;

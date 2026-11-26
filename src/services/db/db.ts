@@ -1859,6 +1859,230 @@ export class E2CalDatabase extends Dexie {
         }
       }
     });
+
+    // ========================================================================
+    // Schema v35: FoodItem 營養常數全面收斂至 macros 物件，並強制錨定每 100 g / 100 ml
+    // ========================================================================
+    this.version(35).upgrade(async (tx) => {
+      const now = Date.now();
+      const parseFinite = (val: unknown): number | undefined => {
+        if (val === undefined || val === null || val === '') return undefined;
+        const num = Number(val);
+        if (!Number.isFinite(num)) return undefined;
+        return num;
+      };
+
+      const allFoods = await tx.table<Record<string, unknown>, string>('foods').toArray();
+      let migratedCount = 0;
+
+      for (const f of allFoods) {
+        if (f.macros && typeof f.macros === 'object') continue;
+
+        const servingSize = Number(f.servingSize);
+        const scale =
+          Number.isFinite(servingSize) && servingSize > 0 && servingSize !== 100
+            ? 100 / servingSize
+            : 1;
+
+        const scaleNum = (val: unknown, decimals: number): number | undefined => {
+          const parsed = parseFinite(val);
+          if (parsed === undefined) return undefined;
+          const factor = 10 ** decimals;
+          return Math.round(Math.max(0, parsed) * scale * factor) / factor;
+        };
+
+        const fiber = scaleNum(f.fiber, 1);
+        const sugar = scaleNum(f.sugar, 1);
+        const saturatedFat = scaleNum(f.saturatedFat, 1);
+        const transFat = scaleNum(f.transFat, 1);
+        const sodium = scaleNum(f.sodium, 0);
+
+        const macros = {
+          calories: Math.round(Math.max(0, Number(f.calories) || 0) * scale),
+          carbs: scaleNum(f.carbs, 1) ?? 0,
+          protein: scaleNum(f.protein, 1) ?? 0,
+          fat: scaleNum(f.fat, 1) ?? 0,
+          ...(fiber !== undefined ? { fiber } : {}),
+          ...(sugar !== undefined ? { sugar } : {}),
+          ...(saturatedFat !== undefined ? { saturatedFat } : {}),
+          ...(transFat !== undefined ? { transFat } : {}),
+          ...(sodium !== undefined ? { sodium } : {}),
+        };
+
+        const nextRecord: Record<string, unknown> = {
+          ...f,
+          macros,
+          updatedAt: now,
+          rev: (Number(f.rev) || 1) + 1,
+        };
+        delete nextRecord.calories;
+        delete nextRecord.carbs;
+        delete nextRecord.protein;
+        delete nextRecord.fat;
+        delete nextRecord.fiber;
+        delete nextRecord.sugar;
+        delete nextRecord.saturatedFat;
+        delete nextRecord.transFat;
+        delete nextRecord.sodium;
+
+        await tx.table<Record<string, unknown>, string>('foods').put(nextRecord);
+        migratedCount++;
+      }
+
+      if (migratedCount > 0) {
+        clearFoodsCache();
+        if (typeof window !== 'undefined' && window.localStorage) {
+          try {
+            const PUSHED_STORAGE_KEY = 'e2cal_sync_pushed_times_v1';
+            const raw = window.localStorage.getItem(PUSHED_STORAGE_KEY);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              delete parsed['foods'];
+              window.localStorage.setItem(PUSHED_STORAGE_KEY, JSON.stringify(parsed));
+            }
+            const REVS_STORAGE_KEY = 'e2cal_cached_revs_v1';
+            const rawRevs = window.localStorage.getItem(REVS_STORAGE_KEY);
+            if (rawRevs) {
+              const parsedRevs = JSON.parse(rawRevs);
+              delete parsedRevs['/nutrition/foods.json'];
+              window.localStorage.setItem(REVS_STORAGE_KEY, JSON.stringify(parsedRevs));
+            }
+            window.localStorage.setItem('e2cal_force_push_foods', 'true');
+          } catch {
+            // ignore
+          }
+        }
+      }
+    });
+
+    // ========================================================================
+    // Schema v36: FoodMacros 巢狀化 (carbs: { total, sugar?, fiber? }, fat: { total, saturated?, trans? })
+    // 同時相容中間態 (macros.carbs 為數字) 與舊版頂層扁平格式
+    // ========================================================================
+    this.version(36).upgrade(async (tx) => {
+      const now = Date.now();
+      const parseFinite = (val: unknown): number | undefined => {
+        if (val === undefined || val === null || val === '') return undefined;
+        const num = Number(val);
+        if (!Number.isFinite(num)) return undefined;
+        return num;
+      };
+
+      const allFoods = await tx.table<Record<string, unknown>, string>('foods').toArray();
+      let migratedCount = 0;
+
+      for (const f of allFoods) {
+        const rawMacros =
+          f.macros && typeof f.macros === 'object' && !Array.isArray(f.macros)
+            ? (f.macros as Record<string, unknown>)
+            : null;
+
+        const isAlreadyNested =
+          rawMacros !== null &&
+          typeof rawMacros.carbs === 'object' &&
+          rawMacros.carbs !== null &&
+          typeof rawMacros.fat === 'object' &&
+          rawMacros.fat !== null;
+
+        if (isAlreadyNested) continue;
+
+        const servingSize = Number(f.servingSize);
+        const scale =
+          !rawMacros && Number.isFinite(servingSize) && servingSize > 0 && servingSize !== 100
+            ? 100 / servingSize
+            : 1;
+
+        const src = rawMacros ?? f;
+        const scaleNum = (val: unknown, decimals: number): number | undefined => {
+          const parsed = parseFinite(val);
+          if (parsed === undefined) return undefined;
+          const factor = 10 ** decimals;
+          return Math.round(Math.max(0, parsed) * scale * factor) / factor;
+        };
+
+        const rawCarbsObj =
+          typeof src.carbs === 'object' && src.carbs !== null
+            ? (src.carbs as Record<string, unknown>)
+            : null;
+        const rawFatObj =
+          typeof src.fat === 'object' && src.fat !== null
+            ? (src.fat as Record<string, unknown>)
+            : null;
+
+        const carbsTotal =
+          scaleNum(rawCarbsObj ? rawCarbsObj.total : src.carbs, 1) ?? 0;
+        const sugar = scaleNum(rawCarbsObj ? rawCarbsObj.sugar : src.sugar, 1);
+        const fiber = scaleNum(rawCarbsObj ? rawCarbsObj.fiber : src.fiber, 1);
+
+        const fatTotal = scaleNum(rawFatObj ? rawFatObj.total : src.fat, 1) ?? 0;
+        const saturated = scaleNum(
+          rawFatObj ? rawFatObj.saturated : src.saturatedFat,
+          1
+        );
+        const trans = scaleNum(rawFatObj ? rawFatObj.trans : src.transFat, 1);
+        const sodium = scaleNum(src.sodium, 0);
+
+        const macros = {
+          calories: Math.round(Math.max(0, Number(src.calories) || 0) * scale),
+          carbs: {
+            total: carbsTotal,
+            ...(sugar !== undefined ? { sugar } : {}),
+            ...(fiber !== undefined ? { fiber } : {}),
+          },
+          protein: scaleNum(src.protein, 1) ?? 0,
+          fat: {
+            total: fatTotal,
+            ...(saturated !== undefined ? { saturated } : {}),
+            ...(trans !== undefined ? { trans } : {}),
+          },
+          ...(sodium !== undefined ? { sodium } : {}),
+        };
+
+        const nextRecord: Record<string, unknown> = {
+          ...f,
+          macros,
+          updatedAt: now,
+          rev: (Number(f.rev) || 1) + 1,
+        };
+        delete nextRecord.calories;
+        delete nextRecord.carbs;
+        delete nextRecord.protein;
+        delete nextRecord.fat;
+        delete nextRecord.fiber;
+        delete nextRecord.sugar;
+        delete nextRecord.saturatedFat;
+        delete nextRecord.transFat;
+        delete nextRecord.sodium;
+
+        await tx.table<Record<string, unknown>, string>('foods').put(nextRecord);
+        migratedCount++;
+      }
+
+      if (migratedCount > 0) {
+        clearFoodsCache();
+        if (typeof window !== 'undefined' && window.localStorage) {
+          try {
+            const PUSHED_STORAGE_KEY = 'e2cal_sync_pushed_times_v1';
+            const raw = window.localStorage.getItem(PUSHED_STORAGE_KEY);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              delete parsed['foods'];
+              window.localStorage.setItem(PUSHED_STORAGE_KEY, JSON.stringify(parsed));
+            }
+            const REVS_STORAGE_KEY = 'e2cal_cached_revs_v1';
+            const rawRevs = window.localStorage.getItem(REVS_STORAGE_KEY);
+            if (rawRevs) {
+              const parsedRevs = JSON.parse(rawRevs);
+              delete parsedRevs['/nutrition/foods.json'];
+              window.localStorage.setItem(REVS_STORAGE_KEY, JSON.stringify(parsedRevs));
+            }
+            window.localStorage.setItem('e2cal_force_push_foods', 'true');
+          } catch {
+            // ignore
+          }
+        }
+      }
+    });
   }
 
   async seedDefaultData() {

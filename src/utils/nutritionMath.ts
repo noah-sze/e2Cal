@@ -1,4 +1,4 @@
-import type { EnergyUnit, FoodCategory, FoodWeightUnit, FoodVolumeUnit, MealType } from '@/types';
+import type { EnergyUnit, FoodCategory, FoodMacros, FoodWeightUnit, FoodVolumeUnit, MealType } from '@/types';
 import { OZ_TO_G_RATIO, FL_OZ_TO_ML_RATIO, kjToKcal, roundTo } from './unitMath';
 
 export type NutritionDisplayMode = 'serving' | 'per100g';
@@ -15,6 +15,40 @@ export interface BaseNutritionInput {
   sodium?: number;
   servingSize?: number;
   servingUnit?: string;
+}
+
+export type FoodOrFlatNutritionInput =
+  | BaseNutritionInput
+  | {
+      macros: FoodMacros;
+      servingSize?: number;
+      servingUnit?: string;
+    };
+
+function hasGroupedMacros(
+  item: FoodOrFlatNutritionInput | null | undefined
+): item is { macros: FoodMacros; servingSize?: number; servingUnit?: string } {
+  return Boolean(item && 'macros' in item && item.macros && typeof item.macros === 'object');
+}
+
+function extractFlatMacros(item: FoodOrFlatNutritionInput | null | undefined): BaseNutritionInput | null {
+  if (!item) return null;
+  if (hasGroupedMacros(item)) {
+    return {
+      calories: item.macros.calories,
+      carbs: item.macros.carbs.total,
+      protein: item.macros.protein,
+      fat: item.macros.fat.total,
+      fiber: item.macros.carbs.fiber,
+      sugar: item.macros.carbs.sugar,
+      saturatedFat: item.macros.fat.saturated,
+      transFat: item.macros.fat.trans,
+      sodium: item.macros.sodium,
+      servingSize: item.servingSize,
+      servingUnit: item.servingUnit,
+    };
+  }
+  return item;
 }
 
 export interface ScaledNutritionResult {
@@ -45,10 +79,12 @@ export interface ScaledNutritionOptions {
  * - 英制 (oz / fl oz)：以「每 1 oz」（液體為「每 1 fl oz」）為密度標準
  */
 export function calculateScaledNutrition(
-  item: BaseNutritionInput | null | undefined,
+  rawItem: FoodOrFlatNutritionInput | null | undefined,
   mode: NutritionDisplayMode = 'serving',
   options?: ScaledNutritionOptions
 ): ScaledNutritionResult {
+  const isPer100Anchored = hasGroupedMacros(rawItem);
+  const item = extractFlatMacros(rawItem);
   const safeCalories = Math.max(0, typeof item?.calories === 'number' && !isNaN(item.calories) ? item.calories : 0);
   const safeProtein = Math.max(0, typeof item?.protein === 'number' && !isNaN(item.protein) ? item.protein : 0);
   const safeCarbs = Math.max(0, typeof item?.carbs === 'number' && !isNaN(item.carbs) ? item.carbs : 0);
@@ -62,18 +98,22 @@ export function calculateScaledNutrition(
     return isInt ? Math.round(safe * f) : Math.round(safe * f * 10) / 10;
   };
 
-  // 「每份」模式：直接輸出原始物理標籤數值
+  // 「每份」模式
   if (mode === 'serving') {
+    // 若傳入為 per-100g/100ml 錨定之 FoodItem.macros，則按參考份量 servingSize / 100 折算
+    const servingFactor = isPer100Anchored
+      ? (rawSize > 0 ? normalizeToPhysicalBase(rawSize, rawUnit) / 100 : 1)
+      : 1;
     return {
-      calories: Math.round(safeCalories),
-      protein: Math.round(safeProtein * 10) / 10,
-      carbs: Math.round(safeCarbs * 10) / 10,
-      fat: Math.round(safeFat * 10) / 10,
-      fiber: scaleOpt(item?.fiber),
-      sugar: scaleOpt(item?.sugar),
-      saturatedFat: scaleOpt(item?.saturatedFat),
-      transFat: scaleOpt(item?.transFat),
-      sodium: scaleOpt(item?.sodium, 1, true),
+      calories: Math.round(safeCalories * servingFactor),
+      protein: Math.round(safeProtein * servingFactor * 10) / 10,
+      carbs: Math.round(safeCarbs * servingFactor * 10) / 10,
+      fat: Math.round(safeFat * servingFactor * 10) / 10,
+      fiber: scaleOpt(item?.fiber, servingFactor),
+      sugar: scaleOpt(item?.sugar, servingFactor),
+      saturatedFat: scaleOpt(item?.saturatedFat, servingFactor),
+      transFat: scaleOpt(item?.transFat, servingFactor),
+      sodium: scaleOpt(item?.sodium, servingFactor, true),
       servingSize: rawSize,
       servingUnit: rawUnit,
     };
@@ -83,9 +123,12 @@ export function calculateScaledNutrition(
   const normalizedRawUnit = rawUnit.toLowerCase();
   const isLiquid = normalizedRawUnit.includes('ml') || normalizedRawUnit.includes('fl');
   const isImperial = options?.foodWeightUnit === 'oz';
+  // FoodItem.macros 已強制錨定於每 100g/100ml，無需再依 servingSize 反推
+  const basisSize = isPer100Anchored ? 100 : rawSize;
+  const basisUnit = isPer100Anchored ? (isLiquid ? 'ml' : 'g') : normalizedRawUnit;
 
   // 邊界防護：若份量無效或 <= 0，除以零防護，回退為原始數值或預設基準
-  if (rawSize <= 0) {
+  if (basisSize <= 0) {
     if (isImperial) {
       return {
         calories: Math.round(safeCalories),
@@ -121,12 +164,12 @@ export function calculateScaledNutrition(
     let factor = 1;
     if (isLiquid) {
       // 基準為 1 fl oz
-      if (normalizedRawUnit.includes('fl')) {
+      if (basisUnit.includes('fl')) {
         // 原始單位已是 fl oz
-        factor = 1 / rawSize;
+        factor = 1 / basisSize;
       } else {
         // 原始單位為 ml (1 fl oz = FL_OZ_TO_ML_RATIO ml)
-        factor = FL_OZ_TO_ML_RATIO / rawSize;
+        factor = FL_OZ_TO_ML_RATIO / basisSize;
       }
       return {
         calories: Math.round(safeCalories * factor),
@@ -143,12 +186,12 @@ export function calculateScaledNutrition(
       };
     } else {
       // 基準為 1 oz
-      if (normalizedRawUnit.includes('oz')) {
+      if (basisUnit.includes('oz')) {
         // 原始單位已是 oz
-        factor = 1 / rawSize;
+        factor = 1 / basisSize;
       } else {
         // 原始單位為 g (1 oz = OZ_TO_G_RATIO g)
-        factor = OZ_TO_G_RATIO / rawSize;
+        factor = OZ_TO_G_RATIO / basisSize;
       }
       return {
         calories: Math.round(safeCalories * factor),
@@ -169,11 +212,11 @@ export function calculateScaledNutrition(
   // 公制密度基準：固體為 100g，液體為 100ml
   let factor = 1;
   if (isLiquid) {
-    if (normalizedRawUnit.includes('fl')) {
+    if (basisUnit.includes('fl')) {
       // 原始單位為 fl oz，100ml = 100 / FL_OZ_TO_ML_RATIO fl oz
-      factor = (100 / FL_OZ_TO_ML_RATIO) / rawSize;
+      factor = (100 / FL_OZ_TO_ML_RATIO) / basisSize;
     } else {
-      factor = 100 / rawSize;
+      factor = 100 / basisSize;
     }
     return {
       calories: Math.round(safeCalories * factor),
@@ -189,11 +232,11 @@ export function calculateScaledNutrition(
       servingUnit: 'ml',
     };
   } else {
-    if (normalizedRawUnit.includes('oz')) {
+    if (basisUnit.includes('oz')) {
       // 原始單位為 oz，100g = 100 / OZ_TO_G_RATIO oz
-      factor = (100 / OZ_TO_G_RATIO) / rawSize;
+      factor = (100 / OZ_TO_G_RATIO) / basisSize;
     } else {
-      factor = 100 / rawSize;
+      factor = 100 / basisSize;
     }
     return {
       calories: Math.round(safeCalories * factor),
@@ -334,22 +377,12 @@ export interface CalculatedFoodLogNutrients {
  * 遵循 Precision Metric 純數學無副作用標準
  */
 export function calculateFoodLogNutrients(
-  food: {
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-    fiber?: number;
-    sugar?: number;
-    saturatedFat?: number;
-    transFat?: number;
-    sodium?: number;
-    servingSize?: number;
-    servingUnit?: string;
-  } | null | undefined,
+  rawFood: FoodOrFlatNutritionInput | null | undefined,
   quantity: number,
   unit?: string
 ): CalculatedFoodLogNutrients {
+  const isPer100Anchored = hasGroupedMacros(rawFood);
+  const food = extractFlatMacros(rawFood);
   if (!food) {
     return { calories: 0, protein: 0, carbs: 0, fat: 0 };
   }
@@ -365,7 +398,7 @@ export function calculateFoodLogNutrients(
     sodium: food.sodium,
     servingSize: quantity,
     servingUnit: unit || food.servingUnit || 'g',
-    basisSize: food.servingSize || 100,
+    basisSize: isPer100Anchored ? 100 : (food.servingSize || 100),
     basisUnit: food.servingUnit || 'g',
   });
   return {
@@ -499,20 +532,13 @@ export interface NormalizeFoodInputParams {
 export interface NormalizedMetricFoodNutrition {
   servingSize: number;
   servingUnit: 'g' | 'ml';
-  calories: number;
-  carbs: number;
-  protein: number;
-  fat: number;
-  fiber?: number;
-  sugar?: number;
-  saturatedFat?: number;
-  transFat?: number;
-  sodium?: number;
+  macros: FoodMacros;
 }
 
 /**
  * 將新增 / 編輯食材表單中的任意單位（g / oz / ml / fl oz、kcal / kJ）與任意基準（份量 / 自定義）
- * 一次性無損折算為單份純公制 SI 真值（g / ml、kcal），保存後徹底遺忘輸入過程的單位與基準。
+ * 一次性無損折算為「每 100 g / 100 ml 純公制 SI 營養素 (macros)」，
+ * 並保留參考份量 (servingSize / servingUnit) 作為純 UX 元數據。
  */
 export function normalizeFoodInputToMetric(
   params: NormalizeFoodInputParams
@@ -543,75 +569,56 @@ export function normalizeFoodInputToMetric(
   const baseCaloriesKcal =
     params.energyUnit === 'kJ' ? kjToKcal(safeRawCal, 4) : safeRawCal;
 
-  // 2. 食用份量統一折算為公制 SI（g / ml）
+  // 2. 參考份量統一折算為公制 SI（g / ml）
   const metricServing = normalizeServingToMetric(
     params.servingSize,
     params.servingUnit,
     params.category
   );
 
-  // 3. 依份量直接輸入：無需比例縮放
-  if (params.basisMode === 'serving') {
-    return {
-      servingSize: metricServing.servingSize,
-      servingUnit: metricServing.servingUnit,
-      calories: roundTo(baseCaloriesKcal, 2),
-      carbs: roundTo(safeCarbs, 2),
-      protein: roundTo(safeProtein, 2),
-      fat: roundTo(safeFat, 2),
-      fiber: safeOpt(params.fiber),
-      sugar: safeOpt(params.sugar),
-      saturatedFat: safeOpt(params.saturatedFat),
-      transFat: safeOpt(params.transFat),
-      sodium: safeOpt(params.sodium, 1, true),
-    };
+  // 3. 決定輸入數值所對應的物理基準克數/毫升數，並一律折算為每 100 g / 100 ml
+  let basisPhysicalSize = metricServing.servingSize;
+  if (params.basisMode === 'custom') {
+    const effectiveBasisSize =
+      typeof params.basisSize === 'number' && Number.isFinite(params.basisSize) && params.basisSize > 0
+        ? params.basisSize
+        : params.servingSize;
+    const effectiveBasisUnit =
+      params.basisSize && params.basisSize > 0 && params.basisUnit
+        ? params.basisUnit
+        : params.servingUnit;
+    basisPhysicalSize = normalizeServingToMetric(
+      effectiveBasisSize,
+      effectiveBasisUnit,
+      params.category
+    ).servingSize;
   }
 
-  // 4. 自定義基準輸入（例如每 100 g / 每 1 oz）：先統一至物理公制基準再按單份比例折算
-  const effectiveBasisSize =
-    typeof params.basisSize === 'number' && Number.isFinite(params.basisSize) && params.basisSize > 0
-      ? params.basisSize
-      : params.servingSize;
-  const effectiveBasisUnit =
-    params.basisSize && params.basisSize > 0 && params.basisUnit
-      ? params.basisUnit
-      : params.servingUnit;
+  const ratio = basisPhysicalSize > 0 ? 100 / basisPhysicalSize : 1;
+  const fiber = safeOpt(params.fiber, ratio);
+  const sugar = safeOpt(params.sugar, ratio);
+  const saturatedFat = safeOpt(params.saturatedFat, ratio);
+  const transFat = safeOpt(params.transFat, ratio);
+  const sodium = safeOpt(params.sodium, ratio, true);
 
-  const metricBasis = normalizeServingToMetric(
-    effectiveBasisSize,
-    effectiveBasisUnit,
-    params.category
-  );
-
-  if (metricBasis.servingSize <= 0 || metricServing.servingSize <= 0) {
-    return {
-      servingSize: metricServing.servingSize,
-      servingUnit: metricServing.servingUnit,
-      calories: roundTo(baseCaloriesKcal, 2),
-      carbs: roundTo(safeCarbs, 2),
-      protein: roundTo(safeProtein, 2),
-      fat: roundTo(safeFat, 2),
-      fiber: safeOpt(params.fiber),
-      sugar: safeOpt(params.sugar),
-      saturatedFat: safeOpt(params.saturatedFat),
-      transFat: safeOpt(params.transFat),
-      sodium: safeOpt(params.sodium, 1, true),
-    };
-  }
-
-  const ratio = metricServing.servingSize / metricBasis.servingSize;
   return {
     servingSize: metricServing.servingSize,
     servingUnit: metricServing.servingUnit,
-    calories: roundTo(baseCaloriesKcal * ratio, 2),
-    carbs: roundTo(safeCarbs * ratio, 2),
-    protein: roundTo(safeProtein * ratio, 2),
-    fat: roundTo(safeFat * ratio, 2),
-    fiber: safeOpt(params.fiber, ratio),
-    sugar: safeOpt(params.sugar, ratio),
-    saturatedFat: safeOpt(params.saturatedFat, ratio),
-    transFat: safeOpt(params.transFat, ratio),
-    sodium: safeOpt(params.sodium, ratio, true),
+    macros: {
+      calories: roundTo(baseCaloriesKcal * ratio, 2),
+      carbs: {
+        total: roundTo(safeCarbs * ratio, 2),
+        ...(sugar !== undefined ? { sugar } : {}),
+        ...(fiber !== undefined ? { fiber } : {}),
+      },
+      protein: roundTo(safeProtein * ratio, 2),
+      fat: {
+        total: roundTo(safeFat * ratio, 2),
+        ...(saturatedFat !== undefined ? { saturated: saturatedFat } : {}),
+        ...(transFat !== undefined ? { trans: transFat } : {}),
+      },
+      ...(sodium !== undefined ? { sodium } : {}),
+    },
   };
 }
 

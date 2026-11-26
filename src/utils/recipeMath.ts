@@ -22,31 +22,30 @@ export interface RecipeTotals extends NutrientBreakdown {
  * 純函數無副作用，處理異常與邊界輸入
  */
 export function calculateIngredientMacros(
-  food: Pick<FoodItem, 'servingSize' | 'calories' | 'protein' | 'carbs' | 'fat' | 'sugar' | 'fiber' | 'saturatedFat' | 'transFat' | 'sodium'> | undefined | null,
+  food: Pick<FoodItem, 'macros'> | undefined | null,
   quantity: number
 ): NutrientBreakdown {
   if (
     !food ||
+    !food.macros ||
     typeof quantity !== 'number' ||
     isNaN(quantity) ||
-    quantity <= 0 ||
-    typeof food.servingSize !== 'number' ||
-    isNaN(food.servingSize) ||
-    food.servingSize <= 0
+    quantity <= 0
   ) {
     return { calories: 0, protein: 0, carbs: 0, fat: 0 };
   }
 
-  const ratio = quantity / food.servingSize;
-  const safeCalories = typeof food.calories === 'number' && !isNaN(food.calories) ? food.calories : 0;
-  const safeProtein = typeof food.protein === 'number' && !isNaN(food.protein) ? food.protein : 0;
-  const safeCarbs = typeof food.carbs === 'number' && !isNaN(food.carbs) ? food.carbs : 0;
-  const safeFat = typeof food.fat === 'number' && !isNaN(food.fat) ? food.fat : 0;
-  const safeSugar = typeof food.sugar === 'number' && !isNaN(food.sugar) ? food.sugar : undefined;
-  const safeFiber = typeof food.fiber === 'number' && !isNaN(food.fiber) ? food.fiber : undefined;
-  const safeSatFat = typeof food.saturatedFat === 'number' && !isNaN(food.saturatedFat) ? food.saturatedFat : undefined;
-  const safeTransFat = typeof food.transFat === 'number' && !isNaN(food.transFat) ? food.transFat : undefined;
-  const safeSodium = typeof food.sodium === 'number' && !isNaN(food.sodium) ? food.sodium : undefined;
+  const ratio = quantity / 100;
+  const m = food.macros;
+  const safeCalories = typeof m.calories === 'number' && !isNaN(m.calories) ? m.calories : 0;
+  const safeProtein = typeof m.protein === 'number' && !isNaN(m.protein) ? m.protein : 0;
+  const safeCarbs = typeof m.carbs?.total === 'number' && !isNaN(m.carbs.total) ? m.carbs.total : 0;
+  const safeFat = typeof m.fat?.total === 'number' && !isNaN(m.fat.total) ? m.fat.total : 0;
+  const safeSugar = typeof m.carbs?.sugar === 'number' && !isNaN(m.carbs.sugar) ? m.carbs.sugar : undefined;
+  const safeFiber = typeof m.carbs?.fiber === 'number' && !isNaN(m.carbs.fiber) ? m.carbs.fiber : undefined;
+  const safeSatFat = typeof m.fat?.saturated === 'number' && !isNaN(m.fat.saturated) ? m.fat.saturated : undefined;
+  const safeTransFat = typeof m.fat?.trans === 'number' && !isNaN(m.fat.trans) ? m.fat.trans : undefined;
+  const safeSodium = typeof m.sodium === 'number' && !isNaN(m.sodium) ? m.sodium : undefined;
 
   return {
     calories: Math.round(safeCalories * ratio),

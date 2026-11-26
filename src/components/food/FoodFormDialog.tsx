@@ -226,25 +226,39 @@ export function FoodFormDialog({
       );
       setServingUnit(prefServingUnit);
 
-      // 2. 權威庫導入食物鎖定原基準份量模式以確保調整預設份量時正確等比折算；一般食物以「份量」模式開啟
-      setBasisMode(initialData.dataSource ? 'custom' : 'serving');
-      setBasisUnit(prefServingUnit);
-      setBasisSize(convertedServingSize > 0 ? String(convertedServingSize) : '');
+      // 2. 權威庫導入食物鎖定 100 g / ml 基準以確保調整預設份量時正確等比折算；一般食物以「份量」模式開啟
+      const isAuthority = Boolean(initialData.dataSource);
+      const metricBaseUnit = isBeverage ? 'ml' : 'g';
+      setBasisMode(isAuthority ? 'custom' : 'serving');
+      setBasisUnit(isAuthority ? metricBaseUnit : prefServingUnit);
+      setBasisSize(
+        isAuthority
+          ? '100'
+          : convertedServingSize > 0
+            ? String(convertedServingSize)
+            : ''
+      );
 
-      // 3. 熱量由底層公制 kcal 依當前偏好單位即時換算（kJ 時使用精準 4.184 換算）
+      // 3. 底層 macros 錨定於每 100 g / ml；若為「份量」模式則依預設份量等比回顯
+      const m = initialData.macros;
+      const servingScale = !isAuthority && rawServingSize > 0 ? rawServingSize / 100 : 1;
+      const scaleOpt = (v?: number) =>
+        typeof v === 'number' ? String(Math.round(v * servingScale * 100) / 100) : '';
+
+      const rawCal = m.calories * servingScale;
       const displayCal =
         energyUnit === 'kJ'
-          ? kcalToKj(initialData.calories, 2)
-          : Math.round(initialData.calories * 100) / 100;
+          ? kcalToKj(rawCal, 2)
+          : Math.round(rawCal * 100) / 100;
       setCalories(displayCal >= 0 ? String(displayCal) : '');
-      setProtein(typeof initialData.protein === 'number' ? String(initialData.protein) : '');
-      setCarbs(typeof initialData.carbs === 'number' ? String(initialData.carbs) : '');
-      setFat(typeof initialData.fat === 'number' ? String(initialData.fat) : '');
-      setFiber(typeof initialData.fiber === 'number' ? String(initialData.fiber) : '');
-      setSugar(typeof initialData.sugar === 'number' ? String(initialData.sugar) : '');
-      setSaturatedFat(typeof initialData.saturatedFat === 'number' ? String(initialData.saturatedFat) : '');
-      setTransFat(typeof initialData.transFat === 'number' ? String(initialData.transFat) : '');
-      setSodium(typeof initialData.sodium === 'number' ? String(initialData.sodium) : '');
+      setProtein(scaleOpt(m.protein));
+      setCarbs(scaleOpt(m.carbs.total));
+      setFat(scaleOpt(m.fat.total));
+      setFiber(scaleOpt(m.carbs.fiber));
+      setSugar(scaleOpt(m.carbs.sugar));
+      setSaturatedFat(scaleOpt(m.fat.saturated));
+      setTransFat(scaleOpt(m.fat.trans));
+      setSodium(typeof m.sodium === 'number' ? String(Math.round(m.sodium * servingScale)) : '');
       const rawEdible =
         initialData.edibleRate ??
         (typeof initialData.refuseRate === 'number' ? Math.max(0, 1 - initialData.refuseRate) : 1);
@@ -733,15 +747,7 @@ export function FoodFormDialog({
         brand: brand.trim() || undefined,
         servingSize: normalizedMetricFood.servingSize,
         servingUnit: normalizedMetricFood.servingUnit,
-        calories: normalizedMetricFood.calories,
-        protein: normalizedMetricFood.protein,
-        carbs: normalizedMetricFood.carbs,
-        fat: normalizedMetricFood.fat,
-        fiber: normalizedMetricFood.fiber,
-        sugar: normalizedMetricFood.sugar,
-        saturatedFat: normalizedMetricFood.saturatedFat,
-        transFat: normalizedMetricFood.transFat,
-        sodium: normalizedMetricFood.sodium,
+        macros: normalizedMetricFood.macros,
         ...(() => {
           const clampedPct = Math.min(100, Math.max(1, Math.round(Number(edibleRatePct) || 100)));
           const finalEdibleRate = clampedPct / 100;
@@ -1052,7 +1058,22 @@ export function FoodFormDialog({
           {/* 表格段落 2: 基準營養素 (權威庫導入食物僅供唯讀檢視，不允許編輯營養價值表) */}
           <NutritionFactsCard
             title={t('diet.servingNutrients')}
-            data={isAuthorityFood ? normalizedMetricFood : undefined}
+            data={
+              isAuthorityFood
+                ? {
+                    servingSize: 100,
+                    servingUnit: normalizedMetricFood.servingUnit,
+                    calories: normalizedMetricFood.macros.calories,
+                    carbs: normalizedMetricFood.macros.carbs.total,
+                    protein: normalizedMetricFood.macros.protein,
+                    fat: normalizedMetricFood.macros.fat.total,
+                    fiber: normalizedMetricFood.macros.carbs.fiber,
+                    sugar: normalizedMetricFood.macros.carbs.sugar,
+                    saturatedFat: normalizedMetricFood.macros.fat.saturated,
+                    transFat: normalizedMetricFood.macros.fat.trans,
+                  }
+                : undefined
+            }
             action={
               isAuthorityFood ? null : (
                 <div className="h-7 p-0.5 rounded-full border border-border bg-background inline-flex items-center text-xs font-mono select-none shrink-0">

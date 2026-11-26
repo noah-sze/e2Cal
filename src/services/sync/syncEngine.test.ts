@@ -117,42 +117,44 @@ describe('syncEngine', () => {
       interface TestFoodEntity {
         id: string;
         name: string;
-        carbs: number;
-        sugar?: number;
+        macros: {
+          calories: number;
+          carbs: { total: number; sugar?: number };
+          protein: number;
+          fat: { total: number };
+        };
         updatedAt: number;
       }
       const localWithSugar: TestFoodEntity = {
         id: 'coca_cola_id',
         name: 'Coca-Cola · 可口可樂',
-        sugar: 35,
-        carbs: 35,
+        macros: { calories: 140, carbs: { total: 35, sugar: 35 }, protein: 0, fat: { total: 0 } },
         updatedAt: 1000,
       };
       const remoteWithoutSugar: TestFoodEntity = {
         id: 'coca_cola_id',
         name: 'Coca-Cola · 可口可樂',
-        carbs: 35,
+        macros: { calories: 140, carbs: { total: 35 }, protein: 0, fat: { total: 0 } },
         updatedAt: 2000, // remote is newer
       };
       const result = mergeEntities([localWithSugar], [remoteWithoutSugar]);
-      expect(result.merged[0].sugar).toBe(35);
+      expect(result.merged[0].macros.carbs.sugar).toBe(35);
 
       // 反向：本地較新但缺少 sugar，遠端有 sugar
       const localWithoutSugar: TestFoodEntity = {
         id: 'coca_cola_id_2',
         name: 'Coca-Cola · 可口可樂',
-        carbs: 35,
+        macros: { calories: 140, carbs: { total: 35 }, protein: 0, fat: { total: 0 } },
         updatedAt: 3000,
       };
       const remoteWithSugar: TestFoodEntity = {
         id: 'coca_cola_id_2',
         name: 'Coca-Cola · 可口可樂',
-        sugar: 35,
-        carbs: 35,
+        macros: { calories: 140, carbs: { total: 35, sugar: 35 }, protein: 0, fat: { total: 0 } },
         updatedAt: 1000,
       };
       const result2 = mergeEntities([localWithoutSugar], [remoteWithSugar]);
-      expect(result2.merged[0].sugar).toBe(35);
+      expect(result2.merged[0].macros.carbs.sugar).toBe(35);
     });
 
     it('prevents deleted entities from resurrecting via tombstones and reports deletedIds for local cleanup', () => {

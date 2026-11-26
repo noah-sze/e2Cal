@@ -86,7 +86,10 @@ export function SubNutrientsPopover({
       if (lockOpen && reason !== 'trigger-press') {
         return;
       }
-      if (reason === 'focus-out' && performance.now() < unlockGraceUntilRef.current) {
+      if (
+        (reason === 'focus-out' || reason === 'outside-press') &&
+        performance.now() < unlockGraceUntilRef.current
+      ) {
         return;
       }
     }

@@ -113,17 +113,17 @@ interface ThermodynamicsResult {
 }
 
 function calcThermodynamics(food: FoodItem): ThermodynamicsResult {
-  const c = food.carbs || 0;
-  const p = food.protein || 0;
-  const f = food.fat || 0;
-  const fiber = food.fiber || 0;
+  const c = food.macros.carbs.total || 0;
+  const p = food.macros.protein || 0;
+  const f = food.macros.fat.total || 0;
+  const fiber = food.macros.carbs.fiber || 0;
 
   // 1. 粗算總碳水理論熱量 (Gross Atwater: 4P + 4C + 9F)
   const carbEnergy = c * 4;
   const proteinEnergy = p * 4;
   const fatEnergy = f * 9;
   const theoCal = carbEnergy + proteinEnergy + fatEnergy;
-  const nomCal = food.calories || 0;
+  const nomCal = food.macros.calories || 0;
   const deltaGross = Math.abs(nomCal - theoCal);
 
   // 2. 淨碳水理論熱量 (Net Atwater: 扣除膳食纖維，纖維按 2 kcal/g)
@@ -293,11 +293,11 @@ export function DatabaseTab() {
         return false;
       })
       .sort((a, b) => {
-        if (sortBy === 'calories-desc') return (b.calories || 0) - (a.calories || 0);
-        if (sortBy === 'calories-asc') return (a.calories || 0) - (b.calories || 0);
-        if (sortBy === 'protein-desc') return (b.protein || 0) - (a.protein || 0);
-        if (sortBy === 'carbs-desc') return (b.carbs || 0) - (a.carbs || 0);
-        if (sortBy === 'fat-desc') return (b.fat || 0) - (a.fat || 0);
+        if (sortBy === 'calories-desc') return (b.macros.calories || 0) - (a.macros.calories || 0);
+        if (sortBy === 'calories-asc') return (a.macros.calories || 0) - (b.macros.calories || 0);
+        if (sortBy === 'protein-desc') return (b.macros.protein || 0) - (a.macros.protein || 0);
+        if (sortBy === 'carbs-desc') return (b.macros.carbs.total || 0) - (a.macros.carbs.total || 0);
+        if (sortBy === 'fat-desc') return (b.macros.fat.total || 0) - (a.macros.fat.total || 0);
         if (sortBy === 'refuse-desc') return (b.refuseRate || 0) - (a.refuseRate || 0);
         if (sortBy === 'source-asc') return (a.dataSource?.sourceId || '').localeCompare(b.dataSource?.sourceId || '');
         return 0;
@@ -669,16 +669,16 @@ export function DatabaseTab() {
                     <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 font-mono text-xs pt-1 sm:pt-0 border-t sm:border-t-0 border-border">
                       <div className="flex items-center gap-2 text-3xs">
                         <span className="text-muted-foreground">
-                          C: <MetricValue value={food.carbs} unit="g" valueClassName="text-foreground" unitClassName="text-3xs" />
+                          C: <MetricValue value={food.macros.carbs.total} unit="g" valueClassName="text-foreground" unitClassName="text-3xs" />
                         </span>
                         <span className="text-muted-foreground">
-                          P: <MetricValue value={food.protein} unit="g" valueClassName="text-foreground" unitClassName="text-3xs" />
+                          P: <MetricValue value={food.macros.protein} unit="g" valueClassName="text-foreground" unitClassName="text-3xs" />
                         </span>
                         <span className="text-muted-foreground">
-                          F: <MetricValue value={food.fat} unit="g" valueClassName="text-foreground" unitClassName="text-3xs" />
+                          F: <MetricValue value={food.macros.fat.total} unit="g" valueClassName="text-foreground" unitClassName="text-3xs" />
                         </span>
                         <MetricValue
-                          value={food.calories}
+                          value={food.macros.calories}
                           unit="kcal"
                           className="ml-1"
                           valueClassName="text-foreground font-semibold"
@@ -833,8 +833,8 @@ export function DatabaseTab() {
                               <span>蛋白質供能: {thermo.proteinEnergy} kcal ({thermo.proteinPct}%)</span>
                               <span>脂肪供能: {thermo.fatEnergy} kcal ({thermo.fatPct}%)</span>
                             </div>
-                            {food.fiber ? (
-                              <div>包含膳食纖維: {food.fiber}g (按 2 kcal/g 淨碳水計算法校驗)</div>
+                            {food.macros.carbs.fiber ? (
+                              <div>包含膳食纖維: {food.macros.carbs.fiber}g (按 2 kcal/g 淨碳水計算法校驗)</div>
                             ) : null}
                           </div>
                         </div>
