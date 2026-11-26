@@ -178,7 +178,16 @@ describe('useDietPlan 核心契約與沿用邏輯', () => {
   });
 
   it('SSOT 規範化契約：儲存的 DietPlan 實體嚴禁寫死熱量與三大營養素，只儲存真理源 activityLevel 與 macroSplit', () => {
-    const sanitizePlanForStorage = (updates: any) => {
+    interface LegacyPlanUpdates {
+      activityLevel?: number;
+      macroSplit?: { carbs: number; protein: number; fat: number };
+      caloriesTarget?: number;
+      proteinTarget?: number;
+      carbsTarget?: number;
+      fatTarget?: number;
+    }
+
+    const sanitizePlanForStorage = (updates: LegacyPlanUpdates) => {
       const {
         caloriesTarget: _cal,
         proteinTarget: _p,

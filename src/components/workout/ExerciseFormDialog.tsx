@@ -424,7 +424,7 @@ export function ExerciseFormDialog({
                                       >
                                         <span className="truncate">{getMuscleLabel(m)}</span>
                                         {isUsedByOther && (
-                                          <span className="text-[10px] text-muted-foreground ml-auto">
+                                          <span className="text-3xs text-muted-foreground ml-auto">
                                             ({t('common.selected', '已選')})
                                           </span>
                                         )}

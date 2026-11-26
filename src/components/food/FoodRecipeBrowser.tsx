@@ -768,7 +768,7 @@ export function FoodRecipeBrowser({
                       )}
                     >
                       <span>{t('diet.foodCategory.all', '全部')}</span>
-                      <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                      <span className="font-mono text-3xs opacity-60 tabular-nums">
                         {totalActiveFoodsCount}
                       </span>
                     </DropdownMenuItem>
@@ -794,7 +794,7 @@ export function FoodRecipeBrowser({
                         )}
                       >
                         <span>{cat.label}</span>
-                        <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                        <span className="font-mono text-3xs opacity-60 tabular-nums">
                           {categoryCounts[cat.id]}
                         </span>
                       </DropdownMenuItem>
@@ -812,7 +812,7 @@ export function FoodRecipeBrowser({
                         )}
                       >
                         <span>{t('common.archived', '已歸檔')}</span>
-                        <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                        <span className="font-mono text-3xs opacity-60 tabular-nums">
                           {totalArchivedFoods.length}
                         </span>
                       </DropdownMenuItem>
@@ -879,7 +879,7 @@ export function FoodRecipeBrowser({
                     )}
                   >
                     <span>{t('diet.nutritionTags.all', '全部')}</span>
-                    <span className="text-[10px] text-muted-foreground font-mono">
+                    <span className="text-3xs text-muted-foreground font-mono">
                       {tabBaseFoods.length}
                     </span>
                   </DropdownMenuItem>
@@ -905,7 +905,7 @@ export function FoodRecipeBrowser({
                       )}
                     >
                       <span>{tag.label}</span>
-                      <span className="text-[10px] text-muted-foreground font-mono">
+                      <span className="text-3xs text-muted-foreground font-mono">
                         {nutritionTagCounts[tag.id]}
                       </span>
                     </DropdownMenuItem>
@@ -1029,7 +1029,7 @@ export function FoodRecipeBrowser({
                       <span className="font-medium text-xs text-foreground">
                         {t('diet.addManualFood', '手動添加')}
                       </span>
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-3xs text-muted-foreground">
                         {t('diet.addManualFoodDesc', '自行填寫營養素與自定義食物')}
                       </span>
                     </div>
@@ -1050,7 +1050,7 @@ export function FoodRecipeBrowser({
                       <span className="font-medium text-xs text-foreground">
                         {t('diet.addAuthorityFood', '搜尋食物資料庫')}
                       </span>
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-3xs text-muted-foreground">
                         {t('diet.addAuthorityFoodDesc', '六大機構 · 18,635 項')}
                       </span>
                     </div>
@@ -1275,7 +1275,7 @@ export function FoodRecipeBrowser({
                       )}
                     >
                       <span>{t('diet.foodCategory.all', '全部')}</span>
-                      <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                      <span className="font-mono text-3xs opacity-60 tabular-nums">
                         {totalActiveRecipes.length}
                       </span>
                     </DropdownMenuItem>
@@ -1290,7 +1290,7 @@ export function FoodRecipeBrowser({
                       )}
                     >
                       <span>{t('common.archived', '已歸檔')}</span>
-                      <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                      <span className="font-mono text-3xs opacity-60 tabular-nums">
                         {totalArchivedRecipes.length}
                       </span>
                     </DropdownMenuItem>
@@ -1356,7 +1356,7 @@ export function FoodRecipeBrowser({
                     )}
                   >
                     <span>{t('diet.nutritionTags.all', '全部')}</span>
-                    <span className="text-[10px] text-muted-foreground font-mono">
+                    <span className="text-3xs text-muted-foreground font-mono">
                       {tabBaseRecipes.length}
                     </span>
                   </DropdownMenuItem>
@@ -1382,7 +1382,7 @@ export function FoodRecipeBrowser({
                       )}
                     >
                       <span>{tag.label}</span>
-                      <span className="text-[10px] text-muted-foreground font-mono">
+                      <span className="text-3xs text-muted-foreground font-mono">
                         {recipeNutritionTagCounts[tag.id]}
                       </span>
                     </DropdownMenuItem>

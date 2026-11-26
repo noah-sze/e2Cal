@@ -5,49 +5,23 @@ import type { FoodRecipe, FoodItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { calculateRecipeTotals, type RecipeTotals } from '@/utils/recipeMath';
 import { getInMemoryFoodsCache, setInMemoryFoodsCache } from '@/hooks/useFoods';
+import { createInMemoryCache } from './createInMemoryCache';
 
 const EMPTY_RECIPES: FoodRecipe[] = [];
 const EMPTY_FOODS: FoodItem[] = [];
 
-/**
- * 模組級菜餚記憶體注水快取 (In-Memory Hydration Cache)
- * 解決彈窗與組件掛載時等待 IndexedDB 異步查詢造成的加載微閃爍問題
- * 實現第 0 幀滿數據同步秒開
- */
-let inMemoryRecipesCache: FoodRecipe[] | null = null;
+const recipesCache = createInMemoryCache<FoodRecipe>(() => db.recipes.toArray());
 
-export function getInMemoryRecipesCache(): FoodRecipe[] | null {
-  return inMemoryRecipesCache;
-}
-
-export function setInMemoryRecipesCache(recipes: FoodRecipe[]): void {
-  inMemoryRecipesCache = recipes;
-}
-
-export function clearRecipesCache(): void {
-  inMemoryRecipesCache = null;
-}
-
-/**
- * 預熱菜餚記憶體快取 (非阻塞非同步預熱)
- */
-export async function prewarmRecipesCache(): Promise<FoodRecipe[]> {
-  if (inMemoryRecipesCache !== null) return inMemoryRecipesCache;
-  try {
-    if (typeof indexedDB === 'undefined') return [];
-    const recipes = await db.recipes.toArray();
-    inMemoryRecipesCache = recipes;
-    return recipes;
-  } catch {
-    return [];
-  }
-}
+export const getInMemoryRecipesCache = recipesCache.get;
+export const setInMemoryRecipesCache = recipesCache.set;
+export const clearRecipesCache = recipesCache.clear;
+export const prewarmRecipesCache = recipesCache.prewarm;
 
 export function useRecipes(searchQuery = '') {
   const allRecipesList = useLiveQuery(
     async () => {
       const result = await db.recipes.toArray();
-      inMemoryRecipesCache = result;
+      recipesCache.set(result);
       return result;
     },
     []
@@ -63,7 +37,7 @@ export function useRecipes(searchQuery = '') {
   );
 
   // 核心即時注水：若 useLiveQuery 仍在等待微任務/IPC 回調，直接同步採用記憶體快照
-  const allRecipes = allRecipesList ?? inMemoryRecipesCache ?? EMPTY_RECIPES;
+  const allRecipes = allRecipesList ?? recipesCache.get() ?? EMPTY_RECIPES;
   const allFoods = allFoodsList ?? getInMemoryFoodsCache() ?? EMPTY_FOODS;
 
   // 構建 foodMap 供純函數計算引用
@@ -193,7 +167,7 @@ export function useRecipes(searchQuery = '') {
     presetRecipes,
     archivedCustomRecipes,
     archivedPresetRecipes,
-    isLoading: allRecipesList === undefined && inMemoryRecipesCache === null,
+    isLoading: allRecipesList === undefined && recipesCache.get() === null,
     addRecipe,
     updateRecipe,
     archiveRecipe,

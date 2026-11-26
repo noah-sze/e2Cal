@@ -7,32 +7,14 @@ import { triggerHaptic } from '@/lib/haptics';
 import { getLocalizedExerciseName } from '@/utils/defaultLocalization';
 import { setInMemoryExercisesCache } from './useExercises';
 import { setInMemoryRoutinesCache } from './useRoutines';
+import { createInMemoryCache } from './createInMemoryCache';
 
-let inMemoryWorkoutLogsCache: WorkoutLog[] | null = null;
+const workoutLogsCache = createInMemoryCache<WorkoutLog>(() => db.workout_logs.toArray());
 
-export function getInMemoryWorkoutLogsCache(): WorkoutLog[] | null {
-  return inMemoryWorkoutLogsCache;
-}
-
-export function setInMemoryWorkoutLogsCache(logs: WorkoutLog[]): void {
-  inMemoryWorkoutLogsCache = logs;
-}
-
-export function clearWorkoutLogsCache(): void {
-  inMemoryWorkoutLogsCache = null;
-}
-
-export async function prewarmWorkoutLogsCache(): Promise<WorkoutLog[]> {
-  if (inMemoryWorkoutLogsCache !== null) return inMemoryWorkoutLogsCache;
-  try {
-    if (typeof indexedDB === 'undefined') return [];
-    const logs = await db.workout_logs.toArray();
-    inMemoryWorkoutLogsCache = logs;
-    return logs;
-  } catch {
-    return [];
-  }
-}
+export const getInMemoryWorkoutLogsCache = workoutLogsCache.get;
+export const setInMemoryWorkoutLogsCache = workoutLogsCache.set;
+export const clearWorkoutLogsCache = workoutLogsCache.clear;
+export const prewarmWorkoutLogsCache = workoutLogsCache.prewarm;
 
 export function useWorkoutLogs(date?: string) {
   const currentLang = i18n.language;
@@ -48,7 +30,7 @@ export function useWorkoutLogs(date?: string) {
       const allRoutines = await db.routines.toArray();
       setInMemoryRoutinesCache(allRoutines);
       const routineMap = new Map(allRoutines.map((r) => [r.id, r]));
-      if (inMemoryWorkoutLogsCache === null) {
+      if (workoutLogsCache.get() === null) {
         void prewarmWorkoutLogsCache();
       }
 

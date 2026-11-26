@@ -143,7 +143,7 @@ export function LocalImportDialog({
                   </div>
                 </div>
 
-                <p className="text-[11px] text-muted-foreground leading-relaxed px-0.5 font-sans">
+                <p className="text-2xs text-muted-foreground leading-relaxed px-0.5 font-sans">
                   {t(
                     'landing.launchMenu.localDialogDesc',
                     '選取 e2Cal 匯出的 ZIP 備份檔，將歷史資料還原至此裝置。'
@@ -179,7 +179,7 @@ export function LocalImportDialog({
                         type="button"
                         onClick={handlePickFile}
                         disabled={isImporting}
-                        className="text-[11px] text-muted-foreground hover:text-foreground font-sans shrink-0 cursor-pointer transition-colors"
+                        className="text-2xs text-muted-foreground hover:text-foreground font-sans shrink-0 cursor-pointer transition-colors"
                       >
                         {t('landing.launchMenu.changeFileAction', '更換')}
                       </button>
@@ -197,7 +197,7 @@ export function LocalImportDialog({
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="p-2.5 rounded-lg border border-border bg-card">
-                    <div className="text-[10px] text-muted-foreground font-sans">
+                    <div className="text-3xs text-muted-foreground font-sans">
                       {t('initialSync.summaryFoods', '食物庫')}
                     </div>
                     <div className="text-sm font-semibold text-foreground font-mono mt-0.5">
@@ -205,7 +205,7 @@ export function LocalImportDialog({
                     </div>
                   </div>
                   <div className="p-2.5 rounded-lg border border-border bg-card">
-                    <div className="text-[10px] text-muted-foreground font-sans">
+                    <div className="text-3xs text-muted-foreground font-sans">
                       {t('initialSync.summaryExercises', '動作庫')}
                     </div>
                     <div className="text-sm font-semibold text-foreground font-mono mt-0.5">
@@ -213,7 +213,7 @@ export function LocalImportDialog({
                     </div>
                   </div>
                   <div className="p-2.5 rounded-lg border border-border bg-card">
-                    <div className="text-[10px] text-muted-foreground font-sans">
+                    <div className="text-3xs text-muted-foreground font-sans">
                       {t('initialSync.summaryFoodLogs', '飲食記錄')}
                     </div>
                     <div className="text-sm font-semibold text-foreground font-mono mt-0.5">
@@ -221,7 +221,7 @@ export function LocalImportDialog({
                     </div>
                   </div>
                   <div className="p-2.5 rounded-lg border border-border bg-card">
-                    <div className="text-[10px] text-muted-foreground font-sans">
+                    <div className="text-3xs text-muted-foreground font-sans">
                       {t('initialSync.summaryWorkoutLogs', '訓練記錄')}
                     </div>
                     <div className="text-sm font-semibold text-foreground font-mono mt-0.5">

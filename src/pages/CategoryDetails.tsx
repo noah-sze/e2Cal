@@ -94,7 +94,7 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
       case 'high-calorie':
         return 'text-rose-500 border-rose-500/30 bg-rose-500/10';
       default:
-        return 'text-muted-foreground border-border bg-muted/30';
+        return 'text-muted-foreground border-border bg-muted';
     }
   };
 
@@ -335,15 +335,15 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
       {/* 方案 B-1 + 10px 熱點圖全一體化卡片 */}
       <div className="border border-border rounded-lg overflow-hidden bg-card text-card-foreground shadow-none">
         {/* 第 1 層：B-1 極簡 HUD 規格條 (h-10，與下方 SectionCard 表頭等高) */}
-        <div className="h-10 px-4 border-b border-border bg-muted/40 flex items-center justify-between text-xs font-mono">
+        <div className="h-10 px-4 border-b border-border bg-muted flex items-center justify-between text-xs font-mono">
           <div className="flex items-center gap-2">
-            <span className="uppercase tracking-widest text-[10px] text-muted-foreground">
+            <span className="uppercase tracking-widest text-3xs text-muted-foreground">
               {t(`diet.foodCategory.${food.category || 'natural'}`)}
             </span>
             {food.brand && (
               <>
                 <span className="text-border select-none">·</span>
-                <span className="text-muted-foreground text-[11px]">{food.brand}</span>
+                <span className="text-muted-foreground text-2xs">{food.brand}</span>
               </>
             )}
             {effectiveDataSource && (
@@ -355,7 +355,7 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
                     triggerHaptic('light');
                     setIsSourceDetailsOpen(true);
                   }}
-                  className="group px-1.5 py-0.5 rounded border border-transparent hover:border-border/80 hover:bg-background/80 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-all cursor-pointer select-none inline-flex items-center gap-0.5 active:scale-95"
+                  className="group px-1.5 py-0.5 rounded border border-transparent hover:border-border hover:bg-background text-3xs font-mono text-muted-foreground hover:text-foreground transition-all cursor-pointer select-none inline-flex items-center gap-0.5 active:scale-95"
                   title={t('diet.viewAuthorityDetails')}
                   aria-label={t('diet.viewAuthorityDetails')}
                 >
@@ -369,11 +369,11 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
           </div>
           <div>
             {food.isArchived ? (
-              <span className="text-[10px] font-mono text-destructive tracking-wide">
+              <span className="text-3xs font-mono text-destructive tracking-wide">
                 {t('common.archived')}
               </span>
             ) : (
-              <span className="text-[10px] font-mono text-emerald-500 tracking-wide">
+              <span className="text-3xs font-mono text-emerald-500 tracking-wide">
                 {t('common.active')}
               </span>
             )}
@@ -410,7 +410,7 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
                   <span
                     key={tag}
                     className={cn(
-                      "text-[11px] font-mono border px-1.5 py-0.5 rounded font-medium whitespace-nowrap truncate",
+                      "text-2xs font-mono border px-1.5 py-0.5 rounded font-medium whitespace-nowrap truncate",
                       idx === 1 && "hidden sm:inline-flex",
                       getNutritionTagBadgeClass(tag)
                     )}
@@ -427,7 +427,7 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
                           type="button"
                           onClick={() => triggerHaptic('light')}
                           className={cn(
-                            "text-[11px] font-mono border border-border bg-muted/40 hover:bg-hover text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded font-medium whitespace-nowrap shrink-0 cursor-pointer transition-colors",
+                            "text-2xs font-mono border border-border bg-muted hover:bg-hover text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded font-medium whitespace-nowrap shrink-0 cursor-pointer transition-colors",
                             labels.length <= 2 ? "inline-flex sm:hidden" : "inline-flex"
                           )}
                         >
@@ -447,7 +447,7 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
                           <span
                             key={tag}
                             className={cn(
-                              "text-[11px] font-mono border px-1.5 py-0.5 rounded font-medium whitespace-nowrap",
+                              "text-2xs font-mono border px-1.5 py-0.5 rounded font-medium whitespace-nowrap",
                               getNutritionTagBadgeClass(tag)
                             )}
                           >

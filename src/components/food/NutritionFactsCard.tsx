@@ -247,7 +247,7 @@ export function NutritionFactsCard({
                   <span className="text-carbs text-xs font-medium">{t('diet.carbs')}</span>
                   <ChevronRight
                     className={cn(
-                      "size-3 text-carbs/60 transition-transform duration-150",
+                      "size-3 text-carbs-subtle transition-transform duration-150",
                       open && "rotate-90 text-carbs"
                     )}
                   />
@@ -349,7 +349,7 @@ export function NutritionFactsCard({
                   <span className="text-fat text-xs font-medium">{t('diet.fat')}</span>
                   <ChevronRight
                     className={cn(
-                      "size-3 text-fat/60 transition-transform duration-150",
+                      "size-3 text-fat-subtle transition-transform duration-150",
                       open && "rotate-90 text-fat"
                     )}
                   />

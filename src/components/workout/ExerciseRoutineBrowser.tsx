@@ -398,7 +398,7 @@ export function ExerciseRoutineBrowser({
                   >
                     {activeExercises.length}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-3xs text-muted-foreground">
                     {t('common.items', '項')}
                   </span>
                 </div>
@@ -455,7 +455,7 @@ export function ExerciseRoutineBrowser({
                   >
                     {activeRoutines.length}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-3xs text-muted-foreground">
                     {t('common.items', '項')}
                   </span>
                 </div>
@@ -525,7 +525,7 @@ export function ExerciseRoutineBrowser({
                   <span>{t('common.all', '全部')}</span>
                   <span
                     className={cn(
-                      'text-[10px] tabular-nums',
+                      'text-3xs tabular-nums',
                       selectedMuscleFilter === 'all' ? 'opacity-60' : 'opacity-45'
                     )}
                   >
@@ -557,7 +557,7 @@ export function ExerciseRoutineBrowser({
                       <span>{t(`workout.${group.id}`)}</span>
                       <span
                         className={cn(
-                          'text-[10px] tabular-nums',
+                          'text-3xs tabular-nums',
                           isSelected ? 'opacity-60' : 'opacity-45'
                         )}
                       >
@@ -616,7 +616,7 @@ export function ExerciseRoutineBrowser({
                       )}
                     >
                       <span>{t('common.all', '全部')}</span>
-                      <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                      <span className="font-mono text-3xs opacity-60 tabular-nums">
                         {activeExercises.length}
                       </span>
                     </DropdownMenuItem>
@@ -633,7 +633,7 @@ export function ExerciseRoutineBrowser({
                         )}
                       >
                         <span>{t(`workout.${group.id}`)}</span>
-                        <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                        <span className="font-mono text-3xs opacity-60 tabular-nums">
                           {muscleGroupCounts[group.id] ?? 0}
                         </span>
                       </DropdownMenuItem>
@@ -699,7 +699,7 @@ export function ExerciseRoutineBrowser({
                       )}
                     >
                       <span>{t('common.all', '全部')}</span>
-                      <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                      <span className="font-mono text-3xs opacity-60 tabular-nums">
                         {activeExercises.length}
                       </span>
                     </DropdownMenuItem>
@@ -716,7 +716,7 @@ export function ExerciseRoutineBrowser({
                         )}
                       >
                         <span className="truncate">{getEquipmentDisplayName(eq.id, t)}</span>
-                        <span className="font-mono text-[10px] opacity-60 tabular-nums shrink-0">
+                        <span className="font-mono text-3xs opacity-60 tabular-nums shrink-0">
                           {equipmentCounts[eq.id] ?? 0}
                         </span>
                       </DropdownMenuItem>
@@ -807,7 +807,7 @@ export function ExerciseRoutineBrowser({
                     </div>
 
                     {isDisabled && (
-                      <span className="text-[10px] font-mono text-muted-foreground shrink-0 border border-border px-1.5 py-0.5 rounded">
+                      <span className="text-3xs font-mono text-muted-foreground shrink-0 border border-border px-1.5 py-0.5 rounded">
                         {t('common.selected', '已選')}
                       </span>
                     )}
@@ -919,7 +919,7 @@ export function ExerciseRoutineBrowser({
 
                     <div className="flex items-center gap-1 shrink-0">
                       {isDisabled ? (
-                        <span className="text-[10px] font-mono text-muted-foreground shrink-0 border border-border px-1.5 py-0.5 rounded">
+                        <span className="text-3xs font-mono text-muted-foreground shrink-0 border border-border px-1.5 py-0.5 rounded">
                           {t('common.selected', '已選')}
                         </span>
                       ) : (

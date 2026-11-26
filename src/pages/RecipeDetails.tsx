@@ -164,7 +164,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
       case 'high-calorie':
         return 'text-rose-500 border-rose-500/30 bg-rose-500/10';
       default:
-        return 'text-muted-foreground border-border bg-muted/30';
+        return 'text-muted-foreground border-border bg-muted';
     }
   };
 
@@ -441,23 +441,23 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
       {/* 核心一體化卡片 (與食物詳情頁 1:1 一體化設計) */}
       <div className="border border-border rounded-lg overflow-hidden bg-card text-card-foreground shadow-none">
         {/* 第 1 層：B-1 極簡 HUD 規格條 (h-10，與下方 SectionCard 表頭等高) */}
-        <div className="h-10 px-4 border-b border-border bg-muted/40 flex items-center justify-between text-xs font-mono">
+        <div className="h-10 px-4 border-b border-border bg-muted flex items-center justify-between text-xs font-mono">
           <div className="flex items-center gap-2">
-            <span className="uppercase tracking-widest text-[10px] text-muted-foreground">
+            <span className="uppercase tracking-widest text-3xs text-muted-foreground">
               {t('diet.recipesTab', '食譜')}
             </span>
             <span className="text-border">·</span>
-            <span className="text-muted-foreground text-[11px]">
+            <span className="text-muted-foreground text-2xs">
               {t('diet.ingredientsCount', { count: recipe.ingredients.length })}
             </span>
           </div>
           <div>
             {recipe.isArchived ? (
-              <span className="text-[10px] font-mono text-destructive tracking-wide">
+              <span className="text-3xs font-mono text-destructive tracking-wide">
                 {t('common.archived')}
               </span>
             ) : (
-              <span className="text-[10px] font-mono text-emerald-500 tracking-wide">
+              <span className="text-3xs font-mono text-emerald-500 tracking-wide">
                 {t('common.active', '使用中')}
               </span>
             )}
@@ -475,7 +475,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
                 <span
                   key={tag}
                   className={cn(
-                    "text-[11px] font-mono border px-1.5 py-0.5 rounded font-medium",
+                    "text-2xs font-mono border px-1.5 py-0.5 rounded font-medium",
                     getNutritionTagBadgeClass(tag)
                   )}
                 >

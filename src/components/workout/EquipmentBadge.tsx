@@ -41,7 +41,7 @@ export const EquipmentBadge = memo(function EquipmentBadge({
       className={cn(
         'inline-flex items-center rounded border font-mono select-none whitespace-nowrap shrink-0 transition-colors',
         'bg-muted/60 text-muted-foreground border-border/70 hover:text-foreground',
-        size === 'sm' ? 'px-1.5 py-0.5 text-[10px] leading-tight' : 'px-2 py-1 text-xs',
+        size === 'sm' ? 'px-1.5 py-0.5 text-3xs leading-tight' : 'px-2 py-1 text-xs',
         className
       )}
     >

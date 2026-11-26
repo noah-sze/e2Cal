@@ -43,7 +43,7 @@ export function OverviewPeriodSelector({ value, onChange }: OverviewPeriodSelect
       <SelectTrigger
         size="custom"
         iconClassName="size-2.5 opacity-60 text-muted-foreground"
-        className="h-5 px-2 rounded-full border border-border/80 bg-muted/20 hover:bg-muted/60 text-[10px] font-mono text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer select-none active:scale-95"
+        className="h-5 px-2 rounded-full border border-border/80 bg-muted/20 hover:bg-muted/60 text-3xs font-mono text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer select-none active:scale-95"
       >
         <SelectValue className="flex-none tabular-nums font-normal">
           {value === 'all' ? t('stats.periodAll') : value}
@@ -193,7 +193,7 @@ export function IntakeFootprintHeatmap({
         <span className="text-xs font-medium text-foreground">
           {title || t('diet.intakePattern')}
         </span>
-        <div className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground">
+        <div className="flex items-center gap-1 text-3xs font-mono text-muted-foreground">
           <span>{t('diet.less')}</span>
           <div className="size-[7px] rounded-[1px] bg-muted/40 border border-border/40" />
           <div className="size-[7px] rounded-[1px] bg-emerald-500/25 border border-emerald-500/30" />
@@ -269,7 +269,7 @@ export function IntakeFootprintHeatmap({
       {/* 選定日期與數據檢測（純文字行，無 border-t，無獨立底色） */}
       <div className="pt-1 flex items-center justify-between text-xs font-mono">
         <div className="flex items-center gap-2 text-foreground">
-          <span className="text-[11px] text-muted-foreground uppercase">
+          <span className="text-2xs text-muted-foreground uppercase">
             {t('common.selectedDate')}
           </span>
           <span className="tabular-nums text-foreground">

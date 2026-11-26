@@ -388,7 +388,7 @@ export function EditFoodLogDialog({
                         value={formatDisplayAmount(String(baseServingSize))}
                         unit={baseServingUnit}
                         valueClassName="font-normal text-muted-foreground/65 text-xs"
-                        unitClassName="text-[11px] text-muted-foreground/50"
+                        unitClassName="text-2xs text-muted-foreground/50"
                       />
                       )
                     </span>
@@ -413,7 +413,7 @@ export function EditFoodLogDialog({
                       value={formatDisplayAmount(String(step1))}
                       unit={currentUnit}
                       valueClassName="font-normal text-foreground text-xs"
-                      unitClassName="text-[11px]"
+                      unitClassName="text-2xs"
                     />
                   </button>
 
@@ -427,7 +427,7 @@ export function EditFoodLogDialog({
                       value={formatDisplayAmount(String(step2))}
                       unit={currentUnit}
                       valueClassName="font-normal text-foreground text-xs"
-                      unitClassName="text-[11px]"
+                      unitClassName="text-2xs"
                     />
                   </button>
                 </div>
@@ -447,7 +447,7 @@ export function EditFoodLogDialog({
                   >
                     {weighingForm === 'gross' && grossQuantity && grossQuantity > 0 ? (
                       <span className="inline-flex items-center gap-1.5">
-                        <span className="text-[11px] font-sans text-muted-foreground">
+                        <span className="text-2xs font-sans text-muted-foreground">
                           {t('diet.grossWeightLabel', '毛重')}
                         </span>
                         <span className="h-3 w-px bg-border/80 shrink-0" aria-hidden="true" />
@@ -455,7 +455,7 @@ export function EditFoodLogDialog({
                           value={formatDisplayAmount(String(grossQuantity)) || '0'}
                           unit={log.unit || 'g'}
                           valueClassName="font-normal text-foreground"
-                          unitClassName="text-[11px]"
+                          unitClassName="text-2xs"
                         />
                       </span>
                     ) : (
@@ -463,7 +463,7 @@ export function EditFoodLogDialog({
                         value={formatDisplayAmount(String(quantity)) || '0'}
                         unit={log.unit || 'g'}
                         valueClassName="font-normal text-foreground"
-                        unitClassName="text-[11px]"
+                        unitClassName="text-2xs"
                       />
                     )}
                     <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />

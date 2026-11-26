@@ -703,13 +703,13 @@ export function ExternalAIAssistant({
 
           {/* 左側：左上角供應商標頭（與輸入框卡片一致）+ 左下角估算中與時間 */}
           <div className="relative z-10 h-full flex flex-col justify-between min-w-0">
-            <div className="flex items-center gap-1.5 px-0.5 text-[11px] font-mono text-foreground">
+            <div className="flex items-center gap-1.5 px-0.5 text-2xs font-mono text-foreground">
               <PixelSpriteIcon />
               <span className="truncate">{activeProfile?.name ?? 'PIXEL_AI'}</span>
             </div>
             <div className="flex items-center gap-2 px-0.5 font-mono text-xs">
               <span className="text-foreground font-medium">{statusLabel}</span>
-              <span className="tabular-nums text-[11px] text-muted-foreground">
+              <span className="tabular-nums text-2xs text-muted-foreground">
                 {(elapsedMs / 1000).toFixed(1)}s
               </span>
             </div>
@@ -738,7 +738,7 @@ export function ExternalAIAssistant({
       return (
         <div className="w-full rounded-xl border border-border bg-card text-card-foreground p-3 space-y-2.5 text-xs">
           {/* 1. 頂部固定供應商標頭（無底部分割線，與待機與載入態完全對齊） */}
-          <div className="flex items-center justify-between gap-2 px-0.5 text-[11px] font-mono">
+          <div className="flex items-center justify-between gap-2 px-0.5 text-2xs font-mono">
             <span className="flex items-center gap-1.5 font-medium text-foreground min-w-0">
               <PixelSpriteIcon />
               <span className="truncate">{activeProfile?.name ?? 'PIXEL_AI'}</span>
@@ -755,7 +755,7 @@ export function ExternalAIAssistant({
           {/* 2. 方案 A：雙層整合卡（上層：品名 ｜ 卡路里；下層：三大營養素 C -> P -> F） */}
           <div className="border border-border rounded-lg overflow-hidden divide-y divide-border bg-card">
             {/* 上層：名稱 ｜ 卡路里（外食與標籤掃描統一同構） */}
-            <div className="h-8 px-3 bg-muted/40 flex items-center justify-between gap-2 text-[11px]">
+            <div className="h-8 px-3 bg-muted/40 flex items-center justify-between gap-2 text-2xs">
               <span className="font-medium text-foreground truncate min-w-0">
                 {mode === 'meal'
                   ? mealResult?.title || t('diet.placeholder.defaultName', '快速估算')
@@ -763,7 +763,7 @@ export function ExternalAIAssistant({
               </span>
               <span className="flex items-center gap-1.5 shrink-0">
                 {mode === 'foodLabel' && foodResult?.servingSize && (
-                  <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-1">
+                  <span className="text-3xs text-muted-foreground font-mono flex items-center gap-1">
                     <span>{t('diet.per', '每')}</span>
                     <MetricValue
                       value={foodResult.servingSize}
@@ -786,7 +786,7 @@ export function ExternalAIAssistant({
             {/* 下層：三大營養素 3 格 (C -> P -> F) */}
             <div className="grid grid-cols-3 divide-x divide-border text-center bg-card">
               <div className="py-1.5 px-1">
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-3xs text-muted-foreground">
                   {t('nutrients.carbs', '碳水')}
                 </div>
                 <div className="mt-0.5 flex justify-center">
@@ -797,12 +797,12 @@ export function ExternalAIAssistant({
                         : (foodResult?.carbs ?? '-')
                     }
                     unit="g"
-                    valueClassName="text-[11px] font-semibold text-[var(--carbs)]"
+                    valueClassName="text-2xs font-semibold text-[var(--carbs)]"
                   />
                 </div>
               </div>
               <div className="py-1.5 px-1">
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-3xs text-muted-foreground">
                   {t('nutrients.protein', '蛋白質')}
                 </div>
                 <div className="mt-0.5 flex justify-center">
@@ -813,12 +813,12 @@ export function ExternalAIAssistant({
                         : (foodResult?.protein ?? '-')
                     }
                     unit="g"
-                    valueClassName="text-[11px] font-semibold text-[var(--protein)]"
+                    valueClassName="text-2xs font-semibold text-[var(--protein)]"
                   />
                 </div>
               </div>
               <div className="py-1.5 px-1">
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-3xs text-muted-foreground">
                   {t('nutrients.fat', '脂肪')}
                 </div>
                 <div className="mt-0.5 flex justify-center">
@@ -829,7 +829,7 @@ export function ExternalAIAssistant({
                         : (foodResult?.fat ?? '-')
                     }
                     unit="g"
-                    valueClassName="text-[11px] font-semibold text-[var(--fat)]"
+                    valueClassName="text-2xs font-semibold text-[var(--fat)]"
                   />
                 </div>
               </div>
@@ -862,7 +862,7 @@ export function ExternalAIAssistant({
                         </span>
                         <span
                           className={cn(
-                            'text-[11px] font-mono truncate flex items-center gap-1',
+                            'text-2xs font-mono truncate flex items-center gap-1',
                             isExcluded ? 'line-through text-muted-foreground/50' : 'text-foreground'
                           )}
                         >
@@ -878,7 +878,7 @@ export function ExternalAIAssistant({
                       <MetricValue
                         value={Math.round(c.calories)}
                         unit="kcal"
-                        className="shrink-0 text-[11px]"
+                        className="shrink-0 text-2xs"
                         valueClassName={
                           isExcluded ? 'line-through text-muted-foreground/40' : 'text-muted-foreground'
                         }
@@ -888,7 +888,7 @@ export function ExternalAIAssistant({
                 })}
               </div>
             ) : mealResult.summary ? (
-              <div className="text-[11px] font-mono text-muted-foreground">
+              <div className="text-2xs font-mono text-muted-foreground">
                 {mealResult.summary}
               </div>
             ) : null
@@ -919,7 +919,7 @@ export function ExternalAIAssistant({
         ref={inputCardRef}
         className="w-full rounded-xl border border-border bg-card text-card-foreground p-2.5 space-y-2"
       >
-        <div className="flex items-center justify-between px-0.5 text-[11px] font-mono text-muted-foreground">
+        <div className="flex items-center justify-between px-0.5 text-2xs font-mono text-muted-foreground">
           {profiles.length === 0 ? (
             <button
               type="button"
@@ -949,7 +949,7 @@ export function ExternalAIAssistant({
               <SelectTrigger
                 size="custom"
                 iconClassName="size-3 text-muted-foreground/60"
-                className="flex items-center gap-1.5 text-[11px] font-mono text-foreground hover:opacity-80 cursor-pointer transition-opacity max-w-[200px]"
+                className="flex items-center gap-1.5 text-2xs font-mono text-foreground hover:opacity-80 cursor-pointer transition-opacity max-w-[200px]"
               >
                 <PixelSpriteIcon />
                 <SelectValue className="flex-none truncate">
@@ -983,7 +983,7 @@ export function ExternalAIAssistant({
 
         {attachedImage && (
           <div className="flex items-center">
-            <div className="inline-flex items-center gap-1.5 pl-1 pr-1.5 py-1 rounded-md border border-border bg-muted/40 text-[11px] font-mono text-foreground max-w-full">
+            <div className="inline-flex items-center gap-1.5 pl-1 pr-1.5 py-1 rounded-md border border-border bg-muted/40 text-2xs font-mono text-foreground max-w-full">
               <img
                 src={attachedImage.dataUrl}
                 alt={attachedImage.name}

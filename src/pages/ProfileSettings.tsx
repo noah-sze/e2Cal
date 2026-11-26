@@ -138,7 +138,7 @@ export default function ProfileSettings() {
             <span className="text-xs font-normal text-muted-foreground font-mono truncate">
               {t('profileSettings.gender', '生理性別')}
             </span>
-            <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-muted/20 border border-border text-xs font-mono shrink-0">
+            <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-muted border border-border text-xs font-mono shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -146,7 +146,7 @@ export default function ProfileSettings() {
                   triggerHaptic('selection');
                 }}
                 className={cn(
-                  'px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer transition-colors select-none',
+                  'px-2 py-0.5 rounded text-2xs font-semibold cursor-pointer transition-colors select-none',
                   gender === 'male'
                     ? 'bg-foreground text-background shadow-none'
                     : 'text-muted-foreground hover:text-foreground'
@@ -161,7 +161,7 @@ export default function ProfileSettings() {
                   triggerHaptic('selection');
                 }}
                 className={cn(
-                  'px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer transition-colors select-none',
+                  'px-2 py-0.5 rounded text-2xs font-semibold cursor-pointer transition-colors select-none',
                   gender === 'female'
                     ? 'bg-foreground text-background shadow-none'
                     : 'text-muted-foreground hover:text-foreground'
@@ -223,8 +223,8 @@ export default function ProfileSettings() {
       {/* 區塊 2：生理常數 (單獨一個獨立卡片區塊) */}
       <div className="border border-border rounded-lg overflow-hidden bg-card font-mono">
         {/* 小標題列 (改為純生理常數標籤，無右側冗餘公式名) */}
-        <div className="px-4 py-1.5 flex items-center justify-between text-muted-foreground/80 border-b border-border/60 bg-muted/10">
-          <span className="text-[11px] uppercase tracking-wider font-normal">
+        <div className="px-4 py-1.5 flex items-center justify-between text-muted-foreground border-b border-border bg-muted">
+          <span className="text-2xs uppercase tracking-wider font-normal">
             {t('profileSettings.metricsCalculation', '生理常數')}
           </span>
         </div>
@@ -233,7 +233,7 @@ export default function ProfileSettings() {
         <div className="grid grid-cols-2 divide-x divide-border text-left">
           {/* BMI */}
           <div className="px-4 py-3 sm:py-3.5 space-y-1 overflow-hidden">
-            <div className="text-[11px] font-normal text-muted-foreground truncate">
+            <div className="text-2xs font-normal text-muted-foreground truncate">
               {t('welcome.bmi', '身體質量指數 (BMI)')}
             </div>
             <div className="text-base sm:text-lg font-normal text-foreground font-mono leading-none">
@@ -243,14 +243,14 @@ export default function ProfileSettings() {
 
           {/* BMR */}
           <div className="px-4 py-3 sm:py-3.5 space-y-1 overflow-hidden">
-            <div className="text-[11px] font-normal text-muted-foreground truncate">
+            <div className="text-2xs font-normal text-muted-foreground truncate">
               {t('welcome.bmr', '靜態基礎代謝 (BMR)')}
             </div>
             <MetricValue
               value={currentBMR > 0 ? currentBMR : '-'}
               unit={currentBMR > 0 ? 'kcal/day' : undefined}
               valueClassName="text-base sm:text-lg font-normal text-foreground"
-              unitClassName="text-[11px] font-normal"
+              unitClassName="text-2xs font-normal"
             />
           </div>
         </div>

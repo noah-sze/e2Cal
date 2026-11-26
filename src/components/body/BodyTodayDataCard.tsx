@@ -183,7 +183,7 @@ export function BodyTodayDataCard({
               }
               className="h-7 px-3 rounded-full border border-border bg-muted/30 hover:bg-hover active:scale-95 transition-[background-color,transform] cursor-pointer font-mono text-xs flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
             >
-              <span className="text-[11px]">{t('body.bodyFat', '體脂率')}</span>
+              <span className="text-2xs">{t('body.bodyFat', '體脂率')}</span>
               <span
                 className={cn(
                   'transition-colors font-medium',
@@ -200,7 +200,7 @@ export function BodyTodayDataCard({
             </button>
           ) : (
             <div className="h-7 px-3 rounded-full border border-border bg-muted/30 font-mono text-xs flex items-center gap-1.5 text-muted-foreground">
-              <span className="text-[11px]">{t('body.bodyFat', '體脂率')}</span>
+              <span className="text-2xs">{t('body.bodyFat', '體脂率')}</span>
               <span
                 className={cn(
                   'font-medium',
@@ -240,7 +240,7 @@ export function BodyTodayDataCard({
                   }
                   className="p-3 text-center space-y-0.5 hover:bg-hover transition-colors cursor-pointer active:scale-98 overflow-hidden"
                 >
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.shoulders', '肩寬')}
                   </div>
                   <div
@@ -258,7 +258,7 @@ export function BodyTodayDataCard({
                 </button>
               ) : (
                 <div className="p-3 text-center space-y-0.5 overflow-hidden">
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.shoulders', '肩寬')}
                   </div>
                   <div
@@ -291,7 +291,7 @@ export function BodyTodayDataCard({
                   }
                   className="p-3 text-center space-y-0.5 hover:bg-hover transition-colors cursor-pointer active:scale-98 overflow-hidden"
                 >
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.chest', '胸圍')}
                   </div>
                   <div
@@ -309,7 +309,7 @@ export function BodyTodayDataCard({
                 </button>
               ) : (
                 <div className="p-3 text-center space-y-0.5 overflow-hidden">
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.chest', '胸圍')}
                   </div>
                   <div
@@ -342,7 +342,7 @@ export function BodyTodayDataCard({
                   }
                   className="p-3 text-center space-y-0.5 hover:bg-hover transition-colors cursor-pointer active:scale-98 overflow-hidden"
                 >
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.waist', '腰圍')}
                   </div>
                   <div
@@ -360,7 +360,7 @@ export function BodyTodayDataCard({
                 </button>
               ) : (
                 <div className="p-3 text-center space-y-0.5 overflow-hidden">
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.waist', '腰圍')}
                   </div>
                   <div
@@ -393,7 +393,7 @@ export function BodyTodayDataCard({
                   }
                   className="p-3 text-center space-y-0.5 hover:bg-hover transition-colors cursor-pointer active:scale-98 overflow-hidden"
                 >
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.hips', '臀圍')}
                   </div>
                   <div
@@ -411,7 +411,7 @@ export function BodyTodayDataCard({
                 </button>
               ) : (
                 <div className="p-3 text-center space-y-0.5 overflow-hidden">
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.hips', '臀圍')}
                   </div>
                   <div
@@ -449,7 +449,7 @@ export function BodyTodayDataCard({
                   }
                   className="p-3 text-center space-y-0.5 hover:bg-hover transition-colors cursor-pointer active:scale-98 overflow-hidden"
                 >
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.arms', '手臂圍')}
                   </div>
                   <div
@@ -467,7 +467,7 @@ export function BodyTodayDataCard({
                 </button>
               ) : (
                 <div className="p-3 text-center space-y-0.5 overflow-hidden">
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.arms', '手臂圍')}
                   </div>
                   <div
@@ -500,7 +500,7 @@ export function BodyTodayDataCard({
                   }
                   className="p-3 text-center space-y-0.5 hover:bg-hover transition-colors cursor-pointer active:scale-98 overflow-hidden"
                 >
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.thighs', '大腿圍')}
                   </div>
                   <div
@@ -518,7 +518,7 @@ export function BodyTodayDataCard({
                 </button>
               ) : (
                 <div className="p-3 text-center space-y-0.5 overflow-hidden">
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.thighs', '大腿圍')}
                   </div>
                   <div

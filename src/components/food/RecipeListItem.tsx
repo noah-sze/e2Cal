@@ -127,7 +127,7 @@ export const RecipeListItem = React.memo(function RecipeListItem({
           {recipe.name}
         </div>
 
-        <div className="text-[11px] text-muted-foreground truncate mt-0.5 flex items-center gap-1.5">
+        <div className="text-2xs text-muted-foreground truncate mt-0.5 flex items-center gap-1.5">
           {nutritionDisplayMode === 'per100g' ? (
             <>
               {(() => {
@@ -137,12 +137,12 @@ export const RecipeListItem = React.memo(function RecipeListItem({
                   foodWeightUnit,
                   foodVolumeUnit
                 );
-                return <MetricValue value={s.size} unit={s.unit} unitClassName="text-[10px]" />;
+                return <MetricValue value={s.size} unit={s.unit} unitClassName="text-3xs" />;
               })()}
               <span className="text-muted-foreground/40">·</span>
               <span
                 className={cn(
-                  'inline-flex items-center h-4 leading-none tabular-nums rounded text-[11px] font-normal',
+                  'inline-flex items-center h-4 leading-none tabular-nums rounded text-2xs font-normal',
                   isLowCalorie && 'px-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
                   isHighCalorie && 'px-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400',
                   !isLowCalorie && !isHighCalorie && 'text-muted-foreground'
@@ -155,7 +155,7 @@ export const RecipeListItem = React.memo(function RecipeListItem({
                       value={e.value.toLocaleString()}
                       unit={e.unit}
                       unitClassName={cn(
-                        'text-[10px]',
+                        'text-3xs',
                         (isLowCalorie || isHighCalorie) && 'text-current opacity-85'
                       )}
                     />
@@ -173,7 +173,7 @@ export const RecipeListItem = React.memo(function RecipeListItem({
               <span className="text-muted-foreground/40">·</span>
               <span
                 className={cn(
-                  'inline-flex items-center h-4 leading-none tabular-nums rounded text-[11px] font-normal',
+                  'inline-flex items-center h-4 leading-none tabular-nums rounded text-2xs font-normal',
                   isLowCalorie && 'px-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
                   isHighCalorie && 'px-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400',
                   !isLowCalorie && !isHighCalorie && 'text-muted-foreground'
@@ -186,7 +186,7 @@ export const RecipeListItem = React.memo(function RecipeListItem({
                       value={e.value.toLocaleString()}
                       unit={e.unit}
                       unitClassName={cn(
-                        'text-[10px]',
+                        'text-3xs',
                         (isLowCalorie || isHighCalorie) && 'text-current opacity-85'
                       )}
                     />

@@ -95,15 +95,15 @@ function MacroColumnCell({
           value={Math.round(current)}
           unit="g"
           valueClassName="font-normal text-foreground"
-          unitClassName="text-[11px]"
+          unitClassName="text-2xs"
         />
-        <span className="text-[11px] sm:text-xs font-sans text-muted-foreground mx-0.5">/</span>
+        <span className="text-2xs sm:text-xs font-sans text-muted-foreground mx-0.5">/</span>
         <MetricValue
           value={target}
           unit="g"
-          className="text-[11px] sm:text-xs text-muted-foreground"
+          className="text-2xs sm:text-xs text-muted-foreground"
           valueClassName="font-normal"
-          unitClassName="text-[10px]"
+          unitClassName="text-3xs"
         />
       </div>
 

@@ -3,42 +3,16 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/services/db/db';
 import type { Exercise } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+import { createInMemoryCache } from './createInMemoryCache';
 
 const EMPTY_EXERCISES: Exercise[] = [];
 
-/**
- * 模組級動作記憶體注水快取 (In-Memory Hydration Cache)
- * 解決彈窗與組件掛載時等待 IndexedDB 異步查詢造成的微閃爍問題
- * 實現第 0 幀滿數據同步秒開
- */
-let inMemoryExercisesCache: Exercise[] | null = null;
+const exercisesCache = createInMemoryCache<Exercise>(() => db.exercises.toArray());
 
-export function getInMemoryExercisesCache(): Exercise[] | null {
-  return inMemoryExercisesCache;
-}
-
-export function setInMemoryExercisesCache(exercises: Exercise[]): void {
-  inMemoryExercisesCache = exercises;
-}
-
-export function clearExercisesCache(): void {
-  inMemoryExercisesCache = null;
-}
-
-/**
- * 預熱動作記憶體快取 (非阻塞非同步預熱)
- */
-export async function prewarmExercisesCache(): Promise<Exercise[]> {
-  if (inMemoryExercisesCache !== null) return inMemoryExercisesCache;
-  try {
-    if (typeof indexedDB === 'undefined') return [];
-    const exercises = await db.exercises.toArray();
-    inMemoryExercisesCache = exercises;
-    return exercises;
-  } catch {
-    return [];
-  }
-}
+export const getInMemoryExercisesCache = exercisesCache.get;
+export const setInMemoryExercisesCache = exercisesCache.set;
+export const clearExercisesCache = exercisesCache.clear;
+export const prewarmExercisesCache = exercisesCache.prewarm;
 
 /**
  * 歸檔動作並於同一交易內從所有關聯訓練組合中剔除該動作引用
@@ -77,14 +51,14 @@ export function useExercises(equipmentFilter?: string, searchQuery = '') {
   const allExercisesList = useLiveQuery(
     async () => {
       const result = await db.exercises.toArray();
-      inMemoryExercisesCache = result;
+      exercisesCache.set(result);
       return result;
     },
     []
   );
 
   // 核心即時注水：若 useLiveQuery 仍在等待微任務/IPC 回調，直接同步採用記憶體快照
-  const allExercises = allExercisesList ?? inMemoryExercisesCache ?? EMPTY_EXERCISES;
+  const allExercises = allExercisesList ?? exercisesCache.get() ?? EMPTY_EXERCISES;
 
   const {
     activeExercises,
@@ -224,7 +198,7 @@ export function useExercises(equipmentFilter?: string, searchQuery = '') {
     archivedPresetExercises,
     // 相容性別名
     exercises: filteredActiveExercises,
-    isLoading: allExercisesList === undefined && inMemoryExercisesCache === null,
+    isLoading: allExercisesList === undefined && exercisesCache.get() === null,
     addExercise,
     updateExercise,
     archiveExercise,

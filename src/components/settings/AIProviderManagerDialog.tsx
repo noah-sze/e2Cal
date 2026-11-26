@@ -97,7 +97,7 @@ export function AIProviderManagerDialog({
                         <div className="text-xs font-medium text-foreground truncate">
                           {p.name}
                         </div>
-                        <div className="text-[11px] font-mono text-muted-foreground truncate">
+                        <div className="text-2xs font-mono text-muted-foreground truncate">
                           {PROTOCOL_SHORT[p.protocol]} · {p.model}
                         </div>
                       </div>

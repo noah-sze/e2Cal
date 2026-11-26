@@ -61,7 +61,7 @@ export function AISettingsCard() {
         <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground font-mono">
           {t('settings.aiSection', 'AI 助手設定')}
         </h2>
-        <p className="text-[11px] text-muted-foreground font-mono leading-relaxed">
+        <p className="text-2xs text-muted-foreground font-mono leading-relaxed">
           {t('settings.aiDesc', '自備 API Key (BYO-AI)，支援營養標籤識別與外食拍照估算，直連官方 API 或自訂端點')}
         </p>
       </div>

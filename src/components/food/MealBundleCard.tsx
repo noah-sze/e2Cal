@@ -107,12 +107,12 @@ export function MealBundleCard({
           </div>
 
           {/* 總重量與總熱量副標題 */}
-          <div className="text-[11px] text-muted-foreground truncate mt-0.5 flex items-center gap-1.5">
+          <div className="text-2xs text-muted-foreground truncate mt-0.5 flex items-center gap-1.5">
             {bundleTotals.totalWeightGrams > 0 && (
               <>
                 {(() => {
                   const s = formatFoodServing(bundleTotals.totalWeightGrams, 'g', foodWeightUnit, foodVolumeUnit);
-                  return <MetricValue value={s.size} unit={s.unit} unitClassName="text-[10px]" />;
+                  return <MetricValue value={s.size} unit={s.unit} unitClassName="text-3xs" />;
                 })()}
                 <span className="text-border">·</span>
               </>
@@ -133,7 +133,7 @@ export function MealBundleCard({
                     value={e.value.toLocaleString()}
                     unit={e.unit}
                     unitClassName={cn(
-                      'text-[10px]',
+                      'text-3xs',
                       (isLowCalorie || isHighCalorie) && 'text-current opacity-85'
                     )}
                   />
@@ -195,7 +195,7 @@ export function MealBundleCard({
                   <div className="font-normal text-foreground truncate text-xs">
                     {item.foodName}
                   </div>
-                  <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                  <div className="text-3xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                     {(() => {
                       const s = formatFoodServing(item.quantity ?? 0, item.unit ?? 'g', foodWeightUnit, foodVolumeUnit);
                       return <MetricValue value={s.size} unit={s.unit} unitClassName="text-[9px]" />;

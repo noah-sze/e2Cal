@@ -107,7 +107,7 @@ export const AdaptiveMuscleBadgeGroup = memo(function AdaptiveMuscleBadgeGroup({
         ))}
         <span
           ref={moreMeasureRef}
-          className="text-[10px] font-mono shrink-0 px-1 py-0.5 rounded select-none"
+          className="text-3xs font-mono shrink-0 px-1 py-0.5 rounded select-none"
         >
           +{sortedEntries.length}
         </span>
@@ -127,7 +127,7 @@ export const AdaptiveMuscleBadgeGroup = memo(function AdaptiveMuscleBadgeGroup({
 
       {hiddenCount > 0 && (
         <span
-          className="text-[10px] font-mono text-muted-foreground/70 shrink-0 px-1 py-0.5 rounded bg-muted/60 border border-border/40 select-none"
+          className="text-3xs font-mono text-muted-foreground/70 shrink-0 px-1 py-0.5 rounded bg-muted/60 border border-border/40 select-none"
           title={sortedEntries
             .slice(visibleCount)
             .map(([m]) => getMuscleLabel(m))

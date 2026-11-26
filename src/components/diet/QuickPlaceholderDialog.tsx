@@ -993,7 +993,7 @@ export function QuickPlaceholderDialog({
                 <span className="text-xs font-sans font-medium text-foreground truncate min-w-0">
                   {item.title}
                 </span>
-                <div className="flex items-center gap-1.5 shrink-0 font-mono text-[10px]">
+                <div className="flex items-center gap-1.5 shrink-0 font-mono text-3xs">
                   <span className="text-muted-foreground font-normal tabular-nums">
                     {formatEnergy(item.calories, energyUnit).formatted}
                   </span>

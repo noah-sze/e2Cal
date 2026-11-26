@@ -432,7 +432,7 @@ export const BodyMapTab: React.FC = () => {
             </div>
 
             {/* 地圖點擊行為切換 */}
-            <div className="px-4 py-2.5 bg-muted/20 flex flex-wrap items-center justify-between gap-2 text-2xs">
+            <div className="px-4 py-2.5 bg-muted flex flex-wrap items-center justify-between gap-2 text-2xs">
               <span className="text-muted-foreground">地圖點擊</span>
               <div className="flex items-center gap-1 flex-wrap">
                 {(
@@ -596,7 +596,7 @@ export const BodyMapTab: React.FC = () => {
                   value={highlightColor}
                   onChange={(e) => setHighlightColor(e.target.value)}
                   placeholder="預設"
-                  className="w-28 h-7 px-2 rounded border border-border bg-background font-mono text-2xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-foreground"
+                  className="w-28 h-7 px-2 rounded border border-border bg-background font-mono text-2xs text-foreground placeholder:text-label-tertiary focus:outline-none focus:border-foreground"
                 />
               </label>
               <label className="flex items-center justify-between gap-2">
@@ -606,7 +606,7 @@ export const BodyMapTab: React.FC = () => {
                   value={baseColor}
                   onChange={(e) => setBaseColor(e.target.value)}
                   placeholder="預設"
-                  className="w-28 h-7 px-2 rounded border border-border bg-background font-mono text-2xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-foreground"
+                  className="w-28 h-7 px-2 rounded border border-border bg-background font-mono text-2xs text-foreground placeholder:text-label-tertiary focus:outline-none focus:border-foreground"
                 />
               </label>
             </div>
@@ -836,7 +836,7 @@ export const BodyMapTab: React.FC = () => {
                   key={m}
                   className={cn(
                     'min-h-10 px-3 py-1.5 flex items-center justify-between gap-2 text-xs',
-                    isSelected && 'bg-muted/40'
+                    isSelected && 'bg-muted'
                   )}
                 >
                   <button

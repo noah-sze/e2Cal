@@ -3,38 +3,20 @@ import { db } from '@/services/db/db';
 import type { WorkoutRoutine, Exercise } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getInMemoryExercisesCache, setInMemoryExercisesCache } from './useExercises';
+import { createInMemoryCache } from './createInMemoryCache';
 
-let inMemoryRoutinesCache: WorkoutRoutine[] | null = null;
+const routinesCache = createInMemoryCache<WorkoutRoutine>(() => db.routines.toArray());
 
-export function getInMemoryRoutinesCache(): WorkoutRoutine[] | null {
-  return inMemoryRoutinesCache;
-}
-
-export function setInMemoryRoutinesCache(routines: WorkoutRoutine[]): void {
-  inMemoryRoutinesCache = routines;
-}
-
-export function clearRoutinesCache(): void {
-  inMemoryRoutinesCache = null;
-}
-
-export async function prewarmRoutinesCache(): Promise<WorkoutRoutine[]> {
-  if (inMemoryRoutinesCache !== null) return inMemoryRoutinesCache;
-  try {
-    if (typeof indexedDB === 'undefined') return [];
-    const routines = await db.routines.toArray();
-    inMemoryRoutinesCache = routines;
-    return routines;
-  } catch {
-    return [];
-  }
-}
+export const getInMemoryRoutinesCache = routinesCache.get;
+export const setInMemoryRoutinesCache = routinesCache.set;
+export const clearRoutinesCache = routinesCache.clear;
+export const prewarmRoutinesCache = routinesCache.prewarm;
 
 export function useRoutines(searchQuery = '') {
   const allRoutinesList = useLiveQuery(
     async () => {
       const result = await db.routines.toArray();
-      inMemoryRoutinesCache = result;
+      routinesCache.set(result);
       return result;
     },
     []
@@ -49,7 +31,7 @@ export function useRoutines(searchQuery = '') {
     []
   );
 
-  const allRoutines = allRoutinesList ?? inMemoryRoutinesCache ?? [];
+  const allRoutines = allRoutinesList ?? routinesCache.get() ?? [];
   const allExercises = allExercisesList ?? getInMemoryExercisesCache() ?? [];
 
   const exerciseMap = new Map<string, Exercise>();
@@ -133,7 +115,7 @@ export function useRoutines(searchQuery = '') {
     archivedCustomRoutines,
     archivedPresetRoutines,
     exerciseMap,
-    isLoading: allRoutinesList === undefined && inMemoryRoutinesCache === null,
+    isLoading: allRoutinesList === undefined && routinesCache.get() === null,
     addRoutine,
     updateRoutine,
     archiveRoutine,

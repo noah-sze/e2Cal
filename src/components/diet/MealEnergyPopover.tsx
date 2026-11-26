@@ -59,7 +59,7 @@ export function MealEnergyPopover({
                 <MetricValue
                   value={formattedEnergy.slice(0, idx)}
                   unit={formattedEnergy.slice(idx + 1)}
-                  unitClassName="text-[11px] group-hover:text-foreground/80"
+                  unitClassName="text-2xs group-hover:text-foreground/80"
                 />
               );
             }
@@ -103,7 +103,7 @@ export function MealEnergyPopover({
             <span className="text-carbs font-medium">
               {t('dietPlan.carbs', '碳水化合物')}
             </span>
-            <MetricValue value={Math.round(carbs)} unit="g" valueClassName="font-normal text-foreground" unitClassName="text-[11px]" />
+            <MetricValue value={Math.round(carbs)} unit="g" valueClassName="font-normal text-foreground" unitClassName="text-2xs" />
           </div>
 
           {/* 蛋白質 (P) */}
@@ -111,7 +111,7 @@ export function MealEnergyPopover({
             <span className="text-protein font-medium">
               {t('dietPlan.protein', '蛋白質')}
             </span>
-            <MetricValue value={Math.round(protein)} unit="g" valueClassName="font-normal text-foreground" unitClassName="text-[11px]" />
+            <MetricValue value={Math.round(protein)} unit="g" valueClassName="font-normal text-foreground" unitClassName="text-2xs" />
           </div>
 
           {/* 脂肪 (F) */}
@@ -119,7 +119,7 @@ export function MealEnergyPopover({
             <span className="text-fat font-medium">
               {t('dietPlan.fat', '脂肪')}
             </span>
-            <MetricValue value={Math.round(fat)} unit="g" valueClassName="font-normal text-foreground" unitClassName="text-[11px]" />
+            <MetricValue value={Math.round(fat)} unit="g" valueClassName="font-normal text-foreground" unitClassName="text-2xs" />
           </div>
         </div>
 
@@ -140,7 +140,7 @@ export function MealEnergyPopover({
         </div>
 
         {/* 供能比例圖例標籤 */}
-        <div className="flex items-center justify-between text-[10px] font-mono mt-1 px-0.5">
+        <div className="flex items-center justify-between text-3xs font-mono mt-1 px-0.5">
           <span className="text-carbs font-medium">{t('diet.macroMicro.carbs', '碳')} {cPercent}%</span>
           <span className="text-protein font-medium">{t('diet.macroMicro.protein', '蛋')} {pPercent}%</span>
           <span className="text-fat font-medium">{t('diet.macroMicro.fat', '脂')} {fPercent}%</span>

@@ -143,7 +143,7 @@ export function RecipeIngredientsCard({
                       }
                       unit={item.unit}
                       valueClassName="font-normal text-foreground"
-                      unitClassName="text-[11px]"
+                      unitClassName="text-2xs"
                     />
                     <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                   </button>
@@ -178,7 +178,7 @@ export function RecipeIngredientsCard({
                 <div className="truncate text-foreground font-medium text-sm">
                   {item.foodName || t('common.unknown')}
                 </div>
-                <div className="text-[11px] font-mono text-muted-foreground truncate mt-0.5 flex items-center gap-1.5">
+                <div className="text-2xs font-mono text-muted-foreground truncate mt-0.5 flex items-center gap-1.5">
                   <span>
                     {
                       formatFoodServing(

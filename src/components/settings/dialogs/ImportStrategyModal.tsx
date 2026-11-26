@@ -247,7 +247,7 @@ export function ImportStrategyModal({
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium text-foreground flex items-center gap-1.5">
                     <span>{t('settings.overwriteStrategy', '完全覆蓋')}</span>
-                    <span className="text-3xs font-medium text-destructive border border-destructive/30 px-1.5 py-0.5 rounded">
+                    <span className="text-3xs font-medium text-destructive border border-destructive px-1.5 py-0.5 rounded">
                       {t('settings.resetBadge', '清空重置')}
                     </span>
                   </div>

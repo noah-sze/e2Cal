@@ -412,7 +412,7 @@ export default function RoutineDetails({ id }: RoutineDetailsProps) {
               triggerHaptic('selection');
               setIsPickerOpen(true);
             }}
-            className="h-6 px-2.5 rounded-full border border-border/80 bg-card hover:bg-hover font-mono text-xs flex items-center gap-1 transition-colors cursor-pointer text-muted-foreground hover:text-foreground active:scale-95 select-none"
+            className="h-6 px-2.5 rounded-full border border-border bg-card hover:bg-hover font-mono text-xs flex items-center gap-1 transition-colors cursor-pointer text-muted-foreground hover:text-foreground active:scale-95 select-none"
           >
             <Plus className="size-3 text-muted-foreground" />
             <span>{t('workout.addExercise')}</span>

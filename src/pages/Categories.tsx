@@ -179,7 +179,7 @@ export default function Categories({ isDetailOpen = false }: CategoriesProps) {
                     <span className="font-medium text-xs text-foreground">
                       {t('diet.addManualFood', '手動添加')}
                     </span>
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-3xs text-muted-foreground">
                       {t('diet.addManualFoodDesc', '自行填寫營養素與自定義食物')}
                     </span>
                   </div>
@@ -196,7 +196,7 @@ export default function Categories({ isDetailOpen = false }: CategoriesProps) {
                     <span className="font-medium text-xs text-foreground">
                       {t('diet.addAuthorityFood', '搜尋食物資料庫')}
                     </span>
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-3xs text-muted-foreground">
                       {t('diet.addAuthorityFoodDesc', '六大機構 · 18,635 項')}
                     </span>
                   </div>

@@ -337,7 +337,7 @@ export function AuthorityFoodSearchDialog({
                       setActiveFilter(auth);
                     }}
                     className={cn(
-                      'h-6 px-2 rounded text-[11px] font-mono transition-colors shrink-0 cursor-pointer',
+                      'h-6 px-2 rounded text-2xs font-mono transition-colors shrink-0 cursor-pointer',
                       activeFilter === auth
                         ? 'bg-foreground text-background font-medium'
                         : 'text-muted-foreground hover:text-foreground hover:bg-hover'
@@ -498,7 +498,7 @@ export function AuthorityFoodSearchDialog({
                   <span className="font-mono tabular-nums">
                     {t('common.itemCount', { count: totalCount })}
                   </span>
-                  <span className="text-[11px] font-mono inline-flex items-baseline gap-1">
+                  <span className="text-2xs font-mono inline-flex items-baseline gap-1">
                     {activeFilter !== 'all' && <span>{activeFilter} ·</span>}
                     <MetricValue value={100} unit="g" />
                   </span>
@@ -532,7 +532,7 @@ export function AuthorityFoodSearchDialog({
                         )}
                       >
                         <div className="flex flex-col gap-1 min-w-0 flex-1">
-                          <div className="text-[10px] font-mono tabular-nums text-muted-foreground flex items-center gap-1.5 leading-none">
+                          <div className="text-3xs font-mono tabular-nums text-muted-foreground flex items-center gap-1.5 leading-none">
                             <span>{authority}</span>
                             {ediblePct < 100 && (
                               <>
@@ -550,14 +550,14 @@ export function AuthorityFoodSearchDialog({
 
                           {food.dataSource?.sourceName && food.dataSource.sourceName !== food.name && (
                             <div
-                              className="text-[11px] text-muted-foreground/75 truncate leading-tight"
+                              className="text-2xs text-muted-foreground/75 truncate leading-tight"
                               title={food.dataSource.sourceName}
                             >
                               {food.dataSource.sourceName}
                             </div>
                           )}
 
-                          <div className="text-[11px] font-mono tabular-nums text-muted-foreground leading-none">
+                          <div className="text-2xs font-mono tabular-nums text-muted-foreground leading-none">
                             <MetricValue
                               value={food.macros.calories}
                               unit="kcal"

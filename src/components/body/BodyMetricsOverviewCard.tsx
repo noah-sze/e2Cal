@@ -76,15 +76,15 @@ export function BodyMetricsOverviewCard({
           >
             {getMetricDisplayValue(type)}
             {!isMetricFresh(type) && getMetricDisplayValue(type) !== '-' && (
-              <span className="text-[11px] text-muted-foreground/60 ml-1.5 font-sans">
+              <span className="text-2xs text-muted-foreground/60 ml-1.5 font-sans">
                 ({t('body.referenceValue', '參考值')})
               </span>
             )}
           </div>
         </div>
 
-        <div className="text-[11px] text-muted-foreground font-mono flex flex-wrap items-center gap-1.5 bg-muted/50 px-2.5 py-1.5 rounded leading-relaxed">
-          <span className="text-[11px] uppercase tracking-wider text-muted-foreground/70 shrink-0">
+        <div className="text-2xs text-muted-foreground font-mono flex flex-wrap items-center gap-1.5 bg-muted/50 px-2.5 py-1.5 rounded leading-relaxed">
+          <span className="text-2xs uppercase tracking-wider text-muted-foreground/70 shrink-0">
             {t('body.metricExplanations.formula', '計算公式')}:
           </span>
           <span className="text-foreground whitespace-normal break-words">
@@ -119,7 +119,7 @@ export function BodyMetricsOverviewCard({
             onClick={(e) => onOpenMetricPopover?.('trendWeight', e.currentTarget)}
             className="w-full p-3 sm:p-3.5 text-center space-y-0.5 overflow-hidden hover:bg-hover transition-colors cursor-pointer active:scale-[0.99] focus:outline-hidden"
           >
-            <div className="text-[11px] text-muted-foreground truncate">
+            <div className="text-2xs text-muted-foreground truncate">
               {t('body.trendWeight', '平滑體重')}
             </div>
             <div
@@ -143,7 +143,7 @@ export function BodyMetricsOverviewCard({
         </Popover>
       ) : (
         <div className="w-full p-3 sm:p-3.5 text-center space-y-0.5 overflow-hidden">
-          <div className="text-[11px] text-muted-foreground truncate">
+          <div className="text-2xs text-muted-foreground truncate">
             {t('body.trendWeight', '平滑體重')}
           </div>
           <div
@@ -178,7 +178,7 @@ export function BodyMetricsOverviewCard({
               onClick={(e) => onOpenMetricPopover?.('bmi', e.currentTarget)}
               className="p-3 text-center space-y-0.5 overflow-hidden hover:bg-hover transition-colors cursor-pointer active:scale-[0.99] focus:outline-hidden"
             >
-              <div className="text-[11px] text-muted-foreground truncate">
+              <div className="text-2xs text-muted-foreground truncate">
                 {t('body.bmi', 'BMI')}
               </div>
               <div
@@ -198,7 +198,7 @@ export function BodyMetricsOverviewCard({
           </Popover>
         ) : (
           <div className="p-3 text-center space-y-0.5 overflow-hidden">
-            <div className="text-[11px] text-muted-foreground truncate">
+            <div className="text-2xs text-muted-foreground truncate">
               {t('body.bmi', 'BMI')}
             </div>
             <div
@@ -227,7 +227,7 @@ export function BodyMetricsOverviewCard({
               onClick={(e) => onOpenMetricPopover?.('ffmi', e.currentTarget)}
               className="p-3 text-center space-y-0.5 overflow-hidden hover:bg-hover transition-colors cursor-pointer active:scale-[0.99] focus:outline-hidden"
             >
-              <div className="text-[11px] text-muted-foreground truncate">
+              <div className="text-2xs text-muted-foreground truncate">
                 {t('body.ffmi', 'FFMI')}
               </div>
               <div
@@ -247,7 +247,7 @@ export function BodyMetricsOverviewCard({
           </Popover>
         ) : (
           <div className="p-3 text-center space-y-0.5 overflow-hidden">
-            <div className="text-[11px] text-muted-foreground truncate">
+            <div className="text-2xs text-muted-foreground truncate">
               {t('body.ffmi', 'FFMI')}
             </div>
             <div
@@ -279,7 +279,7 @@ export function BodyMetricsOverviewCard({
               onClick={(e) => onOpenMetricPopover?.('leanBodyMass', e.currentTarget)}
               className="p-3 text-center space-y-0.5 overflow-hidden hover:bg-hover transition-colors cursor-pointer active:scale-[0.99] focus:outline-hidden"
             >
-              <div className="text-[11px] text-muted-foreground truncate">
+              <div className="text-2xs text-muted-foreground truncate">
                 {t('body.leanBodyMass', '去脂體重')}
               </div>
               <div
@@ -299,7 +299,7 @@ export function BodyMetricsOverviewCard({
           </Popover>
         ) : (
           <div className="p-3 text-center space-y-0.5 overflow-hidden">
-            <div className="text-[11px] text-muted-foreground truncate">
+            <div className="text-2xs text-muted-foreground truncate">
               {t('body.leanBodyMass', '去脂體重')}
             </div>
             <div
@@ -328,7 +328,7 @@ export function BodyMetricsOverviewCard({
               onClick={(e) => onOpenMetricPopover?.('fatMass', e.currentTarget)}
               className="p-3 text-center space-y-0.5 overflow-hidden hover:bg-hover transition-colors cursor-pointer active:scale-[0.99] focus:outline-hidden"
             >
-              <div className="text-[11px] text-muted-foreground truncate">
+              <div className="text-2xs text-muted-foreground truncate">
                 {t('body.fatMass', '脂肪總重')}
               </div>
               <div
@@ -348,7 +348,7 @@ export function BodyMetricsOverviewCard({
           </Popover>
         ) : (
           <div className="p-3 text-center space-y-0.5 overflow-hidden">
-            <div className="text-[11px] text-muted-foreground truncate">
+            <div className="text-2xs text-muted-foreground truncate">
               {t('body.fatMass', '脂肪總重')}
             </div>
             <div

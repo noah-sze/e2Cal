@@ -99,11 +99,11 @@ export const FoodListItem = React.memo(function FoodListItem({
         </div>
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <MetricValue value={displayServing.size} unit={displayServing.unit} unitClassName="text-[11px]" />
+          <MetricValue value={displayServing.size} unit={displayServing.unit} unitClassName="text-2xs" />
           <span className="text-muted-foreground/40">·</span>
           <span
             className={cn(
-              'inline-flex items-center h-4 leading-none tabular-nums rounded text-[11px] font-normal',
+              'inline-flex items-center h-4 leading-none tabular-nums rounded text-2xs font-normal',
               isLowCalorie && 'px-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
               isHighCalorie && 'px-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400',
               !isLowCalorie && !isHighCalorie && 'text-muted-foreground'
@@ -113,7 +113,7 @@ export const FoodListItem = React.memo(function FoodListItem({
               value={displayCal.value.toLocaleString()}
               unit={displayCal.unit}
               unitClassName={cn(
-                'text-[10px]',
+                'text-3xs',
                 (isLowCalorie || isHighCalorie) && 'text-current opacity-85'
               )}
             />

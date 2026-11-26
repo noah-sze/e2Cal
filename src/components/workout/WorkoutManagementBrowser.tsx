@@ -444,7 +444,7 @@ export function WorkoutManagementBrowser({
                     )}
                   >
                     <span>{t('common.all', '全部')}</span>
-                    <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                    <span className="font-mono text-3xs opacity-60 tabular-nums">
                       {activeExercises.length}
                     </span>
                   </DropdownMenuItem>
@@ -462,7 +462,7 @@ export function WorkoutManagementBrowser({
                       )}
                     >
                       <span>{t(`workout.${group.id}`)}</span>
-                      <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                      <span className="font-mono text-3xs opacity-60 tabular-nums">
                         {muscleGroupCounts[group.id] || 0}
                       </span>
                     </DropdownMenuItem>
@@ -479,7 +479,7 @@ export function WorkoutManagementBrowser({
                     )}
                   >
                     <span>{t('common.archived', '已歸檔')}</span>
-                    <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                    <span className="font-mono text-3xs opacity-60 tabular-nums">
                       {archivedExercises.length}
                     </span>
                   </DropdownMenuItem>
@@ -693,7 +693,7 @@ export function WorkoutManagementBrowser({
                     )}
                   >
                     <span>{t('common.all', '全部')}</span>
-                    <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                    <span className="font-mono text-3xs opacity-60 tabular-nums">
                       {activeRoutines.length}
                     </span>
                   </DropdownMenuItem>
@@ -708,7 +708,7 @@ export function WorkoutManagementBrowser({
                     )}
                   >
                     <span>{t('common.archived', '已歸檔')}</span>
-                    <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                    <span className="font-mono text-3xs opacity-60 tabular-nums">
                       {archivedRoutines.length}
                     </span>
                   </DropdownMenuItem>
@@ -843,7 +843,7 @@ export function WorkoutManagementBrowser({
                     )}
                   >
                     <span>{t('common.all', '全部')}</span>
-                    <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                    <span className="font-mono text-3xs opacity-60 tabular-nums">
                       {activeEquipments.length}
                     </span>
                   </DropdownMenuItem>
@@ -858,7 +858,7 @@ export function WorkoutManagementBrowser({
                     )}
                   >
                     <span>{t('common.archived', '已歸檔')}</span>
-                    <span className="font-mono text-[10px] opacity-60 tabular-nums">
+                    <span className="font-mono text-3xs opacity-60 tabular-nums">
                       {archivedEquipments.length}
                     </span>
                   </DropdownMenuItem>

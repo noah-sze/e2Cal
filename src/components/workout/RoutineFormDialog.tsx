@@ -252,7 +252,7 @@ export function RoutineFormDialog({
                             {ex ? getLocalizedExerciseName(ex) : t('workout.unknownExercise')}
                           </div>
                           {ex && (
-                            <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
+                            <div className="mt-0.5 flex items-center gap-1 text-3xs text-muted-foreground font-mono">
                               <EquipmentBadge
                                 name={getEquipmentDisplayName(ex.equipment, t)}
                                 size="sm"

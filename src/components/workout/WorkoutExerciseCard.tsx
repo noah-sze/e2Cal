@@ -79,7 +79,7 @@ export function WorkoutExerciseCard({
               value={sets.length}
               unit={t('workout.set', '組')}
               className="shrink-0"
-              unitClassName="text-[11px]"
+              unitClassName="text-2xs"
             />
             {displayGroupVolume > 0 && (
               <>
@@ -88,7 +88,7 @@ export function WorkoutExerciseCard({
                   value={Math.round(displayGroupVolume).toLocaleString()}
                   unit={bodyWeightUnit}
                   className="text-muted-foreground shrink-0"
-                  unitClassName="text-[11px]"
+                  unitClassName="text-2xs"
                 />
               </>
             )}
@@ -149,7 +149,7 @@ export function WorkoutExerciseCard({
                   >
                     {displayWeight}
                   </span>
-                  <span className="font-sans text-muted-foreground text-[11px] shrink-0">
+                  <span className="font-sans text-muted-foreground text-2xs shrink-0">
                     {bodyWeightUnit}
                   </span>
                   <ChevronRight className="size-3 text-muted-foreground/60 shrink-0 -ml-0.5" />
@@ -186,7 +186,7 @@ export function WorkoutExerciseCard({
                       ? set.reps
                       : '-'}
                   </span>
-                  <span className="font-sans text-muted-foreground text-[11px] shrink-0">
+                  <span className="font-sans text-muted-foreground text-2xs shrink-0">
                     {t('workout.repsUnit', '次')}
                   </span>
                   <ChevronRight className="size-3 text-muted-foreground/60 shrink-0 -ml-0.5" />
@@ -203,7 +203,7 @@ export function WorkoutExerciseCard({
             disabled={!interactive}
             onClick={onAddSet}
             className={cn(
-              'text-[11px] font-mono text-muted-foreground inline-flex items-center gap-1 transition-colors select-none py-0.5',
+              'text-2xs font-mono text-muted-foreground inline-flex items-center gap-1 transition-colors select-none py-0.5',
               interactive
                 ? 'hover:text-foreground cursor-pointer'
                 : 'cursor-default opacity-80'

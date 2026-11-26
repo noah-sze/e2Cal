@@ -378,7 +378,7 @@ export const BodyHighlighter = memo(function BodyHighlighter({
 
         {/* 極簡底標 (完美對齊左右兩具人體足底中軸線) */}
         {showLabels && (
-          <div className="mt-2.5 w-full font-mono text-[10px] tracking-widest text-muted-foreground uppercase select-none">
+          <div className="mt-2.5 w-full font-mono text-3xs tracking-widest text-muted-foreground uppercase select-none">
             {view === 'both' ? (
               <div className="grid grid-cols-2 w-full">
                 <span className="text-center">ANTERIOR</span>

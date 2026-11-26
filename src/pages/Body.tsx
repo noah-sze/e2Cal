@@ -504,7 +504,7 @@ export default function Body() {
                 <button
                   type="button"
                   onClick={handleDeleteTodayMetric}
-                  className="size-6 flex items-center justify-center rounded-full hover:bg-muted/80 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                  className="size-6 flex items-center justify-center rounded-full hover:bg-hover text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
                   title={t('common.delete', '刪除')}
                   aria-label={t('common.delete', '刪除')}
                 >
@@ -536,8 +536,8 @@ export default function Body() {
                   hasTodayWeight
                     ? 'text-foreground group-hover:opacity-80'
                     : heroDisplayWeight
-                      ? 'text-muted-foreground/40 group-hover:text-muted-foreground/70'
-                      : 'text-muted-foreground/30 group-hover:text-foreground'
+                      ? 'text-label-tertiary group-hover:text-muted-foreground'
+                      : 'text-label-quaternary group-hover:text-foreground'
                 )}
               >
                 {heroDisplayWeight || '-'}
@@ -545,7 +545,7 @@ export default function Body() {
               <span
                 className={cn(
                   'text-sm sm:text-base font-normal font-mono transition-colors',
-                  hasTodayWeight ? 'text-muted-foreground' : 'text-muted-foreground/40'
+                  hasTodayWeight ? 'text-muted-foreground' : 'text-label-tertiary'
                 )}
               >
                 {bodyWeightUnit}
@@ -566,17 +566,17 @@ export default function Body() {
                   e.currentTarget
                 )
               }
-              className="h-7 px-3 rounded-full border border-border bg-muted/30 hover:bg-hover active:scale-95 transition-[background-color,transform] cursor-pointer font-mono text-xs flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+              className="h-7 px-3 rounded-full border border-border bg-muted hover:bg-hover active:scale-95 transition-[background-color,transform] cursor-pointer font-mono text-xs flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
             >
-              <span className="text-[11px]">{t('body.bodyFat', '體脂率')}</span>
+              <span className="text-2xs">{t('body.bodyFat', '體脂率')}</span>
               <span
                 className={cn(
                   'transition-colors font-medium',
                   hasTodayBodyFat
                     ? 'text-foreground'
                     : effectiveBodyFat
-                      ? 'text-muted-foreground/60'
-                      : 'text-muted-foreground/40'
+                      ? 'text-label-tertiary'
+                      : 'text-label-tertiary'
                 )}
               >
                 {effectiveBodyFat ? `${effectiveBodyFat}%` : '-'}
@@ -606,7 +606,7 @@ export default function Body() {
                   }
                   className="p-3 text-center space-y-0.5 hover:bg-hover transition-colors cursor-pointer active:scale-98 overflow-hidden"
                 >
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.shoulders', '肩寬')}
                   </div>
                   <div
@@ -637,7 +637,7 @@ export default function Body() {
                   }
                   className="p-3 text-center space-y-0.5 hover:bg-hover transition-colors cursor-pointer active:scale-98 overflow-hidden"
                 >
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.chest', '胸圍')}
                   </div>
                   <div
@@ -668,7 +668,7 @@ export default function Body() {
                   }
                   className="p-3 text-center space-y-0.5 hover:bg-hover transition-colors cursor-pointer active:scale-98 overflow-hidden"
                 >
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.waist', '腰圍')}
                   </div>
                   <div
@@ -699,7 +699,7 @@ export default function Body() {
                   }
                   className="p-3 text-center space-y-0.5 hover:bg-hover transition-colors cursor-pointer active:scale-98 overflow-hidden"
                 >
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.hips', '臀圍')}
                   </div>
                   <div
@@ -735,7 +735,7 @@ export default function Body() {
                   }
                   className="p-3 text-center space-y-0.5 hover:bg-hover transition-colors cursor-pointer active:scale-98 overflow-hidden"
                 >
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.arms', '手臂圍')}
                   </div>
                   <div
@@ -766,7 +766,7 @@ export default function Body() {
                   }
                   className="p-3 text-center space-y-0.5 hover:bg-hover transition-colors cursor-pointer active:scale-98 overflow-hidden"
                 >
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-2xs text-muted-foreground truncate">
                     {t('body.thighs', '大腿圍')}
                   </div>
                   <div
@@ -804,7 +804,7 @@ export default function Body() {
           onClick={(e) => handleOpenMetricPopover('trendWeight', e.currentTarget)}
           className="w-full p-3 sm:p-3.5 text-center space-y-0.5 overflow-hidden hover:bg-hover transition-colors cursor-pointer active:scale-[0.99] focus:outline-hidden"
         >
-          <div className="text-[11px] text-muted-foreground truncate">
+          <div className="text-2xs text-muted-foreground truncate">
             {t('body.trendWeight', '平滑體重')}
           </div>
           <div
@@ -829,7 +829,7 @@ export default function Body() {
             onClick={(e) => handleOpenMetricPopover('bmi', e.currentTarget)}
             className="p-3 text-center space-y-0.5 overflow-hidden hover:bg-hover transition-colors cursor-pointer active:scale-[0.99] focus:outline-hidden"
           >
-            <div className="text-[11px] text-muted-foreground truncate">
+            <div className="text-2xs text-muted-foreground truncate">
               {t('body.bmi', 'BMI')}
             </div>
             <div
@@ -852,7 +852,7 @@ export default function Body() {
             onClick={(e) => handleOpenMetricPopover('ffmi', e.currentTarget)}
             className="p-3 text-center space-y-0.5 overflow-hidden hover:bg-hover transition-colors cursor-pointer active:scale-[0.99] focus:outline-hidden"
           >
-            <div className="text-[11px] text-muted-foreground truncate">
+            <div className="text-2xs text-muted-foreground truncate">
               {t('body.ffmi', 'FFMI')}
             </div>
             <div
@@ -878,7 +878,7 @@ export default function Body() {
             onClick={(e) => handleOpenMetricPopover('leanBodyMass', e.currentTarget)}
             className="p-3 text-center space-y-0.5 overflow-hidden hover:bg-hover transition-colors cursor-pointer active:scale-[0.99] focus:outline-hidden"
           >
-            <div className="text-[11px] text-muted-foreground truncate">
+            <div className="text-2xs text-muted-foreground truncate">
               {t('body.leanBodyMass', '去脂體重')}
             </div>
             <div
@@ -901,7 +901,7 @@ export default function Body() {
             onClick={(e) => handleOpenMetricPopover('fatMass', e.currentTarget)}
             className="p-3 text-center space-y-0.5 overflow-hidden hover:bg-hover transition-colors cursor-pointer active:scale-[0.99] focus:outline-hidden"
           >
-            <div className="text-[11px] text-muted-foreground truncate">
+            <div className="text-2xs text-muted-foreground truncate">
               {t('body.fatMass', '脂肪總重')}
             </div>
             <div
@@ -948,21 +948,21 @@ export default function Body() {
                     'text-xs font-mono transition-colors',
                     isMetricFresh(activeMetricInfo)
                       ? 'text-foreground'
-                      : 'text-muted-foreground/60'
+                      : 'text-label-tertiary'
                   )}
                 >
                   {getMetricDisplayValue(activeMetricInfo)}
                   {!isMetricFresh(activeMetricInfo) &&
                     getMetricDisplayValue(activeMetricInfo) !== '-' && (
-                      <span className="text-[11px] text-muted-foreground/60 ml-1.5 font-sans">
+                      <span className="text-2xs text-label-tertiary ml-1.5 font-sans">
                         ({t('body.referenceValue', '參考值')})
                       </span>
                     )}
                 </div>
               </div>
 
-              <div className="text-[11px] text-muted-foreground font-mono flex flex-wrap items-center gap-1.5 bg-muted/50 px-2.5 py-1.5 rounded leading-relaxed">
-                <span className="text-[11px] uppercase tracking-wider text-muted-foreground/70 shrink-0">
+              <div className="text-2xs text-muted-foreground font-mono flex flex-wrap items-center gap-1.5 bg-muted px-2.5 py-1.5 rounded leading-relaxed">
+                <span className="text-2xs uppercase tracking-wider text-muted-foreground shrink-0">
                   {t('body.metricExplanations.formula', '計算公式')}:
                 </span>
                 <span className="text-foreground whitespace-normal break-words">
@@ -1006,7 +1006,7 @@ export default function Body() {
                 onClick={(e) => handleOpenMetricPopover('vTaperRatio', e.currentTarget)}
                 className="p-3 text-center space-y-0.5 overflow-hidden hover:bg-hover transition-colors cursor-pointer active:scale-[0.99] focus:outline-hidden"
               >
-                <div className="text-[11px] text-muted-foreground truncate">
+                <div className="text-2xs text-muted-foreground truncate">
                   {t('body.vTaperRatio', '胸腰比')}
                 </div>
                 <div
@@ -1021,7 +1021,7 @@ export default function Body() {
                 >
                   {vTaperRatio !== null ? <MetricValue value={vTaperRatio} /> : '-'}
                 </div>
-                <div className="text-[11px] text-label-tertiary truncate">
+                <div className="text-2xs text-label-tertiary truncate">
                   {t('body.vTaperHint', '倒三角係數')}
                 </div>
               </button>
@@ -1032,7 +1032,7 @@ export default function Body() {
                 onClick={(e) => handleOpenMetricPopover('whRatio', e.currentTarget)}
                 className="p-3 text-center space-y-0.5 overflow-hidden hover:bg-hover transition-colors cursor-pointer active:scale-[0.99] focus:outline-hidden"
               >
-                <div className="text-[11px] text-muted-foreground truncate">
+                <div className="text-2xs text-muted-foreground truncate">
                   {t('body.whRatio', '腰臀比')}
                 </div>
                 <div
@@ -1047,7 +1047,7 @@ export default function Body() {
                 >
                   {whRatio !== null ? <MetricValue value={whRatio} /> : '-'}
                 </div>
-                <div className="text-[11px] text-label-tertiary truncate">
+                <div className="text-2xs text-label-tertiary truncate">
                   {t('body.whRatioHint', '形態基準')}
                 </div>
               </button>
@@ -1056,7 +1056,7 @@ export default function Body() {
 
           {/* 圍度演進表格 (三欄固定 Grid 佈局，依偏好動態過濾項目) */}
           <div className="divide-y divide-border text-xs">
-            <div className="px-4 py-2 grid grid-cols-3 items-center text-muted-foreground text-[11px] bg-muted/20">
+            <div className="px-4 py-2 grid grid-cols-3 items-center text-muted-foreground text-2xs bg-muted">
               <span className="text-left">{t('body.bodyPart', '部位圍度')}</span>
               <span className="text-center">{t('body.currentValue', '當前數值')}</span>
               <span className="text-right">{t('body.thirtyDaysChange', '30 天變動')}</span>
@@ -1154,7 +1154,7 @@ export default function Body() {
             <div className="py-1 text-center space-y-0.5">
               {/* 上方動態標籤列（僅在有數值時展示） */}
               {displayVal !== null && (
-                <div className="text-[11px] font-sans text-muted-foreground tracking-wide">
+                <div className="text-2xs font-sans text-muted-foreground tracking-wide">
                   {isToday ? (
                     <span>{t('body.keypadGuide.todayRecord', '當日記錄')}</span>
                   ) : (
@@ -1184,7 +1184,7 @@ export default function Body() {
 
             {/* 項目說明與測量步驟 (純文字排版，無前綴標籤) */}
             {(desc || method) && (
-              <div className="pt-2 border-t border-border/60 space-y-1.5 font-sans leading-relaxed text-[11px] text-muted-foreground text-left">
+              <div className="pt-2 border-t border-border space-y-1.5 font-sans leading-relaxed text-2xs text-muted-foreground text-left">
                 {desc && <div>{desc}</div>}
                 {method && <div>{method}</div>}
               </div>

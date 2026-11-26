@@ -120,8 +120,8 @@ export function WeightTrendChart({
                     )}
                   </div>
 
-                  <div className="text-[11px] text-muted-foreground font-mono flex flex-wrap items-center gap-1.5 bg-muted/50 px-2.5 py-1.5 rounded leading-relaxed">
-                    <span className="text-[11px] uppercase tracking-wider text-muted-foreground/70 shrink-0">
+                  <div className="text-2xs text-muted-foreground font-mono flex flex-wrap items-center gap-1.5 bg-muted/50 px-2.5 py-1.5 rounded leading-relaxed">
+                    <span className="text-2xs uppercase tracking-wider text-muted-foreground/70 shrink-0">
                       {t('body.metricExplanations.formula', '計算公式')}:
                     </span>
                     <span className="text-foreground whitespace-normal break-words">
@@ -157,13 +157,13 @@ export function WeightTrendChart({
             onChange={setRange}
           />
         ) : (
-          <div className="h-5 px-2 rounded-full border border-border/80 bg-muted/20 text-[11px] font-mono text-muted-foreground flex items-center justify-center select-none pointer-events-none cursor-default">
+          <div className="h-5 px-2 rounded-full border border-border/80 bg-muted/20 text-2xs font-mono text-muted-foreground flex items-center justify-center select-none pointer-events-none cursor-default">
             <span className="flex-none tabular-nums font-normal">{range}</span>
           </div>
         )}
       </div>
 
-      <div className="text-[11px] font-mono text-muted-foreground mb-2 text-right">
+      <div className="text-2xs font-mono text-muted-foreground mb-2 text-right">
         {t('body.recordsCount', { count: sorted.length, defaultValue: `${sorted.length} 筆記錄` })}
       </div>
 
@@ -330,7 +330,7 @@ export function WeightTrendChart({
               className="w-auto min-w-[148px] p-3 bg-popover text-popover-foreground border border-border shadow-none rounded-lg select-none font-mono focus:outline-hidden z-[90]"
             >
               <div className="space-y-1.5">
-                <div className="text-[11px] font-normal text-muted-foreground pb-1 border-b border-border">
+                <div className="text-2xs font-normal text-muted-foreground pb-1 border-b border-border">
                   {activePoint.date}
                 </div>
                 <div className="grid grid-cols-[auto_1fr] items-center gap-x-2.5 gap-y-1 text-xs font-mono">

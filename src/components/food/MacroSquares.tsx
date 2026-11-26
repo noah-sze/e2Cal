@@ -57,19 +57,19 @@ const ACCENT_CLASSES = {
   carbs: {
     subtleBox: 'border-carbs-subtle-border bg-carbs-subtle-bg text-foreground shadow-none',
     defaultBox: 'border-carbs bg-carbs-subtle text-foreground shadow-none',
-    subtleText: 'text-carbs/65 font-medium',
+    subtleText: 'text-carbs-subtle font-medium',
     defaultText: 'text-carbs font-semibold',
   },
   protein: {
     subtleBox: 'border-protein-subtle-border bg-protein-subtle-bg text-foreground shadow-none',
     defaultBox: 'border-protein bg-protein-subtle text-foreground shadow-none',
-    subtleText: 'text-protein/65 font-medium',
+    subtleText: 'text-protein-subtle font-medium',
     defaultText: 'text-protein font-semibold',
   },
   fat: {
     subtleBox: 'border-fat-subtle-border bg-fat-subtle-bg text-foreground shadow-none',
     defaultBox: 'border-fat bg-fat-subtle text-foreground shadow-none',
-    subtleText: 'text-fat/65 font-medium',
+    subtleText: 'text-fat-subtle font-medium',
     defaultText: 'text-fat font-semibold',
   },
 } as const;
@@ -104,7 +104,7 @@ function MacroStackRow({
           value={value}
           unit="g"
           valueClassName={cn(
-            'text-[10px] font-mono tabular-nums',
+            'text-3xs font-mono tabular-nums',
             isHighlighted ? styles.defaultText : 'text-muted-foreground'
           )}
           unitClassName="text-[8px]"
@@ -136,7 +136,7 @@ function MacroSquareCell({
           ? isSubtle
             ? styles.subtleBox
             : styles.defaultBox
-          : 'border-border bg-muted/30 text-foreground'
+          : 'border-border bg-muted text-foreground'
       )}
     >
       {hasSub && (
@@ -158,7 +158,7 @@ function MacroSquareCell({
         {label}
       </div>
       <AutoMarquee className="text-xs leading-tight" align="center">
-        <MetricValue value={value} unit="g" unitClassName="text-[10px]" />
+        <MetricValue value={value} unit="g" unitClassName="text-3xs" />
       </AutoMarquee>
     </div>
   );
@@ -223,7 +223,7 @@ export const MacroSquares = React.memo(function MacroSquares({
       {/* 手機版：方案 H 垂直三階微堆疊 (僅於 < 768px / md 呈現) */}
       <div
         className={cn(
-          'flex-col items-end justify-center font-mono text-[10px] leading-tight shrink-0 py-0.5 select-none gap-0.5 w-[50px]',
+          'flex-col items-end justify-center font-mono text-3xs leading-tight shrink-0 py-0.5 select-none gap-0.5 w-[50px]',
           responsive ? 'flex md:hidden' : 'hidden'
         )}
         aria-label={`${t('diet.macroMicro.carbs', '碳')}: ${carbs}g, ${t('diet.macroMicro.protein', '蛋')}: ${protein}g, ${t('diet.macroMicro.fat', '脂')}: ${fat}g`}

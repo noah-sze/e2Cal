@@ -280,7 +280,7 @@ export function SetupProfileDialog({
                       triggerHaptic('selection');
                     }}
                     className={cn(
-                      'px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer transition-all select-none',
+                      'px-2 py-0.5 rounded text-2xs font-semibold cursor-pointer transition-all select-none',
                       gender === 'male'
                         ? 'bg-foreground text-background shadow-none'
                         : 'text-muted-foreground hover:text-foreground'
@@ -295,7 +295,7 @@ export function SetupProfileDialog({
                       triggerHaptic('selection');
                     }}
                     className={cn(
-                      'px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer transition-all select-none',
+                      'px-2 py-0.5 rounded text-2xs font-semibold cursor-pointer transition-all select-none',
                       gender === 'female'
                         ? 'bg-foreground text-background shadow-none'
                         : 'text-muted-foreground hover:text-foreground'
@@ -336,7 +336,7 @@ export function SetupProfileDialog({
                   type="button"
                   onClick={() => handleUnitSystemChange('metric')}
                   className={cn(
-                    'px-2.5 py-0.5 rounded text-[11px] cursor-pointer transition-all select-none',
+                    'px-2.5 py-0.5 rounded text-2xs cursor-pointer transition-all select-none',
                     preferences.preset === 'metric'
                       ? 'bg-foreground text-background shadow-none'
                       : 'text-muted-foreground hover:text-foreground'
@@ -348,7 +348,7 @@ export function SetupProfileDialog({
                   type="button"
                   onClick={() => handleUnitSystemChange('imperial')}
                   className={cn(
-                    'px-2.5 py-0.5 rounded text-[11px] cursor-pointer transition-all select-none',
+                    'px-2.5 py-0.5 rounded text-2xs cursor-pointer transition-all select-none',
                     preferences.preset === 'imperial'
                       ? 'bg-foreground text-background shadow-none'
                       : 'text-muted-foreground hover:text-foreground'
@@ -421,14 +421,14 @@ export function SetupProfileDialog({
           <div className="rounded-md border border-border bg-card overflow-hidden font-mono divide-y divide-border/60">
             {/* 標籤小列 */}
             <div className="px-3 py-1 flex items-center justify-between text-muted-foreground bg-muted/20">
-              <span className="text-[10px] uppercase tracking-wider">
+              <span className="text-3xs uppercase tracking-wider">
                 {t('welcome.previewTitle', '生理常數')}
               </span>
             </div>
             {/* 雙欄指標 */}
             <div className="grid grid-cols-2 divide-x divide-border text-left bg-muted/10">
               <div className="pl-3 pr-2.5 py-2 space-y-0.5 overflow-hidden">
-                <div className="text-[10px] text-muted-foreground truncate">
+                <div className="text-3xs text-muted-foreground truncate">
                   {t('welcome.bmi', '身體質量指數 (BMI)')}
                 </div>
                 <div className="text-xs sm:text-sm font-normal text-foreground font-mono leading-none">
@@ -436,7 +436,7 @@ export function SetupProfileDialog({
                 </div>
               </div>
               <div className="pl-2.5 pr-3 py-2 space-y-0.5 overflow-hidden">
-                <div className="text-[10px] text-muted-foreground truncate">
+                <div className="text-3xs text-muted-foreground truncate">
                   {t('welcome.bmr', '靜態基礎代謝 (BMR)')}
                 </div>
                 <MetricValue
@@ -464,7 +464,7 @@ export function SetupProfileDialog({
           </button>
 
           {/* 底部客觀儀式小字 */}
-          <div className="pt-0.5 text-center text-[10px] font-mono text-muted-foreground select-none">
+          <div className="pt-0.5 text-center text-3xs font-mono text-muted-foreground select-none">
             LOCAL-FIRST &middot; 100% PRIVATE
           </div>
         </div>

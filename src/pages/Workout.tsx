@@ -521,7 +521,7 @@ export default function Workout() {
                     className="border border-border bg-card text-card-foreground shadow-none rounded-lg overflow-visible"
                   >
                     {/* 組合專屬大卡片表頭 (40px 高度) */}
-                    <div className="h-10 px-4 bg-muted/40 border-b border-border flex items-center justify-between gap-3 text-xs font-mono text-muted-foreground shrink-0 rounded-t-lg">
+                    <div className="h-10 px-4 bg-muted border-b border-border flex items-center justify-between gap-3 text-xs font-mono text-muted-foreground shrink-0 rounded-t-lg">
                       <div className="flex items-center gap-1.5 min-w-0">
                         {workout.routineId ? (
                           <button
@@ -531,7 +531,7 @@ export default function Workout() {
                               triggerHaptic('light');
                               navigate(APP_ROUTES.routineDetail(workout.routineId));
                             }}
-                            className="font-semibold text-sm tracking-tight text-foreground truncate px-1.5 py-0.5 -mx-1.5 rounded-full border border-transparent hover:border-border/80 hover:bg-hover transition-colors cursor-pointer select-none shrink-0"
+                            className="font-semibold text-sm tracking-tight text-foreground truncate px-1.5 py-0.5 -mx-1.5 rounded-full border border-transparent hover:border-border hover:bg-hover transition-colors cursor-pointer select-none shrink-0"
                           >{workout.title}</button>
                         ) : (
                           <span className="font-semibold text-sm tracking-tight text-foreground truncate shrink-0">{workout.title}</span>
@@ -574,7 +574,7 @@ export default function Workout() {
                     </div>
 
                     {/* 較大卡片內部容器：收納組合內的所有動作表 */}
-                    <div className="p-3 sm:p-4 space-y-3 bg-muted/10 rounded-b-lg">
+                    <div className="p-3 sm:p-4 space-y-3 bg-card rounded-b-lg">
                       {workout.exercises.map((group, exIdx) =>
                         renderExerciseTable(workout, group, exIdx)
                       )}

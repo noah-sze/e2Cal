@@ -626,7 +626,7 @@ export function CopyMealDialog({
                             <span className="font-normal text-foreground">
                               {formatDisplayAmount(String(item.quantity)) || '0'}
                             </span>
-                            <span className="font-sans text-muted-foreground text-[11px]">
+                            <span className="font-sans text-muted-foreground text-2xs">
                               {item.unit}
                             </span>
                             <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />

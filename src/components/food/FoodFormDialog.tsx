@@ -876,7 +876,7 @@ export function FoodFormDialog({
                       triggerHaptic('selection');
                       setIsAuthorityDetailsOpen(true);
                     }}
-                    className="h-6 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer text-muted-foreground hover:text-foreground active:scale-95 select-none max-w-full"
+                    className="h-6 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-2xs flex items-center gap-1.5 transition-colors cursor-pointer text-muted-foreground hover:text-foreground active:scale-95 select-none max-w-full"
                     title={t('diet.viewAuthorityDetails')}
                   >
                     <span className="font-sans text-muted-foreground/80 shrink-0">
@@ -1087,7 +1087,7 @@ export function FoodFormDialog({
                       }
                     }}
                     className={cn(
-                      "h-full px-2.5 rounded-full transition-all cursor-pointer text-[11px] flex items-center justify-center whitespace-nowrap",
+                      "h-full px-2.5 rounded-full transition-all cursor-pointer text-2xs flex items-center justify-center whitespace-nowrap",
                       basisMode === 'serving'
                         ? "bg-foreground text-background font-medium shadow-none"
                         : "text-muted-foreground hover:text-foreground"
@@ -1104,7 +1104,7 @@ export function FoodFormDialog({
                       }
                     }}
                     className={cn(
-                      "h-full px-2.5 rounded-full transition-all cursor-pointer text-[11px] flex items-center justify-center whitespace-nowrap",
+                      "h-full px-2.5 rounded-full transition-all cursor-pointer text-2xs flex items-center justify-center whitespace-nowrap",
                       basisMode === 'custom'
                         ? "bg-foreground text-background font-medium shadow-none"
                         : "text-muted-foreground hover:text-foreground"

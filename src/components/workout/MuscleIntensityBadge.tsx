@@ -48,8 +48,8 @@ export const MuscleIntensityBadge = memo(function MuscleIntensityBadge({
   const badgeClasses = hasRole
     ? getMuscleIntensityBadgeClasses(rawRole)
     : {
-        container: 'bg-muted/60 border-border text-foreground/80',
-        text: 'text-foreground/80',
+        container: 'bg-muted border-border text-foreground',
+        text: 'text-foreground',
       };
 
   const shouldShowRole = showRole || showIntensity;
@@ -60,7 +60,7 @@ export const MuscleIntensityBadge = memo(function MuscleIntensityBadge({
     <span
       className={cn(
         'inline-flex items-center gap-1 rounded border font-mono select-none whitespace-nowrap transition-colors',
-        size === 'sm' ? 'px-1.5 py-0.5 text-[10px] leading-tight' : 'px-2 py-1 text-xs',
+        size === 'sm' ? 'px-1.5 py-0.5 text-3xs leading-tight' : 'px-2 py-1 text-xs',
         badgeClasses.container,
         className
       )}

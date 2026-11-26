@@ -9,46 +9,29 @@ import { ensureDailyDietMeta } from './useDietPlan';
 import { getInMemoryFoodsCache, setInMemoryFoodsCache } from './useFoods';
 import { sortFoodLogsByWeightDesc } from '@/utils/dietSorting';
 import { roundTo, ozToG, gToOz, flOzToMl, mlToFlOz } from '@/utils/unitMath';
+import { createInMemoryCache } from './createInMemoryCache';
 
 /**
  * 模組級每日飲食日誌記憶體注水快取 (In-Memory Hydration Cache)
  * 解決從 /diet 跳轉至食材/菜餚詳情頁時等待 db.daily_diet_logs.toArray() 異步查詢造成的熱點圖與統計數據二次跳動問題
  */
-let inMemoryDailyDietLogsCache: DailyDietLog[] | null = null;
+const dailyDietLogsCache = createInMemoryCache<DailyDietLog>(() => db.daily_diet_logs.toArray());
 
-export function getInMemoryDailyDietLogsCache(): DailyDietLog[] | null {
-  return inMemoryDailyDietLogsCache;
-}
-
-export function setInMemoryDailyDietLogsCache(logs: DailyDietLog[]): void {
-  inMemoryDailyDietLogsCache = logs;
-}
-
-export function clearDailyDietLogsCache(): void {
-  inMemoryDailyDietLogsCache = null;
-}
+export const getInMemoryDailyDietLogsCache = dailyDietLogsCache.get;
+export const setInMemoryDailyDietLogsCache = dailyDietLogsCache.set;
+export const clearDailyDietLogsCache = dailyDietLogsCache.clear;
+export const prewarmDailyDietLogsCache = dailyDietLogsCache.prewarm;
 
 function upsertInMemoryDailyDietLog(log: DailyDietLog): void {
-  if (!inMemoryDailyDietLogsCache) return;
-  const idx = inMemoryDailyDietLogsCache.findIndex((d) => d.id === log.id || d.date === log.date);
+  const current = dailyDietLogsCache.get();
+  if (!current) return;
+  const idx = current.findIndex((d) => d.id === log.id || d.date === log.date);
   if (idx !== -1) {
-    const next = [...inMemoryDailyDietLogsCache];
+    const next = [...current];
     next[idx] = log;
-    inMemoryDailyDietLogsCache = next;
+    dailyDietLogsCache.set(next);
   } else {
-    inMemoryDailyDietLogsCache = [...inMemoryDailyDietLogsCache, log];
-  }
-}
-
-export async function prewarmDailyDietLogsCache(): Promise<DailyDietLog[]> {
-  if (inMemoryDailyDietLogsCache !== null) return inMemoryDailyDietLogsCache;
-  try {
-    if (typeof indexedDB === 'undefined') return [];
-    const logs = await db.daily_diet_logs.toArray();
-    inMemoryDailyDietLogsCache = logs;
-    return logs;
-  } catch {
-    return [];
+    dailyDietLogsCache.set([...current, log]);
   }
 }
 
@@ -63,7 +46,7 @@ export function useFoodLogs(date: string) {
       if (!cachedFoods) {
         setInMemoryFoodsCache(allFoods);
       }
-      if (inMemoryDailyDietLogsCache === null) {
+      if (dailyDietLogsCache.get() === null) {
         void prewarmDailyDietLogsCache();
       } else if (dailyLog) {
         upsertInMemoryDailyDietLog(dailyLog);

@@ -109,7 +109,7 @@ export function KeypadWeighingDisplayCard({
       </div>
 
       {/* 底層：可食率與折算淨重（不加粗） */}
-      <div className="px-3 py-1.5 min-h-7 bg-muted/20 flex items-center justify-between text-[11px] font-normal text-muted-foreground">
+      <div className="px-3 py-1.5 min-h-7 bg-muted/20 flex items-center justify-between text-2xs font-normal text-muted-foreground">
         <span className="font-mono tabular-nums">
           {t('diet.refuseRatePrefix')} {ediblePct}%
         </span>

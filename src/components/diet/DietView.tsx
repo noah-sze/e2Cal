@@ -574,7 +574,7 @@ export function DietView({
                         <div className="truncate text-foreground font-normal text-sm">
                           {resolveFoodLogTitle(item, t)}
                         </div>
-                        <div className="text-[11px] font-mono tabular-nums text-muted-foreground truncate mt-0.5 flex items-center gap-1.5">
+                        <div className="text-2xs font-mono tabular-nums text-muted-foreground truncate mt-0.5 flex items-center gap-1.5">
                           {isSystemEntry ? (
                             <>
                               <span className="inline-flex items-center gap-1 shrink-0">
@@ -592,7 +592,7 @@ export function DietView({
                               <span className="text-border">·</span>
                               {(() => {
                                 const e = formatEnergy(item.calories || 0, energyUnit);
-                                return <MetricValue value={e.value.toLocaleString()} unit={e.unit} unitClassName="text-[10px]" />;
+                                return <MetricValue value={e.value.toLocaleString()} unit={e.unit} unitClassName="text-3xs" />;
                               })()}
                             </>
                           ) : (
@@ -603,7 +603,7 @@ export function DietView({
                                     ? item.grossQuantity
                                     : item.quantity || 0;
                                 const s = formatFoodServing(displayQty, item.unit || 'g', foodWeightUnit, foodVolumeUnit);
-                                return <MetricValue value={s.size} unit={s.unit} unitClassName="text-[10px]" />;
+                                return <MetricValue value={s.size} unit={s.unit} unitClassName="text-3xs" />;
                               })()}
                               <span className="text-border">·</span>
                               <span
@@ -622,7 +622,7 @@ export function DietView({
                                       value={e.value.toLocaleString()}
                                       unit={e.unit}
                                       unitClassName={cn(
-                                        'text-[10px]',
+                                        'text-3xs',
                                         (isLowCalorie || isHighCalorie) && 'text-current opacity-85'
                                       )}
                                     />

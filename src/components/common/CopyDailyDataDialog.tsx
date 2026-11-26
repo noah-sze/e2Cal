@@ -295,14 +295,14 @@ export function CopyDailyDataDialog({
       >
         <div className="pt-3 space-y-3 font-mono text-xs select-none">
           {/* 說明文字 */}
-          <p className="text-[11px] text-muted-foreground leading-relaxed font-sans px-0.5">
+          <p className="text-2xs text-muted-foreground leading-relaxed font-sans px-0.5">
             {t('aiExport.dialogDesc')}
           </p>
 
           {/* 日期與範圍狀態列 */}
-          <div className="flex items-center justify-between px-3 py-2 rounded-lg border border-border bg-muted/20 text-[11px]">
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg border border-border bg-muted/20 text-2xs">
             <span className="text-muted-foreground font-mono">{date}</span>
-            <span className="px-2 py-0.5 rounded bg-foreground text-background font-sans font-medium text-[10px] leading-tight">
+            <span className="px-2 py-0.5 rounded bg-foreground text-background font-sans font-medium text-3xs leading-tight">
               {t(`aiExport.scope.${scope}`)}
             </span>
           </div>
@@ -373,7 +373,7 @@ export function CopyDailyDataDialog({
               )}
             </div>
           ) : (
-            <div className="h-[240px] overflow-y-auto rounded-lg border border-border bg-muted/30 p-2.5 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-words select-all text-muted-foreground overscroll-contain">
+            <div className="h-[240px] overflow-y-auto rounded-lg border border-border bg-muted/30 p-2.5 font-mono text-2xs leading-relaxed whitespace-pre-wrap break-words select-all text-muted-foreground overscroll-contain">
               {previewContent}
             </div>
           )}

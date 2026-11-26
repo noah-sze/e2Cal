@@ -63,7 +63,7 @@ export function ClearDataModal({ isOpen, onClose }: ClearDataModalProps) {
       >
         <div className="flex flex-col space-y-3.5 pt-3.5 pb-0 select-none">
           {/* 1. 客觀警示卡片 */}
-          <div className="p-3.5 rounded-lg border border-destructive/40 bg-destructive-subtle flex items-start gap-2.5">
+          <div className="p-3.5 rounded-lg border border-destructive bg-destructive-subtle flex items-start gap-2.5">
             <AlertTriangle className="size-4 shrink-0 text-destructive mt-0.5" />
             <p className="text-xs leading-relaxed text-foreground font-sans">
               {t('settings.clearDataWarning')}

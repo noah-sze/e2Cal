@@ -270,7 +270,7 @@ const DialogRowItem: React.FC<DialogRowItemProps> = ({
             className={cn(
               'h-6 text-2xs font-mono px-2.5 border-border shadow-none',
               action.variant === 'destructive'
-                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                ? 'bg-destructive text-destructive-foreground hover:opacity-90'
                 : 'hover:bg-foreground hover:text-background'
             )}
             onClick={action.onOpen}

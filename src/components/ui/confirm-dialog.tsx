@@ -164,7 +164,7 @@ export function ConfirmDialog({
               </div>
               {affectedItems.length > 0 && (
                 <div className="px-3 py-2.5 bg-muted space-y-2">
-                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <div className="flex items-center justify-between text-2xs text-muted-foreground">
                     <span>{spec.affectedLabel}</span>
                     <span className="font-mono">{affectedItems.length}</span>
                   </div>

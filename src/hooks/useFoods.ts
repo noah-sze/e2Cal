@@ -3,42 +3,16 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/services/db/db';
 import type { FoodItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+import { createInMemoryCache } from './createInMemoryCache';
 
 const EMPTY_FOODS: FoodItem[] = [];
 
-/**
- * 模組級食材記憶體注水快取 (In-Memory Hydration Cache)
- * 解決彈窗與組件掛載時等待 IndexedDB 異步查詢 (10ms~30ms) 造成的先空後滿視覺閃爍問題
- * 實現第 0 幀滿數據同步秒開
- */
-let inMemoryFoodsCache: FoodItem[] | null = null;
+const foodsCache = createInMemoryCache<FoodItem>(() => db.foods.toArray());
 
-export function getInMemoryFoodsCache(): FoodItem[] | null {
-  return inMemoryFoodsCache;
-}
-
-export function setInMemoryFoodsCache(foods: FoodItem[]): void {
-  inMemoryFoodsCache = foods;
-}
-
-export function clearFoodsCache(): void {
-  inMemoryFoodsCache = null;
-}
-
-/**
- * 預熱食材記憶體快取 (非阻塞非同步預熱)
- */
-export async function prewarmFoodsCache(): Promise<FoodItem[]> {
-  if (inMemoryFoodsCache !== null) return inMemoryFoodsCache;
-  try {
-    if (typeof indexedDB === 'undefined') return [];
-    const foods = await db.foods.toArray();
-    inMemoryFoodsCache = foods;
-    return foods;
-  } catch {
-    return [];
-  }
-}
+export const getInMemoryFoodsCache = foodsCache.get;
+export const setInMemoryFoodsCache = foodsCache.set;
+export const clearFoodsCache = foodsCache.clear;
+export const prewarmFoodsCache = foodsCache.prewarm;
 
 /**
  * 歸檔單品食材並於同一交易內從所有關聯食譜中剔除該食材引用
@@ -77,14 +51,14 @@ export function useFoods(searchQuery = '') {
   const allFoodsList = useLiveQuery(
     async () => {
       const result = await db.foods.toArray();
-      inMemoryFoodsCache = result;
+      foodsCache.set(result);
       return result;
     },
     []
   );
 
   // 核心即時注水：若 useLiveQuery 仍在等待微任務/IPC 回調，直接同步採用記憶體快照
-  const allFoods = allFoodsList ?? inMemoryFoodsCache ?? EMPTY_FOODS;
+  const allFoods = allFoodsList ?? foodsCache.get() ?? EMPTY_FOODS;
 
   const {
     activeFoods,
@@ -212,7 +186,7 @@ export function useFoods(searchQuery = '') {
     presetFoods,
     archivedCustomFoods,
     archivedPresetFoods,
-    isLoading: allFoodsList === undefined && inMemoryFoodsCache === null,
+    isLoading: allFoodsList === undefined && foodsCache.get() === null,
     addFood,
     updateFood,
     archiveFood,

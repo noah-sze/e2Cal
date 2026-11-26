@@ -245,7 +245,7 @@ export const TargetMusclesCard = memo(function TargetMusclesCard({
                 </span>
               </div>
               <div className="p-2.5 bg-card flex flex-col items-start gap-0.5 overflow-hidden">
-                <span className="text-[10px] text-muted-foreground font-normal leading-none truncate">
+                <span className="text-3xs text-muted-foreground font-normal leading-none truncate">
                   {t('workout.muscleRole', '發力角色')}
                 </span>
                 <span

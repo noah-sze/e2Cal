@@ -401,7 +401,7 @@ export function AIProviderDialog({
                         return next;
                       });
                     }}
-                    className="h-6 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover text-[11px] font-mono text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer active:scale-95"
+                    className="h-6 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover text-2xs font-mono text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer active:scale-95"
                     aria-label={
                       isCustomModelInput
                         ? t('settings.aiSelectModel', '切換至列表選擇')
@@ -495,7 +495,7 @@ export function AIProviderDialog({
 
             {/* 內嵌連線狀態與測試膠囊 */}
             <div className="h-10 px-4 flex items-center justify-between gap-2">
-              <div className="min-w-0 flex-1 text-[11px] font-mono">
+              <div className="min-w-0 flex-1 text-2xs font-mono">
                 {testResult ? (
                   testResult.success ? (
                     <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
@@ -542,7 +542,7 @@ export function AIProviderDialog({
             </div>
 
             {testResult && !testResult.success && testResult.message && (
-              <div className="px-4 py-2 bg-destructive/5 text-[11px] font-mono text-destructive leading-relaxed break-words">
+              <div className="px-4 py-2 bg-destructive-subtle text-2xs font-mono text-destructive leading-relaxed break-words">
                 {testResult.message}
               </div>
             )}

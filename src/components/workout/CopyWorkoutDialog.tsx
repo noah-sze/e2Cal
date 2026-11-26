@@ -512,7 +512,7 @@ export function CopyWorkoutDialog({
                             <span className="font-normal text-foreground">
                               {item.sets.length}
                             </span>
-                            <span className="font-sans text-muted-foreground text-[11px]">
+                            <span className="font-sans text-muted-foreground text-2xs">
                               {t('workout.set', '組')}
                             </span>
                             <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />

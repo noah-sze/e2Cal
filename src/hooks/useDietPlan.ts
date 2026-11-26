@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/services/db/db';
 import type { DietPlan, HydratedDietPlan, MacroSplit, UserProfile, DailyDietLog } from '@/types';
@@ -74,7 +75,7 @@ export async function ensureDailyDietMeta(targetDate: string): Promise<DietPlan>
 }
 
 export function useDietPlan(date: string): UseDietPlanResult {
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const [today] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const isToday = date === today;
 
   const queryResult = useLiveQuery(

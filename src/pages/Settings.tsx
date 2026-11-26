@@ -260,7 +260,7 @@ export default function Settings() {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground font-mono">
             {t('settings.profileSection')}
           </h2>
-          <p className="text-[11px] text-muted-foreground font-mono leading-relaxed">
+          <p className="text-2xs text-muted-foreground font-mono leading-relaxed">
             {t('settings.profileDesc')}
           </p>
         </div>
@@ -287,7 +287,7 @@ export default function Settings() {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground font-mono">
             {t('settings.preferencesSection')}
           </h2>
-          <p className="text-[11px] text-muted-foreground font-mono leading-relaxed">
+          <p className="text-2xs text-muted-foreground font-mono leading-relaxed">
             {t('settings.preferencesDesc')}
           </p>
         </div>
@@ -390,7 +390,7 @@ export default function Settings() {
       </section>
 
       {/* 分割線 */}
-      <div className="border-t border-border/60" />
+      <div className="border-t border-border" />
 
       {/* 區塊 2：度量衡單位偏好 */}
       <section className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 items-start">
@@ -398,7 +398,7 @@ export default function Settings() {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground font-mono">
             {t('settings.unitsSection')}
           </h2>
-          <p className="text-[11px] text-muted-foreground font-mono leading-relaxed">
+          <p className="text-2xs text-muted-foreground font-mono leading-relaxed">
             {t('settings.unitsDesc')}
           </p>
         </div>
@@ -557,7 +557,7 @@ export default function Settings() {
       </section>
 
       {/* 分割線 */}
-      <div className="border-t border-border/60" />
+      <div className="border-t border-border" />
 
       {/* 區塊 3：體態指標追蹤與忽略設定 */}
       <section className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 items-start">
@@ -565,7 +565,7 @@ export default function Settings() {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground font-mono">
             {t('settings.bodyTrackingSection', '體態指標')}
           </h2>
-          <p className="text-[11px] text-muted-foreground font-mono leading-relaxed">
+          <p className="text-2xs text-muted-foreground font-mono leading-relaxed">
             {t('settings.bodyTrackingDesc', '自訂需記錄或忽略的圍度範圍')}
           </p>
         </div>
@@ -631,16 +631,16 @@ export default function Settings() {
       </section>
 
       {/* 分割線 */}
-      <div className="border-t border-border/60" />
+      <div className="border-t border-border" />
 
       {/* 區塊：AI 助手設定 (BYO-AI) */}
       <AISettingsCard />
 
       {/* 分割線 */}
-      <div className="border-t border-border/60" />
+      <div className="border-t border-border" />
 
       {/* 分割線 */}
-      <div className="border-t border-border/60" />
+      <div className="border-t border-border" />
 
       {/* 區塊 3：自訂資料庫管理 (飲食庫 + 訓練庫) */}
       <section className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 items-start">
@@ -648,7 +648,7 @@ export default function Settings() {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground font-mono">
             {t('settings.databaseSection')}
           </h2>
-          <p className="text-[11px] text-muted-foreground font-mono leading-relaxed">
+          <p className="text-2xs text-muted-foreground font-mono leading-relaxed">
             {t('settings.databaseDesc')}
           </p>
         </div>
@@ -698,7 +698,7 @@ export default function Settings() {
       </section>
 
       {/* 分割線 */}
-      <div className="border-t border-border/60" />
+      <div className="border-t border-border" />
 
       {/* 區塊 4：資料與儲存 */}
       <section className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 items-start">
@@ -706,7 +706,7 @@ export default function Settings() {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground font-mono">
             {t('settings.dataVaultSection')}
           </h2>
-          <p className="text-[11px] text-muted-foreground font-mono leading-relaxed">
+          <p className="text-2xs text-muted-foreground font-mono leading-relaxed">
             {t('settings.dataVaultDesc')}
           </p>
         </div>
@@ -774,7 +774,7 @@ export default function Settings() {
       </section>
 
       {/* 分割線 */}
-      <div className="border-t border-border/60" />
+      <div className="border-t border-border" />
 
       {/* 區塊 6：關於 */}
       <section className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 items-start">
@@ -782,7 +782,7 @@ export default function Settings() {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground font-mono">
             {t('settings.aboutSection')}
           </h2>
-          <p className="text-[11px] text-muted-foreground font-mono leading-relaxed">
+          <p className="text-2xs text-muted-foreground font-mono leading-relaxed">
             {t('settings.aboutDesc')}
           </p>
         </div>
@@ -805,7 +805,7 @@ export default function Settings() {
       </section>
 
       {/* 分割線 */}
-      <div className="border-t border-border/60" />
+      <div className="border-t border-border" />
 
       {/* 區塊 7：危險操作 */}
       <section className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 items-start">
@@ -813,11 +813,11 @@ export default function Settings() {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-destructive font-mono">
             {t('settings.dangerZoneSection')}
           </h2>
-          <p className="text-[11px] text-destructive/70 font-mono leading-relaxed">
+          <p className="text-2xs text-destructive font-mono leading-relaxed">
             {t('settings.dangerZoneDesc')}
           </p>
         </div>
-        <div className="sm:col-span-8 border border-destructive/25 rounded-lg overflow-hidden bg-card">
+        <div className="sm:col-span-8 border border-destructive rounded-lg overflow-hidden bg-card">
           {/* 清除所有本地資料 */}
           <div
             onClick={handleClearData}
@@ -826,7 +826,7 @@ export default function Settings() {
             <span className="text-sm font-normal text-destructive">
               {t('settings.clearData')}
             </span>
-            <div className="flex items-center gap-1.5 text-sm font-mono text-destructive/70 group-hover:text-destructive">
+            <div className="flex items-center gap-1.5 text-sm font-mono text-destructive">
               <span>{t('settings.clearDataAction')}</span>
               <ChevronRight className="size-4 opacity-70" />
             </div>

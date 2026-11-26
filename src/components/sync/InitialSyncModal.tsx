@@ -176,7 +176,7 @@ export function InitialSyncModal({ onCompleted, preview }: InitialSyncModalProps
 
   const stepRightBadge =
     !error && step !== 'COMPLETED' ? (
-      <span className="font-mono text-[10px] tabular-nums text-muted-foreground min-w-[28px] text-right shrink-0">
+      <span className="font-mono text-3xs tabular-nums text-muted-foreground min-w-[28px] text-right shrink-0">
         0{currentStep}/05
       </span>
     ) : undefined;
@@ -274,7 +274,7 @@ export function InitialSyncModal({ onCompleted, preview }: InitialSyncModalProps
                     style={{ width: `${Math.max(15, progressPercent)}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                <div className="flex items-center justify-between text-2xs text-muted-foreground">
                   <span className="font-sans truncate">
                     {t('initialSync.authHint', '正在檢查遠端備份清單…')}
                   </span>
@@ -287,8 +287,8 @@ export function InitialSyncModal({ onCompleted, preview }: InitialSyncModalProps
           {/* 步驟 2: STRATEGY（個人資訊對比表 + 3 策略卡 + 500ms 長按蓄力確認） */}
           {!error && step === 'STRATEGY' && (
             <>
-              <div className="border border-border rounded-lg divide-y divide-border overflow-hidden bg-card text-[11px]">
-                <div className="grid grid-cols-7 px-2.5 py-1.5 bg-muted text-[10px] text-muted-foreground font-sans font-medium">
+              <div className="border border-border rounded-lg divide-y divide-border overflow-hidden bg-card text-2xs">
+                <div className="grid grid-cols-7 px-2.5 py-1.5 bg-muted text-3xs text-muted-foreground font-sans font-medium">
                   <span className="col-span-2">{t('settings.item', '項目')}</span>
                   <span className="col-span-2 text-center">{t('settings.local', '本機')}</span>
                   <span className="col-span-3 text-right">
@@ -387,7 +387,7 @@ export function InitialSyncModal({ onCompleted, preview }: InitialSyncModalProps
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="font-sans text-[11px] font-semibold text-foreground">
+                      <span className="font-sans text-2xs font-semibold text-foreground">
                         {t('initialSync.mergeTitle', '雙向合併')}
                       </span>
                       {isNameMismatch && (
@@ -396,7 +396,7 @@ export function InitialSyncModal({ onCompleted, preview }: InitialSyncModalProps
                         </span>
                       )}
                     </span>
-                    <span className="block font-sans text-[10px] text-muted-foreground truncate mt-0.5">
+                    <span className="block font-sans text-3xs text-muted-foreground truncate mt-0.5">
                       {isNameMismatch
                         ? t('settings.cannotMergeNameMismatch', '姓名不一致，僅支援覆蓋')
                         : t('initialSync.mergeDesc', '保留雙方所有資料，相同項目取最新')}
@@ -420,14 +420,14 @@ export function InitialSyncModal({ onCompleted, preview }: InitialSyncModalProps
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="font-sans text-[11px] font-semibold text-foreground">
+                      <span className="font-sans text-2xs font-semibold text-foreground">
                         {t('initialSync.overwriteLocalShortTitle', '覆蓋本機')}
                       </span>
                       <span className="font-mono text-[9px] text-destructive border border-destructive px-1.5 py-0.5 rounded leading-none">
                         {t('initialSync.overwriteLocalBadge', '清空本機')}
                       </span>
                     </span>
-                    <span className="block font-sans text-[10px] text-muted-foreground truncate mt-0.5">
+                    <span className="block font-sans text-3xs text-muted-foreground truncate mt-0.5">
                       {t('initialSync.overwriteLocalDesc', '清空本地，完全還原雲端內容')}
                     </span>
                   </span>
@@ -449,14 +449,14 @@ export function InitialSyncModal({ onCompleted, preview }: InitialSyncModalProps
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="font-sans text-[11px] font-semibold text-foreground">
+                      <span className="font-sans text-2xs font-semibold text-foreground">
                         {t('initialSync.overwriteRemoteShortTitle', '覆蓋雲端')}
                       </span>
                       <span className="font-mono text-[9px] text-destructive border border-destructive px-1.5 py-0.5 rounded leading-none">
                         {t('initialSync.overwriteRemoteBadge', '覆寫雲端')}
                       </span>
                     </span>
-                    <span className="block font-sans text-[10px] text-muted-foreground truncate mt-0.5">
+                    <span className="block font-sans text-3xs text-muted-foreground truncate mt-0.5">
                       {t('initialSync.overwriteRemoteDesc', '用當前設備資料覆寫 Dropbox')}
                     </span>
                   </span>
@@ -510,7 +510,7 @@ export function InitialSyncModal({ onCompleted, preview }: InitialSyncModalProps
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-2xs text-muted-foreground">
                   <Loader2 className="size-3 animate-spin shrink-0" />
                   <span className="font-sans truncate">
                     {t('initialSync.downloadingDesc', '正在從 Dropbox 下載最新資料…')}
@@ -547,7 +547,7 @@ export function InitialSyncModal({ onCompleted, preview }: InitialSyncModalProps
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                <div className="flex items-center justify-between text-2xs text-muted-foreground">
                   <span className="flex items-center gap-1.5 font-sans truncate">
                     <Loader2 className="size-3 animate-spin shrink-0" />
                     <span className="truncate">
@@ -565,7 +565,7 @@ export function InitialSyncModal({ onCompleted, preview }: InitialSyncModalProps
             <>
               <div className="grid grid-cols-2 gap-2">
                 <div className="p-2.5 rounded-lg border border-border bg-card">
-                  <div className="text-[11px] text-muted-foreground font-sans">
+                  <div className="text-2xs text-muted-foreground font-sans">
                     {t('initialSync.summaryFoods', '食物庫')}
                   </div>
                   <div className="text-sm font-semibold text-foreground font-mono tabular-nums mt-0.5">
@@ -573,7 +573,7 @@ export function InitialSyncModal({ onCompleted, preview }: InitialSyncModalProps
                   </div>
                 </div>
                 <div className="p-2.5 rounded-lg border border-border bg-card">
-                  <div className="text-[11px] text-muted-foreground font-sans">
+                  <div className="text-2xs text-muted-foreground font-sans">
                     {t('initialSync.summaryExercises', '動作庫')}
                   </div>
                   <div className="text-sm font-semibold text-foreground font-mono tabular-nums mt-0.5">
@@ -581,7 +581,7 @@ export function InitialSyncModal({ onCompleted, preview }: InitialSyncModalProps
                   </div>
                 </div>
                 <div className="p-2.5 rounded-lg border border-border bg-card">
-                  <div className="text-[11px] text-muted-foreground font-sans">
+                  <div className="text-2xs text-muted-foreground font-sans">
                     {t('initialSync.summaryFoodLogs', '飲食記錄')}
                   </div>
                   <div className="text-sm font-semibold text-foreground font-mono tabular-nums mt-0.5">
@@ -589,7 +589,7 @@ export function InitialSyncModal({ onCompleted, preview }: InitialSyncModalProps
                   </div>
                 </div>
                 <div className="p-2.5 rounded-lg border border-border bg-card">
-                  <div className="text-[11px] text-muted-foreground font-sans">
+                  <div className="text-2xs text-muted-foreground font-sans">
                     {t('initialSync.summaryWorkoutLogs', '訓練記錄')}
                   </div>
                   <div className="text-sm font-semibold text-foreground font-mono tabular-nums mt-0.5">

@@ -94,7 +94,7 @@ export function ExerciseOverviewCard({
               {exerciseName}
             </h3>
             {isArchived && (
-              <span className="text-[10px] font-mono text-destructive border border-destructive/30 px-1.5 py-0.5 rounded shrink-0">
+              <span className="text-3xs font-mono text-destructive border border-destructive px-1.5 py-0.5 rounded shrink-0">
                 {t('common.archived', '已歸檔')}
               </span>
             )}
@@ -103,7 +103,7 @@ export function ExerciseOverviewCard({
             <div className="flex items-center shrink-0">
               <EquipmentBadge
                 name={equipmentName}
-                className="text-[11px] px-2 py-0.5 font-normal"
+                className="text-2xs px-2 py-0.5 font-normal"
               />
             </div>
           )}
@@ -249,8 +249,8 @@ export function ExerciseOverviewCard({
                 </div>
               </div>
 
-              <div className="text-[11px] text-muted-foreground font-mono flex flex-wrap items-center gap-1.5 bg-muted/50 px-2.5 py-1.5 rounded leading-relaxed">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 shrink-0">
+              <div className="text-2xs text-muted-foreground font-mono flex flex-wrap items-center gap-1.5 bg-muted px-2.5 py-1.5 rounded leading-relaxed">
+                <span className="text-3xs uppercase tracking-wider text-muted-foreground/70 shrink-0">
                   {t('workout.e1rmExplanation.formulaLabel', '推算公式')}:
                 </span>
                 <span className="text-foreground whitespace-normal break-words font-mono">
@@ -265,7 +265,7 @@ export function ExerciseOverviewCard({
                 )}
               </div>
 
-              <div className="text-[11px] text-muted-foreground/80 font-sans leading-relaxed border-t border-border/60 pt-2 break-words">
+              <div className="text-2xs text-muted-foreground/80 font-sans leading-relaxed border-t border-border/60 pt-2 break-words">
                 {t(
                   'workout.e1rmExplanation.accuracy',
                   '次數越接近 1~5 次，推算結果越具備高度參考價值。'

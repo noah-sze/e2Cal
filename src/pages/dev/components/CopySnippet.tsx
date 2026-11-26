@@ -44,7 +44,7 @@ export const CopySnippet: React.FC<CopySnippetProps> = ({
   };
 
   const variantClasses = {
-    code: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-muted/50 hover:bg-muted font-mono text-2xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none group',
+    code: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-muted hover:bg-hover font-mono text-2xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none group',
     subtle: 'inline-flex items-center gap-1 font-mono text-2xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none group',
     badge: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-card hover:bg-hover font-mono text-3xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none group',
   };

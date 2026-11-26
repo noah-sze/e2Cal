@@ -580,7 +580,7 @@ export function ResponsiveNumericKeypad({
             renderContextRow(displayVal || '0', currentUnit)
           ) : (
             <div className="h-10 px-3 rounded-lg bg-muted/50 border border-border/50 flex items-center justify-between">
-              <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider select-none">
+              <span className="text-2xs font-mono text-muted-foreground uppercase tracking-wider select-none">
                 {t('keypad.input')}
               </span>
               <div className="flex items-baseline gap-1 font-mono">
