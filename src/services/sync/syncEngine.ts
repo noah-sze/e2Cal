@@ -1075,7 +1075,7 @@ export async function uploadManifestFile(cachedRevs: Record<string, string>): Pr
  * 執行解包資料夾雙向同步 (Unpacked Folder Sync Engine)
  */
 export async function executeSync(
-  mode: 'auto' | 'overwrite_local' | 'overwrite_remote' = 'auto'
+  mode: 'auto' | 'manual' | 'overwrite_local' | 'overwrite_remote' = 'auto'
 ): Promise<SyncResult> {
   if (isSyncInProgress) {
     hasPendingSyncRequest = true;
@@ -1116,14 +1116,22 @@ export async function executeSync(
     isSyncInProgress = true;
     try {
       const now = new Date().toISOString();
-      const cachedRevs = getCachedRevs();
-      const pushedTimes = getPushedTimes();
+      const cachedRevs: Record<string, string> = {};
+      const pushedTimes: Record<string, string> = {};
 
       await uploadAllLocalData(now, cachedRevs, pushedTimes);
 
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.removeItem('e2cal_force_push_foods');
+        } catch {
+          // ignore
+        }
+      }
       setCachedRevs(cachedRevs);
       setPushedTimes(pushedTimes);
       setLastSyncTime(now);
+      conflictRetryCount = 0;
 
       if (justSyncedTimer) clearTimeout(justSyncedTimer);
       updateSyncEngineStatus({
@@ -1400,9 +1408,31 @@ export async function executeSync(
     }
 
     // 2. 檢查 foods
+    let forcePushFoodsFromSchema = false;
     const foodsMeta = remoteFileMap.get('/nutrition/foods.json');
     if (foodsMeta && cachedRevs['/nutrition/foods.json'] !== foodsMeta.rev) {
-      const rawRemoteList = (await downloadJsonFile<FoodItem[]>('/nutrition/foods.json')) || [];
+      const rawRemoteList = (await downloadJsonFile<unknown[]>('/nutrition/foods.json')) || [];
+      const hasLegacyRemoteFood = rawRemoteList.some((item) => {
+        if (typeof item !== 'object' || item === null) return true;
+        const rec = item as Record<string, unknown>;
+        const mObj =
+          typeof rec.macros === 'object' && rec.macros !== null
+            ? (rec.macros as Record<string, unknown>)
+            : null;
+        const cObj =
+          mObj && typeof mObj.carbs === 'object' && mObj.carbs !== null
+            ? (mObj.carbs as Record<string, unknown>)
+            : null;
+        const fObj =
+          mObj && typeof mObj.fat === 'object' && mObj.fat !== null
+            ? (mObj.fat as Record<string, unknown>)
+            : null;
+        return typeof cObj?.total !== 'number' || typeof fObj?.total !== 'number';
+      });
+      if (hasLegacyRemoteFood) {
+        forcePushFoodsFromSchema = true;
+      }
+
       const remoteList = rawRemoteList.map(sanitizeFoodItem);
       const localList = (await db.foods.toArray()).map(sanitizeFoodItem);
       const m = mergeEntities(localList, remoteList, mergedTombstones.foods, nowTs);
@@ -1416,7 +1446,7 @@ export async function executeSync(
       }
       if (m.hasRemoteChanges) hasRemoteModified = true;
       cachedRevs['/nutrition/foods.json'] = foodsMeta.rev;
-      if (!m.hasRemoteChanges) {
+      if (!m.hasRemoteChanges && !forcePushFoodsFromSchema) {
         pushedTimes['foods'] = now;
       }
     }
@@ -1653,6 +1683,7 @@ export async function executeSync(
     );
     if (
       forcePushFoods ||
+      forcePushFoodsFromSchema ||
       !lastFoodsPushed ||
       maxFoodsUpdated > getNormalizedTimestamp(lastFoodsPushed)
     ) {

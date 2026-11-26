@@ -241,6 +241,10 @@ export function useDropboxSync() {
     [syncState.isSyncing, t, isOnline]
   );
 
+  const overwriteRemote = useCallback((): Promise<SyncResult> => {
+    return syncNow('overwrite_remote');
+  }, [syncNow]);
+
   return {
     isAuthenticated,
     isSyncing: syncState.isSyncing,
@@ -251,5 +255,6 @@ export function useDropboxSync() {
     connectDropbox,
     disconnectDropbox,
     syncNow,
+    overwriteRemote,
   };
 }

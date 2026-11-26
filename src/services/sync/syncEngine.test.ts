@@ -34,7 +34,7 @@ import i18n from '@/i18n/config';
 import { toast } from '@/components/ui/toast';
 import { db } from '@/services/db/db';
 import { _resetNetworkStatus } from '@/hooks/useNetworkStatus';
-import type { FoodLog, WorkoutLog, BodyMetric, DailyDietLog } from '@/types';
+import type { FoodItem, FoodLog, WorkoutLog, BodyMetric, DailyDietLog } from '@/types';
 
 class LocalStorageMock {
   private store: Record<string, string> = {};
@@ -1258,6 +1258,185 @@ describe('syncErrorReason & Toast handling', () => {
     // 3. Empty workout & body buckets uploaded as []
     expect(uploadedPayloads['/workout/logs/2026-11-25.json']).toEqual([]);
     expect(uploadedPayloads['/body/metrics/2026-11-25.json']).toEqual([]);
+  });
+
+  it('auto-upgrades legacy remote /nutrition/foods.json to nested FoodMacros format', async () => {
+    setStoredTokens({
+      access_token: 'valid_token',
+      expires_in: 14400,
+      expires_at: Date.now() + 14400 * 1000,
+    });
+
+    const legacyRemoteFoods = [
+      {
+        id: 'food-legacy-1',
+        name: 'Legacy Oats',
+        category: 'natural',
+        servingSize: 50,
+        servingUnit: 'g',
+        calories: 185,
+        carbs: 33,
+        protein: 7,
+        fat: 3.5,
+        isCustom: true,
+        createdAt: 1000,
+        updatedAt: 2000,
+        rev: 1,
+      },
+    ];
+
+    let localFoodsDb: FoodItem[] = [];
+    vi.spyOn(db.foods, 'count').mockImplementation((async () => localFoodsDb.length) as never);
+    vi.spyOn(db.recipes, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.daily_diet_logs, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.exercises, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.equipments, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.routines, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.workout_logs, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.body_metrics, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.foods, 'toArray').mockImplementation((async () => localFoodsDb) as never);
+    vi.spyOn(db.foods, 'bulkPut').mockImplementation((async (items: FoodItem[]) => {
+      localFoodsDb = items;
+    }) as never);
+    vi.spyOn(db.foods, 'count').mockResolvedValue(1 as never);
+    vi.spyOn(db.recipes, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.daily_diet_logs, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.exercises, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.equipments, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.routines, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.workout_logs, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.body_metrics, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.user_base_info, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.recipes, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.daily_diet_logs, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.exercises, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.equipments, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.routines, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.workout_logs, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.body_metrics, 'toArray').mockResolvedValue([]);
+
+    const uploadedPayloads: Record<string, unknown> = {};
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+      const u = String(url);
+      const headers = (init?.headers || {}) as Record<string, string>;
+      if (u.includes('list_folder')) {
+        return new Response(
+          JSON.stringify({
+            entries: [
+              {
+                '.tag': 'file',
+                name: 'foods.json',
+                path_lower: '/nutrition/foods.json',
+                rev: 'rev_legacy_foods',
+              },
+            ],
+            has_more: false,
+          }),
+          { status: 200 }
+        );
+      }
+      if (u.includes('files/download')) {
+        const arg = headers['Dropbox-API-Arg'] || '';
+        if (arg.includes('/nutrition/foods.json')) {
+          return new Response(JSON.stringify(legacyRemoteFoods), {
+            status: 200,
+            headers: { 'Dropbox-API-Result': JSON.stringify({ rev: 'rev_legacy_foods' }) },
+          });
+        }
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+      if (u.includes('files/upload')) {
+        const arg = JSON.parse(headers['Dropbox-API-Arg'] || '{}');
+        const bodyText =
+          init?.body instanceof Blob
+            ? await init.body.text()
+            : typeof init?.body === 'string'
+              ? init.body
+              : new TextDecoder().decode(init?.body as ArrayBuffer);
+        uploadedPayloads[arg.path] = JSON.parse(bodyText);
+        return new Response(JSON.stringify({ rev: 'rev_upgraded' }), { status: 200 });
+      }
+      return new Response('{}', { status: 200 });
+    });
+
+    const res = await executeSync('auto');
+    expect(res.success).toBe(true);
+    const rewrittenFoods = uploadedPayloads['/nutrition/foods.json'] as Array<{
+      id: string;
+      macros: { calories: number; carbs: { total: number }; protein: number; fat: { total: number } };
+    }>;
+    expect(rewrittenFoods).toBeDefined();
+    expect(rewrittenFoods[0].macros).toEqual({
+      calories: 370,
+      carbs: { total: 66 },
+      protein: 14,
+      fat: { total: 7 },
+    });
+  });
+
+  it('executeSync("overwrite_remote") resets cachedRevs/pushedTimes and pushes all local tables and tombstones', async () => {
+    setStoredTokens({
+      access_token: 'valid_token',
+      expires_in: 14400,
+      expires_at: Date.now() + 14400 * 1000,
+    });
+    localStorage.setItem('e2cal_dropbox_cached_revs', JSON.stringify({ '/stale/old.json': 'old_rev' }));
+    localStorage.setItem('e2cal_dropbox_pushed_times', JSON.stringify({ stale_key: '2026-01-01T00:00:00Z' }));
+    localStorage.setItem(
+      'e2cal_deleted_entity_tombstones',
+      JSON.stringify({ foods: { 'deleted-food-1': Date.now() } })
+    );
+
+    vi.spyOn(db.foods, 'count').mockResolvedValue(1 as never);
+    vi.spyOn(db.recipes, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.daily_diet_logs, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.exercises, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.equipments, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.routines, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.workout_logs, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.body_metrics, 'count').mockResolvedValue(0 as never);
+    vi.spyOn(db.user_base_info, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.foods, 'toArray').mockResolvedValue([
+      {
+        id: 'food-local-1',
+        name: 'Local Oats',
+        category: 'natural',
+        servingSize: 100,
+        servingUnit: 'g',
+        macros: { calories: 370, carbs: { total: 66 }, protein: 14, fat: { total: 7 } },
+        isCustom: true,
+        createdAt: 1000,
+        updatedAt: 1000,
+      },
+    ]);
+    vi.spyOn(db.recipes, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.daily_diet_logs, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.exercises, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.equipments, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.routines, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.workout_logs, 'toArray').mockResolvedValue([]);
+    vi.spyOn(db.body_metrics, 'toArray').mockResolvedValue([]);
+
+    const uploadedPaths: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+      const u = String(url);
+      const headers = (init?.headers || {}) as Record<string, string>;
+      if (u.includes('files/upload')) {
+        const arg = JSON.parse(headers['Dropbox-API-Arg'] || '{}');
+        uploadedPaths.push(arg.path);
+        return new Response(JSON.stringify({ rev: `rev_${uploadedPaths.length}` }), { status: 200 });
+      }
+      return new Response('{}', { status: 200 });
+    });
+
+    const res = await executeSync('overwrite_remote');
+    expect(res.success).toBe(true);
+    expect(res.actionTaken).toBe('uploaded_local');
+    expect(uploadedPaths).toContain('/nutrition/foods.json');
+    expect(uploadedPaths).toContain('/deleted_entities.json');
+    expect(uploadedPaths).toContain('/manifest.json');
+    expect(getCachedRevs()['/stale/old.json']).toBeUndefined();
+    expect(getCachedRevs()['/nutrition/foods.json']).toBeDefined();
   });
 });
 

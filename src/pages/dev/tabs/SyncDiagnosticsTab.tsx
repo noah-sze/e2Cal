@@ -7,6 +7,7 @@ import {
   type SyncTombstoneTable,
 } from '@/services/db/db';
 import {
+  executeSync,
   getLastSyncTime,
   getCachedRevs,
   setCachedRevs,
@@ -16,6 +17,7 @@ import {
   type SyncEngineStatus,
 } from '@/services/sync/syncEngine';
 import { isDropboxConnected } from '@/services/sync/dropboxAuth';
+import { toast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -421,6 +423,20 @@ export function SyncDiagnosticsTab() {
             >
               {showSyncJson ? 'Hide JSON' : 'Inspect JSON'}
             </Button>
+            {connected && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={engineStatus.isSyncing}
+                onClick={async () => {
+                  const res = await executeSync('overwrite_remote');
+                  toast.show(res.success ? 'Full Push OK' : res.error || 'Full Push Failed');
+                  await refreshDiagnostics();
+                }}
+              >
+                Force Push (overwrite_remote)
+              </Button>
+            )}
             {confirmResetSync ? (
               <div className="flex items-center gap-1.5">
                 <Button variant="destructive" size="sm" onClick={handleResetSyncCache}>

@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw, Unlink } from 'lucide-react';
+import { RefreshCw, Unlink, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { HoldToDeleteButton } from '@/components/ui/HoldToDeleteButton';
@@ -18,7 +19,8 @@ export interface DropboxSyncDialogProps {
   isOnline?: boolean;
   onConnectDropbox: () => void;
   onDisconnectDropbox?: () => void;
-  onSyncNow?: () => Promise<unknown>;
+  onSyncNow?: (mode?: 'auto' | 'overwrite_local' | 'overwrite_remote') => Promise<unknown>;
+  onOverwriteRemote?: () => Promise<unknown>;
   title?: string;
   description?: string;
   actionLabel?: string;
@@ -38,11 +40,18 @@ export function DropboxSyncDialog({
   onConnectDropbox,
   onDisconnectDropbox,
   onSyncNow,
+  onOverwriteRemote,
   title,
   description,
   actionLabel,
 }: DropboxSyncDialogProps) {
   const { t } = useTranslation();
+  const [confirmOverwriteRemote, setConfirmOverwriteRemote] = useState(false);
+
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) setConfirmOverwriteRemote(false);
+    onOpenChange(nextOpen);
+  };
 
   const resolvedTitle =
     title ??
@@ -69,10 +78,10 @@ export function DropboxSyncDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <PrecisionDialogContent
         title={resolvedTitle}
-        onClose={() => onOpenChange(false)}
+        onClose={() => handleDialogOpenChange(false)}
         overlayClassName="z-[70]"
         className="z-[70]"
       >
@@ -164,6 +173,54 @@ export function DropboxSyncDialog({
                           : t('settings.syncNow', '立即同步')}
                     </span>
                   </Button>
+                )}
+
+                {(onOverwriteRemote || onSyncNow) && (
+                  confirmOverwriteRemote ? (
+                    <div className="border border-border rounded-lg p-3 bg-muted space-y-2.5">
+                      <p className="text-xs text-muted-foreground leading-relaxed font-sans">
+                        {t('settings.overwriteRemoteConfirm')}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={isSyncing}
+                          onClick={() => setConfirmOverwriteRemote(false)}
+                          className="flex-1 h-8 text-xs font-mono shadow-none"
+                        >
+                          {t('common.cancel')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          disabled={isSyncing || !isOnline}
+                          onClick={() => {
+                            setConfirmOverwriteRemote(false);
+                            void (onOverwriteRemote
+                              ? onOverwriteRemote()
+                              : onSyncNow?.('overwrite_remote'));
+                          }}
+                          className="flex-1 h-8 text-xs font-mono shadow-none"
+                        >
+                          {t('settings.confirmOverwriteRemote')}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full h-9 text-xs font-medium rounded-lg"
+                      onClick={() => setConfirmOverwriteRemote(true)}
+                      disabled={isSyncing || !isOnline}
+                    >
+                      <UploadCloud className="size-3.5 mr-1.5" />
+                      <span>{t('settings.overwriteRemote')}</span>
+                    </Button>
+                  )
                 )}
 
                 {onDisconnectDropbox && (
