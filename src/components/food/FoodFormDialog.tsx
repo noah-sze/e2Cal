@@ -830,6 +830,9 @@ export function FoodFormDialog({
     if (typeof parsed.fiber === 'number' && parsed.fiber >= 0) {
       setFiber(formatNum2(parsed.fiber));
     }
+    if (typeof parsed.sodium === 'number' && parsed.sodium >= 0) {
+      setSodium(String(Math.round(parsed.sodium)));
+    }
   };
 
   return (
@@ -1071,6 +1074,7 @@ export function FoodFormDialog({
                     sugar: normalizedMetricFood.macros.carbs.sugar,
                     saturatedFat: normalizedMetricFood.macros.fat.saturated,
                     transFat: normalizedMetricFood.macros.fat.trans,
+                    sodium: normalizedMetricFood.macros.sodium,
                   }
                 : undefined
             }

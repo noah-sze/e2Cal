@@ -243,6 +243,7 @@
       "target": "Target",
       "consumed": "Consumed",
       "calorieStats": "Calorie Stats",
+      "nutrientDetails": "Nutrients",
       "burn": "Burned",
       "foodLibrary": "Food Library",
       "addAuthorityFood": "Search Food Database",

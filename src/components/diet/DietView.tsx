@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, ChevronRight, ChevronDown, Zap, Plus, History, PieChart } from 'lucide-react';
+import { Activity, ChevronRight, ChevronDown, Zap, Plus, History, PieChart, LayoutGrid } from 'lucide-react';
 import type { MealType, HydratedFoodLog, FoodRecipe, EnergyUnit, FoodWeightUnit, FoodVolumeUnit } from '@/types';
 import { MealBundleCard } from '@/components/food/MealBundleCard';
 import { MacroSquares } from '@/components/food/MacroSquares';
@@ -8,6 +8,7 @@ import { MealEnergyPopover } from '@/components/diet/MealEnergyPopover';
 import { MealAddActionPopover, MealActionMenuContent } from '@/components/diet/MealAddActionPopover';
 import { MacroProgressGrid } from '@/components/diet/MacroProgressGrid';
 import { MetricValue } from '@/components/ui/metric-value';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { calculateMealBudget } from '@/utils/nutritionMath';
 import { triggerHaptic } from '@/lib/haptics';
 import { formatEnergy, formatFoodServing } from '@/utils/unitMath';
@@ -76,6 +77,7 @@ export interface DietViewProps {
     fiber?: number;
     saturatedFat?: number;
     transFat?: number;
+    sodium?: number;
   };
   targetMacros: {
     carbsGrams: number;
@@ -393,6 +395,60 @@ export function DietView({
               />
             </div>
           </div>
+
+          {/* 左下角：次要與微量營養素入口按鈕 + Popover (Option B) */}
+          <div className="flex items-center justify-start pt-0.5">
+            <Popover>
+              <PopoverTrigger
+                type="button"
+                onClick={() => triggerHaptic('light')}
+                aria-label={t('diet.nutrientDetails')}
+                className="h-6 px-2.5 rounded-full border border-border/80 bg-muted/20 hover:bg-muted/50 text-2xs sm:text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition-colors cursor-pointer select-none active:scale-95"
+              >
+                <LayoutGrid className="size-3 shrink-0" />
+                <span>{t('diet.nutrientDetails')}</span>
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                side="bottom"
+                sideOffset={6}
+                className="w-64 p-0 gap-0 overflow-hidden bg-card text-card-foreground border-border shadow-none"
+              >
+                <div className="px-3 py-2 border-b border-border text-xs font-semibold text-foreground leading-[1.38]">
+                  {t('diet.secondaryNutrients')}
+                </div>
+                <div className="p-3 space-y-1 select-none">
+                  <div className="text-xs font-medium text-sodium whitespace-nowrap">
+                    {t('diet.sodium')}
+                  </div>
+                  <div className="text-sm sm:text-base tracking-tight flex items-baseline whitespace-nowrap">
+                    <MetricValue
+                      value={Math.round(totals.sodium ?? 0).toLocaleString()}
+                      unit="mg"
+                      valueClassName="font-normal text-foreground"
+                      unitClassName="text-2xs"
+                    />
+                    <span className="text-2xs sm:text-xs font-sans text-muted-foreground mx-0.5">/</span>
+                    <MetricValue
+                      value={(2300).toLocaleString()}
+                      unit="mg"
+                      className="text-2xs sm:text-xs text-muted-foreground"
+                      valueClassName="font-normal"
+                      unitClassName="text-3xs"
+                    />
+                  </div>
+                  <div className="h-2 w-full rounded-full overflow-hidden mt-2 bg-sodium-subtle">
+                    <div
+                      className="h-full bg-sodium transition-[width] duration-200"
+                      style={{
+                        width: `${Math.min(100, Math.max(0, ((totals.sodium ?? 0) / 2300) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
 
         {/* 下半部：三大營養素 (共用通用 MacroProgressGrid) */}
@@ -680,6 +736,7 @@ export function getDemoDietData(
       carbs: 252,
       protein: 145,
       fat: 51,
+      sodium: 1420,
     },
     targetMacros: {
       carbsGrams: 330,

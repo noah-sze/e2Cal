@@ -67,7 +67,7 @@ export interface NutritionFactsCardProps {
   showServingRow?: boolean;
   /** 是否顯示熱量行，預設為 true */
   showCaloriesRow?: boolean;
-  /** 是否顯示鈉指標行，預設為 false（減輕記錄心智負擔，預設隱藏鈉） */
+  /** 是否顯示鈉指標行，預設為 true */
   showSodiumRow?: boolean;
   /** 是否顯示脂肪次級指標（飽和脂肪、反式脂肪），預設為 false */
   showFatSub?: boolean;
@@ -109,7 +109,7 @@ export function NutritionFactsCard({
   showHeader = true,
   showServingRow = true,
   showCaloriesRow = true,
-  showSodiumRow = false,
+  showSodiumRow = true,
   showFatSub = false,
   editable,
   className,
@@ -247,8 +247,8 @@ export function NutritionFactsCard({
                   <span className="text-carbs text-xs font-medium">{t('diet.carbs')}</span>
                   <ChevronRight
                     className={cn(
-                      "size-3 text-carbs-subtle transition-transform duration-150",
-                      open && "rotate-90 text-carbs"
+                      "size-3 text-carbs transition-transform duration-150",
+                      open && "rotate-90"
                     )}
                   />
                 </div>
@@ -349,8 +349,8 @@ export function NutritionFactsCard({
                   <span className="text-fat text-xs font-medium">{t('diet.fat')}</span>
                   <ChevronRight
                     className={cn(
-                      "size-3 text-fat-subtle transition-transform duration-150",
-                      open && "rotate-90 text-fat"
+                      "size-3 text-fat transition-transform duration-150",
+                      open && "rotate-90"
                     )}
                   />
                 </div>

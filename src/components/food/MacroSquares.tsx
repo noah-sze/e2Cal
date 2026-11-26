@@ -57,19 +57,19 @@ const ACCENT_CLASSES = {
   carbs: {
     subtleBox: 'border-carbs-subtle-border bg-carbs-subtle-bg text-foreground shadow-none',
     defaultBox: 'border-carbs bg-carbs-subtle text-foreground shadow-none',
-    subtleText: 'text-carbs-subtle font-medium',
+    subtleText: 'text-carbs font-medium',
     defaultText: 'text-carbs font-semibold',
   },
   protein: {
     subtleBox: 'border-protein-subtle-border bg-protein-subtle-bg text-foreground shadow-none',
     defaultBox: 'border-protein bg-protein-subtle text-foreground shadow-none',
-    subtleText: 'text-protein-subtle font-medium',
+    subtleText: 'text-protein font-medium',
     defaultText: 'text-protein font-semibold',
   },
   fat: {
     subtleBox: 'border-fat-subtle-border bg-fat-subtle-bg text-foreground shadow-none',
     defaultBox: 'border-fat bg-fat-subtle text-foreground shadow-none',
-    subtleText: 'text-fat-subtle font-medium',
+    subtleText: 'text-fat font-medium',
     defaultText: 'text-fat font-semibold',
   },
 } as const;

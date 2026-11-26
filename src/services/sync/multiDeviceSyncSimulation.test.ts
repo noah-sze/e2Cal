@@ -184,6 +184,9 @@ vi.mock('./dropboxClient', async (importOriginal) => {
       dropboxFiles.set(key, { content: JSON.stringify(data), rev: newRev });
       return newRev;
     }),
+    deleteRemotePath: vi.fn(async (path: string): Promise<void> => {
+      dropboxFiles.delete(path.toLowerCase());
+    }),
   };
 });
 

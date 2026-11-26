@@ -51,6 +51,7 @@ export interface NutritionLabelParseResult {
   fat?: number;
   sugar?: number;
   fiber?: number;
+  sodium?: number;
   /** 備註說明（例如識別到的語言、是否有 kJ 換算） */
   notes?: string;
 }
@@ -65,6 +66,7 @@ export interface MealComponentEstimate {
   fat: number;
   sugar?: number;
   fiber?: number;
+  sodium?: number;
   notes?: string;
 }
 
@@ -78,5 +80,6 @@ export interface MealEstimateResult {
   totalFat: number;
   totalSugar?: number;
   totalFiber?: number;
+  totalSodium?: number;
   components: MealComponentEstimate[];
 }

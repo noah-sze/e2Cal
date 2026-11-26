@@ -579,6 +579,7 @@ export function ExternalAIAssistant({
         totalFat: 0,
         totalSugar: 0,
         totalFiber: 0,
+        totalSodium: undefined as number | undefined,
         canInjectMeal: false,
       };
     }
@@ -592,12 +593,17 @@ export function ExternalAIAssistant({
         totalFat: Math.round((mealResult.totalFat || 0) * 10) / 10,
         totalSugar: Math.round((mealResult.totalSugar || 0) * 10) / 10,
         totalFiber: Math.round((mealResult.totalFiber || 0) * 10) / 10,
+        totalSodium:
+          typeof mealResult.totalSodium === 'number'
+            ? Math.round(mealResult.totalSodium)
+            : undefined,
         canInjectMeal: true,
       };
     }
     const includedComponents = components.filter(
       (_, idx) => !excludedComponentIndices.includes(idx)
     );
+    const hasComponentSodium = includedComponents.some((c) => typeof c.sodium === 'number');
     return {
       includedComponents,
       totalCalories: Math.round(includedComponents.reduce((s, c) => s + (c.calories || 0), 0)),
@@ -611,6 +617,11 @@ export function ExternalAIAssistant({
         Math.round(includedComponents.reduce((s, c) => s + (c.sugar || 0), 0) * 10) / 10,
       totalFiber:
         Math.round(includedComponents.reduce((s, c) => s + (c.fiber || 0), 0) * 10) / 10,
+      totalSodium: hasComponentSodium
+        ? Math.round(includedComponents.reduce((s, c) => s + (c.sodium || 0), 0))
+        : typeof mealResult.totalSodium === 'number'
+          ? Math.round(mealResult.totalSodium)
+          : undefined,
       canInjectMeal: includedComponents.length > 0,
     };
   })();
@@ -628,6 +639,7 @@ export function ExternalAIAssistant({
         totalFat: activeMealSummary.totalFat,
         totalSugar: activeMealSummary.totalSugar,
         totalFiber: activeMealSummary.totalFiber,
+        totalSodium: activeMealSummary.totalSodium,
         components: activeMealSummary.includedComponents,
         title:
           hasExcluded && activeMealSummary.includedComponents.length > 0
@@ -761,15 +773,20 @@ export function ExternalAIAssistant({
                   ? mealResult?.title || t('diet.placeholder.defaultName', '快速估算')
                   : foodTitle || t('diet.aiLabelParsed', '標籤已解析')}
               </span>
-              <span className="flex items-center gap-1.5 shrink-0">
+              <span className="flex items-center gap-1.5 shrink-0 text-xs text-foreground">
                 {mode === 'foodLabel' && foodResult?.servingSize && (
-                  <span className="text-3xs text-muted-foreground font-mono flex items-center gap-1">
-                    <span>{t('diet.per', '每')}</span>
-                    <MetricValue
-                      value={foodResult.servingSize}
-                      unit={foodResult.servingUnit || 'g'}
-                    />
-                  </span>
+                  <>
+                    <span className="font-sans flex items-center gap-1">
+                      <span className="text-muted-foreground">{t('diet.per', '每')}</span>
+                      <MetricValue
+                        value={foodResult.servingSize}
+                        unit={foodResult.servingUnit || 'g'}
+                        valueClassName="font-normal text-foreground text-xs"
+                        unitClassName="text-xs"
+                      />
+                    </span>
+                    <span className="text-muted-foreground/60 select-none">·</span>
+                  </>
                 )}
                 <MetricValue
                   value={
@@ -778,7 +795,8 @@ export function ExternalAIAssistant({
                       : (foodResult?.calories ?? '-')
                   }
                   unit="kcal"
-                  valueClassName="font-semibold text-foreground text-xs"
+                  valueClassName="font-normal text-foreground text-xs"
+                  unitClassName="text-xs"
                 />
               </span>
             </div>
@@ -833,6 +851,27 @@ export function ExternalAIAssistant({
                   />
                 </div>
               </div>
+            </div>
+
+            {/* 鈉橫列 */}
+            <div className="px-2.5 py-1.5 flex items-center justify-between bg-card">
+              <span className="text-3xs text-sodium font-medium">
+                {t('diet.sodium')}
+              </span>
+              {(() => {
+                const naVal =
+                  mode === 'meal' ? activeMealSummary.totalSodium : foodResult?.sodium;
+                return typeof naVal === 'number' ? (
+                  <MetricValue
+                    value={Math.round(naVal).toLocaleString()}
+                    unit="mg"
+                    valueClassName="text-2xs font-semibold text-sodium"
+                    unitClassName="text-3xs"
+                  />
+                ) : (
+                  <span className="text-2xs font-mono text-muted-foreground/60">-</span>
+                );
+              })()}
             </div>
           </div>
 

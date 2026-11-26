@@ -519,7 +519,7 @@ export async function parseNutritionLabel(
   let prompt: string;
   if (locale === 'en') {
     prompt = imageBase64
-      ? 'Please identify the nutrition facts label in the image. Output calories, carbs, protein, fat, sugar, dietary fiber, serving size, and product name in the specified JSON format in English.'
+      ? 'Please identify the nutrition facts label in the image. Output calories, carbs, protein, fat, sugar, dietary fiber, sodium, serving size, and product name in the specified JSON format in English.'
       : 'Please analyze and estimate standard nutrition label facts based on the food name or description provided by the user. Output in the specified JSON format in English.';
     if (userNotes && userNotes.trim()) {
       prompt += `\nUser provided notes or label text: ${userNotes.trim()}`;
@@ -529,7 +529,7 @@ export async function parseNutritionLabel(
     }
   } else if (locale === 'zh-CN') {
     prompt = imageBase64
-      ? '请识别图片中的营养标签或营养成分表。请按照指定 JSON 格式以简体中文输出热量、碳水、蛋白质、脂肪、糖、膳食纤维、基准份量与品名。'
+      ? '请识别图片中的营养标签或营养成分表。请按照指定 JSON 格式以简体中文输出热量、碳水、蛋白质、脂肪、糖、膳食纤维、钠、基准份量与品名。'
       : '请根据用户提供的食品名称或营养成分描述，解析并推算其标准营养标签数据。请按照指定 JSON 格式以简体中文输出。';
     if (userNotes && userNotes.trim()) {
       prompt += `\n用户提供之说明或标签文字：${userNotes.trim()}`;
@@ -539,7 +539,7 @@ export async function parseNutritionLabel(
     }
   } else {
     prompt = imageBase64
-      ? '請辨識圖片中的營養標籤或營養成分表。請按照指定 JSON 格式以繁體中文輸出熱量、碳水、蛋白質、脂肪、糖、膳食纖維、基準份量與品名。'
+      ? '請辨識圖片中的營養標籤或營養成分表。請按照指定 JSON 格式以繁體中文輸出熱量、碳水、蛋白質、脂肪、糖、膳食纖維、鈉、基準份量與品名。'
       : '請根據使用者提供的食品名稱或營養成分描述，解析並推算其標準營養標籤數據。請按照指定 JSON 格式以繁體中文輸出。';
     if (userNotes && userNotes.trim()) {
       prompt += `\n使用者提供之說明或標籤文字：${userNotes.trim()}`;
@@ -578,22 +578,22 @@ export async function estimateMeal(
   let prompt: string;
   if (locale === 'en') {
     prompt = imageBase64
-      ? 'Please deconstruct the meal in the image, objectively estimate component weight in grams, calories, carbs, protein, and fat, and output structured JSON in English.'
-      : 'Please deconstruct the meal based on the user description, objectively estimate component weight in grams, calories, carbs, protein, and fat, and output structured JSON in English.';
+      ? 'Please deconstruct the meal in the image, objectively estimate component weight in grams, calories, carbs, protein, fat, and sodium (mg), and output structured JSON in English.'
+      : 'Please deconstruct the meal based on the user description, objectively estimate component weight in grams, calories, carbs, protein, fat, and sodium (mg), and output structured JSON in English.';
     if (userNotes && userNotes.trim()) {
       prompt += `\nUser provided meal description: ${userNotes.trim()}`;
     }
   } else if (locale === 'zh-CN') {
     prompt = imageBase64
-      ? '请解构盘中餐点，客观推算各组件份量克数与热量、碳水、蛋白质、脂肪数值，并以简体中文输出结构化 JSON。'
-      : '请根据用户描述的餐点内容，客观推算各组件份量克数与热量、碳水、蛋白质、脂肪数值，并以简体中文输出结构化 JSON。';
+      ? '请解构盘中餐点，客观推算各组件份量克数与热量、碳水、蛋白质、脂肪及钠 (mg) 数值，并以简体中文输出结构化 JSON。'
+      : '请根据用户描述的餐点内容，客观推算各组件份量克数与热量、碳水、蛋白质、脂肪及钠 (mg) 数值，并以简体中文输出结构化 JSON。';
     if (userNotes && userNotes.trim()) {
       prompt += `\n用户提供之餐点说明：${userNotes.trim()}`;
     }
   } else {
     prompt = imageBase64
-      ? '請解構盤中餐點，客觀推算各組件份量克數與熱量、碳水、蛋白質、脂肪數值，並以繁體中文輸出結構化 JSON。'
-      : '請根據使用者描述的餐點內容，客觀推算各組件份量克數與熱量、碳水、蛋白質、脂肪數值，並以繁體中文輸出結構化 JSON。';
+      ? '請解構盤中餐點，客觀推算各組件份量克數與熱量、碳水、蛋白質、脂肪及鈉 (mg) 數值，並以繁體中文輸出結構化 JSON。'
+      : '請根據使用者描述的餐點內容，客觀推算各組件份量克數與熱量、碳水、蛋白質、脂肪及鈉 (mg) 數值，並以繁體中文輸出結構化 JSON。';
     if (userNotes && userNotes.trim()) {
       prompt += `\n使用者提供之說明或餐點說明：${userNotes.trim()}`;
     }

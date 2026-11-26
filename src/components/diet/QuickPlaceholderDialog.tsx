@@ -718,6 +718,9 @@ export function QuickPlaceholderDialog({
     if (typeof result.totalFiber === 'number' && result.totalFiber >= 0) {
       setFiber(round1(result.totalFiber));
     }
+    if (typeof result.totalSodium === 'number' && result.totalSodium >= 0) {
+      setSodium(Math.round(result.totalSodium));
+    }
   };
 
   return (

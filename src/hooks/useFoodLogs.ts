@@ -127,6 +127,9 @@ export function useFoodLogs(date: string) {
       if (typeof item.transFat === 'number') {
         acc.transFat = (acc.transFat ?? 0) + item.transFat;
       }
+      if (typeof item.sodium === 'number') {
+        acc.sodium = (acc.sodium ?? 0) + item.sodium;
+      }
       return acc;
     },
     {
@@ -138,6 +141,7 @@ export function useFoodLogs(date: string) {
       fiber: undefined as number | undefined,
       saturatedFat: undefined as number | undefined,
       transFat: undefined as number | undefined,
+      sodium: undefined as number | undefined,
     }
   );
 

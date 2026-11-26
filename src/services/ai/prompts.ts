@@ -29,6 +29,7 @@ Strictly adhere to the following rules:
    - Fat ("fat"): in grams (g).
    - Sugar ("sugar"): in grams (g), or null if absent.
    - Dietary Fiber ("fiber"): in grams (g), or null if absent.
+   - Sodium ("sodium"): in milligrams (mg), or null if absent.
 6. The output must be valid raw JSON only, strictly without markdown blocks (e.g. \`\`\`json):
 {
   "name": string,
@@ -41,6 +42,7 @@ Strictly adhere to the following rules:
   "fat": number,
   "sugar": number | null,
   "fiber": number | null,
+  "sodium": number | null,
   "notes": string
 }`;
   }
@@ -64,6 +66,7 @@ Strictly adhere to the following rules:
    - 脂肪 (fat)：克数 (g)。
    - 糖 (sugar)：克数 (g)，若无设为 null 或 0。
    - 膳食纤维 (fiber)：克数 (g)，若无设为 null 或 0。
+   - 钠 (sodium)：毫克数 (mg)，若无设为 null 或 0。
 6. 输出格式必须是合法且唯一的 JSON 对象，严禁包含 Markdown 标记：
 {
   "name": string,
@@ -76,6 +79,7 @@ Strictly adhere to the following rules:
   "fat": number,
   "sugar": number | null,
   "fiber": number | null,
+  "sodium": number | null,
   "notes": string
 }`;
   }
@@ -98,6 +102,7 @@ Strictly adhere to the following rules:
    - 脂肪 (fat)：克數 (g)。
    - 糖 (sugar)：克數 (g)，若無則設為 null 或 0。
    - 膳食纖維 (fiber)：克數 (g)，若無則設為 null 或 0。
+   - 鈉 (sodium)：毫克數 (mg)，若無則設為 null 或 0。
 6. 輸出格式必須是合法且唯一的 JSON 物件，嚴禁包含 Markdown 標記（如 \`\`\`json 或任何其他文字）：
 {
   "name": string,
@@ -110,6 +115,7 @@ Strictly adhere to the following rules:
   "fat": number,
   "sugar": number | null,
   "fiber": number | null,
+  "sodium": number | null,
   "notes": string
 }`;
 }
@@ -134,7 +140,8 @@ Strictly adhere to the following rules:
    - fat: Fat (g) (Note: cooking oil must be reasonably accounted for).
    - sugar: Sugar (g, optional).
    - fiber: Dietary Fiber (g, optional).
-2. Total calculations ("totalCalories", "totalCarbs", "totalProtein", "totalFat", "totalSugar", "totalFiber"):
+   - sodium: Sodium (mg, optional).
+2. Total calculations ("totalCalories", "totalCarbs", "totalProtein", "totalFat", "totalSugar", "totalFiber", "totalSodium"):
    - Total equals the sum of all components.
    - Thermodynamics conservation must hold: totalCalories ≈ totalCarbs * 4 + totalProtein * 4 + totalFat * 9.
 3. title: A concise, objective meal title in English (2 to 5 words, e.g. "Chicken Breast Bento", "Black Pepper Steak", "Beef Noodles").
@@ -150,6 +157,7 @@ Strictly adhere to the following rules:
   "totalFat": number,
   "totalSugar": number,
   "totalFiber": number,
+  "totalSodium": number,
   "components": [
     {
       "name": string,
@@ -160,6 +168,7 @@ Strictly adhere to the following rules:
       "fat": number,
       "sugar": number,
       "fiber": number,
+      "sodium": number,
       "notes": string
     }
   ]
@@ -180,7 +189,8 @@ Strictly adhere to the following rules:
    - fat: 脂肪 (g)（注意：需合理计入烹调用油）。
    - sugar: 糖 (g，选填)。
    - fiber: 膳食纤维 (g，选填)。
-2. 总量计算 (totalCalories, totalCarbs, totalProtein, totalFat, totalSugar, totalFiber)：
+   - sodium: 钠 (mg，选填)。
+2. 总量计算 (totalCalories, totalCarbs, totalProtein, totalFat, totalSugar, totalFiber, totalSodium)：
    - 总量为各组件之总和。
    - 必须维持热力学与物理守恒：totalCalories ≈ totalCarbs * 4 + totalProtein * 4 + totalFat * 9。
 3. title: 为整份餐点取一个简短客观的名词（如“鸡胸便当”、“黑椒牛排”、“牛肉面”）。
@@ -196,6 +206,7 @@ Strictly adhere to the following rules:
   "totalFat": number,
   "totalSugar": number,
   "totalFiber": number,
+  "totalSodium": number,
   "components": [
     {
       "name": string,
@@ -206,6 +217,7 @@ Strictly adhere to the following rules:
       "fat": number,
       "sugar": number,
       "fiber": number,
+      "sodium": number,
       "notes": string
     }
   ]
@@ -225,7 +237,8 @@ Strictly adhere to the following rules:
    - fat: 脂肪 (g)（注意：需合理計入烹調用油）。
    - sugar: 糖 (g，選填)。
    - fiber: 膳食纖維 (g，選填)。
-2. 總量計算 (totalCalories, totalCarbs, totalProtein, totalFat, totalSugar, totalFiber)：
+   - sodium: 鈉 (mg，選填)。
+2. 總量計算 (totalCalories, totalCarbs, totalProtein, totalFat, totalSugar, totalFiber, totalSodium)：
    - 總量為各組件之總和。
    - 必須維持熱力學與物理守恆：totalCalories ≈ totalCarbs * 4 + totalProtein * 4 + totalFat * 9（允許合理微差）。
 3. title: 為整份餐點取一個簡短客觀的名詞（2~6 字，如「雞胸便當」、「黑胡椒牛排」、「牛肉麵」）。
@@ -241,6 +254,7 @@ Strictly adhere to the following rules:
   "totalFat": number,
   "totalSugar": number,
   "totalFiber": number,
+  "totalSodium": number,
   "components": [
     {
       "name": string,
@@ -251,6 +265,7 @@ Strictly adhere to the following rules:
       "fat": number,
       "sugar": number,
       "fiber": number,
+      "sodium": number,
       "notes": string
     }
   ]

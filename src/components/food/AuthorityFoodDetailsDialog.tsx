@@ -134,6 +134,7 @@ export function AuthorityFoodDetailsDialog({
       sugar: source.macros.carbs.sugar,
       saturatedFat: source.macros.fat.saturated,
       transFat: source.macros.fat.trans,
+      sodium: source.macros.sodium,
     };
   }, [fetchedRaw, food]);
 
