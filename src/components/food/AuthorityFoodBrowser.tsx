@@ -366,11 +366,12 @@ export function AuthorityFoodBrowser({
 
   const searchBarSection = (
     <div
+      data-slot={isPage ? undefined : 'dialog-header'}
       className={cn(
         'space-y-2',
         isPage
           ? 'pb-3 border-b border-border'
-          : 'px-4 py-2.5 border-b border-border bg-card'
+          : 'shrink-0 px-4 py-2.5 border-b border-border bg-card'
       )}
     >
       <div className="relative flex items-center">
