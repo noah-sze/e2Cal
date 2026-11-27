@@ -6,7 +6,11 @@
 
 import { DEFAULT_EXERCISE_IDS } from '@/services/db/defaultExercises';
 import { DEFAULT_EQUIPMENT_IDS } from '@/services/db/defaultEquipments';
-import { getAliasesForTarget } from './multilingualAliases';
+import {
+  getAliasesForTarget,
+  expandCompoundFoodQueryAliases,
+  splitCompoundFoodTokens,
+} from './multilingualAliases';
 import { toPinyinInitials } from './pinyinInitials';
 
 export { getAliasesForTarget } from './multilingualAliases';
@@ -148,6 +152,13 @@ const S2T_PAIRS: [string, string][] = [
   ['芦', '蘆'],
   ['蓝', '藍'],
   ['绿', '綠'],
+  ['红', '紅'],
+  ['樱', '櫻'],
+  ['猕', '獼'],
+  ['鳄', '鱷'],
+  ['凤', '鳳'],
+  ['榄', '欖'],
+  ['凉', '涼'],
   ['葱', '蔥'],
   ['姜', '薑'],
   ['酱', '醬'],
@@ -894,20 +905,33 @@ export function matchesMultilingual(
   }
 
   // 4. 權威雙語別名庫匹配 (Phase 2 - Domain Aliases Matching)
-  // 4.1 查詢詞同義詞正向穿透 (Query Synonyms Forward Matching: 例如輸入「紅薯」命中權威庫的「地瓜」)
-  const queryAliases = getAliasesForTarget(undefined, cleanQuery);
+  // 4.1 查詢詞同義詞正向穿透 (含簡繁歸一化查表與複合詞子串展開，例如「烤三文魚」命中「烤鮭魚」)
+  let queryAliases = getAliasesForTarget(undefined, cleanQuery);
+  if (queryAliases.length === 0 && !isQueryAscii) {
+    queryAliases = getAliasesForTarget(undefined, qTrad);
+  }
+  if (queryAliases.length === 0 && cleanQuery.length >= 3) {
+    queryAliases = expandCompoundFoodQueryAliases(cleanQuery);
+    if (queryAliases.length === 0 && !isQueryAscii && qTrad !== cleanQuery) {
+      queryAliases = expandCompoundFoodQueryAliases(qTrad);
+    }
+  }
   if (queryAliases.length > 0) {
+    let targetNameTrad: string | null = null;
+    let targetNameSimp: string | null = null;
     for (let i = 0; i < queryAliases.length; i++) {
       const qAlias = queryAliases[i];
       if (targetName.includes(qAlias)) {
         return true;
       }
-      if (!isQueryAscii) {
+      if (hasNonAscii(qAlias)) {
+        if (targetNameTrad === null) {
+          targetNameTrad = toTraditional(targetName);
+          targetNameSimp = toSimplified(targetName);
+        }
         const qAliasTrad = toTraditional(qAlias);
         const qAliasSimp = toSimplified(qAlias);
-        const targetNameTrad = toTraditional(targetName);
-        const targetNameSimp = toSimplified(targetName);
-        if (targetNameTrad.includes(qAliasTrad) || targetNameSimp.includes(qAliasSimp)) {
+        if (targetNameTrad.includes(qAliasTrad) || targetNameSimp!.includes(qAliasSimp)) {
           return true;
         }
       }
@@ -965,14 +989,28 @@ export function matchesMultilingual(
     }
   }
 
-  // 6. 多詞空格分離比對（如「槓鈴 臥推」或「beef shank」）
-  if (cleanQuery.includes(' ') || cleanQuery.includes('_') || cleanQuery.includes('+')) {
-    const queryTokens = cleanQuery.split(/[\s_+,-]+/).filter(Boolean);
-    if (queryTokens.length > 1) {
-      const allTokensMatch = queryTokens.every((token) =>
+  // 6. 多詞空格、符號與中英邊界分離比對（如「槓鈴 臥推」、「db臥推」、「beef shank」）
+  const queryTokens = cleanQuery
+    .split(/[\s_+,-]+/)
+    .flatMap((part) =>
+      part.split(/(?<=[a-z0-9])(?=\P{ASCII})|(?<=\P{ASCII})(?=[a-z0-9])/u)
+    )
+    .filter(Boolean);
+  if (queryTokens.length > 1) {
+    const allTokensMatch = queryTokens.every((token) =>
+      matchesMultilingual(token, target)
+    );
+    if (allTokensMatch) return true;
+  }
+
+  // 6.1 無空格中文複合飲食詞拆分比對（如「氣炸雞胸」→ ['氣炸', '雞胸'] 命中 'air-fried 雞胸'）
+  if (queryTokens.length === 1 && !isQueryAscii && cleanQuery.length >= 4) {
+    const compoundTokens = splitCompoundFoodTokens(cleanQuery);
+    if (compoundTokens.length > 1) {
+      const allCompoundMatch = compoundTokens.every((token) =>
         matchesMultilingual(token, target)
       );
-      if (allTokensMatch) return true;
+      if (allCompoundMatch) return true;
     }
   }
 

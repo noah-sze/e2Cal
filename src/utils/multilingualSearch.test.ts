@@ -597,4 +597,127 @@ describe('multilingualSearch', () => {
       expect(matchesMultilingual('!@#$%^&*()', benchPress, 'exercise')).toBe(false);
     });
   });
+
+  describe('拓展模糊搜索關聯：新增高頻食物、複合詞與全量預設動作', () => {
+    it('新增高頻飲食同義詞應互相穿透', () => {
+      expect(matchesMultilingual('士多啤梨', { name: '草莓' }, 'food')).toBe(true);
+      expect(matchesMultilingual('車厘子', { name: '櫻桃' }, 'food')).toBe(true);
+      expect(matchesMultilingual('牛油', { name: '無鹽奶油' }, 'food')).toBe(true);
+      expect(matchesMultilingual('乳清蛋白', { name: '分離蛋白粉' }, 'food')).toBe(true);
+      expect(matchesMultilingual('意麵', { name: '義大利麵' }, 'food')).toBe(true);
+    });
+
+    it('複合詞子串同義詞展開應能無縫命中，且長詞優先不誤傷牛油果', () => {
+      expect(matchesMultilingual('烤三文魚', { name: '烤鮭魚' }, 'food')).toBe(true);
+      expect(matchesMultilingual('紅薯泥', { name: '地瓜泥' }, 'food')).toBe(true);
+      expect(matchesMultilingual('水煮雞蛋', { name: '水煮蛋' }, 'food')).toBe(true);
+      // 牛油果應命中酪梨，而非被「牛油」誤展開成奶油
+      expect(matchesMultilingual('烤牛油果', { name: '烤酪梨' }, 'food')).toBe(true);
+      expect(matchesMultilingual('烤牛油果', { name: '烤奶油' }, 'food')).toBe(false);
+    });
+
+    it('英文別名查詢應能穿透簡繁體目標名稱', () => {
+      expect(matchesMultilingual('sweet potato', { name: '红薯' }, 'food')).toBe(true);
+      expect(matchesMultilingual('sweet potato', { name: '地瓜' }, 'food')).toBe(true);
+      expect(matchesMultilingual('salmon', { name: '大西洋鲑鱼' }, 'food')).toBe(true);
+    });
+
+    it('補齊的預設健身動作別名與英文縮寫應正確命中', () => {
+      expect(
+        matchesMultilingual('蝴蝶機', { id: DEFAULT_EXERCISE_IDS.pec_deck_fly, name: '蝴蝶機夾胸' }, 'exercise')
+      ).toBe(true);
+      expect(
+        matchesMultilingual('pec deck', { id: DEFAULT_EXERCISE_IDS.pec_deck_fly, name: '蝴蝶機夾胸' }, 'exercise')
+      ).toBe(true);
+      expect(
+        matchesMultilingual('阿諾', { id: DEFAULT_EXERCISE_IDS.arnold_press, name: '阿諾德推舉' }, 'exercise')
+      ).toBe(true);
+      expect(
+        matchesMultilingual('hlr', { id: DEFAULT_EXERCISE_IDS.hanging_leg_raise, name: '懸垂舉腿' }, 'exercise')
+      ).toBe(true);
+      expect(
+        matchesMultilingual('早安式', { id: DEFAULT_EXERCISE_IDS.good_morning, name: '早安式體前屈' }, 'exercise')
+      ).toBe(true);
+    });
+
+    it('中英無空格複合查詢應自動切分並命中對應動作與食材', () => {
+      expect(
+        matchesMultilingual('db臥推', { id: DEFAULT_EXERCISE_IDS.dumbbell_bench_press, name: '啞鈴臥推' }, 'exercise')
+      ).toBe(true);
+      expect(
+        matchesMultilingual('bb深蹲', { id: DEFAULT_EXERCISE_IDS.barbell_squat, name: '槓鈴深蹲' }, 'exercise')
+      ).toBe(true);
+      expect(
+        matchesMultilingual('cable下拉', { id: DEFAULT_EXERCISE_IDS.lat_pulldown, name: '滑輪下拉' }, 'exercise')
+      ).toBe(true);
+    });
+
+    it('第二批高頻食材與烹調狀態詞彙應互相穿透', () => {
+      expect(matchesMultilingual('菜頭', { name: '白蘿蔔' }, 'food')).toBe(true);
+      expect(matchesMultilingual('芫荽', { name: '香菜' }, 'food')).toBe(true);
+      expect(matchesMultilingual('太白粉', { name: '生粉' }, 'food')).toBe(true);
+      expect(matchesMultilingual('美式咖啡', { name: '黑咖啡' }, 'food')).toBe(true);
+      expect(matchesMultilingual('氣炸雞胸', { name: 'air-fried 雞胸' }, 'food')).toBe(true);
+      expect(matchesMultilingual('無糖豆漿', { name: 'unsweetened soy milk' }, 'food')).toBe(true);
+    });
+
+    it('第三批日常食物（肉類部位、豆製品、主食麵點、海菜、植物奶與醬料）應互相穿透', () => {
+      expect(matchesMultilingual('三層肉', { name: '五花肉' }, 'food')).toBe(true);
+      expect(matchesMultilingual('肥牛', { name: '牛五花' }, 'food')).toBe(true);
+      expect(matchesMultilingual('腐竹', { name: '豆皮' }, 'food')).toBe(true);
+      expect(matchesMultilingual('牛角包', { name: '可頌' }, 'food')).toBe(true);
+      expect(matchesMultilingual('粉絲', { name: '冬粉' }, 'food')).toBe(true);
+      expect(matchesMultilingual('昆布', { name: '海帶' }, 'food')).toBe(true);
+      expect(matchesMultilingual('裙帶菜', { name: '海帶芽' }, 'food')).toBe(true);
+      expect(matchesMultilingual('忌廉芝士', { name: '奶油乳酪' }, 'food')).toBe(true);
+      expect(matchesMultilingual('蛋黃醬', { name: '美乃滋' }, 'food')).toBe(true);
+      expect(matchesMultilingual('tahini', { name: '芝麻醬' }, 'food')).toBe(true);
+      expect(matchesMultilingual('acv', { name: '蘋果醋' }, 'food')).toBe(true);
+    });
+
+    it('第四批純天然原始食材（野菜、瓜果、菌菇、原魚海鮮與堅果原肉）應互相穿透', () => {
+      expect(matchesMultilingual('刈菜', { name: '芥菜' }, 'food')).toBe(true);
+      expect(matchesMultilingual('豆瓣菜', { name: '西洋菜' }, 'food')).toBe(true);
+      expect(matchesMultilingual('花胡瓜', { name: '小黃瓜' }, 'food')).toBe(true);
+      expect(matchesMultilingual('雪耳', { name: '白木耳' }, 'food')).toBe(true);
+      expect(matchesMultilingual('lime', { name: '青檸檬' }, 'food')).toBe(true);
+      expect(matchesMultilingual('hamachi', { name: '鰤魚' }, 'food')).toBe(true);
+      expect(matchesMultilingual('多春魚', { name: '柳葉魚' }, 'food')).toBe(true);
+      expect(matchesMultilingual('碧根果', { name: '長壽果' }, 'food')).toBe(true);
+      expect(matchesMultilingual('嘴邊肉', { name: '豬頰肉' }, 'food')).toBe(true);
+    });
+
+    it('第五批純天然原始食材（精細原肉部位、甲殼貝類、芽菜與豆類穀物）應互相穿透', () => {
+      expect(matchesMultilingual('前腰脊肉', { name: '紐約客牛排' }, 'food')).toBe(true);
+      expect(matchesMultilingual('鳥蛋', { name: '鵪鶉蛋' }, 'food')).toBe(true);
+      expect(matchesMultilingual('竹絲雞', { name: '烏骨雞' }, 'food')).toBe(true);
+      expect(matchesMultilingual('青口', { name: '淡菜' }, 'food')).toBe(true);
+      expect(matchesMultilingual('沙公', { name: '泥蟹' }, 'food')).toBe(true);
+      expect(matchesMultilingual('豆苗', { name: '豌豆苗' }, 'food')).toBe(true);
+      expect(matchesMultilingual('樹葡萄', { name: '嘉寶果' }, 'food')).toBe(true);
+      expect(matchesMultilingual('紅芸豆', { name: '紅腰豆' }, 'food')).toBe(true);
+    });
+
+    it('第六批純天然食材（野菜山菜、原粒香料、深海原魚、超級莓果與小扁豆）應互相穿透', () => {
+      expect(matchesMultilingual('折耳根', { name: '魚腥草' }, 'food')).toBe(true);
+      expect(matchesMultilingual('雞頭米', { name: '芡實' }, 'food')).toBe(true);
+      expect(matchesMultilingual('高良薑', { name: '南薑' }, 'food')).toBe(true);
+      expect(matchesMultilingual('大料', { name: '八角' }, 'food')).toBe(true);
+      expect(matchesMultilingual('monkfish', { name: '鮟鱇魚' }, 'food')).toBe(true);
+      expect(matchesMultilingual('umibudo', { name: '海葡萄' }, 'food')).toBe(true);
+      expect(matchesMultilingual('阿薩伊果', { name: '巴西莓' }, 'food')).toBe(true);
+      expect(matchesMultilingual('兵豆', { name: '小扁豆' }, 'food')).toBe(true);
+    });
+
+    it('第七批純天然食材（根莖瓜果、菇類、原魚卵蝦蟹、原肉臟器與天然冷壓油脂）應互相穿透', () => {
+      expect(matchesMultilingual('沙葛', { name: '豆薯' }, 'food')).toBe(true);
+      expect(matchesMultilingual('jicama', { name: '涼薯' }, 'food')).toBe(true);
+      expect(matchesMultilingual('柳松菇', { name: '茶樹菇' }, 'food')).toBe(true);
+      expect(matchesMultilingual('毛瓜', { name: '節瓜' }, 'food')).toBe(true);
+      expect(matchesMultilingual('ikura', { name: '鮭魚卵' }, 'food')).toBe(true);
+      expect(matchesMultilingual('魚肚', { name: '花膠' }, 'food')).toBe(true);
+      expect(matchesMultilingual('山茶花油', { name: '苦茶油' }, 'food')).toBe(true);
+      expect(matchesMultilingual('米糠油', { name: '玄米油' }, 'food')).toBe(true);
+    });
+  });
 });
