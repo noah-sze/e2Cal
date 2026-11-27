@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight } from 'lucide-react';
 import { APP_ROUTES } from '@/utils/navigation';
 import { forceRefreshApp, formatBuildTime } from '@/utils/pwaRefresh';
 import { Button } from '@/components/ui/button';
@@ -14,10 +13,10 @@ import { useTheme } from '@/components/ThemeProvider';
 import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
-import { useBodyPreferences } from '@/hooks/useBodyPreferences';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useDropboxSync } from '@/hooks/useDropboxSync';
 import { useAISettings } from '@/hooks/useAISettings';
+import { SettingsRow } from '@/components/settings/SettingsRow';
 import { DropboxSyncDialog } from '@/components/settings/dialogs/DropboxSyncDialog';
 import { BrandWordmark } from '@/components/ui/Logo';
 import type { UnitSystemPreset } from '@/types';
@@ -27,7 +26,6 @@ export default function Settings() {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const { preferences } = useUnitPreferences();
-  const { bodyPreferences } = useBodyPreferences();
   const { profile } = useUserProfile();
   const { profiles: aiProfiles, activeProfile: activeAIProfile } = useAISettings();
 
@@ -72,7 +70,7 @@ export default function Settings() {
     if (lang === 'zh-CN' || lang.startsWith('zh-CN') || lang.startsWith('zh-Hans')) {
       return '简体中文';
     }
-    return 'English';
+    return 'EN';
   };
 
   const getPresetLabel = (p: UnitSystemPreset) => {
@@ -82,16 +80,24 @@ export default function Settings() {
   };
 
   const appearanceSummary = `${getThemeLabel(theme)} · ${getLanguageShortLabel(currentLang)}`;
-  const hasIgnoredBody =
-    bodyPreferences.ignoreTorsoCircumferences || bodyPreferences.ignoreLimbCircumferences;
-  const unitsAndBodySummary = `${getPresetLabel(preferences.preset)} · ${
-    hasIgnoredBody ? t('settings.bodyPartialIgnored') : t('settings.bodyAllTracked')
-  }`;
+  const unitsAndBodySummary = getPresetLabel(preferences.preset);
   const aiSummary = activeAIProfile
     ? activeAIProfile.name
     : aiProfiles.length > 0
       ? String(aiProfiles.length)
       : '-';
+
+  const dropboxSummary = !isDropboxAuth
+    ? t('settings.disconnected', '未連線')
+    : isDropboxSyncing
+      ? t('settings.syncing', '同步中…')
+      : t('settings.connected', '已連線');
+
+  const dropboxSummaryClassName = !isDropboxAuth
+    ? undefined
+    : isDropboxSyncing
+      ? 'text-primary'
+      : 'text-emerald-500 font-medium';
 
   return (
     <div className="w-full max-w-xl mx-auto space-y-7 pb-20 select-none">
@@ -106,54 +112,30 @@ export default function Settings() {
           </p>
         </div>
         <div className="sm:col-span-8 border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
-          {/* 個人資料 */}
-          <div
+          <SettingsRow
+            label={t('settings.profile')}
+            summary={profile.name || '-'}
             onClick={() => {
               triggerHaptic('light');
               navigate(APP_ROUTES.profile);
             }}
-            className="usage-row hover:bg-hover transition-colors group cursor-pointer"
-          >
-            <span className="text-sm font-normal text-foreground">{t('settings.profile')}</span>
-            <div className="flex items-center gap-1.5 text-sm font-mono text-muted-foreground group-hover:text-foreground transition-colors">
-              <span>{profile.name || '-'}</span>
-              <ChevronRight className="size-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-            </div>
-          </div>
-
-          {/* 外觀與語言 */}
-          <div
+          />
+          <SettingsRow
+            label={t('settings.appearanceAndLanguage')}
+            summary={appearanceSummary}
             onClick={() => {
               triggerHaptic('light');
               navigate(APP_ROUTES.settingsAppearance);
             }}
-            className="usage-row hover:bg-hover transition-colors group cursor-pointer"
-          >
-            <span className="text-sm font-normal text-foreground shrink-0">
-              {t('settings.appearanceAndLanguage')}
-            </span>
-            <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground group-hover:text-foreground transition-colors min-w-0">
-              <span className="truncate">{appearanceSummary}</span>
-              <ChevronRight className="size-4 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity" />
-            </div>
-          </div>
-
-          {/* 度量衡與體態指標 */}
-          <div
+          />
+          <SettingsRow
+            label={t('settings.unitsAndBody')}
+            summary={unitsAndBodySummary}
             onClick={() => {
               triggerHaptic('light');
               navigate(APP_ROUTES.settingsUnits);
             }}
-            className="usage-row hover:bg-hover transition-colors group cursor-pointer"
-          >
-            <span className="text-sm font-normal text-foreground shrink-0">
-              {t('settings.unitsAndBody')}
-            </span>
-            <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground group-hover:text-foreground transition-colors min-w-0">
-              <span className="truncate">{unitsAndBodySummary}</span>
-              <ChevronRight className="size-4 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity" />
-            </div>
-          </div>
+          />
         </div>
       </section>
 
@@ -171,47 +153,27 @@ export default function Settings() {
           </p>
         </div>
         <div className="sm:col-span-8 border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
-          {/* 飲食資料管理 */}
-          <div
+          <SettingsRow
+            label={t('settings.dietSection')}
             onClick={() => {
               triggerHaptic('light');
               navigate(APP_ROUTES.foods);
             }}
-            className="usage-row cursor-pointer group hover:bg-hover transition-colors"
-          >
-            <span className="text-sm font-normal text-foreground">
-              {t('settings.dietSection')}
-            </span>
-            <ChevronRight className="size-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-          </div>
-
-          {/* 訓練資料管理 */}
-          <div
+          />
+          <SettingsRow
+            label={t('settings.workoutSection')}
             onClick={() => {
               triggerHaptic('light');
               navigate(APP_ROUTES.exercises);
             }}
-            className="usage-row cursor-pointer group hover:bg-hover transition-colors"
-          >
-            <span className="text-sm font-normal text-foreground">
-              {t('settings.workoutSection')}
-            </span>
-            <ChevronRight className="size-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-          </div>
-
-          {/* 食物數據庫 */}
-          <div
+          />
+          <SettingsRow
+            label={t('settings.authorityFoodSection')}
             onClick={() => {
               triggerHaptic('light');
               navigate(APP_ROUTES.authorityFoods);
             }}
-            className="usage-row cursor-pointer group hover:bg-hover transition-colors"
-          >
-            <span className="text-sm font-normal text-foreground">
-              {t('settings.authorityFoodSection')}
-            </span>
-            <ChevronRight className="size-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-          </div>
+          />
         </div>
       </section>
 
@@ -229,59 +191,30 @@ export default function Settings() {
           </p>
         </div>
         <div className="sm:col-span-8 border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
-          {/* Dropbox 雲端同步（一級頁直達） */}
-          <div
+          <SettingsRow
+            label={t('settings.dropboxSync', 'Dropbox 同步')}
+            summary={dropboxSummary}
+            summaryClassName={dropboxSummaryClassName}
             onClick={() => {
               triggerHaptic('selection');
               setIsDropboxDialogOpen(true);
             }}
-            className="usage-row cursor-pointer group hover:bg-hover transition-colors"
-          >
-            <span className="text-sm font-normal text-foreground">
-              {t('settings.dropboxSync', 'Dropbox 同步')}
-            </span>
-            <div className="flex items-center gap-1.5 text-sm font-mono text-muted-foreground group-hover:text-foreground">
-              {!isDropboxAuth ? (
-                <span>{t('settings.disconnected', '未連線')}</span>
-              ) : isDropboxSyncing ? (
-                <span className="text-primary">{t('settings.syncing', '同步中…')}</span>
-              ) : (
-                <span className="text-emerald-500 font-medium">{t('settings.connected', '已連線')}</span>
-              )}
-              <ChevronRight className="size-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-            </div>
-          </div>
-
-          {/* AI 助手 */}
-          <div
+          />
+          <SettingsRow
+            label={t('settings.aiAssistant')}
+            summary={aiSummary}
             onClick={() => {
               triggerHaptic('light');
               navigate(APP_ROUTES.settingsAi);
             }}
-            className="usage-row cursor-pointer group hover:bg-hover transition-colors"
-          >
-            <span className="text-sm font-normal text-foreground">
-              {t('settings.aiAssistant')}
-            </span>
-            <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground group-hover:text-foreground transition-colors">
-              <span>{aiSummary}</span>
-              <ChevronRight className="size-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-            </div>
-          </div>
-
-          {/* 備份與系統 */}
-          <div
+          />
+          <SettingsRow
+            label={t('settings.dataAndSystem')}
             onClick={() => {
               triggerHaptic('light');
               navigate(APP_ROUTES.settingsData);
             }}
-            className="usage-row cursor-pointer group hover:bg-hover transition-colors"
-          >
-            <span className="text-sm font-normal text-foreground">
-              {t('settings.dataAndSystem')}
-            </span>
-            <ChevronRight className="size-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-          </div>
+          />
         </div>
       </section>
 
@@ -299,20 +232,13 @@ export default function Settings() {
           </p>
         </div>
         <div className="sm:col-span-8 border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
-          <a
+          <SettingsRow
             href="/landing.html"
             target="_blank"
             rel="noopener noreferrer"
+            label={t('settings.productIntro')}
             onClick={() => triggerHaptic('light')}
-            className="usage-row hover:bg-hover transition-colors group cursor-pointer"
-          >
-            <span className="text-sm font-normal text-foreground">
-              {t('settings.productIntro')}
-            </span>
-            <div className="flex items-center gap-1.5 text-sm font-mono text-muted-foreground group-hover:text-foreground transition-colors">
-              <ChevronRight className="size-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-            </div>
-          </a>
+          />
         </div>
       </section>
 

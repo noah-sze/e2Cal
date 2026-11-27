@@ -533,7 +533,7 @@
 }
 
 @utility usage-row {
-  @apply min-h-12 py-2 px-4 flex items-center justify-between hover:bg-hover transition-colors;
+  @apply min-h-12 py-2 px-4 flex items-center justify-between gap-3 hover:bg-hover transition-colors;
 }
 
 @utility hero-number {
