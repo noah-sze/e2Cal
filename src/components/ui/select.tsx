@@ -2,6 +2,7 @@ import * as React from "react"
 import { Select as SelectPrimitive } from "@base-ui/react/select"
 
 import { cn } from "@/lib/utils"
+import { parseZIndexNumber, useDialogLayerZ } from "@/components/ui/dialog"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
 const Select = SelectPrimitive.Root
@@ -82,11 +83,19 @@ function SelectContent({
     positionerClassName?: string
     backdropClassName?: string
   }) {
+  const dialogZ = useDialogLayerZ()
+  const explicitZ =
+    parseZIndexNumber(positionerClassName) ??
+    parseZIndexNumber(className) ??
+    parseZIndexNumber(backdropClassName)
+  const resolvedZ = dialogZ > 0 ? Math.max(explicitZ ?? 0, dialogZ + 5) : (explicitZ ?? 80)
+
   return (
     <SelectPrimitive.Portal>
       {/* 依據設計標準使用專屬語意化遮罩 (淺色純淨白霜牛奶玻璃 / 深色深邃黑曜石毛玻璃) */}
       <SelectPrimitive.Backdrop
         data-slot="select-backdrop"
+        style={{ zIndex: resolvedZ }}
         className={cn(
           "fixed inset-0 z-[80] bg-overlay backdrop-blur-[2px] data-closed:hidden touch-none",
           backdropClassName
@@ -98,11 +107,13 @@ function SelectContent({
         align={align}
         alignOffset={alignOffset}
         alignItemWithTrigger={alignItemWithTrigger}
+        style={{ zIndex: resolvedZ }}
         className={cn("isolate z-[80]", positionerClassName)}
       >
         <SelectPrimitive.Popup
           data-slot="select-content"
           data-align-trigger={alignItemWithTrigger}
+          style={{ zIndex: resolvedZ }}
           className={cn(
             "relative isolate z-[80] max-h-(--available-height) w-max min-w-[max(var(--anchor-width,0px),168px)] max-w-[calc(100vw-2rem)] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-card text-card-foreground border border-border shadow-none p-1 flex flex-col gap-0.5 data-closed:hidden",
             className

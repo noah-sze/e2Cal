@@ -2,6 +2,7 @@ import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 
 import { cn } from "@/lib/utils"
+import { parseZIndexNumber, useDialogLayerZ } from "@/components/ui/dialog"
 import { ChevronRightIcon, CheckIcon } from "lucide-react"
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
@@ -31,12 +32,19 @@ function DropdownMenuContent({
     MenuPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
+  const dialogZ = useDialogLayerZ()
+  const explicitZ = parseZIndexNumber(className)
+  const resolvedZ = dialogZ > 0 ? Math.max(explicitZ ?? 0, dialogZ + 5) : (explicitZ ?? 90)
   const zIndex = extractZIndex(className) || "z-[90]"
 
   return (
     <MenuPrimitive.Portal>
-      <MenuPrimitive.Backdrop className={cn("fixed inset-0 bg-overlay backdrop-blur-[2px] data-closed:hidden touch-none", zIndex)} />
+      <MenuPrimitive.Backdrop
+        style={{ zIndex: resolvedZ }}
+        className={cn("fixed inset-0 bg-overlay backdrop-blur-[2px] data-closed:hidden touch-none", zIndex)}
+      />
       <MenuPrimitive.Positioner
+        style={{ zIndex: resolvedZ }}
         className={cn("isolate outline-none", zIndex)}
         align={align}
         alignOffset={alignOffset}
@@ -45,6 +53,7 @@ function DropdownMenuContent({
       >
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
+          style={{ zIndex: resolvedZ }}
           className={cn(
             zIndex,
             "max-h-(--available-height) w-(--anchor-width) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-card p-1.5 flex flex-col gap-0.5 text-card-foreground border border-border shadow-none outline-none data-closed:hidden",

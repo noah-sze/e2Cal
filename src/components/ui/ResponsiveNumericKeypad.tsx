@@ -7,6 +7,7 @@ import { HoldToDeleteButton } from "@/components/ui/HoldToDeleteButton"
 import { AutoMarquee } from "@/components/ui/AutoMarquee"
 import { cn, evaluateAmountExpression, formatDisplayAmount } from "@/lib/utils"
 import { triggerHaptic } from "@/lib/haptics"
+import { DialogLayerContext, useDialogLayerZ } from "@/components/ui/dialog"
 
 export interface ResponsiveNumericKeypadProps {
   /** 是否開啟鍵盤 */
@@ -116,6 +117,7 @@ export function ResponsiveNumericKeypad({
   className,
 }: ResponsiveNumericKeypadProps) {
   const { t } = useTranslation()
+  const dialogZ = useDialogLayerZ()
 
   // 內部輸入狀態 (字串形式，便於處理小數點與算式)
   const [internalValue, setInternalValue] = React.useState<string>(() => {
@@ -449,19 +451,17 @@ export function ResponsiveNumericKeypad({
   if (!open || typeof document === 'undefined') return null
 
   const displayVal = formatDisplayAmount(internalValue, { preserveEmpty: true })
-
-  const zIndexClass = zIndex ? `z-[${zIndex}]` : 'z-[80]'
-  const relativeZIndexClass = zIndex ? `z-[${zIndex + 1}]` : 'z-[81]'
-  const dropdownPositionerClass = zIndex ? `z-[${zIndex + 15}]` : 'z-[95]'
-  const dropdownBackdropClass = zIndex ? `z-[${zIndex + 10}]` : 'z-[90]'
+  const resolvedZ = zIndex ?? (dialogZ > 0 ? dialogZ + 10 : 80)
 
   const btnBaseClass =
     "h-10 text-base font-mono font-medium rounded-lg bg-muted/60 text-foreground hover:bg-muted border border-border/40 active:bg-foreground active:text-background active:border-foreground transition-transform duration-75 active:scale-[0.95] select-none cursor-pointer flex items-center justify-center shadow-none outline-none"
 
   // 方案 1: 全端統一渲染一體化精密卡片 (Unified Precision Modal, 寬度 350px 對齊 Dialog)
   return createPortal(
+    <DialogLayerContext.Provider value={resolvedZ}>
     <div
-      className={cn("fixed inset-0 pointer-events-auto flex flex-col justify-end touch-none select-none overscroll-none", zIndexClass)}
+      style={{ zIndex: resolvedZ }}
+      className="fixed inset-0 pointer-events-auto flex flex-col justify-end touch-none select-none overscroll-none"
       onTouchMove={(e) => e.preventDefault()}
     >
       {/* 半透明毛玻璃遮罩層：點擊安全回滾放棄並收起 */}
@@ -472,7 +472,10 @@ export function ResponsiveNumericKeypad({
       />
 
       {/* 懸浮容器 (全屏水平居中，最大寬度 350px，底部懸浮留白) */}
-      <div className={cn("relative pointer-events-auto w-full max-w-[350px] mx-auto px-3 pb-[max(1rem,env(safe-area-inset-bottom))] mb-3 sm:mb-6 flex flex-col gap-2", relativeZIndexClass)}>
+      <div
+        style={{ zIndex: resolvedZ + 1 }}
+        className="relative pointer-events-auto w-full max-w-[350px] mx-auto px-3 pb-[max(1rem,env(safe-area-inset-bottom))] mb-3 sm:mb-6 flex flex-col gap-2"
+      >
         {/* 上方獨立長按刪除卡片 (可用時顯示，不可用時隱藏) */}
         {onDelete && (
           <div
@@ -554,9 +557,7 @@ export function ResponsiveNumericKeypad({
                   </SelectTrigger>
                   <SelectContent
                     align="end"
-                    positionerClassName={dropdownPositionerClass}
-                    backdropClassName={dropdownBackdropClass}
-                    className={cn("min-w-20 p-1 font-mono text-xs", dropdownPositionerClass)}
+                    className="min-w-20 p-1 font-mono text-xs"
                   >
                     {allowedUnits.map((u) => (
                       <SelectItem key={u} value={u}>
@@ -752,7 +753,8 @@ export function ResponsiveNumericKeypad({
           </div>
         </div>
       </div>
-    </div>,
+    </div>
+    </DialogLayerContext.Provider>,
     document.body
   )
 }

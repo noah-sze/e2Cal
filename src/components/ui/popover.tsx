@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 import { cn } from "@/lib/utils"
+import { parseZIndexNumber, useDialogLayerZ } from "@/components/ui/dialog"
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
   return <PopoverPrimitive.Root data-slot="popover" {...props} />
@@ -18,6 +19,7 @@ function PopoverContent({
   side = "bottom",
   sideOffset = 4,
   anchor,
+  style,
   ...props
 }: PopoverPrimitive.Popup.Props &
   Pick<
@@ -26,6 +28,10 @@ function PopoverContent({
   > & {
     positionerClassName?: string;
   }) {
+  const dialogZ = useDialogLayerZ()
+  const explicitZ = parseZIndexNumber(positionerClassName) ?? parseZIndexNumber(className)
+  const resolvedZ = dialogZ > 0 ? Math.max(explicitZ ?? 0, dialogZ + 5) : (explicitZ ?? 70)
+
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Positioner
@@ -34,10 +40,12 @@ function PopoverContent({
         side={side}
         sideOffset={sideOffset}
         anchor={anchor}
+        style={{ zIndex: resolvedZ }}
         className={cn("isolate z-[70]", positionerClassName)}
       >
         <PopoverPrimitive.Popup
           data-slot="popover-content"
+          style={{ zIndex: resolvedZ, ...style }}
           className={cn(
             "z-[70] flex w-72 origin-(--transform-origin) flex-col gap-2.5 rounded-lg bg-popover p-2.5 text-sm text-popover-foreground border border-border shadow-none outline-hidden data-closed:hidden",
             className

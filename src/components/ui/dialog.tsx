@@ -8,6 +8,21 @@ import { Button } from "@/components/ui/button"
 import { XIcon, CheckIcon } from "lucide-react"
 import { AutoMarquee } from "@/components/ui/AutoMarquee"
 
+export const DialogLayerContext = React.createContext<number>(0)
+
+export function useDialogLayerZ(): number {
+  return React.useContext(DialogLayerContext)
+}
+
+export function parseZIndexNumber(str?: unknown): number | undefined {
+  if (typeof str !== 'string') return undefined
+  const bracketMatch = str.match(/(?:^|\s)z-\[(\d+)\](?:\s|$)/)
+  if (bracketMatch) return Number(bracketMatch[1])
+  const plainMatch = str.match(/(?:^|\s)z-(\d+)(?:\s|$)/)
+  if (plainMatch) return Number(plainMatch[1])
+  return undefined
+}
+
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
 }
@@ -87,17 +102,23 @@ function DialogContent({
     typeof str === 'string' ? str.match(/(?:^|\s)(z-(?:\[\d+\]|\d+))(?:\s|$)/)?.[1] : undefined
 
   const extractedZIndex = extractZIndex(className) || extractZIndex(overlayClassName)
+  const resolvedZ = parseZIndexNumber(className) ?? parseZIndexNumber(overlayClassName) ?? 60
   const isPrecision = size === 'compact' || size === 'standard'
   const shouldShowCloseButton = showCloseButton ?? !isPrecision
 
   return (
     <DialogPortal container={container ?? (typeof document !== 'undefined' ? document.body : undefined)}>
-      <DialogOverlay className={cn(commandDeck && "bg-overlay", overlayClassName)} />
+      <DialogLayerContext.Provider value={resolvedZ}>
+      <DialogOverlay
+        style={{ zIndex: resolvedZ }}
+        className={cn(commandDeck && "bg-overlay", overlayClassName)}
+      />
       {fullscreen ? (
         <DialogPrimitive.Popup
           ref={contentRef}
           initialFocus={initialFocus ?? false}
           data-slot="dialog-content"
+          style={{ zIndex: resolvedZ }}
           className={cn(
             "fixed inset-0 z-[60] flex flex-col w-full h-full bg-background overflow-hidden overscroll-contain outline-none data-closed:hidden",
             className
@@ -111,6 +132,7 @@ function DialogContent({
           ref={contentRef}
           initialFocus={initialFocus ?? false}
           data-slot="dialog-content"
+          style={{ zIndex: resolvedZ }}
           className={cn(
             "fixed inset-0 z-[60] flex flex-col w-full h-full bg-background text-foreground outline-none px-4 pt-[calc(1rem+env(safe-area-inset-top,0px)+var(--ios-status-blur-offset,0px))] pb-4 overflow-y-auto overscroll-contain no-scrollbar sm:fixed sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-[min(380px,calc(100vw-2rem))] sm:h-[min(600px,calc(100vh-3rem))] sm:h-[min(600px,calc(100dvh-3rem))] sm:max-h-[calc(100vh-3rem)] sm:max-h-[calc(100dvh-3rem))] sm:rounded-lg sm:bg-card sm:text-card-foreground sm:border sm:border-border sm:p-6 sm:shadow-none sm:overflow-y-auto sm:overscroll-contain data-closed:hidden",
             className
@@ -120,7 +142,9 @@ function DialogContent({
           {children}
         </DialogPrimitive.Popup>
       ) : (
-        <div className={cn(
+        <div
+          style={{ zIndex: resolvedZ }}
+          className={cn(
           "fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none touch-none",
           extractedZIndex,
           wrapperClassName
@@ -217,6 +241,7 @@ function DialogContent({
           )}
         </div>
       )}
+      </DialogLayerContext.Provider>
     </DialogPortal>
   )
 }
