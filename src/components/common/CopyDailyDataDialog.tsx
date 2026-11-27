@@ -183,6 +183,17 @@ export function CopyDailyDataDialog({
     }
   };
 
+  // 下載純文字 / JSON 檔案
+  const handleDownloadText = () => {
+    const ext = format === 'json' ? 'json' : 'md';
+    const mime =
+      format === 'json' ? 'application/json;charset=utf-8' : 'text/markdown;charset=utf-8';
+    const blob = new Blob([previewContent], { type: mime });
+    downloadBlob(blob, `e2cal-${date}-${scope}.${ext}`);
+    triggerHaptic('success');
+    toast.show(t('aiExport.imageSaved', '已保存'));
+  };
+
   // 複製高解析度圖片 (透過 Canvas 繪製超採樣生成)
   const handleCopyImage = async () => {
     if (isCapturing) return;
@@ -299,92 +310,65 @@ export function CopyDailyDataDialog({
         overlayClassName="z-[70]"
         className="z-[70] w-[320px] max-w-[calc(100vw-24px)] sm:w-[320px] sm:max-w-[320px]"
       >
-        <div className="pt-3 space-y-3 font-mono text-xs select-none">
-          {/* 說明文字 */}
-          <p className="text-2xs text-muted-foreground leading-relaxed font-sans px-0.5">
-            {t('aiExport.dialogDesc')}
-          </p>
-
-          {/* 日期與範圍狀態列 */}
-          <div className="flex items-center justify-between px-3 py-2 rounded-lg border border-border bg-muted/20 text-2xs">
-            <span className="text-muted-foreground font-mono">{date}</span>
-            <span className="px-2 py-0.5 rounded bg-foreground text-background font-sans font-medium text-3xs leading-tight">
-              {t(`aiExport.scope.${scope}`)}
-            </span>
+        <div className="pt-2.5 space-y-2.5 font-sans text-xs select-none">
+          {/* 單行日期與範圍摘要 */}
+          <div className="flex items-center justify-center gap-1.5 text-2xs text-muted-foreground">
+            <span className="font-mono tabular-nums">{date}</span>
+            <span>·</span>
+            <span>{t(`aiExport.scope.${scope}`)}</span>
           </div>
 
-          {/* 格式切換器 (3 頁籤: 圖片 | 純文本 | JSON) */}
+          {/* 膠囊格式切換器 (圖片 | 純文本 | JSON) */}
           <div className="grid grid-cols-3 p-0.5 rounded-lg bg-muted border border-border">
-            <button
-              type="button"
-              onClick={() => {
-                setFormat('image');
-                triggerHaptic('selection');
-              }}
-              className={cn(
-                'h-7 rounded-md text-xs font-mono font-medium transition-colors cursor-pointer',
-                format === 'image'
-                  ? 'bg-card text-foreground border border-border/80'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {t('aiExport.formatImage')}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setFormat('text');
-                triggerHaptic('selection');
-              }}
-              className={cn(
-                'h-7 rounded-md text-xs font-mono font-medium transition-colors cursor-pointer',
-                format === 'text'
-                  ? 'bg-card text-foreground border border-border/80'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {t('aiExport.formatText')}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setFormat('json');
-                triggerHaptic('selection');
-              }}
-              className={cn(
-                'h-7 rounded-md text-xs font-mono font-medium transition-colors cursor-pointer',
-                format === 'json'
-                  ? 'bg-card text-foreground border border-border/80'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {t('aiExport.formatJson')}
-            </button>
+            {(['image', 'text', 'json'] as const).map((fmt) => (
+              <button
+                key={fmt}
+                type="button"
+                onClick={() => {
+                  setFormat(fmt);
+                  triggerHaptic('selection');
+                }}
+                className={cn(
+                  'h-7 rounded-md text-xs font-sans font-medium transition-colors cursor-pointer',
+                  format === fmt
+                    ? 'bg-card text-foreground border border-border/80'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {t(
+                  fmt === 'image'
+                    ? 'aiExport.formatImage'
+                    : fmt === 'text'
+                      ? 'aiExport.formatText'
+                      : 'aiExport.formatJson'
+                )}
+              </button>
+            ))}
           </div>
 
-          {/* 預覽區域 (高度鎖死 240px，上下滾動，圖片嚴格保持原始比例不變形，永不撐大 Dialog) */}
+          {/* 預覽區域 (鎖定 316px 高度，圖片無內邊距貼合，消除雙層框線) */}
           {format === 'image' ? (
-            <div className="h-[240px] overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-muted/20 p-2 overscroll-contain">
+            <div className="h-[316px] overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-muted/20 overscroll-contain">
               {previewImageDataUrl ? (
                 <img
                   src={previewImageDataUrl}
                   alt={`e2Cal ${date} Share`}
-                  className="block w-full h-auto rounded shadow-none select-none pointer-events-none"
+                  className="block w-full h-auto select-none pointer-events-none"
                 />
               ) : (
-                <div className="h-full flex items-center justify-center text-muted-foreground text-xs font-mono">
+                <div className="h-full flex items-center justify-center text-muted-foreground text-xs font-sans">
                   <Loader2 className="size-4 animate-spin mr-2" />
                   <span>{t('aiExport.imageGenerating')}</span>
                 </div>
               )}
             </div>
           ) : (
-            <div className="h-[240px] overflow-y-auto rounded-lg border border-border bg-muted/30 p-2.5 font-mono text-2xs leading-relaxed whitespace-pre-wrap break-words select-all text-muted-foreground overscroll-contain">
+            <div className="h-[316px] overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 font-mono text-2xs leading-relaxed whitespace-pre-wrap break-words select-all text-muted-foreground overscroll-contain">
               {previewContent}
             </div>
           )}
 
-          {/* 底部操作按鈕：複製 | 保存 | 分享 */}
+          {/* 底部操作按鈕 */}
           {format === 'image' ? (
             <div className="grid grid-cols-3 gap-1.5">
               {/* 複製 */}
@@ -392,7 +376,7 @@ export function CopyDailyDataDialog({
                 type="button"
                 disabled={isCapturing}
                 onClick={handleCopyImage}
-                className="h-9 px-2 rounded-lg bg-foreground text-background font-mono text-xs font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer gap-1"
+                className="h-9 px-2 rounded-lg bg-foreground text-background font-sans text-xs font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer gap-1"
               >
                 {isCapturing ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -410,7 +394,7 @@ export function CopyDailyDataDialog({
                 disabled={isCapturing}
                 onClick={handleSaveImage}
                 variant="outline"
-                className="h-9 px-2 rounded-lg border-border bg-card text-foreground font-mono text-xs font-medium hover:bg-muted active:scale-[0.98] transition-all cursor-pointer gap-1"
+                className="h-9 px-2 rounded-lg border-border bg-card text-foreground font-sans text-xs font-medium hover:bg-muted active:scale-[0.98] transition-all cursor-pointer gap-1"
               >
                 {isCapturing ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -426,7 +410,7 @@ export function CopyDailyDataDialog({
                 disabled={isCapturing}
                 onClick={handleShareImage}
                 variant="outline"
-                className="h-9 px-2 rounded-lg border-border bg-card text-foreground font-mono text-xs font-medium hover:bg-muted active:scale-[0.98] transition-all cursor-pointer gap-1"
+                className="h-9 px-2 rounded-lg border-border bg-card text-foreground font-sans text-xs font-medium hover:bg-muted active:scale-[0.98] transition-all cursor-pointer gap-1"
               >
                 {isCapturing ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -437,18 +421,29 @@ export function CopyDailyDataDialog({
               </Button>
             </div>
           ) : (
-            <Button
-              type="button"
-              onClick={handleCopyText}
-              className="w-full h-9 rounded-lg bg-foreground text-background font-mono text-xs font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer gap-1.5"
-            >
-              {copied ? (
-                <Check className="size-3.5 stroke-[2.2]" />
-              ) : (
-                <Copy className="size-3.5 stroke-[2]" />
-              )}
-              <span>{t('aiExport.copyBtn')}</span>
-            </Button>
+            <div className="grid grid-cols-[1fr_auto] gap-1.5">
+              <Button
+                type="button"
+                onClick={handleCopyText}
+                className="h-9 rounded-lg bg-foreground text-background font-sans text-xs font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer gap-1.5"
+              >
+                {copied ? (
+                  <Check className="size-3.5 stroke-[2.2]" />
+                ) : (
+                  <Copy className="size-3.5 stroke-[2]" />
+                )}
+                <span>{t('aiExport.copyBtn')}</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDownloadText}
+                className="h-9 px-3 rounded-lg border-border bg-card text-foreground font-sans text-xs font-medium hover:bg-muted active:scale-[0.98] transition-all cursor-pointer gap-1"
+              >
+                <Download className="size-3.5 stroke-[2]" />
+                <span>{t('aiExport.downloadFile')}</span>
+              </Button>
+            </div>
           )}
         </div>
       </PrecisionDialogContent>
