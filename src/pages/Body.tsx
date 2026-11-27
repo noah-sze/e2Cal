@@ -619,7 +619,7 @@ export default function Body() {
                           : 'text-label-quaternary'
                     )}
                   >
-                    {effectiveShoulders ? <MetricValue value={effectiveShoulders} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
+                    {effectiveShoulders ? <MetricValue value={effectiveShoulders} unit={lengthUnit} unitClassName={cn('text-xs', !hasTodayShoulders && 'text-label-tertiary')} /> : '-'}
                   </div>
                 </button>
 
@@ -650,7 +650,7 @@ export default function Body() {
                           : 'text-label-quaternary'
                     )}
                   >
-                    {effectiveChest ? <MetricValue value={effectiveChest} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
+                    {effectiveChest ? <MetricValue value={effectiveChest} unit={lengthUnit} unitClassName={cn('text-xs', !hasTodayChest && 'text-label-tertiary')} /> : '-'}
                   </div>
                 </button>
 
@@ -681,7 +681,7 @@ export default function Body() {
                           : 'text-label-quaternary'
                     )}
                   >
-                    {effectiveWaist ? <MetricValue value={effectiveWaist} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
+                    {effectiveWaist ? <MetricValue value={effectiveWaist} unit={lengthUnit} unitClassName={cn('text-xs', !hasTodayWaist && 'text-label-tertiary')} /> : '-'}
                   </div>
                 </button>
 
@@ -712,7 +712,7 @@ export default function Body() {
                           : 'text-label-quaternary'
                     )}
                   >
-                    {effectiveHips ? <MetricValue value={effectiveHips} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
+                    {effectiveHips ? <MetricValue value={effectiveHips} unit={lengthUnit} unitClassName={cn('text-xs', !hasTodayHips && 'text-label-tertiary')} /> : '-'}
                   </div>
                 </button>
               </div>
@@ -748,7 +748,7 @@ export default function Body() {
                           : 'text-label-quaternary'
                     )}
                   >
-                    {effectiveArms ? <MetricValue value={effectiveArms} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
+                    {effectiveArms ? <MetricValue value={effectiveArms} unit={lengthUnit} unitClassName={cn('text-xs', !hasTodayArms && 'text-label-tertiary')} /> : '-'}
                   </div>
                 </button>
 
@@ -779,7 +779,7 @@ export default function Body() {
                           : 'text-label-quaternary'
                     )}
                   >
-                    {effectiveThighs ? <MetricValue value={effectiveThighs} unit={lengthUnit} unitClassName="text-xs" /> : '-'}
+                    {effectiveThighs ? <MetricValue value={effectiveThighs} unit={lengthUnit} unitClassName={cn('text-xs', !hasTodayThighs && 'text-label-tertiary')} /> : '-'}
                   </div>
                 </button>
               </div>
@@ -817,7 +817,7 @@ export default function Body() {
                   : 'text-label-quaternary'
             )}
           >
-            {displayTrendWeight ? <MetricValue value={displayTrendWeight} unit={bodyWeightUnit} unitClassName="text-xs sm:text-sm" /> : '-'}
+            {displayTrendWeight ? <MetricValue value={displayTrendWeight} unit={bodyWeightUnit} unitClassName={cn('text-xs sm:text-sm', !hasTodayWeight && 'text-label-tertiary')} /> : '-'}
           </div>
         </button>
 
@@ -891,7 +891,7 @@ export default function Body() {
                     : 'text-label-quaternary'
               )}
             >
-              {displayLeanMass ? <MetricValue value={displayLeanMass} unit={bodyWeightUnit} unitClassName="text-xs sm:text-sm" /> : '-'}
+              {displayLeanMass ? <MetricValue value={displayLeanMass} unit={bodyWeightUnit} unitClassName={cn('text-xs sm:text-sm', !hasTodayWeight && 'text-label-tertiary')} /> : '-'}
             </div>
           </button>
 
@@ -914,7 +914,7 @@ export default function Body() {
                     : 'text-label-quaternary'
               )}
             >
-              {displayFatMass ? <MetricValue value={displayFatMass} unit={bodyWeightUnit} unitClassName="text-xs sm:text-sm" /> : '-'}
+              {displayFatMass ? <MetricValue value={displayFatMass} unit={bodyWeightUnit} unitClassName={cn('text-xs sm:text-sm', !hasTodayWeight && 'text-label-tertiary')} /> : '-'}
             </div>
           </button>
         </div>
