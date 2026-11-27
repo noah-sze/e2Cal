@@ -1383,9 +1383,6 @@
     "aiExport": {
       "triggerAriaLabel": "Copy Daily Data",
       "dialogTitle": "Copy Daily Data",
-      "dialogDesc": "Export structured daily logs for your AI assistant to analyze nutrition and workouts.",
-      "dateLabel": "Date",
-      "scopeLabel": "Scope",
       "scope": {
         "diet": "Daily Diet Data",
         "workout": "Daily Workout Data",

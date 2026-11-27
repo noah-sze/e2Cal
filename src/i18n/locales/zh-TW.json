@@ -1383,9 +1383,6 @@
     "aiExport": {
       "triggerAriaLabel": "複製當日數據",
       "dialogTitle": "複製當日數據",
-      "dialogDesc": "一鍵匯出結構化當日記錄，可直接貼給 AI 助手進行營養與訓練分析。",
-      "dateLabel": "日期",
-      "scopeLabel": "範圍",
       "scope": {
         "diet": "當日飲食數據",
         "workout": "當日訓練數據",
