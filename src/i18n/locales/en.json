@@ -1451,7 +1451,26 @@
       },
       "copyFailed": "Copy failed",
       "jsonCopied": "JSON copied",
-      "textCopied": "Text copied"
+      "textCopied": "Text copied",
+      "image": {
+        "snapshotSubtitle": "Daily Snapshot",
+        "footerTagline": " · Local-First Fitness Tracker",
+        "recoveringMusclesSuffix": "muscles recovering",
+        "allMusclesReady": "All muscles ready",
+        "exercisesLabel": "Exercises",
+        "exercisesUnit": "items",
+        "setsLabel": "Completed Sets",
+        "setsUnit": "sets",
+        "totalVolumeLabel": "Total Volume",
+        "workoutLogTitle": "Workout Log",
+        "setPrefix": "Set",
+        "setSuffix": "",
+        "repsUnit": "reps",
+        "macroTagCarbs": "C",
+        "macroTagProtein": "P",
+        "macroTagFat": "F",
+        "trendLabel": "Trend"
+      }
     },
     "landing": {
       "metaTitle": "e2Cal - Nutrition & Strength Tracker",

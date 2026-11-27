@@ -21,6 +21,7 @@ import type {
   WorkoutRoutine,
 } from '@/types';
 import { formatFoodDisplayName, resolveFoodLogTitle } from '@/utils/foodNaming';
+import { getLocalizedExerciseName } from '@/utils/defaultLocalization';
 import { calculateFoodLogNutrients } from '@/utils/nutritionMath';
 import {
   cmToIn,
@@ -159,14 +160,22 @@ export interface ExportBodyCircumference {
   label: string;
   value: number;
   unit: LengthUnit;
+  /** 是否為回退展示之歷史數據 */
+  isHistorical?: boolean;
 }
 
 export interface ExportBodySection {
   weight?: number;
+  weightIsHistorical?: boolean;
   trendWeight?: number;
   weightUnit: BodyWeightUnit;
   bodyFat?: number;
+  bodyFatIsHistorical?: boolean;
   circumferences: ExportBodyCircumference[];
+  /** 實際記錄日期（當日無記錄而回退至歷史最近一筆時提供） */
+  recordedDate?: string;
+  /** 是否為回退展示之歷史最新數據 */
+  isHistoricalFallback?: boolean;
 }
 
 export interface DailyExportPayload {
@@ -566,10 +575,10 @@ function buildWorkoutSection(
     const exercises: ExportWorkoutExercise[] = (w.exercises || []).map((group) => {
       totalExercises += 1;
       const ex = exerciseMap.get(group.exerciseId);
-      const exName =
-        ex?.name ||
-        (group as { exerciseName?: string }).exerciseName ||
-        t('workout.unknownExercise', '未知動作');
+      const exName = ex
+        ? getLocalizedExerciseName(ex)
+        : (group as { exerciseName?: string }).exerciseName ||
+          t('workout.unknownExercise', '未知動作');
       const equipmentLabel = resolveEquipmentLabel(ex?.equipment, equipmentMap, t);
 
       const muscleEntries = ex?.targetMuscles
@@ -668,13 +677,69 @@ function buildWorkoutSection(
   };
 }
 
+function hasAnyMetricValue(m: Partial<BodyMetric> | null | undefined): boolean {
+  if (!m) return false;
+  if (typeof m.weight === 'number' && m.weight > 0) return true;
+  if (typeof m.bodyFat === 'number' && m.bodyFat > 0) return true;
+  const circFields: Array<keyof BodyMetric> = [
+    'shouldersCm',
+    'chestCm',
+    'waistCm',
+    'hipsCm',
+    'armsCm',
+    'thighsCm',
+    'calvesCm',
+  ];
+  return circFields.some((f) => {
+    const val = m[f];
+    return typeof val === 'number' && !isNaN(val) && val > 0;
+  });
+}
+
 function buildBodySection(
   input: BuildDailyExportInput,
   t: TFunction
 ): ExportBodySection {
   const weightUnit: BodyWeightUnit = input.unitPreferences?.bodyWeight || 'kg';
   const lengthUnit: LengthUnit = input.unitPreferences?.length || 'cm';
-  const metric = input.bodyMetric || null;
+
+  const todayMetric = hasAnyMetricValue(input.bodyMetric)
+    ? input.bodyMetric || null
+    : null;
+  let metric: Partial<BodyMetric> | null = todayMetric;
+  let isHistoricalFallback = false;
+  let recordedDate: string | undefined;
+
+  if (!metric && input.allBodyMetrics && input.allBodyMetrics.length > 0) {
+    const candidates = input.allBodyMetrics
+      .filter((m) => m.date <= input.date && hasAnyMetricValue(m))
+      .sort((a, b) => b.date.localeCompare(a.date));
+    if (candidates.length > 0) {
+      metric = candidates[0];
+      isHistoricalFallback = candidates[0].date !== input.date;
+      recordedDate = candidates[0].date;
+    }
+  }
+
+  const sortedHistoryDesc = (input.allBodyMetrics || [])
+    .filter((m) => m.date < input.date)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  const resolveNumericField = (
+    field: keyof BodyMetric
+  ): { value: number | undefined; isHistorical: boolean } => {
+    const todayVal = todayMetric?.[field];
+    if (typeof todayVal === 'number' && !isNaN(todayVal) && todayVal > 0) {
+      return { value: todayVal, isHistorical: false };
+    }
+    for (const hist of sortedHistoryDesc) {
+      const histVal = hist[field];
+      if (typeof histVal === 'number' && !isNaN(histVal) && histVal > 0) {
+        return { value: histVal, isHistorical: true };
+      }
+    }
+    return { value: undefined, isHistorical: false };
+  };
 
   let resolvedTrendKg: number | undefined =
     typeof input.trendWeightKg === 'number' && input.trendWeightKg > 0
@@ -689,25 +754,22 @@ function buildBodySection(
     }
   }
 
-  const rawWeightKg =
-    metric && typeof metric.weight === 'number' && metric.weight > 0
-      ? metric.weight
-      : undefined;
-
+  const weightField = resolveNumericField('weight');
   const displayWeight =
-    rawWeightKg !== undefined
-      ? convertBodyWeight(rawWeightKg, 'kg', weightUnit, 1)
+    weightField.value !== undefined
+      ? convertBodyWeight(weightField.value, 'kg', weightUnit, 1)
       : undefined;
+  const weightIsHistorical = displayWeight !== undefined && weightField.isHistorical;
 
   const displayTrendWeight =
     resolvedTrendKg !== undefined
       ? convertBodyWeight(resolvedTrendKg, 'kg', weightUnit, 1)
       : undefined;
 
+  const bodyFatField = resolveNumericField('bodyFat');
   const bodyFat =
-    metric && typeof metric.bodyFat === 'number' && metric.bodyFat > 0
-      ? roundTo(metric.bodyFat, 1)
-      : undefined;
+    bodyFatField.value !== undefined ? roundTo(bodyFatField.value, 1) : undefined;
+  const bodyFatIsHistorical = bodyFat !== undefined && bodyFatField.isHistorical;
 
   const circumferenceDefs: Array<{
     key: ExportBodyCircumference['key'];
@@ -725,28 +787,31 @@ function buildBodySection(
   ];
 
   const circumferences: ExportBodyCircumference[] = [];
-  if (metric) {
-    for (const def of circumferenceDefs) {
-      const rawVal = metric[def.field];
-      if (typeof rawVal === 'number' && !isNaN(rawVal) && rawVal > 0) {
-        const convertedVal =
-          lengthUnit === 'in' ? cmToIn(rawVal, 1) : roundTo(rawVal, 1);
-        circumferences.push({
-          key: def.key,
-          label: t(def.labelKey, def.defaultLabel),
-          value: convertedVal,
-          unit: lengthUnit,
-        });
-      }
+  for (const def of circumferenceDefs) {
+    const fieldRes = resolveNumericField(def.field);
+    if (fieldRes.value !== undefined) {
+      const convertedVal =
+        lengthUnit === 'in' ? cmToIn(fieldRes.value, 1) : roundTo(fieldRes.value, 1);
+      circumferences.push({
+        key: def.key,
+        label: t(def.labelKey, def.defaultLabel),
+        value: convertedVal,
+        unit: lengthUnit,
+        ...(fieldRes.isHistorical ? { isHistorical: true } : {}),
+      });
     }
   }
 
   return {
     ...(displayWeight !== undefined ? { weight: displayWeight } : {}),
+    ...(weightIsHistorical ? { weightIsHistorical: true } : {}),
     ...(displayTrendWeight !== undefined ? { trendWeight: displayTrendWeight } : {}),
     weightUnit,
     ...(bodyFat !== undefined ? { bodyFat } : {}),
+    ...(bodyFatIsHistorical ? { bodyFatIsHistorical: true } : {}),
     circumferences,
+    ...(recordedDate ? { recordedDate } : {}),
+    ...(isHistoricalFallback ? { isHistoricalFallback: true } : {}),
   };
 }
 

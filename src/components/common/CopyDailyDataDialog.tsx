@@ -72,7 +72,7 @@ export function CopyDailyDataDialog({
   const { allRoutines } = useRoutines();
   const { equipments } = useEquipments();
   const { recoverySummary } = useBodyRecovery(date);
-  const { metricToday, currentTrendWeight } = useBodyMetrics(date);
+  const { metricToday, recentHistory, currentTrendWeight } = useBodyMetrics(date);
 
   const exportInput = useMemo(
     () => ({
@@ -90,6 +90,7 @@ export function CopyDailyDataDialog({
       equipments,
       recoverySummary,
       bodyMetric: metricToday,
+      allBodyMetrics: recentHistory,
       trendWeightKg: currentTrendWeight,
     }),
     [
@@ -107,6 +108,7 @@ export function CopyDailyDataDialog({
       equipments,
       recoverySummary,
       metricToday,
+      recentHistory,
       currentTrendWeight,
     ]
   );
@@ -135,6 +137,7 @@ export function CopyDailyDataDialog({
         const url = generateDailyExportImageDataUrl(payload, {
           theme: isDark ? 'dark' : 'light',
           dpr: 2,
+          t,
         });
         if (isMounted) {
           setPreviewImageDataUrl(url);
@@ -151,7 +154,7 @@ export function CopyDailyDataDialog({
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [open, format, payload, isDark]);
+  }, [open, format, payload, isDark, t]);
 
   // 複製純文字 / JSON
   const handleCopyText = async () => {
@@ -190,6 +193,7 @@ export function CopyDailyDataDialog({
       const blob = await generateDailyExportImageBlob(payload, {
         theme: isDark ? 'dark' : 'light',
         dpr: 2,
+        t,
       });
       if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
         const item = new ClipboardItem({ 'image/png': blob });
@@ -229,6 +233,7 @@ export function CopyDailyDataDialog({
       const blob = await generateDailyExportImageBlob(payload, {
         theme: isDark ? 'dark' : 'light',
         dpr: 2,
+        t,
       });
 
       downloadBlob(blob, filename);
@@ -255,6 +260,7 @@ export function CopyDailyDataDialog({
       const blob = await generateDailyExportImageBlob(payload, {
         theme: isDark ? 'dark' : 'light',
         dpr: 2,
+        t,
       });
 
       if (canNativeShare) {

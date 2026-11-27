@@ -5,7 +5,10 @@ import type {
   ExportWorkoutSection,
   ExportBodySection,
 } from './aiDataExport';
+import type { TFunction } from 'i18next';
+import i18n from '@/i18n/config';
 import { evaluateNutritionalHighlight } from '../utils/nutritionEvaluation';
+import { generateQrMatrix } from '@/utils/qrCode';
 import {
   MALE_OUTLINE_FRONT,
   MALE_OUTLINE_BACK,
@@ -21,6 +24,7 @@ export interface GenerateExportImageOptions {
   theme?: 'dark' | 'light';
   dpr?: number;
   width?: number;
+  t?: TFunction;
 }
 
 export interface ImagePalette {
@@ -283,26 +287,42 @@ function drawChevronDown(
   ctx.restore();
 }
 
-function drawPlusIcon(
+interface InlineToken {
+  text: string;
+  font: string;
+  color: string;
+  gap?: number;
+}
+
+function measureInlineTokens(ctx: CanvasRenderingContext2D, tokens: InlineToken[]): number {
+  let total = 0;
+  tokens.forEach((tk, idx) => {
+    if (idx > 0 && tk.gap) total += tk.gap;
+    ctx.font = tk.font;
+    total += ctx.measureText(tk.text).width;
+  });
+  return total;
+}
+
+function drawInlineTokens(
   ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  size: number,
-  stroke: string,
-  lineWidth = 1.4
-) {
+  tokens: InlineToken[],
+  x: number,
+  baselineY: number
+): number {
+  let curX = x;
   ctx.save();
-  ctx.strokeStyle = stroke;
-  ctx.lineWidth = lineWidth;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  const half = size / 2;
-  ctx.moveTo(cx - half, cy);
-  ctx.lineTo(cx + half, cy);
-  ctx.moveTo(cx, cy - half);
-  ctx.lineTo(cx, cy + half);
-  ctx.stroke();
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+  tokens.forEach((tk, idx) => {
+    if (idx > 0 && tk.gap) curX += tk.gap;
+    ctx.font = tk.font;
+    ctx.fillStyle = tk.color;
+    ctx.fillText(tk.text, curX, baselineY);
+    curX += ctx.measureText(tk.text).width;
+  });
   ctx.restore();
+  return curX - x;
 }
 
 const LOGO_PATHS = [
@@ -412,86 +432,73 @@ interface RenderContext {
   cardWidth: number;
   cardGap: number;
   isMeasureOnly: boolean;
+  t: TFunction;
 }
 
 /**
- * 頂部 Header：品牌標誌、e2Cal 名稱、副標、日期與範圍膠囊
+ * 頂部 Header（方案 1 · 報表雙行對齊，全比例字體無等寬）：
+ * 左側：Logo + e2Cal + 每日數據快照；右側：數據範圍標題 + 日期
  */
 function renderHeader(rc: RenderContext, payload: DailyExportPayload, y: number): number {
   const { ctx, palette, paddingX, cardWidth, isMeasureOnly } = rc;
   const headerHeight = 44;
+  const edgeInset = 8;
+  const contentLeft = paddingX + edgeInset;
+  const contentRight = paddingX + cardWidth - edgeInset;
 
   if (!isMeasureOnly) {
     ctx.save();
 
-    // 頂部 Header 統一垂直中軸線 (44px 高度之正中心 y + 22)
     const centerY = y + Math.round(headerHeight / 2);
 
-    // 品牌 Logo (名稱左側附上官方 Logo 圓角黑底白標，尺寸 30x30，中心對齊 centerY)
-    const logoSize = 30;
-    const logoY = centerY - Math.round(logoSize / 2); // y + 7
-    drawE2CalLogo(ctx, paddingX, logoY, logoSize, palette.border);
+    // 左側：官方 Logo (32x32)
+    const logoSize = 32;
+    const logoY = centerY - Math.round(logoSize / 2);
+    drawE2CalLogo(ctx, contentLeft, logoY, logoSize, palette.border);
 
-    // 品牌文字區塊 (X 軸左對齊，垂直方向與 Logo 嚴格視覺對齊)
-    const brandTextX = paddingX + logoSize + 9;
+    const brandTextX = contentLeft + logoSize + 10;
 
-    // 1. 主名稱 e2Cal (方案 1 官方品牌字標：Geist Sans SemiBold 16px，字距 -0.03em)
+    // 主名稱 e2Cal (Geist Sans SemiBold 17px，字距 -0.03em)
     ctx.save();
-    ctx.font = `600 16px ${BRAND_FONT}`;
+    ctx.font = `600 17px ${BRAND_FONT}`;
     ctx.fillStyle = palette.textPrimary;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
     if ('letterSpacing' in ctx) {
-      (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '-0.48px';
+      (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '-0.51px';
     }
     ctx.fillText('e2Cal', brandTextX, centerY - 7);
     ctx.restore();
 
-    // 2. 子標題 DAILY SNAPSHOT (字號 9.5px，底部與 Logo 底部精準呼應收束)
-    ctx.font = `500 9.5px ${MONO_FONT}`;
+    // 副標：比例字體（多語系）
+    ctx.font = `400 11px ${SANS_FONT}`;
     ctx.fillStyle = palette.textTertiary;
     ctx.textBaseline = 'middle';
-    ctx.fillText('DAILY SNAPSHOT', brandTextX, centerY + 8);
+    ctx.textAlign = 'left';
+    ctx.fillText(rc.t('aiExport.image.snapshotSubtitle', '每日數據快照'), brandTextX, centerY + 9);
 
-    // 右側膠囊標籤 (高度 22px，中心同樣嚴格對齊 centerY)
-    const pillHeight = 22;
-    const pillY = centerY - Math.round(pillHeight / 2);
-
-    const scopeLabelMap: Record<string, string> = {
-      diet: 'DIET 飲食',
-      workout: 'WORKOUT 訓練',
-      body: 'BODY 身體',
-      all: 'FULL 全部',
+    // 右側：雙行右對齊比例字體排版（移除雙膠囊與等寬字體）
+    const scopeFallbackMap: Record<string, string> = {
+      diet: '當日飲食數據',
+      workout: '當日訓練數據',
+      body: '當日身體數據',
+      all: '當日完整數據',
     };
-    const scopeText = scopeLabelMap[payload.scope] || payload.scope.toUpperCase();
-
-    ctx.font = `600 10px ${MONO_FONT}`;
-    const scopeWidth = ctx.measureText(scopeText).width + 14;
-    const scopeX = paddingX + cardWidth - scopeWidth;
-    drawRoundedBox(ctx, scopeX, pillY, scopeWidth, pillHeight, 6, palette.pillBg);
-    ctx.fillStyle = palette.pillText;
-    ctx.textBaseline = 'middle';
-    ctx.fillText(scopeText, scopeX + 7, centerY);
-
-    // 日期膠囊 (高度 22px，中心對齊 centerY)
-    ctx.font = `500 11px ${MONO_FONT}`;
-    const dateText = payload.date;
-    const dateWidth = ctx.measureText(dateText).width + 16;
-    const dateX = scopeX - dateWidth - 8;
-    drawRoundedBox(
-      ctx,
-      dateX,
-      pillY,
-      dateWidth,
-      pillHeight,
-      6,
-      palette.cardSubtleBg,
-      palette.border,
-      1
+    const scopeText = rc.t(
+      `aiExport.scope.${payload.scope}`,
+      scopeFallbackMap[payload.scope] || payload.scope
     );
-    ctx.fillStyle = palette.textSecondary;
+    const rightX = contentRight;
+
+    ctx.font = `600 12px ${SANS_FONT}`;
+    ctx.fillStyle = palette.textPrimary;
+    ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    ctx.fillText(dateText, dateX + 8, centerY);
+    ctx.fillText(scopeText, rightX, centerY - 7);
+
+    ctx.font = `400 11px ${SANS_FONT}`;
+    ctx.fillStyle = palette.textSecondary;
+    ctx.fillText(payload.date, rightX, centerY + 9);
 
     ctx.restore();
   }
@@ -513,19 +520,67 @@ function renderCaloriesHeroCard(
 
   let curY = startY + innerPad;
 
-  // 1. 卡片頂部 Bar: 居中「熱量統計」標題
+  // 1. 卡片頂部 Bar: 左側活動係數膠囊、中間「熱量統計」、右側供能比膠囊（1:1 對齊 DietView）
   if (!isMeasureOnly) {
     ctx.save();
+    const pillH = 22;
+    const pillCenterY = curY + pillH / 2;
+
+    // 左側：活動係數膠囊
+    const palText = diet.activityLabel || `PAL ${diet.activityLevel}`;
+    ctx.font = `400 11px ${SANS_FONT}`;
+    const palTextW = ctx.measureText(palText).width;
+    const palPillW = palTextW + 18;
+    const palPillX = paddingX + innerPad;
+    drawRoundedBox(
+      ctx,
+      palPillX,
+      curY,
+      palPillW,
+      pillH,
+      11,
+      palette.cardSubtleBg,
+      palette.border,
+      1
+    );
+    ctx.fillStyle = palette.textSecondary;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(palText, palPillX + 9, pillCenterY);
+
+    // 右側：供能比膠囊 (C/P/F)
+    const splitText = `${diet.macroSplit.carbs}/${diet.macroSplit.protein}/${diet.macroSplit.fat}`;
+    ctx.font = `400 11px ${MONO_FONT}`;
+    const splitTextW = ctx.measureText(splitText).width;
+    const splitPillW = splitTextW + 18;
+    const splitPillX = paddingX + cardWidth - innerPad - splitPillW;
+    drawRoundedBox(
+      ctx,
+      splitPillX,
+      curY,
+      splitPillW,
+      pillH,
+      11,
+      palette.cardSubtleBg,
+      palette.border,
+      1
+    );
+    ctx.fillStyle = palette.textSecondary;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(splitText, splitPillX + 9, pillCenterY);
+
+    // 中間：熱量統計
     ctx.font = `400 13px ${SANS_FONT}`;
     ctx.fillStyle = palette.textSecondary;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('熱量統計', paddingX + cardWidth / 2, curY + 6);
+    ctx.fillText(rc.t('diet.calorieStats', '熱量統計'), paddingX + cardWidth / 2, pillCenterY);
     ctx.restore();
   }
-  curY += 16;
+  curY += 28;
 
-  // 2. 居中超大熱量數值與單位
+  // 2. 居中超大熱量數值與單位（MetricValue 雙字體 + 4px 微距）
   const actualCal = diet.actual.calories;
   const targetCal = diet.target.calories;
   const remainingCal = targetCal - actualCal;
@@ -537,11 +592,12 @@ function renderCaloriesHeroCard(
     const calStr = actualCal.toLocaleString();
     const calStrW = ctx.measureText(calStr).width;
 
-    ctx.font = `400 14px ${MONO_FONT}`;
+    ctx.font = `400 14px ${SANS_FONT}`;
     const unitStr = `${eUnit}`;
     const unitStrW = ctx.measureText(unitStr).width;
+    const heroUnitGap = 4;
 
-    const totalHeroW = calStrW + unitStrW;
+    const totalHeroW = calStrW + heroUnitGap + unitStrW;
     const heroStartX = paddingX + (cardWidth - totalHeroW) / 2;
 
     ctx.font = `700 36px ${MONO_FONT}`;
@@ -550,20 +606,42 @@ function renderCaloriesHeroCard(
     ctx.textAlign = 'left';
     ctx.fillText(calStr, heroStartX, curY + 34);
 
-    ctx.font = `400 14px ${MONO_FONT}`;
+    ctx.font = `400 14px ${SANS_FONT}`;
     ctx.fillStyle = palette.textSecondary;
-    ctx.fillText(unitStr, heroStartX + calStrW, curY + 34);
+    ctx.fillText(unitStr, heroStartX + calStrW + heroUnitGap, curY + 34);
 
-    // 下方居中小字：剩餘 / 超額
+    // 下方居中小字：剩餘 / 超額（中文 SANS + 6px + 數字 MONO + 2px + 單位 SANS）
+    const diffLabel =
+      remainingCal >= 0
+        ? rc.t('dietPlan.underBudget', '剩餘')
+        : rc.t('dietPlan.overBudget', '超額');
+    const diffNum =
+      remainingCal >= 0
+        ? remainingCal.toLocaleString()
+        : `+${Math.abs(remainingCal).toLocaleString()}`;
+    const diffColor = remainingCal >= 0 ? palette.textSecondary : palette.calories;
+
+    ctx.font = `400 13px ${SANS_FONT}`;
+    const diffLabelW = ctx.measureText(diffLabel).width;
     ctx.font = `400 13px ${MONO_FONT}`;
-    ctx.textAlign = 'center';
-    if (remainingCal >= 0) {
-      ctx.fillStyle = palette.textSecondary;
-      ctx.fillText(`剩餘 ${remainingCal.toLocaleString()}${eUnit}`, paddingX + cardWidth / 2, curY + 54);
-    } else {
-      ctx.fillStyle = palette.calories;
-      ctx.fillText(`超額 +${Math.abs(remainingCal).toLocaleString()}${eUnit}`, paddingX + cardWidth / 2, curY + 54);
-    }
+    const diffNumW = ctx.measureText(diffNum).width;
+    ctx.font = `400 12px ${SANS_FONT}`;
+    const diffUnitW = ctx.measureText(eUnit).width;
+
+    const diffTotalW = diffLabelW + 6 + diffNumW + 2 + diffUnitW;
+    const diffStartX = paddingX + (cardWidth - diffTotalW) / 2;
+    const diffY = curY + 55;
+
+    ctx.font = `400 13px ${SANS_FONT}`;
+    ctx.fillStyle = diffColor;
+    ctx.fillText(diffLabel, diffStartX, diffY);
+
+    ctx.font = `400 13px ${MONO_FONT}`;
+    ctx.fillText(diffNum, diffStartX + diffLabelW + 6, diffY);
+
+    ctx.font = `400 12px ${SANS_FONT}`;
+    ctx.fillStyle = remainingCal >= 0 ? palette.textTertiary : palette.calories;
+    ctx.fillText(eUnit, diffStartX + diffLabelW + 6 + diffNumW + 2, diffY);
 
     ctx.restore();
   }
@@ -610,21 +688,21 @@ function renderCaloriesHeroCard(
 
     const cols = [
       {
-        label: '碳水化合物',
+        label: rc.t('dietPlan.carbsShort', '碳水化合物'),
         actual: diet.actual.carbs,
         target: diet.target.carbs,
         color: palette.carbs,
         trackColor: palette.carbsSubtle,
       },
       {
-        label: '蛋白質',
+        label: rc.t('diet.protein', '蛋白質'),
         actual: diet.actual.protein,
         target: diet.target.protein,
         color: palette.protein,
         trackColor: palette.proteinSubtle,
       },
       {
-        label: '脂肪',
+        label: rc.t('diet.fat', '脂肪'),
         actual: diet.actual.fat,
         target: diet.target.fat,
         color: palette.fat,
@@ -644,20 +722,40 @@ function renderCaloriesHeroCard(
       ctx.textAlign = 'left';
       ctx.fillText(col.label, colStartX, colY);
 
-      // 數值與目標 (font-mono: 107g /200g)
-      const valY = colY + 20;
+      // 數值與目標 (對齊 MetricValue 雙字體 + 2px 微距: 107 g / 200 g)
+      const valY = colY + 32;
+      const actNumStr = `${Math.round(col.actual)}`;
+      const unitG = 'g';
+      const targetNumStr = `${col.target}`;
+
+      ctx.textBaseline = 'alphabetic';
+
       ctx.font = `400 15px ${MONO_FONT}`;
       ctx.fillStyle = palette.textPrimary;
-      const actStr = `${Math.round(col.actual)}g`;
-      ctx.fillText(actStr, colStartX, valY);
-      const actW = ctx.measureText(actStr).width;
+      ctx.fillText(actNumStr, colStartX, valY);
+      const actNumW = ctx.measureText(actNumStr).width;
 
-      ctx.font = `400 12px ${MONO_FONT}`;
+      ctx.font = `400 11px ${SANS_FONT}`;
+      ctx.fillStyle = palette.textSecondary;
+      ctx.fillText(unitG, colStartX + actNumW + 2, valY);
+      const actUnitW = ctx.measureText(unitG).width;
+
+      const slashX = colStartX + actNumW + 2 + actUnitW + 3;
+      ctx.font = `400 11px ${SANS_FONT}`;
       ctx.fillStyle = palette.textTertiary;
-      ctx.fillText(`/${col.target}g`, colStartX + actW, valY + 2);
+      ctx.fillText('/', slashX, valY);
+      const slashW = ctx.measureText('/').width;
+
+      const tgtNumX = slashX + slashW + 3;
+      ctx.font = `400 12px ${MONO_FONT}`;
+      ctx.fillText(targetNumStr, tgtNumX, valY);
+      const tgtNumW = ctx.measureText(targetNumStr).width;
+
+      ctx.font = `400 10px ${SANS_FONT}`;
+      ctx.fillText(unitG, tgtNumX + tgtNumW + 2, valY);
 
       // 底部彩色進度條 (h-2, rounded-full)
-      const barY = valY + 22;
+      const barY = colY + 42;
       const progressH = 8;
       drawRoundedBox(ctx, colStartX, barY, colInnerW, progressH, 4, col.trackColor);
       const ratio = col.target > 0 ? Math.min(1, Math.max(0, col.actual / col.target)) : 0;
@@ -701,36 +799,44 @@ function renderMealCard(
     ctx.lineTo(paddingX + cardWidth, startY + headerHeight);
     ctx.stroke();
 
-    // 左側：餐別名稱 (font-semibold text-sm)
+    // 左側：餐別名稱 (font-semibold text-sm)，與熱量數值同一基線對齊
     const headerInnerX = paddingX + 16;
+    const headerTextBaselineY = startY + 22;
     ctx.font = `600 14px ${SANS_FONT}`;
     ctx.fillStyle = palette.textPrimary;
-    ctx.textBaseline = 'middle';
+    ctx.textBaseline = 'alphabetic';
     ctx.textAlign = 'left';
-    ctx.fillText(meal.mealLabel, headerInnerX, startY + 20);
+    ctx.fillText(meal.mealLabel, headerInnerX, headerTextBaselineY);
     const mealLabelW = ctx.measureText(meal.mealLabel).width;
 
     if (meal.items.length > 0 && meal.calories > 0) {
       // 點號 ·
       const dotX = headerInnerX + mealLabelW + 6;
-      ctx.font = `400 12px ${MONO_FONT}`;
+      ctx.font = `400 12px ${SANS_FONT}`;
       ctx.fillStyle = palette.textTertiary;
-      ctx.fillText('·', dotX, startY + 20);
+      ctx.fillText('·', dotX, headerTextBaselineY);
 
-      // 熱量 popover trigger
+      // 熱量 popover trigger（數值 MONO + 2px + 單位 SANS，與餐別標題同基線）
       const popoverX = dotX + 10;
-      const calText = `${meal.calories}kcal`;
+      const calNumText = `${meal.calories}`;
+      const calUnitText = 'kcal';
       ctx.font = `500 12px ${MONO_FONT}`;
       ctx.fillStyle = palette.textSecondary;
-      ctx.fillText(calText, popoverX, startY + 15);
-      const calTextW = ctx.measureText(calText).width;
+      ctx.fillText(calNumText, popoverX, headerTextBaselineY);
+      const calNumW = ctx.measureText(calNumText).width;
 
-      // 微型箭頭
-      drawChevronDown(ctx, popoverX + calTextW + 8, startY + 15, 6, palette.textSecondary);
+      ctx.font = `400 11px ${SANS_FONT}`;
+      ctx.fillStyle = palette.textTertiary;
+      ctx.fillText(calUnitText, popoverX + calNumW + 2, headerTextBaselineY);
+      const calUnitW = ctx.measureText(calUnitText).width;
+      const calTextW = calNumW + 2 + calUnitW;
+
+      // 微型箭頭（垂直對齊數字中心）
+      drawChevronDown(ctx, popoverX + calTextW + 8, headerTextBaselineY - 4, 6, palette.textSecondary);
 
       // 下半部：與數值同寬之供能色彩微標尺 (3px 高度, rounded-[1.5px])
       const totalPopW = calTextW + 14;
-      const miniBarY = startY + 24;
+      const miniBarY = startY + 28;
       const miniBarH = 3;
 
       const carbCals = meal.carbs * 4;
@@ -760,9 +866,6 @@ function renderMealCard(
       ctx.fillRect(popoverX + cW + pW, miniBarY, fW, miniBarH);
     }
 
-    // 右側：Plus「+」圖標按鈕
-    drawPlusIcon(ctx, paddingX + cardWidth - 22, startY + 20, 14, palette.textSecondary);
-
     ctx.restore();
   }
 
@@ -772,11 +875,11 @@ function renderMealCard(
   if (meal.items.length === 0) {
     if (!isMeasureOnly) {
       ctx.save();
-      ctx.font = `400 12px ${MONO_FONT}`;
+      ctx.font = `400 12px ${SANS_FONT}`;
       ctx.fillStyle = palette.textTertiary;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('無記錄', paddingX + cardWidth / 2, curY + 24);
+      ctx.fillText(rc.t('common.noRecord', '無記錄'), paddingX + cardWidth / 2, curY + 24);
       ctx.restore();
     }
     curY += 48;
@@ -822,24 +925,24 @@ function renderMealCard(
 
         const squares = [
           {
-            tag: '碳',
-            val: `${roundNum(item.carbs)}g`,
+            tag: rc.t('aiExport.image.macroTagCarbs', '碳'),
+            num: `${roundNum(item.carbs)}`,
             isHighlighted: evalRes.highlights.carbs,
             color: palette.carbs,
             bg: palette.carbsBg,
             border: palette.carbsBorder,
           },
           {
-            tag: '蛋',
-            val: `${roundNum(item.protein)}g`,
+            tag: rc.t('aiExport.image.macroTagProtein', '蛋'),
+            num: `${roundNum(item.protein)}`,
             isHighlighted: evalRes.highlights.protein,
             color: palette.protein,
             bg: palette.proteinBg,
             border: palette.proteinBorder,
           },
           {
-            tag: '脂',
-            val: `${roundNum(item.fat)}g`,
+            tag: rc.t('aiExport.image.macroTagFat', '脂'),
+            num: `${roundNum(item.fat)}`,
             isHighlighted: evalRes.highlights.fat,
             color: palette.fat,
             bg: palette.fatBg,
@@ -856,17 +959,30 @@ function renderMealCard(
 
           drawRoundedBox(ctx, sX, sqY, sqW, sqH, 4, boxFill, boxBorder, 1);
 
-          // 頂部標籤 (text-[9px] uppercase)
-          ctx.font = `${tagWeight} 9px ${MONO_FONT}`;
+          // 頂部標籤 (SANS_FONT)
+          ctx.font = `${tagWeight} 9.5px ${SANS_FONT}`;
           ctx.fillStyle = tagColor;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(sq.tag, sX + sqW / 2, sqY + 11);
 
-          // 底部數值 (text-xs font-mono)
+          // 底部數值 + 1.5px 微距 + g (SANS_FONT)
+          ctx.font = `400 12px ${MONO_FONT}`;
+          const numW = ctx.measureText(sq.num).width;
+          ctx.font = `400 9.5px ${SANS_FONT}`;
+          const unitW = ctx.measureText('g').width;
+          const totalValW = numW + 1.5 + unitW;
+          const valStartX = sX + (sqW - totalValW) / 2;
+
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
           ctx.font = `400 12px ${MONO_FONT}`;
           ctx.fillStyle = palette.textPrimary;
-          ctx.fillText(sq.val, sX + sqW / 2, sqY + 26);
+          ctx.fillText(sq.num, valStartX, sqY + 30);
+
+          ctx.font = `400 9.5px ${SANS_FONT}`;
+          ctx.fillStyle = palette.textSecondary;
+          ctx.fillText('g', valStartX + numW + 1.5, sqY + 30);
         });
 
         // --- (B) 左側品名與份量熱量副標 ---
@@ -874,13 +990,13 @@ function renderMealCard(
         const maxTitleW = squaresStartX - leftX - 12;
 
         let badgeText = '';
-        if (item.type === 'estimate') badgeText = '⚡ 估算';
-        if (item.type === 'as_planned') badgeText = '⚡ 歷史均值';
-        if (item.type === 'recipe') badgeText = '食譜';
+        if (item.type === 'estimate') badgeText = `⚡ ${rc.t('aiExport.diet.estimateTag', '估算')}`;
+        if (item.type === 'as_planned') badgeText = `⚡ ${rc.t('aiExport.diet.asPlannedTag', '歷史均值')}`;
+        if (item.type === 'recipe') badgeText = rc.t('aiExport.diet.recipeTag', '食譜');
 
         let titleStartX = leftX;
         if (badgeText) {
-          ctx.font = `500 10px ${MONO_FONT}`;
+          ctx.font = `500 10px ${SANS_FONT}`;
           const bW = ctx.measureText(badgeText).width + 8;
           drawRoundedBox(ctx, titleStartX, curY + 11, bW, 18, 4, palette.pillSubtleBg, palette.border, 1);
           ctx.fillStyle = palette.textSecondary;
@@ -897,42 +1013,69 @@ function renderMealCard(
         const displayTitle = truncateText(ctx, item.name, maxTitleW - (titleStartX - leftX));
         ctx.fillText(displayTitle, titleStartX, curY + 12);
 
-        // 第二行：份量 + 熱量標籤
-        const subY = curY + 36;
-        ctx.font = `400 11px ${MONO_FONT}`;
-        ctx.fillStyle = palette.textSecondary;
-        ctx.textBaseline = 'middle';
+        // 第二行：份量 + 熱量標籤（雙字體分離 + 2px 微距）
+        const subBaselineY = curY + 40;
+        let curSubX = leftX;
 
-        const amountStr = 'amount' in item && item.amount ? `${item.amount} ` : '';
-        ctx.fillText(amountStr, leftX, subY);
-        let curSubX = leftX + ctx.measureText(amountStr).width;
+        if ('amount' in item && item.amount) {
+          const amountParts = item.amount.trim().match(/^([\d.,]+)\s*(.+)$/);
+          const amountTokens: InlineToken[] = amountParts
+            ? [
+                { text: amountParts[1], font: `400 11px ${MONO_FONT}`, color: palette.textSecondary },
+                { text: amountParts[2], font: `400 10.5px ${SANS_FONT}`, color: palette.textTertiary, gap: 2 },
+                { text: '·', font: `400 11px ${SANS_FONT}`, color: palette.textTertiary, gap: 5 },
+              ]
+            : [
+                { text: item.amount, font: `400 11px ${SANS_FONT}`, color: palette.textSecondary },
+                { text: '·', font: `400 11px ${SANS_FONT}`, color: palette.textTertiary, gap: 5 },
+              ];
 
-        if (amountStr) {
-          ctx.fillStyle = palette.textTertiary;
-          ctx.fillText('· ', curSubX, subY);
-          curSubX += ctx.measureText('· ').width;
+          curSubX += drawInlineTokens(ctx, amountTokens, curSubX, subBaselineY) + 5;
         }
 
         const isHighCal = evalRes.labels.includes('high-calorie');
         const isLowCal = evalRes.labels.includes('low-calorie');
-        const calTag = `${item.calories}kcal`;
+        const calColor = isHighCal
+          ? palette.caloriesText
+          : isLowCal
+            ? palette.calorieLowText
+            : palette.textSecondary;
+        const calUnitColor = isHighCal
+          ? palette.caloriesText
+          : isLowCal
+            ? palette.calorieLowText
+            : palette.textTertiary;
 
-        if (isHighCal) {
-          ctx.font = `500 11px ${MONO_FONT}`;
-          const calTagW = ctx.measureText(calTag).width + 8;
-          drawRoundedBox(ctx, curSubX, subY - 8, calTagW, 17, 3, palette.caloriesBg, undefined, 0);
-          ctx.fillStyle = palette.caloriesText;
-          ctx.fillText(calTag, curSubX + 4, subY);
-        } else if (isLowCal) {
-          ctx.font = `500 11px ${MONO_FONT}`;
-          const calTagW = ctx.measureText(calTag).width + 8;
-          drawRoundedBox(ctx, curSubX, subY - 8, calTagW, 17, 3, palette.calorieLowBg, undefined, 0);
-          ctx.fillStyle = palette.calorieLowText;
-          ctx.fillText(calTag, curSubX + 4, subY);
+        const calTokens: InlineToken[] = [
+          {
+            text: `${item.calories}`,
+            font: `${isHighCal || isLowCal ? '500' : '400'} 11px ${MONO_FONT}`,
+            color: calColor,
+          },
+          {
+            text: 'kcal',
+            font: `400 10.5px ${SANS_FONT}`,
+            color: calUnitColor,
+            gap: 2,
+          },
+        ];
+
+        if (isHighCal || isLowCal) {
+          const calTagW = measureInlineTokens(ctx, calTokens) + 8;
+          drawRoundedBox(
+            ctx,
+            curSubX,
+            curY + 28,
+            calTagW,
+            17,
+            3,
+            isHighCal ? palette.caloriesBg : palette.calorieLowBg,
+            undefined,
+            0
+          );
+          drawInlineTokens(ctx, calTokens, curSubX + 4, subBaselineY);
         } else {
-          ctx.font = `400 11px ${MONO_FONT}`;
-          ctx.fillStyle = palette.textSecondary;
-          ctx.fillText(calTag, curSubX, subY);
+          drawInlineTokens(ctx, calTokens, curSubX, subBaselineY);
         }
 
         ctx.restore();
@@ -1044,20 +1187,9 @@ function drawBodyHighlighterOnCanvas(
     ctx.restore();
   }
 
-  // 4. 底部極簡標籤: ANTERIOR / POSTERIOR (精準對齊雙向人體足底中軸)
-  ctx.font = `600 10px ${MONO_FONT}`;
-  ctx.fillStyle = palette.textTertiary;
-  ctx.textBaseline = 'top';
-  ctx.textAlign = 'center';
-
-  // 正面中心: 362 / 1448 = 0.25
-  ctx.fillText('ANTERIOR', width * 0.25, mapHeight + 6);
-  // 背面中心: 1086 / 1448 = 0.75
-  ctx.fillText('POSTERIOR', width * 0.75, mapHeight + 6);
-
   ctx.restore();
 
-  return mapHeight + 22;
+  return mapHeight + 8;
 }
 
 /**
@@ -1070,23 +1202,30 @@ function renderWorkoutHeroCard(
 ): number {
   const { ctx, palette, paddingX, cardWidth, isMeasureOnly } = rc;
 
-  const topBarH = 34;
+  const topBarH = 38;
   const mapW = Math.min(210, cardWidth - 40);
-  const mapH = mapW + 22; // 210 + 22 = 232
+  const mapH = mapW + 8;
   const statH = 68;
   const totalHeroH = topBarH + mapH + statH;
 
   if (!isMeasureOnly) {
     ctx.save();
 
-    // 1. 頂部狀態膠囊 (右上角)
+    // 1. 頂部狀態膠囊 (右上角，數值 MONO + 4px + 多語系文字 SANS，上右邊距統一為 16px)
     const recoveringCount = workout.recovery?.recoveringCount ?? 0;
     if (recoveringCount > 0) {
-      const pillText = `${recoveringCount} 個肌群恢復中`;
-      ctx.font = `500 11px ${MONO_FONT}`;
-      const pillW = ctx.measureText(pillText).width + 16;
+      const pillTokens: InlineToken[] = [
+        { text: `${recoveringCount}`, font: `500 11px ${MONO_FONT}`, color: palette.muscleRecoveringPillText },
+        {
+          text: rc.t('aiExport.image.recoveringMusclesSuffix', '個肌群恢復中'),
+          font: `500 11px ${SANS_FONT}`,
+          color: palette.muscleRecoveringPillText,
+          gap: 4,
+        },
+      ];
+      const pillW = measureInlineTokens(ctx, pillTokens) + 16;
       const pillX = paddingX + cardWidth - 16 - pillW;
-      const pillY = startY + 10;
+      const pillY = startY + 16;
 
       drawRoundedBox(
         ctx,
@@ -1099,16 +1238,13 @@ function renderWorkoutHeroCard(
         palette.muscleRecoveringPillBorder,
         1
       );
-      ctx.fillStyle = palette.muscleRecoveringPillText;
-      ctx.textBaseline = 'middle';
-      ctx.textAlign = 'left';
-      ctx.fillText(pillText, pillX + 8, pillY + 11);
+      drawInlineTokens(ctx, pillTokens, pillX + 8, pillY + 15);
     } else {
-      const pillText = '全部肌群已就緒';
-      ctx.font = `500 11px ${MONO_FONT}`;
+      const pillText = rc.t('aiExport.image.allMusclesReady', '全部肌群已就緒');
+      ctx.font = `500 11px ${SANS_FONT}`;
       const pillW = ctx.measureText(pillText).width + 16;
       const pillX = paddingX + cardWidth - 16 - pillW;
-      const pillY = startY + 10;
+      const pillY = startY + 16;
 
       drawRoundedBox(
         ctx,
@@ -1159,17 +1295,17 @@ function renderWorkoutHeroCard(
 
     const statsData = [
       {
-        label: '動作',
+        label: rc.t('aiExport.image.exercisesLabel', '動作'),
         val: `${workout.summary.totalExercises}`,
-        unit: ' 項',
+        unit: rc.t('aiExport.image.exercisesUnit', '項'),
       },
       {
-        label: '完成組數',
+        label: rc.t('aiExport.image.setsLabel', '完成組數'),
         val: `${workout.summary.totalSets}`,
-        unit: ' 組',
+        unit: rc.t('aiExport.image.setsUnit', '組'),
       },
       {
-        label: '總容量',
+        label: rc.t('aiExport.image.totalVolumeLabel', '總容量'),
         val: `${workout.summary.totalVolume.toLocaleString()}`,
         unit: `${workout.summary.weightUnit}`,
       },
@@ -1186,16 +1322,16 @@ function renderWorkoutHeroCard(
       ctx.textAlign = 'left';
       ctx.fillText(st.label, colX, labelY);
 
-      // 數值大字 (font-mono font-bold 18px)
+      // 數值大字 (font-mono font-bold 18px) + 3px 微距 + SANS 單位
       ctx.font = `700 18px ${MONO_FONT}`;
       const numW = ctx.measureText(st.val).width;
       ctx.fillStyle = palette.textPrimary;
       ctx.fillText(st.val, colX, valY);
 
       // 單位小字
-      ctx.font = `400 12px ${MONO_FONT}`;
+      ctx.font = `400 12px ${SANS_FONT}`;
       ctx.fillStyle = palette.textSecondary;
-      ctx.fillText(st.unit, colX + numW, valY + 5);
+      ctx.fillText(st.unit, colX + numW + 3, valY + 5);
     });
 
     ctx.restore();
@@ -1233,16 +1369,17 @@ function renderWorkoutExercisesCard(
     ctx.fillStyle = palette.textPrimary;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
-    ctx.fillText('訓練日誌', innerX, startY + 20);
+    ctx.fillText(rc.t('aiExport.image.workoutLogTitle', '訓練日誌'), innerX, startY + 20);
 
-    // 右側總組數膠囊
-    const setsText = `${workout.summary.totalSets} 組`;
-    ctx.font = `500 11px ${MONO_FONT}`;
-    const setsW = ctx.measureText(setsText).width + 16;
+    // 右側總組數膠囊（數值 MONO + 2px + 單位 SANS）
+    const setsTokens: InlineToken[] = [
+      { text: `${workout.summary.totalSets}`, font: `500 11px ${MONO_FONT}`, color: palette.textSecondary },
+      { text: rc.t('aiExport.image.setsUnit', '組'), font: `400 11px ${SANS_FONT}`, color: palette.textSecondary, gap: 2 },
+    ];
+    const setsW = measureInlineTokens(ctx, setsTokens) + 16;
     const setsX = paddingX + cardWidth - 16 - setsW;
     drawRoundedBox(ctx, setsX, startY + 9, setsW, 22, 11, palette.pillSubtleBg, palette.border, 1);
-    ctx.fillStyle = palette.textSecondary;
-    ctx.fillText(setsText, setsX + 8, startY + 20);
+    drawInlineTokens(ctx, setsTokens, setsX + 8, startY + 24);
     ctx.restore();
   }
   curY += headerHeight + 14;
@@ -1258,7 +1395,7 @@ function renderWorkoutExercisesCard(
       ctx.font = `500 11px ${SANS_FONT}`;
       ctx.fillStyle = palette.textTertiary;
       ctx.textBaseline = 'top';
-      ctx.fillText('當日無訓練記錄', innerX, curY);
+      ctx.fillText(rc.t('aiExport.workout.noLogs', '當日無訓練記錄'), innerX, curY);
       ctx.restore();
     }
     curY += 24;
@@ -1267,8 +1404,8 @@ function renderWorkoutExercisesCard(
       if (session.routineTitle) {
         if (!isMeasureOnly) {
           ctx.save();
-          ctx.font = `600 11px ${MONO_FONT}`;
-          const rText = `課表 · ${session.routineTitle}`;
+          ctx.font = `500 11px ${SANS_FONT}`;
+          const rText = `${rc.t('aiExport.workout.routinePrefix', '課表')} · ${session.routineTitle}`;
           const rW = ctx.measureText(rText).width + 16;
           drawRoundedBox(ctx, innerX, curY, rW, 22, 6, palette.pillSubtleBg, palette.border, 1);
           ctx.fillStyle = palette.textSecondary;
@@ -1282,39 +1419,55 @@ function renderWorkoutExercisesCard(
       for (const ex of session.exercises) {
         if (!isMeasureOnly) {
           ctx.save();
-          ctx.font = `700 13px ${SANS_FONT}`;
+          ctx.font = `600 13px ${SANS_FONT}`;
+          const displayExName = truncateText(ctx, ex.name, innerWidth);
           ctx.fillStyle = palette.textPrimary;
           ctx.textBaseline = 'top';
-          ctx.fillText(ex.name, innerX, curY);
-
-          // 標籤 (器械與肌群)
-          const tags: string[] = [ex.equipment];
-          if (ex.primaryMuscles.length > 0) {
-            tags.push(`主: ${ex.primaryMuscles.join('、')}`);
-          }
-          const tagStr = tags.join(' · ');
-          ctx.font = `500 10px ${SANS_FONT}`;
-          ctx.fillStyle = palette.textTertiary;
-          const tagW = ctx.measureText(tagStr).width;
-          ctx.fillText(tagStr, innerX + innerWidth - tagW, curY + 1);
+          ctx.textAlign = 'left';
+          ctx.fillText(displayExName, innerX, curY);
           ctx.restore();
         }
         curY += 20;
 
-        // 組數清單
+        // 組數清單（雙字體分離 + 2px/3px 微距，支援多語系前綴/後綴）
+        const setPrefix = rc.t('aiExport.image.setPrefix', '第');
+        const setSuffix = rc.t('aiExport.image.setSuffix', '組');
+        const repsUnit = rc.t('aiExport.image.repsUnit', '次');
+
         for (const s of ex.sets) {
           if (!isMeasureOnly) {
-            ctx.save();
-            ctx.font = `500 11px ${MONO_FONT}`;
-            ctx.fillStyle = palette.textSecondary;
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`第 ${s.setNumber} 組`, innerX + 8, curY + 9);
+            const baselineY = curY + 13;
+            const setLabelTokens: InlineToken[] = [
+              { text: setPrefix, font: `400 11px ${SANS_FONT}`, color: palette.textSecondary },
+              { text: `${s.setNumber}`, font: `500 11px ${MONO_FONT}`, color: palette.textSecondary, gap: 3 },
+            ];
+            if (setSuffix) {
+              setLabelTokens.push({
+                text: setSuffix,
+                font: `400 11px ${SANS_FONT}`,
+                color: palette.textSecondary,
+                gap: 3,
+              });
+            }
+            drawInlineTokens(ctx, setLabelTokens, innerX + 8, baselineY);
 
-            const detailStr = `${s.weight}${s.unit} × ${s.reps} 次${s.rpe ? ` @ RPE ${s.rpe}` : ''}`;
-            const detailW = ctx.measureText(detailStr).width;
-            ctx.fillStyle = palette.textPrimary;
-            ctx.fillText(detailStr, innerX + innerWidth - detailW - 8, curY + 9);
-            ctx.restore();
+            const detailTokens: InlineToken[] = [
+              { text: `${s.weight}`, font: `500 11px ${MONO_FONT}`, color: palette.textPrimary },
+              { text: `${s.unit}`, font: `400 10.5px ${SANS_FONT}`, color: palette.textSecondary, gap: 2 },
+              { text: '×', font: `400 11px ${SANS_FONT}`, color: palette.textTertiary, gap: 5 },
+              { text: `${s.reps}`, font: `500 11px ${MONO_FONT}`, color: palette.textPrimary, gap: 5 },
+              { text: repsUnit, font: `400 10.5px ${SANS_FONT}`, color: palette.textSecondary, gap: 2 },
+            ];
+            if (s.rpe) {
+              detailTokens.push({
+                text: `@ RPE ${s.rpe}`,
+                font: `400 10.5px ${MONO_FONT}`,
+                color: palette.textTertiary,
+                gap: 6,
+              });
+            }
+            const detailW = measureInlineTokens(ctx, detailTokens);
+            drawInlineTokens(ctx, detailTokens, innerX + innerWidth - detailW - 8, baselineY);
           }
           curY += 18;
         }
@@ -1330,7 +1483,7 @@ function renderWorkoutExercisesCard(
 }
 
 /**
- * 身體數據卡片 (獨立 Bento 卡片)
+ * 身體數據卡片 (對齊真實 APP 儀表板 3 欄格線：體重 / 平滑趨勢 / 體脂率 + 圍度紀錄)
  */
 function renderBodyCard(
   rc: RenderContext,
@@ -1341,7 +1494,7 @@ function renderBodyCard(
   const headerHeight = 40;
   let curY = startY;
 
-  // 1. 標題 (灰底橫欄)
+  // 1. 標題 (灰底橫欄，不顯示日期)
   if (!isMeasureOnly) {
     ctx.save();
     drawRoundedTopBox(ctx, paddingX, startY, cardWidth, headerHeight, 8, palette.cardHeaderBg);
@@ -1358,14 +1511,10 @@ function renderBodyCard(
     ctx.fillStyle = palette.textPrimary;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
-    ctx.fillText('身體數據 · BODY', innerX, startY + 20);
+    ctx.fillText(rc.t('aiExport.sections.body', '身體數據'), innerX, startY + 20);
     ctx.restore();
   }
-  curY += headerHeight + 14;
-
-  const innerPad = 16;
-  const innerWidth = cardWidth - innerPad * 2;
-  const innerX = paddingX + innerPad;
+  curY += headerHeight;
 
   const hasData =
     body.weight !== undefined ||
@@ -1376,146 +1525,226 @@ function renderBodyCard(
   if (!hasData) {
     if (!isMeasureOnly) {
       ctx.save();
-      ctx.font = `500 11px ${SANS_FONT}`;
+      ctx.font = `400 12px ${SANS_FONT}`;
       ctx.fillStyle = palette.textTertiary;
-      ctx.textBaseline = 'top';
-      ctx.fillText('當日無身體數據記錄', innerX, curY);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(rc.t('aiExport.body.noLogs', '當日無身體數據記錄'), paddingX + cardWidth / 2, curY + 24);
       ctx.restore();
     }
-    curY += 24;
+    curY += 48;
   } else {
-    // 體重大字
-    if (body.weight !== undefined) {
-      if (!isMeasureOnly) {
-        ctx.save();
-        ctx.font = `700 32px ${MONO_FONT}`;
-        ctx.fillStyle = palette.textPrimary;
-        ctx.textBaseline = 'alphabetic';
-        const wStr = `${body.weight}`;
-        ctx.fillText(wStr, innerX, curY + 28);
-        const wStrW = ctx.measureText(wStr).width;
+    // 2. 核心指標 3 等分欄 (體重 | 平滑趨勢 | 體脂率，與訓練卡片 3 欄完全對齊)
+    const statH = 68;
+    const colW = cardWidth / 3;
 
-        ctx.font = `500 14px ${MONO_FONT}`;
+    if (!isMeasureOnly) {
+      ctx.save();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = palette.divider;
+      ctx.beginPath();
+      ctx.moveTo(paddingX + colW, curY);
+      ctx.lineTo(paddingX + colW, curY + statH);
+      ctx.moveTo(paddingX + colW * 2, curY);
+      ctx.lineTo(paddingX + colW * 2, curY + statH);
+      ctx.stroke();
+
+      const bodyStats = [
+        {
+          label: rc.t('body.weight', '體重'),
+          val: body.weight !== undefined ? `${body.weight}` : '-',
+          unit: body.weight !== undefined ? body.weightUnit : '',
+          gap: 3,
+          isHistorical: Boolean(body.weightIsHistorical || body.isHistoricalFallback),
+        },
+        {
+          label: rc.t('aiExport.image.trendLabel', '平滑趨勢'),
+          val: body.trendWeight !== undefined ? `${body.trendWeight}` : '-',
+          unit: body.trendWeight !== undefined ? body.weightUnit : '',
+          gap: 3,
+          isHistorical: Boolean(
+            body.weight === undefined || body.weightIsHistorical || body.isHistoricalFallback
+          ),
+        },
+        {
+          label: rc.t('aiExport.body.bodyFat', '體脂率'),
+          val: body.bodyFat !== undefined ? `${body.bodyFat}` : '-',
+          unit: body.bodyFat !== undefined ? '%' : '',
+          gap: 2,
+          isHistorical: Boolean(body.bodyFatIsHistorical || body.isHistoricalFallback),
+        },
+      ];
+
+      bodyStats.forEach((st, idx) => {
+        const colX = paddingX + idx * colW + 16;
+        const labelY = curY + 14;
+        const valBaselineY = curY + 51;
+
+        ctx.font = `500 12px ${SANS_FONT}`;
         ctx.fillStyle = palette.textSecondary;
-        ctx.fillText(`${body.weightUnit}`, innerX + wStrW, curY + 28);
-
-        // 趨勢體重 / 體脂標籤
-        const tags: string[] = [];
-        if (body.trendWeight !== undefined) {
-          tags.push(`趨勢: ${body.trendWeight}${body.weightUnit}`);
-        }
-        if (body.bodyFat !== undefined) {
-          tags.push(`體脂: ${body.bodyFat}%`);
-        }
-
-        if (tags.length > 0) {
-          const metaStr = tags.join(' · ');
-          ctx.font = `600 11px ${MONO_FONT}`;
-          const metaW = ctx.measureText(metaStr).width + 16;
-          const metaX = innerX + innerWidth - metaW;
-          drawRoundedBox(
-            ctx,
-            metaX,
-            curY + 8,
-            metaW,
-            24,
-            6,
-            palette.pillSubtleBg,
-            palette.border,
-            1
-          );
-          ctx.fillStyle = palette.textSecondary;
-          ctx.textBaseline = 'middle';
-          ctx.fillText(metaStr, metaX + 8, curY + 20);
-        }
-        ctx.restore();
-      }
-      curY += 42;
-    }
-
-    // 圍度膠囊
-    if (body.circumferences.length > 0) {
-      curY += 4;
-      if (!isMeasureOnly) {
-        ctx.save();
-        ctx.font = `600 10px ${SANS_FONT}`;
-        ctx.fillStyle = palette.textTertiary;
         ctx.textBaseline = 'top';
-        ctx.fillText('圍度紀錄', innerX, curY);
-        ctx.restore();
-      }
-      curY += 18;
+        ctx.textAlign = 'left';
+        ctx.fillText(st.label, colX, labelY);
+
+        if (st.unit) {
+          const valColor = st.isHistorical ? palette.textTertiary : palette.textPrimary;
+          const unitColor = st.isHistorical ? palette.textTertiary : palette.textSecondary;
+          drawInlineTokens(
+            ctx,
+            [
+              { text: st.val, font: `700 18px ${MONO_FONT}`, color: valColor },
+              { text: st.unit, font: `400 12px ${SANS_FONT}`, color: unitColor, gap: st.gap },
+            ],
+            colX,
+            valBaselineY
+          );
+        } else {
+          ctx.font = `400 18px ${MONO_FONT}`;
+          ctx.fillStyle = palette.textTertiary;
+          ctx.textBaseline = 'alphabetic';
+          ctx.fillText(st.val, colX, valBaselineY);
+        }
+      });
+
+      ctx.restore();
+    }
+    curY += statH;
+
+    // 3. 圍度紀錄區 (對齊真實 APP Body.tsx 等分格線網格，最多每行 4 欄，歷史數據顯示為灰色)
+    if (body.circumferences.length > 0) {
+      const colsPerRow = Math.min(4, body.circumferences.length);
+      const rowCount = Math.ceil(body.circumferences.length / colsPerRow);
+      const cellH = 60;
+      const gridCellW = cardWidth / colsPerRow;
 
       if (!isMeasureOnly) {
         ctx.save();
-        let curX = innerX;
-        let curRowY = curY;
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = palette.divider;
 
-        for (const c of body.circumferences) {
-          const itemText = `${c.label} ${c.value}${c.unit}`;
-          ctx.font = `500 10px ${MONO_FONT}`;
-          const itemW = ctx.measureText(itemText).width + 14;
+        // 頂部水平分割線
+        ctx.beginPath();
+        ctx.moveTo(paddingX, curY);
+        ctx.lineTo(paddingX + cardWidth, curY);
+        ctx.stroke();
 
-          if (curX + itemW > innerX + innerWidth && curX !== innerX) {
-            curX = innerX;
-            curRowY += 24;
+        // 繪製每一列的水平線與欄垂直分割線
+        for (let r = 0; r < rowCount; r++) {
+          const rowY = curY + r * cellH;
+          if (r > 0) {
+            ctx.beginPath();
+            ctx.moveTo(paddingX, rowY);
+            ctx.lineTo(paddingX + cardWidth, rowY);
+            ctx.stroke();
           }
 
-          drawRoundedBox(
-            ctx,
-            curX,
-            curRowY,
-            itemW,
-            20,
-            5,
-            palette.pillSubtleBg,
-            palette.border,
-            1
-          );
-          ctx.fillStyle = palette.textSecondary;
-          ctx.textBaseline = 'middle';
-          ctx.fillText(itemText, curX + 7, curRowY + 10);
-
-          curX += itemW + 6;
+          for (let c = 1; c < colsPerRow; c++) {
+            const lineX = paddingX + c * gridCellW;
+            ctx.beginPath();
+            ctx.moveTo(lineX, rowY);
+            ctx.lineTo(lineX, rowY + cellH);
+            ctx.stroke();
+          }
         }
+
+        // 繪製每個圍度儲存格（置中對齊 Body.tsx）
+        body.circumferences.forEach((circ, idx) => {
+          const r = Math.floor(idx / colsPerRow);
+          const c = idx % colsPerRow;
+          const cellCenterX = paddingX + c * gridCellW + gridCellW / 2;
+          const rowY = curY + r * cellH;
+
+          ctx.font = `400 11px ${SANS_FONT}`;
+          ctx.fillStyle = palette.textSecondary;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillText(circ.label, cellCenterX, rowY + 12);
+
+          const isHist = Boolean(circ.isHistorical || body.isHistoricalFallback);
+          const valColor = isHist ? palette.textTertiary : palette.textPrimary;
+          const unitColor = isHist ? palette.textTertiary : palette.textSecondary;
+          const circTokens: InlineToken[] = [
+            { text: `${circ.value}`, font: `500 15px ${MONO_FONT}`, color: valColor },
+            { text: circ.unit, font: `400 11px ${SANS_FONT}`, color: unitColor, gap: 2 },
+          ];
+          const totalW = measureInlineTokens(ctx, circTokens);
+          drawInlineTokens(ctx, circTokens, cellCenterX - totalW / 2, rowY + 44);
+        });
+
         ctx.restore();
       }
-
-      let testX = innerX;
-      let rows = 1;
-      for (const c of body.circumferences) {
-        const itemText = `${c.label} ${c.value}${c.unit}`;
-        const itemW = 10 * itemText.length * 0.6 + 14;
-        if (testX + itemW > innerX + innerWidth && testX !== innerX) {
-          testX = innerX;
-          rows++;
-        }
-        testX += itemW + 6;
-      }
-      curY += rows * 24;
+      curY += rowCount * cellH;
     }
   }
 
-  curY += innerPad - 6;
-  const totalCardH = curY - startY;
-
-  return startY + totalCardH + rc.cardGap;
+  return curY + rc.cardGap;
 }
 
 /**
  * 底部 Footer
  */
+const SHARE_SITE_URL = 'https://e2cal.pages.dev/';
+const CACHED_QR_MATRIX = generateQrMatrix(SHARE_SITE_URL);
+
 function renderFooter(rc: RenderContext, y: number): number {
   const { ctx, palette, paddingX, cardWidth, isMeasureOnly } = rc;
-  const footerH = 24;
+  const topPad = 2;
+  const qrBoxSize = 54;
+  const footerH = topPad + qrBoxSize;
+  const edgeInset = 8;
+  const contentLeft = paddingX + edgeInset;
+  const contentRight = paddingX + cardWidth - edgeInset;
 
   if (!isMeasureOnly) {
     ctx.save();
-    ctx.font = `600 10px ${MONO_FONT}`;
-    ctx.fillStyle = palette.textTertiary;
-    ctx.textAlign = 'center';
+
+    const contentTop = y + topPad;
+    const centerY = contentTop + qrBoxSize / 2;
+
+    // 左側：品牌描述與網站連結（比例字體）
+    ctx.font = `600 12px ${BRAND_FONT}`;
+    const brandName = 'e2Cal';
+    const brandW = ctx.measureText(brandName).width;
+    ctx.fillStyle = palette.textPrimary;
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('E2CAL · LOCAL-FIRST FITNESS TRACKER', paddingX + cardWidth / 2, y + 12);
+    ctx.fillText(brandName, contentLeft, centerY - 9);
+
+    ctx.font = `400 11px ${SANS_FONT}`;
+    ctx.fillStyle = palette.textSecondary;
+    ctx.fillText(
+      rc.t('aiExport.image.footerTagline', ' · Local-First 個人飲食與訓練追蹤'),
+      contentLeft + brandW,
+      centerY - 9
+    );
+
+    ctx.font = `400 11px ${SANS_FONT}`;
+    ctx.fillStyle = palette.textTertiary;
+    ctx.fillText(SHARE_SITE_URL, contentLeft, centerY + 10);
+
+    // 右側：純白底高對比 QR Code 二維碼
+    const qrX = contentRight - qrBoxSize;
+    const qrY = contentTop;
+    drawRoundedBox(ctx, qrX, qrY, qrBoxSize, qrBoxSize, 6, '#ffffff', palette.border, 1);
+
+    const moduleCount = CACHED_QR_MATRIX.length;
+    const innerPad = 4;
+    const innerSize = qrBoxSize - innerPad * 2;
+    const cellSize = innerSize / moduleCount;
+
+    ctx.fillStyle = '#09090b';
+    for (let r = 0; r < moduleCount; r++) {
+      const y0 = Math.round(qrY + innerPad + r * cellSize);
+      const y1 = Math.round(qrY + innerPad + (r + 1) * cellSize);
+      for (let c = 0; c < moduleCount; c++) {
+        if (CACHED_QR_MATRIX[r][c]) {
+          const x0 = Math.round(qrX + innerPad + c * cellSize);
+          const x1 = Math.round(qrX + innerPad + (c + 1) * cellSize);
+          ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+        }
+      }
+    }
+
     ctx.restore();
   }
 
@@ -1543,6 +1772,8 @@ export function renderDailyExportToCanvas(
   const cardGap = 16;
   const cardRadius = 8;
 
+  const t: TFunction = options?.t || i18n.t.bind(i18n);
+
   // 1. Pass 1: 測量總高度
   const measureCanvas =
     typeof document !== 'undefined'
@@ -1563,6 +1794,7 @@ export function renderDailyExportToCanvas(
     cardWidth,
     cardGap,
     isMeasureOnly: true,
+    t,
   };
 
   let measuredY = 24;
@@ -1620,6 +1852,7 @@ export function renderDailyExportToCanvas(
     cardWidth,
     cardGap,
     isMeasureOnly: false,
+    t,
   };
 
   let drawY = 24;

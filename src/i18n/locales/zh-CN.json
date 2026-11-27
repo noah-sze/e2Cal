@@ -1451,7 +1451,26 @@
       },
       "copyFailed": "复制失败",
       "jsonCopied": "已复制 JSON",
-      "textCopied": "已复制纯文本"
+      "textCopied": "已复制纯文本",
+      "image": {
+        "snapshotSubtitle": "每日数据快照",
+        "footerTagline": " · Local-First 个人饮食与训练追踪",
+        "recoveringMusclesSuffix": "个肌群恢复中",
+        "allMusclesReady": "全部肌群已就绪",
+        "exercisesLabel": "动作",
+        "exercisesUnit": "项",
+        "setsLabel": "完成组数",
+        "setsUnit": "组",
+        "totalVolumeLabel": "总容量",
+        "workoutLogTitle": "训练日志",
+        "setPrefix": "第",
+        "setSuffix": "组",
+        "repsUnit": "次",
+        "macroTagCarbs": "碳",
+        "macroTagProtein": "蛋",
+        "macroTagFat": "脂",
+        "trendLabel": "平滑趋势"
+      }
     },
     "landing": {
       "metaTitle": "e2Cal - 饮食、训练记录",

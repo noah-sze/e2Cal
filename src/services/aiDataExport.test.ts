@@ -416,6 +416,46 @@ describe('aiDataExport', () => {
       expect(textStr).not.toContain('臀圍');
       expect(textStr).not.toContain('大腿圍');
     });
+
+    it('當日無身體數據時，自動回退帶入最近一筆真實歷史記錄並標記 recordedDate', () => {
+      const payload = buildDailyExportPayload({
+        date: '2026-04-20',
+        scope: 'body',
+        bodyMetric: null,
+        allBodyMetrics: mockHistory,
+        unitPreferences: { bodyWeight: 'kg', length: 'cm' },
+      });
+
+      const body = payload.body!;
+      expect(body.isHistoricalFallback).toBe(true);
+      expect(body.recordedDate).toBe('2026-04-17');
+      expect(body.weight).toBe(71.2);
+      expect(body.weightIsHistorical).toBe(true);
+      expect(body.bodyFat).toBe(14.5);
+      expect(body.bodyFatIsHistorical).toBe(true);
+    });
+
+    it('當日僅記錄體脂時，體重獨立回退至最近歷史並標記 weightIsHistorical', () => {
+      const payload = buildDailyExportPayload({
+        date: '2026-04-18',
+        scope: 'body',
+        bodyMetric: {
+          id: 'bm-3',
+          date: '2026-04-18',
+          bodyFat: 14.2,
+          createdAt: 3000,
+          updatedAt: 3000,
+        },
+        allBodyMetrics: mockHistory,
+        unitPreferences: { bodyWeight: 'kg', length: 'cm' },
+      });
+
+      const body = payload.body!;
+      expect(body.weight).toBe(71.2);
+      expect(body.weightIsHistorical).toBe(true);
+      expect(body.bodyFat).toBe(14.2);
+      expect(body.bodyFatIsHistorical).toBeUndefined();
+    });
   });
 
   describe('999x 放縱模式 (Binge Activity Level)', () => {
