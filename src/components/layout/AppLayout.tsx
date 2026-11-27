@@ -40,6 +40,10 @@ import Body from '@/pages/Body';
 
 // 子視圖頁面
 import Settings from '@/pages/Settings';
+import AppearanceSettingsPage from '@/pages/settings/AppearanceSettingsPage';
+import UnitsAndBodySettingsPage from '@/pages/settings/UnitsAndBodySettingsPage';
+import AISettingsPage from '@/pages/settings/AISettingsPage';
+import DataAndSystemSettingsPage from '@/pages/settings/DataAndSystemSettingsPage';
 import ProfileSettings from '@/pages/ProfileSettings';
 import FoodsPage from '@/pages/FoodsPage';
 import AuthorityFoodsPage from '@/pages/AuthorityFoodsPage';
@@ -223,6 +227,10 @@ export function AppLayout() {
   const subPageTitle = useMemo(() => {
     if (!subRoute) return '';
     if (subRoute.module === 'settings') return t('settings.title');
+    if (subRoute.module === 'settings-appearance') return t('settings.appearanceAndLanguage');
+    if (subRoute.module === 'settings-units') return t('settings.unitsAndBody');
+    if (subRoute.module === 'settings-ai') return t('settings.aiAssistant');
+    if (subRoute.module === 'settings-data') return t('settings.dataAndSystem');
     if (subRoute.module === 'profile') return t('profileSettings.title');
     if (subRoute.module === 'foods') {
       if (subRoute.detailKind === 'recipe') return t('diet.recipeDetails');
@@ -359,6 +367,10 @@ export function AppLayout() {
           {isSubPage && subRoute && (
             <div key={currentViewKey} className="w-full animate-in fade-in-50 duration-150">
               {subRoute.module === 'settings' && <Settings />}
+              {subRoute.module === 'settings-appearance' && <AppearanceSettingsPage />}
+              {subRoute.module === 'settings-units' && <UnitsAndBodySettingsPage />}
+              {subRoute.module === 'settings-ai' && <AISettingsPage />}
+              {subRoute.module === 'settings-data' && <DataAndSystemSettingsPage />}
               {subRoute.module === 'profile' && <ProfileSettings />}
               {subRoute.module === 'foods' && <FoodsPage />}
               {subRoute.module === 'authority-foods' && <AuthorityFoodsPage />}

@@ -7,6 +7,10 @@ export const APP_ROUTES = {
   home: '/app',
   dev: '/dev',
   settings: '/app/settings',
+  settingsAppearance: '/app/settings/appearance',
+  settingsUnits: '/app/settings/units',
+  settingsAi: '/app/settings/ai',
+  settingsData: '/app/settings/data',
   profile: '/app/profile',
   foods: '/app/foods',
   authorityFoods: '/app/authority-foods',
@@ -19,6 +23,10 @@ export const APP_ROUTES = {
 
 export type AppSubRoute =
   | { module: 'settings' }
+  | { module: 'settings-appearance' }
+  | { module: 'settings-units' }
+  | { module: 'settings-ai' }
+  | { module: 'settings-data' }
   | { module: 'profile' }
   | { module: 'foods'; detailKind?: 'food' | 'recipe'; id?: string }
   | { module: 'authority-foods' }
@@ -40,6 +48,18 @@ export function parseAppSubRoute(pathname: string): AppSubRoute | null {
 
   if (normalized === '/app/settings') {
     return { module: 'settings' };
+  }
+  if (normalized === '/app/settings/appearance') {
+    return { module: 'settings-appearance' };
+  }
+  if (normalized === '/app/settings/units') {
+    return { module: 'settings-units' };
+  }
+  if (normalized === '/app/settings/ai') {
+    return { module: 'settings-ai' };
+  }
+  if (normalized === '/app/settings/data') {
+    return { module: 'settings-data' };
   }
   if (normalized === '/app/profile') {
     return { module: 'profile' };
