@@ -12,6 +12,7 @@ import {
 import { NutritionBasisToggle } from '@/components/food/NutritionBasisToggle';
 import { FoodListItem } from '@/components/food/FoodListItem';
 import { RecipeListItem } from '@/components/food/RecipeListItem';
+import { NutritionTagFilterMenu, FoodSortFilterMenu } from '@/components/food/FoodFilterMenus';
 import { AuthorityFoodSearchDialog } from '@/components/food/AuthorityFoodSearchDialog';
 import { useFoods } from '@/hooks/useFoods';
 import { useRecipes } from '@/hooks/useRecipes';
@@ -837,163 +838,14 @@ export function FoodRecipeBrowser({
               </div>
 
             {/* 營養特徵選單 */}
-            <div
-              className={cn(
-                'inline-flex items-center rounded-full text-xs font-mono transition-all border shrink-0',
-                selectedNutritionTag !== 'all'
-                  ? 'bg-foreground text-background border-foreground font-medium'
-                  : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
-              )}
-            >
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <button
-                      type="button"
-                      className={cn(
-                        'flex items-center gap-1.5 py-1 pl-2.5 cursor-pointer focus:outline-none whitespace-nowrap',
-                        selectedNutritionTag !== 'all' ? 'pr-1' : 'pr-2'
-                      )}
-                    >
-                      <SlidersHorizontal className="size-3 opacity-60 shrink-0" />
-                      <span className="truncate">
-                        {selectedNutritionTag === 'all'
-                          ? t('diet.nutritionTags.title', '營養特徵')
-                          : t(`diet.nutritionTags.${selectedNutritionTag}`)}
-                      </span>
-                      {selectedNutritionTag === 'all' && (
-                        <ChevronDown className="size-3 opacity-60 shrink-0" />
-                      )}
-                    </button>
-                  }
-                />
-                <DropdownMenuContent align="start" className="w-[180px] font-mono text-xs">
-                  <DropdownMenuItem
-                    onClick={() => {
-                      triggerHaptic('selection');
-                      setSelectedNutritionTag('all');
-                    }}
-                    className={cn(
-                      'cursor-pointer flex items-center justify-between',
-                      selectedNutritionTag === 'all' && 'font-semibold bg-muted'
-                    )}
-                  >
-                    <span>{t('diet.nutritionTags.all', '全部')}</span>
-                    <span className="text-3xs text-muted-foreground font-mono">
-                      {tabBaseFoods.length}
-                    </span>
-                  </DropdownMenuItem>
-                  {(
-                    [
-                      { id: 'carb-source', label: t('diet.nutritionTags.carb-source') },
-                      { id: 'high-protein', label: t('diet.nutritionTags.high-protein') },
-                      { id: 'fat-source', label: t('diet.nutritionTags.fat-source') },
-                      { id: 'high-fiber', label: t('diet.nutritionTags.high-fiber') },
-                      { id: 'low-calorie', label: t('diet.nutritionTags.low-calorie') },
-                      { id: 'high-calorie', label: t('diet.nutritionTags.high-calorie') },
-                    ] as const
-                  ).map((tag) => (
-                    <DropdownMenuItem
-                      key={tag.id}
-                      onClick={() => {
-                        triggerHaptic('selection');
-                        setSelectedNutritionTag(tag.id);
-                      }}
-                      className={cn(
-                        'cursor-pointer flex items-center justify-between',
-                        selectedNutritionTag === tag.id && 'font-semibold bg-muted'
-                      )}
-                    >
-                      <span>{tag.label}</span>
-                      <span className="text-3xs text-muted-foreground font-mono">
-                        {nutritionTagCounts[tag.id]}
-                      </span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+            <NutritionTagFilterMenu
+              value={selectedNutritionTag}
+              onChange={setSelectedNutritionTag}
+              counts={nutritionTagCounts}
+              allCount={tabBaseFoods.length}
+            />
 
-              {selectedNutritionTag !== 'all' && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerHaptic('light');
-                    setSelectedNutritionTag('all');
-                  }}
-                  className="p-1 pr-2 hover:opacity-70 cursor-pointer"
-                  title={t('diet.resetFilter', '重設')}
-                >
-                  <X className="size-3" />
-                </button>
-              )}
-            </div>
-
-            {/* 排序功能選單 */}
-            <div
-              className={cn(
-                'inline-flex items-center rounded-full text-xs font-mono transition-all border shrink-0',
-                foodSortBy !== 'default'
-                  ? 'bg-foreground text-background border-foreground font-medium'
-                  : 'border-border/60 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border'
-              )}
-            >
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <button
-                      type="button"
-                      className={cn(
-                        'flex items-center gap-1.5 py-1 pl-2.5 cursor-pointer focus:outline-none whitespace-nowrap',
-                        foodSortBy !== 'default' ? 'pr-1' : 'pr-2'
-                      )}
-                    >
-                      <ArrowUpDown className="size-3 opacity-60 shrink-0" />
-                      <span className="truncate">
-                        {foodSortBy === 'default'
-                          ? t('diet.sort.title', '排序')
-                          : sortOptions.find((o) => o.id === foodSortBy)?.label ?? t('diet.sort.title', '排序')}
-                      </span>
-                      {foodSortBy === 'default' && (
-                        <ChevronDown className="size-3 opacity-60 shrink-0" />
-                      )}
-                    </button>
-                  }
-                />
-                <DropdownMenuContent align="start" className="w-[180px] font-mono text-xs">
-                  {sortOptions.map((opt) => (
-                    <DropdownMenuItem
-                      key={opt.id}
-                      onClick={() => {
-                        triggerHaptic('selection');
-                        setFoodSortBy(opt.id);
-                      }}
-                      className={cn(
-                        'cursor-pointer flex items-center justify-between',
-                        foodSortBy === opt.id && 'font-semibold bg-muted'
-                      )}
-                    >
-                      <span>{opt.label}</span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {foodSortBy !== 'default' && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerHaptic('light');
-                    setFoodSortBy('default');
-                  }}
-                  className="p-1 pr-2 hover:opacity-70 cursor-pointer"
-                  title={t('diet.resetFilter', '重設')}
-                >
-                  <X className="size-3" />
-                </button>
-              )}
-            </div>
+            <FoodSortFilterMenu value={foodSortBy} onChange={setFoodSortBy} />
 
             {/* 新增食物按鈕 (靠右對齊，精確匹配過濾列高度與膠囊風格，分流權威科研庫與手動添加) */}
             {(onAddFood || onAdd || onAddAuthorityFood) && (

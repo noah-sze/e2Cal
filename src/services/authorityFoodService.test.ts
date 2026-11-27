@@ -23,6 +23,8 @@ vi.mock('@/services/db/authorityFoods.json', () => ({
       carbs: 1.6,
       protein: 12.6,
       fat: 9.2,
+      refuseRate: 0.12,
+      edibleRate: 0.88,
       dataSource: {
         authority: 'TFDA',
         sourceId: 'I0100101',
@@ -151,6 +153,9 @@ describe('authorityFoodService localization & bilingual search', () => {
     const limited = await searchAuthorityFoodsWithTotal('去皮雞腿', 1, 'USDA', 'zh-TW', false);
     expect(limited.items).toHaveLength(1);
     expect(limited.total).toBe(2);
+
+    const refuseOnlyHits = await searchAuthorityFoods('雞', 10, 'all', 'zh-TW', false, true);
+    expect(refuseOnlyHits.map((f) => f.id)).toEqual(['tfda-egg-1']);
   });
 
   it('findAuthorityFood & getCachedAuthorityFood resolve by id or authority+sourceId in O(1)', async () => {
@@ -168,5 +173,69 @@ describe('authorityFoodService localization & bilingual search', () => {
     expect(getCachedAuthorityFood('tfda-egg-1')?.id).toBe('tfda-egg-1');
     expect(getCachedAuthorityFood(undefined, 'USDA', '05062')?.id).toBe('usda-chicken-1');
     expect(await findAuthorityFood('missing')).toBeUndefined();
+  });
+
+  it('filters by nutritionTag with tagCounts and sorts by FoodSortOption', async () => {
+    const highProtein = await searchAuthorityFoodsWithTotal(
+      '雞',
+      10,
+      'all',
+      'zh-TW',
+      false,
+      false,
+      'high-protein',
+      'default'
+    );
+    expect(highProtein.allTagTotal).toBeGreaterThanOrEqual(highProtein.total);
+    expect(highProtein.tagCounts['high-protein']).toBe(highProtein.total);
+    expect(highProtein.items.length).toBeGreaterThan(0);
+
+    const byCaloriesDesc = await searchAuthorityFoods(
+      '雞',
+      10,
+      'all',
+      'zh-TW',
+      false,
+      false,
+      'all',
+      'calories-desc'
+    );
+    for (let i = 1; i < byCaloriesDesc.length; i++) {
+      expect(byCaloriesDesc[i - 1].macros.calories).toBeGreaterThanOrEqual(
+        byCaloriesDesc[i].macros.calories
+      );
+    }
+
+    const byCaloriesAsc = await searchAuthorityFoods(
+      '雞',
+      10,
+      'all',
+      'zh-TW',
+      false,
+      false,
+      'all',
+      'calories-asc'
+    );
+    for (let i = 1; i < byCaloriesAsc.length; i++) {
+      expect(byCaloriesAsc[i - 1].macros.calories).toBeLessThanOrEqual(
+        byCaloriesAsc[i].macros.calories
+      );
+    }
+
+    const byProteinDesc = await searchAuthorityFoods(
+      '雞',
+      10,
+      'all',
+      'zh-TW',
+      false,
+      false,
+      'all',
+      'protein-desc'
+    );
+    for (let i = 1; i < byProteinDesc.length; i++) {
+      expect(byProteinDesc[i - 1].macros.protein).toBeGreaterThanOrEqual(
+        byProteinDesc[i].macros.protein
+      );
+    }
   });
 });

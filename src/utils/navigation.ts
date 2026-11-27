@@ -9,6 +9,7 @@ export const APP_ROUTES = {
   settings: '/app/settings',
   profile: '/app/profile',
   foods: '/app/foods',
+  authorityFoods: '/app/authority-foods',
   foodDetail: (id: string) => `/app/foods/${encodeURIComponent(id)}`,
   recipeDetail: (id: string) => `/app/recipes/${encodeURIComponent(id)}`,
   exercises: '/app/exercises',
@@ -20,6 +21,7 @@ export type AppSubRoute =
   | { module: 'settings' }
   | { module: 'profile' }
   | { module: 'foods'; detailKind?: 'food' | 'recipe'; id?: string }
+  | { module: 'authority-foods' }
   | { module: 'exercises'; detailKind?: 'exercise' | 'routine'; id?: string };
 
 function safeDecodeSegment(segment: string): string {
@@ -44,6 +46,9 @@ export function parseAppSubRoute(pathname: string): AppSubRoute | null {
   }
   if (normalized === '/app/foods') {
     return { module: 'foods' };
+  }
+  if (normalized === '/app/authority-foods') {
+    return { module: 'authority-foods' };
   }
   if (normalized.startsWith('/app/foods/')) {
     const id = normalized.slice('/app/foods/'.length);
@@ -109,6 +114,7 @@ export function getHierarchicalFallbackPath(pathname: string): string {
   // 2. 二級管理清單或個人資料 -> 回到設定首頁
   if (
     normalized === '/app/foods' ||
+    normalized === '/app/authority-foods' ||
     normalized === '/app/exercises' ||
     normalized === '/app/profile' ||
     normalized.startsWith('/app/settings/') ||

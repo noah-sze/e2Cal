@@ -42,6 +42,7 @@ import Body from '@/pages/Body';
 import Settings from '@/pages/Settings';
 import ProfileSettings from '@/pages/ProfileSettings';
 import FoodsPage from '@/pages/FoodsPage';
+import AuthorityFoodsPage from '@/pages/AuthorityFoodsPage';
 import ExercisesPage from '@/pages/ExercisesPage';
 
 function getViewKey(tab: AppMainTab, subRoute: AppSubRoute | null): string {
@@ -228,6 +229,9 @@ export function AppLayout() {
       if (subRoute.detailKind === 'food') return t('diet.foodDetails');
       return t('settings.dietSection');
     }
+    if (subRoute.module === 'authority-foods') {
+      return t('settings.authorityFoodSection');
+    }
     if (subRoute.module === 'exercises') {
       if (subRoute.detailKind === 'routine') return t('workout.routineDetails');
       if (subRoute.detailKind === 'exercise') return t('workout.exerciseDetails');
@@ -357,6 +361,7 @@ export function AppLayout() {
               {subRoute.module === 'settings' && <Settings />}
               {subRoute.module === 'profile' && <ProfileSettings />}
               {subRoute.module === 'foods' && <FoodsPage />}
+              {subRoute.module === 'authority-foods' && <AuthorityFoodsPage />}
               {subRoute.module === 'exercises' && <ExercisesPage />}
             </div>
           )}

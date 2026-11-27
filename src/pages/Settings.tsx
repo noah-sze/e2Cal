@@ -681,6 +681,20 @@ export default function Settings() {
             <ChevronRight className="size-4 opacity-50 group-hover:opacity-100 transition-opacity" />
           </div>
 
+          {/* 食物數據庫 */}
+          <div
+            onClick={() => {
+              triggerHaptic('light');
+              navigate(APP_ROUTES.authorityFoods);
+            }}
+            className="usage-row cursor-pointer group hover:bg-hover transition-colors"
+          >
+            <span className="text-sm font-normal text-foreground">
+              {t('settings.authorityFoodSection')}
+            </span>
+            <ChevronRight className="size-4 opacity-50 group-hover:opacity-100 transition-opacity" />
+          </div>
+
           {/* 恢復預設數據 */}
           <div
             onClick={handleRestoreDefaults}

@@ -1,8 +1,10 @@
 import i18n from '@/i18n/config';
 import { db } from '@/services/db/db';
-import type { FoodItem, AuthoritySource } from '@/types';
+import type { FoodItem, AuthoritySource, NutritionTag } from '@/types';
+import type { FoodSortOption } from '@/store/useBrowserStateStore';
 import { clearFoodsCache } from '@/hooks/useFoods';
 import { matchesMultilingual } from '@/utils/multilingualSearch';
+import { evaluateNutritionalHighlight } from '@/utils/nutritionEvaluation';
 
 export type AuthorityLocale = 'zh-TW' | 'zh-CN' | 'en';
 
@@ -302,6 +304,40 @@ export function isRawOrWholeAuthorityFood(food: FoodItem): boolean {
   return true;
 }
 
+function createEmptyNutritionTagCounts(): Record<NutritionTag, number> {
+  return {
+    'high-protein': 0,
+    'carb-source': 0,
+    'fat-source': 0,
+    'high-fiber': 0,
+    'low-calorie': 0,
+    'high-calorie': 0,
+  };
+}
+
+function compareFoodsBySortOption(a: FoodItem, b: FoodItem, sortBy: FoodSortOption): number {
+  if (sortBy === 'calories-desc') {
+    const diff = b.macros.calories - a.macros.calories;
+    if (Math.abs(diff) > 0.001) return diff;
+  } else if (sortBy === 'calories-asc') {
+    const diff = a.macros.calories - b.macros.calories;
+    if (Math.abs(diff) > 0.001) return diff;
+  } else if (sortBy === 'protein-desc') {
+    const diff = b.macros.protein - a.macros.protein;
+    if (Math.abs(diff) > 0.001) return diff;
+  } else if (sortBy === 'carbs-desc') {
+    const diff = b.macros.carbs.total - a.macros.carbs.total;
+    if (Math.abs(diff) > 0.001) return diff;
+  } else if (sortBy === 'fat-desc') {
+    const diff = b.macros.fat.total - a.macros.fat.total;
+    if (Math.abs(diff) > 0.001) return diff;
+  } else if (sortBy === 'fiber-desc') {
+    const diff = (b.macros.carbs.fiber ?? 0) - (a.macros.carbs.fiber ?? 0);
+    if (Math.abs(diff) > 0.001) return diff;
+  }
+  return 0;
+}
+
 /**
  * 在權威庫中進行多語模糊檢索，同時回傳截斷後清單與真實總命中數
  */
@@ -310,15 +346,24 @@ export async function searchAuthorityFoodsWithTotal(
   limit = 40,
   authorityFilter?: 'all' | AuthoritySource,
   lang?: string,
-  rawOnly = false
-): Promise<{ items: FoodItem[]; total: number }> {
+  rawOnly = false,
+  refuseOnly = false,
+  nutritionTag: 'all' | NutritionTag = 'all',
+  sortBy: FoodSortOption = 'default'
+): Promise<{
+  items: FoodItem[];
+  total: number;
+  tagCounts: Record<NutritionTag, number>;
+  allTagTotal: number;
+}> {
   const trimmed = query.trim();
-  if (!trimmed) return { items: [], total: 0 };
+  const tagCounts = createEmptyNutritionTagCounts();
+  if (!trimmed) return { items: [], total: 0, tagCounts, allTagTotal: 0 };
 
   const foods = await getAuthorityFoods(lang);
   const tokens = tokenizeFoodSearchQuery(trimmed);
 
-  const scored: { food: FoodItem; score: number }[] = [];
+  const scored: { food: FoodItem; score: number; labels: NutritionTag[] }[] = [];
 
   for (const food of foods) {
     if (authorityFilter && authorityFilter !== 'all') {
@@ -331,6 +376,10 @@ export async function searchAuthorityFoodsWithTotal(
       continue;
     }
 
+    if (refuseOnly && !(typeof food.refuseRate === 'number' && food.refuseRate > 0)) {
+      continue;
+    }
+
     const sourceName = food.dataSource?.sourceName || '';
     const isMatched =
       tokens.length > 1
@@ -338,14 +387,29 @@ export async function searchAuthorityFoodsWithTotal(
         : matchesSingleToken(trimmed, food, sourceName);
 
     if (isMatched) {
+      const labels = evaluateNutritionalHighlight(food).labels;
+      for (const label of labels) {
+        tagCounts[label] += 1;
+      }
       scored.push({
         food,
         score: scoreAuthorityFoodMatch(trimmed, tokens, food, sourceName),
+        labels,
       });
     }
   }
 
-  const sorted = scored.sort((a, b) => {
+  const allTagTotal = scored.length;
+  const tagFiltered =
+    nutritionTag !== 'all'
+      ? scored.filter((entry) => entry.labels.includes(nutritionTag))
+      : scored;
+
+  const sorted = tagFiltered.sort((a, b) => {
+    if (sortBy !== 'default') {
+      const sortDiff = compareFoodsBySortOption(a.food, b.food, sortBy);
+      if (sortDiff !== 0) return sortDiff;
+    }
     if (b.score !== a.score) return b.score - a.score;
     if (a.food.name.length !== b.food.name.length) {
       return a.food.name.length - b.food.name.length;
@@ -356,6 +420,8 @@ export async function searchAuthorityFoodsWithTotal(
   return {
     items: sorted.slice(0, limit).map((item) => item.food),
     total: sorted.length,
+    tagCounts,
+    allTagTotal,
   };
 }
 
@@ -367,14 +433,20 @@ export async function searchAuthorityFoods(
   limit = 40,
   authorityFilter?: 'all' | AuthoritySource,
   lang?: string,
-  rawOnly = false
+  rawOnly = false,
+  refuseOnly = false,
+  nutritionTag: 'all' | NutritionTag = 'all',
+  sortBy: FoodSortOption = 'default'
 ): Promise<FoodItem[]> {
   const { items } = await searchAuthorityFoodsWithTotal(
     query,
     limit,
     authorityFilter,
     lang,
-    rawOnly
+    rawOnly,
+    refuseOnly,
+    nutritionTag,
+    sortBy
   );
   return items;
 }
