@@ -31,6 +31,7 @@ import { triggerHaptic } from '@/lib/haptics';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { formatEnergy } from '@/utils/unitMath';
 import { parseKeypadDisplayAmount } from '@/lib/utils';
+import { ensureRawWeightConfirmedFromDb } from '@/utils/rawWeightGuide';
 import { KeypadWeighingDisplayCard } from '@/components/diet/KeypadWeighingDisplayCard';
 
 export default function Diet() {
@@ -263,14 +264,14 @@ export default function Diet() {
     await deleteFoodLogBundle(bundleId);
   };
 
-  // 開啟新增飲食選擇彈窗（首次需先閱讀並確認生重計算基準）
-  const handleOpenAddForMeal = (type: MealType) => {
+  // 開啟新增飲食選擇彈窗（首次需先閱讀並確認生重計算基準；若已有歷史飲食記錄則自動豁免）
+  const handleOpenAddForMeal = async (type: MealType) => {
     triggerHaptic('light');
     setTargetMealTypeForAdd(type);
-    if (!hasConfirmedRawWeight) {
-      setIsRawWeightGuideOpen(true);
-    } else {
+    if (hasConfirmedRawWeight || (await ensureRawWeightConfirmedFromDb())) {
       setIsSelectDialogOpen(true);
+    } else {
+      setIsRawWeightGuideOpen(true);
     }
   };
 

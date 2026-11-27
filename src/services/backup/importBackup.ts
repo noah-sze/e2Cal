@@ -1,6 +1,7 @@
 import type JSZip from 'jszip';
 import { v4 as uuidv4 } from 'uuid';
 import { db, withAutoSyncSuppressed } from '@/services/db/db';
+import { confirmRawWeightIfHasDietActivity } from '@/utils/rawWeightGuide';
 import {
   sanitizeFoodItem,
   sanitizeUserBaseInfo,
@@ -382,6 +383,12 @@ export async function executeImport(
       }
     )
   );
+
+  confirmRawWeightIfHasDietActivity({
+    foodsCount: foods.length,
+    recipesCount: recipes.length,
+    dailyDietLogs,
+  });
 
   return {
     success: true,

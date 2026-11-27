@@ -20,6 +20,7 @@ import type {
 } from '@/types';
 import i18n from '@/i18n/config';
 import { toast } from '@/components/ui/toast';
+import { confirmRawWeightIfHasDietActivity } from '@/utils/rawWeightGuide';
 import {
   listRemoteFolder,
   downloadJsonFile,
@@ -1353,6 +1354,12 @@ export async function executeSync(
       setCachedRevs(cachedRevs);
       setLastSyncTime(now);
 
+      confirmRawWeightIfHasDietActivity({
+        foodsCount: foods?.length ?? 0,
+        recipesCount: recipes?.length ?? 0,
+        dailyDietLogs: dedupedDailyDietLogs,
+      });
+
       if (justSyncedTimer) clearTimeout(justSyncedTimer);
       updateSyncEngineStatus({
         isSyncing: false,
@@ -1446,6 +1453,7 @@ export async function executeSync(
           if (m.deletedIds.length) await db.foods.bulkDelete(m.deletedIds);
           if (m.merged.length) await db.foods.bulkPut(m.merged);
         });
+        confirmRawWeightIfHasDietActivity({ foodsCount: m.merged.length });
         clearFoodsCache();
         hasLocalModified = true;
       }
@@ -1468,6 +1476,7 @@ export async function executeSync(
           if (m.deletedIds.length) await db.recipes.bulkDelete(m.deletedIds);
           if (m.merged.length) await db.recipes.bulkPut(m.merged.map(sanitizeRecipe));
         });
+        confirmRawWeightIfHasDietActivity({ recipesCount: m.merged.length });
         hasLocalModified = true;
       }
       if (m.hasRemoteChanges) hasRemoteModified = true;
@@ -1569,6 +1578,7 @@ export async function executeSync(
           const localLog = await db.daily_diet_logs.where('date').equals(bucket).first();
           if (!localLog) {
             await withAutoSyncSuppressed(() => db.daily_diet_logs.put(remoteLog));
+            confirmRawWeightIfHasDietActivity({ dailyDietLogs: [remoteLog] });
             hasLocalModified = true;
             pushedTimes[`diet_log_${bucket}`] = now;
             pushedTimes[`diet_log_${bucket}_count`] = String(remoteLog.entries.length);
@@ -1577,6 +1587,7 @@ export async function executeSync(
             if (m.hasLocalChanges && m.merged[0]) {
               const mergedLog = { ...m.merged[0], id: localLog.id };
               await withAutoSyncSuppressed(() => db.daily_diet_logs.put(mergedLog));
+              confirmRawWeightIfHasDietActivity({ dailyDietLogs: [mergedLog] });
               hasLocalModified = true;
               if (!m.hasRemoteChanges) {
                 pushedTimes[`diet_log_${bucket}`] = now;

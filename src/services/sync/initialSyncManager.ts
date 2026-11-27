@@ -43,6 +43,7 @@ import { clearFoodsCache } from '@/hooks/useFoods';
 import { clearRecipesCache } from '@/hooks/useRecipes';
 import { clearExercisesCache } from '@/hooks/useExercises';
 import { syncUserProfileCache } from '@/hooks/useUserProfile';
+import { confirmRawWeightIfHasDietActivity } from '@/utils/rawWeightGuide';
 import i18n from '@/i18n/config';
 import { toast } from '@/components/ui/toast';
 import {
@@ -684,6 +685,12 @@ async function executeAtomicCommit(): Promise<void> {
         db.workout_logs.count(),
         db.body_metrics.count(),
       ]);
+
+    confirmRawWeightIfHasDietActivity({
+      foodsCount,
+      recipesCount: staged.recipes.length,
+      dailyDietLogs: staged.dailyDietLogs,
+    });
 
     emitState({
       step: 'COMPLETED',
