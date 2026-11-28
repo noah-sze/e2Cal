@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight } from 'lucide-react';
+import { WeighingAmountPill } from '@/components/diet/WeighingAmountPill';
 import { APP_ROUTES } from '@/utils/navigation';
 import {
   Dialog,
@@ -15,7 +15,11 @@ import { formatDisplayAmount, parseKeypadDisplayAmount } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
 import { roundTo, gToOz, ozToG, flOzToMl, mlToFlOz } from '@/utils/unitMath';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
-import { calculateEffectiveGrams, type WeighingForm } from '@/utils/nutritionMath';
+import {
+  calculateEffectiveGrams,
+  resolveWeighingQuantities,
+  type WeighingForm,
+} from '@/utils/nutritionMath';
 import { calculateIngredientMacros } from '@/utils/recipeMath';
 import { evaluateNutritionalHighlight } from '@/utils/nutritionEvaluation';
 import { resolveFoodLogTitle } from '@/utils/foodNaming';
@@ -199,27 +203,26 @@ export function EditFoodLogDialog({
   // 數字鍵盤即時鏡像聯動
   const handleKeypadLiveChange = useCallback((val: number) => {
     const rawVal = val > 0 ? val : 0;
-    if (weighingForm === 'gross' && Boolean(baseFood?.edibleRate && baseFood.edibleRate < 1)) {
-      setQuantity(calculateEffectiveGrams(rawVal, 'gross', baseFood?.edibleRate));
-      setGrossQuantity(rawVal);
-    } else {
-      setQuantity(rawVal);
-      setGrossQuantity(undefined);
-    }
+    const { quantity: nextQty, grossQuantity: nextGross } = resolveWeighingQuantities(
+      rawVal,
+      weighingForm,
+      baseFood?.edibleRate
+    );
+    setQuantity(nextQty);
+    setGrossQuantity(nextGross);
   }, [weighingForm, baseFood?.edibleRate]);
 
   // 數字鍵盤確認
   const handleKeypadConfirm = useCallback((val: number) => {
     isKeypadConfirmedRef.current = true;
     const inputVal = val > 0 ? val : 1;
-    if (weighingForm === 'gross' && Boolean(baseFood?.edibleRate && baseFood.edibleRate < 1)) {
-      const effective = calculateEffectiveGrams(inputVal, 'gross', baseFood?.edibleRate);
-      setQuantity(effective);
-      setGrossQuantity(inputVal);
-    } else {
-      setQuantity(inputVal);
-      setGrossQuantity(undefined);
-    }
+    const { quantity: nextQty, grossQuantity: nextGross } = resolveWeighingQuantities(
+      inputVal,
+      weighingForm,
+      baseFood?.edibleRate
+    );
+    setQuantity(nextQty);
+    setGrossQuantity(nextGross);
     setIsKeypadOpen(false);
   }, [weighingForm, baseFood?.edibleRate]);
 
@@ -439,35 +442,15 @@ export function EditFoodLogDialog({
                   </span>
 
                   {/* e2Cal 專案標準數字輸入框膠囊 */}
-                  <button
-                    type="button"
-                    onClick={(e) => handleOpenKeypad(e.currentTarget)}
-                    className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none"
+                  <WeighingAmountPill
+                    quantity={quantity}
+                    grossQuantity={weighingForm === 'gross' ? grossQuantity : undefined}
+                    unit={log.unit || 'g'}
                     title={t('diet.clickToEnter', '點擊輸入數值')}
-                  >
-                    {weighingForm === 'gross' && grossQuantity && grossQuantity > 0 ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="text-2xs font-sans text-muted-foreground">
-                          {t('diet.grossWeightLabel', '毛重')}
-                        </span>
-                        <span className="h-3 w-px bg-border/80 shrink-0" aria-hidden="true" />
-                        <MetricValue
-                          value={formatDisplayAmount(String(grossQuantity)) || '0'}
-                          unit={log.unit || 'g'}
-                          valueClassName="font-normal text-foreground"
-                          unitClassName="text-2xs"
-                        />
-                      </span>
-                    ) : (
-                      <MetricValue
-                        value={formatDisplayAmount(String(quantity)) || '0'}
-                        unit={log.unit || 'g'}
-                        valueClassName="font-normal text-foreground"
-                        unitClassName="text-2xs"
-                      />
-                    )}
-                    <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                  </button>
+                    emptyFallback="0"
+                    onClick={(e) => handleOpenKeypad(e.currentTarget)}
+                    className="shrink"
+                  />
                 </div>
               </div>
             )}

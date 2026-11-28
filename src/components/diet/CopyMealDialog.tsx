@@ -18,11 +18,18 @@ import { formatEnergy, roundTo } from '@/utils/unitMath';
 import {
   calculateFoodLogNutrients,
   calculateEffectiveGrams,
+  resolveWeighingQuantities,
   type WeighingForm,
 } from '@/utils/nutritionMath';
+import {
+  groupCopyableMealEntries,
+  countSelectedCopyableEntries,
+  type CopyableDisplayEntry,
+} from '@/utils/copyMealGrouping';
 import { resolveFoodLogTitle, formatFoodDisplayName } from '@/utils/foodNaming';
-import { cn, formatDisplayAmount, parseKeypadDisplayAmount } from '@/lib/utils';
+import { cn, parseKeypadDisplayAmount } from '@/lib/utils';
 import { KeypadWeighingDisplayCard } from '@/components/diet/KeypadWeighingDisplayCard';
+import { WeighingAmountPill } from '@/components/diet/WeighingAmountPill';
 import { RecipeDialog } from '@/components/food/RecipeDialog';
 import { CopyMealDatePickerDialog } from './CopyMealDatePickerDialog';
 import type { MealType, FoodLog, FoodItem, HydratedFoodLog } from '@/types';
@@ -43,22 +50,6 @@ interface CopyableMealItem extends FoodLog {
   baseFood?: FoodItem | null;
   baseRatio?: { calories: number; carbs: number; protein: number; fat: number };
 }
-
-type CopyableDisplayEntry =
-  | {
-      kind: 'bundle';
-      bundleId: string;
-      bundleTitle: string;
-      logs: CopyableMealItem[];
-      totalCalories: number;
-      totalDisplayWeight: number;
-      unit: string;
-    }
-  | {
-      kind: 'single';
-      item: CopyableMealItem;
-      index: number;
-    };
 
 /**
  * 複製餐點 Dialog (Precision Modal 標準版 · 方案 1A 一體化表頭橫欄)：
@@ -281,15 +272,15 @@ export function CopyMealDialog({
       setItems((prev) =>
         prev.map((row, idx) => {
           if (idx !== index) return row;
-          const canUseGross =
-            form === 'gross' && Boolean(row.baseFood?.edibleRate && row.baseFood.edibleRate < 1);
-          const effectiveQty = canUseGross
-            ? calculateEffectiveGrams(rawVal, 'gross', row.baseFood?.edibleRate)
-            : rawVal;
+          const { quantity: effectiveQty, grossQuantity } = resolveWeighingQuantities(
+            rawVal,
+            form,
+            row.baseFood?.edibleRate
+          );
           return {
             ...row,
             quantity: effectiveQty,
-            grossQuantity: canUseGross ? rawVal : undefined,
+            grossQuantity,
             calories: recalculateCalories(row, effectiveQty),
           };
         })
@@ -366,51 +357,15 @@ export function CopyMealDialog({
   };
 
   // 將同一食譜組合 (bundleId) 合併為單一列供顯示與編輯
-  const displayEntries = useMemo<CopyableDisplayEntry[]>(() => {
-    const entries: CopyableDisplayEntry[] = [];
-    const bundleMap = new Map<
-      string,
-      Extract<CopyableDisplayEntry, { kind: 'bundle' }>
-    >();
+  const displayEntries = useMemo<CopyableDisplayEntry<CopyableMealItem>[]>(
+    () => groupCopyableMealEntries(items, t('diet.recipe', '食譜')),
+    [items, t]
+  );
 
-    items.forEach((item, index) => {
-      if (item.bundleId) {
-        let group = bundleMap.get(item.bundleId);
-        if (!group) {
-          group = {
-            kind: 'bundle',
-            bundleId: item.bundleId,
-            bundleTitle: item.bundleTitle || t('diet.recipe', '食譜'),
-            logs: [],
-            totalCalories: 0,
-            totalDisplayWeight: 0,
-            unit: item.unit || 'g',
-          };
-          bundleMap.set(item.bundleId, group);
-          entries.push(group);
-        }
-        group.logs.push(item);
-        group.totalCalories += item.calories || 0;
-        const displayQty =
-          typeof item.grossQuantity === 'number' && item.grossQuantity > 0
-            ? item.grossQuantity
-            : item.quantity || 0;
-        group.totalDisplayWeight = roundTo(group.totalDisplayWeight + displayQty, 2);
-      } else {
-        entries.push({ kind: 'single', item, index });
-      }
-    });
-
-    return entries;
-  }, [items, t]);
-
-  const selectedCount = useMemo(() => {
-    return displayEntries.filter((entry) =>
-      entry.kind === 'bundle'
-        ? entry.logs.some((l) => selectedIds.has(l.id))
-        : selectedIds.has(entry.item.id)
-    ).length;
-  }, [displayEntries, selectedIds]);
+  const selectedCount = useMemo(
+    () => countSelectedCopyableEntries(displayEntries, selectedIds),
+    [displayEntries, selectedIds]
+  );
 
   const editingBundleData = useMemo<{
     bundleId: string;
@@ -455,6 +410,9 @@ export function CopyMealDialog({
     ) => {
       const cachedFoods = getInMemoryFoodsCache();
       const allFoods = cachedFoods !== null ? cachedFoods : await db.foods.toArray();
+      if (cachedFoods === null) {
+        setInMemoryFoodsCache(allFoods);
+      }
       const foodMap = new Map(allFoods.map((f) => [f.id, f]));
 
       setItems((prev) => {
@@ -851,25 +809,18 @@ export function CopyMealDialog({
                             </div>
                           </div>
 
-                          <button
-                            type="button"
+                          <WeighingAmountPill
+                            quantity={entry.totalDisplayWeight}
+                            unit={entry.unit}
                             disabled={!isSelected}
+                            emptyFallback="0"
                             onClick={(e) => {
                               e.stopPropagation();
                               if (!isSelected) return;
                               triggerHaptic('selection');
                               setEditingBundleId(entry.bundleId);
                             }}
-                            className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none shrink-0 disabled:pointer-events-none"
-                          >
-                            <MetricValue
-                              value={formatDisplayAmount(String(entry.totalDisplayWeight)) || '0'}
-                              unit={entry.unit}
-                              valueClassName="font-normal text-foreground"
-                              unitClassName="text-2xs"
-                            />
-                            <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                          </button>
+                          />
                         </div>
                       );
                     }
@@ -920,39 +871,18 @@ export function CopyMealDialog({
                             </span>
                           </div>
                         ) : (
-                          <button
-                            type="button"
+                          <WeighingAmountPill
+                            quantity={item.quantity || 0}
+                            grossQuantity={item.grossQuantity}
+                            unit={item.unit || 'g'}
                             disabled={!isSelected}
+                            emptyFallback="0"
                             onClick={(e) => {
                               e.stopPropagation();
                               if (!isSelected) return;
                               handleOpenKeypad(index, e.currentTarget);
                             }}
-                            className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none shrink-0 disabled:pointer-events-none"
-                          >
-                            {typeof item.grossQuantity === 'number' && item.grossQuantity > 0 ? (
-                              <span className="inline-flex items-center gap-1.5">
-                                <span className="text-2xs font-sans text-muted-foreground">
-                                  {t('diet.grossWeightLabel', '毛重')}
-                                </span>
-                                <span className="h-3 w-px bg-border/80 shrink-0" aria-hidden="true" />
-                                <MetricValue
-                                  value={formatDisplayAmount(String(item.grossQuantity)) || '0'}
-                                  unit={item.unit || 'g'}
-                                  valueClassName="font-normal text-foreground"
-                                  unitClassName="text-2xs"
-                                />
-                              </span>
-                            ) : (
-                              <MetricValue
-                                value={formatDisplayAmount(String(item.quantity)) || '0'}
-                                unit={item.unit || 'g'}
-                                valueClassName="font-normal text-foreground"
-                                unitClassName="text-2xs"
-                              />
-                            )}
-                            <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                          </button>
+                          />
                         )}
                       </div>
                     );

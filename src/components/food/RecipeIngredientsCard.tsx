@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { SectionCard } from '@/components/ui/section-card';
-import { MetricValue } from '@/components/ui/metric-value';
+import { WeighingAmountPill } from '@/components/diet/WeighingAmountPill';
 import { MacroSquares } from '@/components/food/MacroSquares';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { formatEnergy, formatFoodServing } from '@/utils/unitMath';
 import type { NutritionEvaluationResult } from '@/utils/nutritionEvaluation';
-import { cn, formatDisplayAmount } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 export interface RecipeIngredientItem {
   id: string;
@@ -131,38 +131,13 @@ export function RecipeIngredientsCard({
 
                 {/* 右側：用量膠囊 + 刪除按鈕 */}
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    type="button"
+                  <WeighingAmountPill
+                    quantity={item.quantity}
+                    grossQuantity={item.grossQuantity}
+                    unit={item.unit}
+                    emptyFallback="-"
                     onClick={(e) => onEditQuantity?.(item, idx, e.currentTarget)}
-                    className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none shrink-0"
-                  >
-                    {typeof item.grossQuantity === 'number' && item.grossQuantity > 0 ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="text-2xs font-sans text-muted-foreground">
-                          {t('diet.grossWeightLabel', '毛重')}
-                        </span>
-                        <span className="h-3 w-px bg-border/80 shrink-0" aria-hidden="true" />
-                        <MetricValue
-                          value={formatDisplayAmount(String(item.grossQuantity)) || '0'}
-                          unit={item.unit}
-                          valueClassName="font-normal text-foreground"
-                          unitClassName="text-2xs"
-                        />
-                      </span>
-                    ) : (
-                      <MetricValue
-                        value={
-                          item.quantity > 0
-                            ? formatDisplayAmount(String(item.quantity)) || '0'
-                            : '-'
-                        }
-                        unit={item.unit}
-                        valueClassName="font-normal text-foreground"
-                        unitClassName="text-2xs"
-                      />
-                    )}
-                    <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-                  </button>
+                  />
                   {onRemoveItem && (
                     <button
                       type="button"

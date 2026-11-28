@@ -160,7 +160,6 @@ interface StagedData {
 
 interface InitialSyncStaging {
   providerId: SyncProviderId;
-  previousProviderId: SyncProviderId;
   mode: DropboxOAuthMode;
   tokens: DropboxTokens | null;
   remoteManifest: SyncManifest | null;
@@ -171,7 +170,6 @@ interface InitialSyncStaging {
 
 let staging: InitialSyncStaging = {
   providerId: 'dropbox',
-  previousProviderId: 'dropbox',
   mode: 'sync',
   tokens: null,
   remoteManifest: null,
@@ -261,13 +259,11 @@ export async function startInitialSync(
     preloadedTokens?: DropboxTokens;
   }
 ): Promise<void> {
-  const previousProviderId = getActiveSyncProviderId();
   const providerId: SyncProviderId = options?.providerId ?? 'dropbox';
   setStagingSyncProviderId(providerId);
 
   staging = {
     providerId,
-    previousProviderId,
     mode: options?.mode || 'sync',
     tokens: null,
     remoteManifest: null,
@@ -831,7 +827,6 @@ export function cancelInitialSync(): void {
   rollbackProviderStaging();
   staging = {
     providerId: getActiveSyncProviderId(),
-    previousProviderId: getActiveSyncProviderId(),
     mode: 'sync',
     tokens: null,
     remoteManifest: null,

@@ -26,7 +26,11 @@ import { getInMemoryRecipesCache, prewarmRecipesCache } from '@/hooks/useRecipes
 import { prewarmDailyDietLogsCache, useFoodLogs } from '@/hooks/useFoodLogs';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { calculateIngredientMacros } from '@/utils/recipeMath';
-import { calculateEffectiveGrams, type WeighingForm } from '@/utils/nutritionMath';
+import {
+  calculateEffectiveGrams,
+  resolveWeighingQuantities,
+  type WeighingForm,
+} from '@/utils/nutritionMath';
 import { evaluateNutritionalHighlight } from '@/utils/nutritionEvaluation';
 import { formatFoodDisplayName } from '@/utils/foodNaming';
 import { ozToG, gToOz, flOzToMl, mlToFlOz } from '@/utils/unitMath';
@@ -518,15 +522,15 @@ export function RecipeDialog({
   const computeUpdatedRow = useCallback(
     (row: UnifiedIngredientRow, rawVal: number, form: WeighingForm, unit?: string): UnifiedIngredientRow => {
       const targetFood = row.baseFood || (row.foodId ? foodMap.get(row.foodId) : null);
-      const canUseGross =
-        form === 'gross' && Boolean(targetFood?.edibleRate && targetFood.edibleRate < 1);
-      const effectiveQty = canUseGross
-        ? calculateEffectiveGrams(rawVal, 'gross', targetFood?.edibleRate)
-        : rawVal;
+      const { quantity: effectiveQty, grossQuantity } = resolveWeighingQuantities(
+        rawVal,
+        form,
+        targetFood?.edibleRate
+      );
       return {
         ...row,
         quantity: effectiveQty,
-        grossQuantity: canUseGross ? rawVal : undefined,
+        grossQuantity,
         unit: unit || row.unit,
       };
     },

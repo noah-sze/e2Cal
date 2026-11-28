@@ -676,3 +676,26 @@ export function calculateEffectiveGrams(
   }
   return roundTo(safeInput, 2);
 }
+
+/**
+ * 依據稱重雙態與食材可食率，一次解析應儲存的純可食淨重 (`quantity`) 與選填毛重 (`grossQuantity`)。
+ * 當食材無損耗（edibleRate >= 1 或未設定）時，自動退回純淨重模式。
+ */
+export function resolveWeighingQuantities(
+  rawVal: number,
+  form: WeighingForm = 'net',
+  edibleRate?: number
+): { quantity: number; grossQuantity?: number } {
+  const canUseGross =
+    form === 'gross' &&
+    typeof edibleRate === 'number' &&
+    Number.isFinite(edibleRate) &&
+    edibleRate > 0 &&
+    edibleRate < 1;
+
+  const effectiveQty = canUseGross ? calculateEffectiveGrams(rawVal, 'gross', edibleRate) : rawVal;
+  return {
+    quantity: effectiveQty,
+    grossQuantity: canUseGross ? rawVal : undefined,
+  };
+}
