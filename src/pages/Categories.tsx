@@ -47,6 +47,7 @@ export default function Categories({ isDetailOpen = false }: CategoriesProps) {
   // 單品新增彈窗狀態
   const [isAddFoodOpen, setIsAddFoodOpen] = useState(false);
   const [isAuthoritySearchOpen, setIsAuthoritySearchOpen] = useState(false);
+  const [authorityInitialQuery, setAuthorityInitialQuery] = useState('');
 
   // 食譜庫
   const {
@@ -239,7 +240,10 @@ export default function Categories({ isDetailOpen = false }: CategoriesProps) {
         onDeleteRecipe={handleDeleteRecipe}
         onUnarchiveRecipe={handleUnarchiveRecipe}
         onAddFood={() => setIsAddFoodOpen(true)}
-        onAddAuthorityFood={() => setIsAuthoritySearchOpen(true)}
+        onAddAuthorityFood={(initialQuery) => {
+          setAuthorityInitialQuery(initialQuery ?? '');
+          setIsAuthoritySearchOpen(true);
+        }}
         onAddRecipe={handleOpenAddRecipe}
       />
 
@@ -251,6 +255,7 @@ export default function Categories({ isDetailOpen = false }: CategoriesProps) {
       <AuthorityFoodSearchDialog
         open={isAuthoritySearchOpen}
         onOpenChange={setIsAuthoritySearchOpen}
+        initialQuery={authorityInitialQuery}
       />
 
       {/* 新增單品食物 Dialog */}
