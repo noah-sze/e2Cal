@@ -1527,12 +1527,12 @@
         "summary": "训练概要",
         "totalExercises": "{{count}} 个动作",
         "totalSets": "{{count}} 组",
-        "totalVolume": "总容量 {{volume}}{{unit}}",
+        "totalVolume": "总容量 {{volume}} {{unit}}",
         "routinePrefix": "课表",
         "equipmentPrefix": "器械",
         "primaryMuscles": "主肌群",
         "secondaryMuscles": "协同肌群",
-        "setLine": "第 {{index}} 组: {{weight}}{{unit}} × {{reps}} 次",
+        "setLine": "第 {{index}} 组: {{weight}} {{unit}} × {{reps}} 次",
         "noLogs": "当日无训练记录"
       },
       "body": {

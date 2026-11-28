@@ -251,15 +251,65 @@ describe('aiDataExport', () => {
       expect(textStr).toContain('卜蜂 · 舒肥雞胸肉 200 g');
       expect(textStr).toContain('[快速估算] 快速估算');
       expect(textStr).toContain('[歷史均值] 歷史均值');
-      expect(textStr).toContain('目標配額: 2000kcal');
-      expect(textStr).toContain('實際攝取: 1708kcal');
-      expect(textStr).toContain('熱量差值: -292kcal');
-      expect(textStr).toContain('### 早餐 (233kcal');
-      expect(textStr).toContain('### 午餐 (525kcal');
-      expect(textStr).toContain('[食譜] 高蛋白雞肉飯: 525kcal');
-      expect(textStr).toContain('卜蜂 · 舒肥雞胸肉 200 g: 330kcal');
-      expect(textStr).toContain('[快速估算] 快速估算: 750kcal');
-      expect(textStr).toContain('[歷史均值] 歷史均值: 200kcal');
+      expect(textStr).toContain('目標配額: 2000 kcal');
+      expect(textStr).toContain('實際攝取: 1708 kcal');
+      expect(textStr).toContain('熱量差值: -292 kcal');
+      expect(textStr).toContain('### 早餐 (233 kcal');
+      expect(textStr).toContain('### 午餐 (525 kcal');
+      expect(textStr).toContain('[食譜] 高蛋白雞肉飯: 525 kcal');
+      expect(textStr).toContain('卜蜂 · 舒肥雞胸肉 200 g: 330 kcal');
+      expect(textStr).toContain('[快速估算] 快速估算: 750 kcal');
+      expect(textStr).toContain('[歷史均值] 歷史均值: 200 kcal');
+      expect(textStr).toContain('碳:');
+      expect(textStr).toContain('蛋:');
+      expect(textStr).toContain('脂:');
+    });
+
+    it('純文本匯出應正確顯示 0 g 糖與毛重條目附帶之可食淨重', () => {
+      const foodWithZeroSugarAndGross: FoodItem = {
+        id: 'food-thigh',
+        name: '雞腿',
+        category: 'natural',
+        macros: {
+          calories: 146,
+          carbs: { total: 0, sugar: 0 },
+          protein: 20,
+          fat: { total: 7 },
+        },
+        servingSize: 100,
+        servingUnit: 'g',
+        edibleRate: 0.74,
+        refuseRate: 0.26,
+        isCustom: true,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      const grossLog: FoodLog = {
+        id: 'log-gross-1',
+        date: '2026-04-17',
+        mealType: 'lunch',
+        foodId: 'food-thigh',
+        quantity: 74,
+        grossQuantity: 100,
+        unit: 'g',
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+
+      const textStr = formatDailyExportData(
+        {
+          date: '2026-04-17',
+          scope: 'diet',
+          foods: [foodWithZeroSugarAndGross],
+          recipes: [],
+          foodLogs: [grossLog],
+        },
+        'text'
+      );
+
+      expect(textStr).toContain('糖: 0 g');
+      expect(textStr).toContain('雞腿 (毛重 100 g / 可食淨重 74 g): 108 kcal');
+      expect(textStr).toContain('碳: 0 g, 蛋: 14.8 g, 脂: 5.2 g');
     });
   });
 
@@ -348,10 +398,10 @@ describe('aiDataExport', () => {
         'text'
       );
       expect(textStr).toContain('課表: 推日課表 A');
-      expect(textStr).toContain('總容量 1150kg');
+      expect(textStr).toContain('總容量 1150 kg');
       expect(textStr).toContain('### 槓鈴臥推 (槓鈴 | 主肌群: 中下胸 | 協同肌群: 三角肌前束、肱三頭肌)');
-      expect(textStr).toContain('- 第 1 組: 80kg × 8 次');
-      expect(textStr).toContain('- 第 2 組: 85kg × 6 次 @ RPE 8.5');
+      expect(textStr).toContain('- 第 1 組: 80 kg × 8 次');
+      expect(textStr).toContain('- 第 2 組: 85 kg × 6 次 @ RPE 8.5');
       expect(textStr).not.toContain('ex-bench');
       expect(textStr).not.toContain('routine-push');
     });
@@ -409,10 +459,10 @@ describe('aiDataExport', () => {
         },
         'text'
       );
-      expect(textStr).toContain('當日體重: 71.2kg');
-      expect(textStr).toContain('平滑趨勢體重: 71.9kg');
+      expect(textStr).toContain('當日體重: 71.2 kg');
+      expect(textStr).toContain('平滑趨勢體重: 71.9 kg');
       expect(textStr).toContain('體脂率: 14.5%');
-      expect(textStr).toContain('身體圍度: 胸圍 102cm · 腰圍 76.5cm · 手臂圍 38cm');
+      expect(textStr).toContain('身體圍度: 胸圍 102 cm · 腰圍 76.5 cm · 手臂圍 38 cm');
       expect(textStr).not.toContain('臀圍');
       expect(textStr).not.toContain('大腿圍');
     });

@@ -58,6 +58,7 @@ export interface ExportNutrientSummary {
 export interface ExportRecipeIngredientItem {
   name: string;
   amount: string;
+  netAmount?: string;
   calories: number;
   carbs: number;
   protein: number;
@@ -69,6 +70,7 @@ export type ExportDietEntry =
       type: 'food';
       name: string;
       amount: string;
+      netAmount?: string;
       calories: number;
       carbs: number;
       protein: number;
@@ -358,20 +360,46 @@ function buildDietSection(
           carbs: roundTo(log.carbs || 0, 1),
           protein: roundTo(log.protein || 0, 1),
           fat: roundTo(log.fat || 0, 1),
+          fiber: log.fiber,
+          sugar: log.sugar,
+          saturatedFat: log.saturatedFat,
+          transFat: log.transFat,
+          sodium: log.sodium,
         };
 
     const resolvedName = food
       ? formatFoodDisplayName(food)
       : resolveFoodLogTitle(log, t, food);
 
+    const hasGross =
+      typeof log.grossQuantity === 'number' &&
+      log.grossQuantity > 0 &&
+      log.grossQuantity !== log.quantity;
+
+    const displayQty = hasGross
+      ? (log.grossQuantity as number)
+      : (log.quantity ?? food?.servingSize ?? 100);
+
+    const resolvedUnit = log.unit || food?.servingUnit || 'g';
+
     const amountFormatted = food || (!isSystemEntry && log.quantity)
       ? formatFoodServing(
-          log.quantity ?? food?.servingSize ?? 100,
-          log.unit || food?.servingUnit || 'g',
+          displayQty,
+          resolvedUnit,
           foodWeightUnit,
           foodVolumeUnit
         ).formatted
       : '';
+
+    const netAmountFormatted =
+      hasGross && typeof log.quantity === 'number' && log.quantity > 0
+        ? formatFoodServing(
+            log.quantity,
+            resolvedUnit,
+            foodWeightUnit,
+            foodVolumeUnit
+          ).formatted
+        : undefined;
 
     const normalizedType: 'item' | 'estimate' | 'as_planned' =
       rawEntryType === 'as_planned' || log.isAsPlanned
@@ -386,6 +414,7 @@ function buildDietSection(
       normalizedType,
       name: resolvedName,
       amount: amountFormatted,
+      netAmount: netAmountFormatted,
       bundleId: log.bundleId,
       bundleTitle: (log as FoodLog & { bundleTitle?: string }).bundleTitle,
       calories: formatEnergy(nutrients.calories, energyUnit).value,
@@ -493,6 +522,7 @@ function buildDietSection(
         bundleItem.ingredients.push({
           name: entry.name,
           amount: entry.amount,
+          ...(entry.netAmount ? { netAmount: entry.netAmount } : {}),
           calories: entry.calories,
           carbs: entry.carbs,
           protein: entry.protein,
@@ -512,6 +542,7 @@ function buildDietSection(
           type: 'food',
           name: entry.name,
           amount: entry.amount,
+          ...(entry.netAmount ? { netAmount: entry.netAmount } : {}),
           calories: entry.calories,
           carbs: entry.carbs,
           protein: entry.protein,
@@ -874,27 +905,46 @@ export function formatDailyExportAsText(
     const d = payload.diet;
     const eUnit = d.target.energyUnit;
     const diffSign = d.calorieDiff > 0 ? '+' : '';
+    const cLabel = t('aiExport.image.macroTagCarbs', '碳');
+    const pLabel = t('aiExport.image.macroTagProtein', '蛋');
+    const fLabel = t('aiExport.image.macroTagFat', '脂');
+    const formatMacros = (c: number, p: number, f: number, sep = ', ') =>
+      `${cLabel}: ${c} g${sep}${pLabel}: ${p} g${sep}${fLabel}: ${f} g`;
+    const formatAmountWithNet = (amount?: string, netAmount?: string, wrap = true) => {
+      if (!amount) return '';
+      if (netAmount) {
+        const grossLabel = t('diet.grossWeightLabel', '毛重');
+        const netLabel = t('diet.netWeightLabel', '可食淨重');
+        return ` (${grossLabel} ${amount} / ${netLabel} ${netAmount})`;
+      }
+      return wrap ? ` (${amount})` : ` ${amount}`;
+    };
+
     lines.push('');
     lines.push(`## ${t('aiExport.sections.diet', '飲食數據')}`);
     lines.push(
       `- ${t('aiExport.diet.activityLevel', '活動係數')}: ${d.activityLabel} (${d.activityLevel})`
     );
     lines.push(
-      `- ${t('aiExport.diet.target', '目標配額')}: ${d.target.calories}${eUnit} (C: ${d.target.carbs}g / P: ${d.target.protein}g / F: ${d.target.fat}g | ${d.macroSplit.carbs}/${d.macroSplit.protein}/${d.macroSplit.fat})`
+      `- ${t('aiExport.diet.target', '目標配額')}: ${d.target.calories} ${eUnit} (${formatMacros(d.target.carbs, d.target.protein, d.target.fat, ' / ')} | ${d.macroSplit.carbs}/${d.macroSplit.protein}/${d.macroSplit.fat})`
     );
     const secondaryDetails: string[] = [];
-    if (d.actual.sugar) secondaryDetails.push(`${t('diet.sugar', '糖')}: ${d.actual.sugar}g`);
-    if (d.actual.fiber) secondaryDetails.push(`${t('diet.fiber', '纖維')}: ${d.actual.fiber}g`);
-    if (d.actual.saturatedFat) secondaryDetails.push(`${t('diet.saturatedFat', '飽和脂肪')}: ${d.actual.saturatedFat}g`);
-    if (d.actual.transFat) secondaryDetails.push(`${t('diet.transFat', '反式脂肪')}: ${d.actual.transFat}g`);
-    if (d.actual.sodium) secondaryDetails.push(`${t('diet.sodium', '鈉')}: ${d.actual.sodium}mg`);
+    if (typeof d.actual.sugar === 'number') {
+      secondaryDetails.push(`${t('diet.sugar', '糖')}: ${d.actual.sugar} g`);
+    }
+    if (typeof d.actual.fiber === 'number') {
+      secondaryDetails.push(`${t('diet.fiber', '纖維')}: ${d.actual.fiber} g`);
+    }
+    if (typeof d.actual.sodium === 'number') {
+      secondaryDetails.push(`${t('diet.sodium', '鈉')}: ${d.actual.sodium} mg`);
+    }
     const secondaryText = secondaryDetails.length > 0 ? ` · ${secondaryDetails.join(' · ')}` : '';
 
     lines.push(
-      `- ${t('aiExport.diet.actual', '實際攝取')}: ${d.actual.calories}${eUnit} (C: ${d.actual.carbs}g / P: ${d.actual.protein}g / F: ${d.actual.fat}g${secondaryText})`
+      `- ${t('aiExport.diet.actual', '實際攝取')}: ${d.actual.calories} ${eUnit} (${formatMacros(d.actual.carbs, d.actual.protein, d.actual.fat, ' / ')}${secondaryText})`
     );
     lines.push(
-      `- ${t('aiExport.diet.calorieDiff', '熱量差值')}: ${diffSign}${d.calorieDiff}${eUnit}`
+      `- ${t('aiExport.diet.calorieDiff', '熱量差值')}: ${diffSign}${d.calorieDiff} ${eUnit}`
     );
 
     if (d.meals.length === 0) {
@@ -903,31 +953,31 @@ export function formatDailyExportAsText(
       for (const meal of d.meals) {
         lines.push('');
         lines.push(
-          `### ${meal.mealLabel} (${meal.calories}${eUnit} | C: ${meal.carbs}g, P: ${meal.protein}g, F: ${meal.fat}g)`
+          `### ${meal.mealLabel} (${meal.calories} ${eUnit} | ${formatMacros(meal.carbs, meal.protein, meal.fat)})`
         );
         for (const item of meal.items) {
           if (item.type === 'recipe') {
             lines.push(
-              `- [${t('aiExport.diet.recipeTag', '食譜')}] ${item.name}: ${item.calories}${eUnit} (C: ${item.carbs}g, P: ${item.protein}g, F: ${item.fat}g)`
+              `- [${t('aiExport.diet.recipeTag', '食譜')}] ${item.name}: ${item.calories} ${eUnit} (${formatMacros(item.carbs, item.protein, item.fat)})`
             );
             for (const ing of item.ingredients) {
-              const amountPart = ing.amount ? ` ${ing.amount}` : '';
+              const amountPart = formatAmountWithNet(ing.amount, ing.netAmount, false);
               lines.push(
-                `  - ${ing.name}${amountPart}: ${ing.calories}${eUnit} (C: ${ing.carbs}g, P: ${ing.protein}g, F: ${ing.fat}g)`
+                `  - ${ing.name}${amountPart}: ${ing.calories} ${eUnit} (${formatMacros(ing.carbs, ing.protein, ing.fat)})`
               );
             }
           } else if (item.type === 'estimate') {
             lines.push(
-              `- [${t('aiExport.diet.estimateTag', '快速估算')}] ${item.name}: ${item.calories}${eUnit} (C: ${item.carbs}g, P: ${item.protein}g, F: ${item.fat}g)`
+              `- [${t('aiExport.diet.estimateTag', '快速估算')}] ${item.name}: ${item.calories} ${eUnit} (${formatMacros(item.carbs, item.protein, item.fat)})`
             );
           } else if (item.type === 'as_planned') {
             lines.push(
-              `- [${t('aiExport.diet.asPlannedTag', '歷史均值')}] ${item.name}: ${item.calories}${eUnit} (C: ${item.carbs}g, P: ${item.protein}g, F: ${item.fat}g)`
+              `- [${t('aiExport.diet.asPlannedTag', '歷史均值')}] ${item.name}: ${item.calories} ${eUnit} (${formatMacros(item.carbs, item.protein, item.fat)})`
             );
           } else {
-            const amountPart = item.amount ? ` (${item.amount})` : '';
+            const amountPart = formatAmountWithNet(item.amount, item.netAmount, true);
             lines.push(
-              `- ${item.name}${amountPart}: ${item.calories}${eUnit} (C: ${item.carbs}g, P: ${item.protein}g, F: ${item.fat}g)`
+              `- ${item.name}${amountPart}: ${item.calories} ${eUnit} (${formatMacros(item.carbs, item.protein, item.fat)})`
             );
           }
         }
@@ -997,11 +1047,11 @@ export function formatDailyExportAsText(
       lines.push(`- ${t('aiExport.body.noLogs', '當日無身體數據記錄')}`);
     } else {
       if (b.weight !== undefined) {
-        lines.push(`- ${t('aiExport.body.weight', '當日體重')}: ${b.weight}${b.weightUnit}`);
+        lines.push(`- ${t('aiExport.body.weight', '當日體重')}: ${b.weight} ${b.weightUnit}`);
       }
       if (b.trendWeight !== undefined) {
         lines.push(
-          `- ${t('aiExport.body.trendWeight', '平滑趨勢體重')}: ${b.trendWeight}${b.weightUnit}`
+          `- ${t('aiExport.body.trendWeight', '平滑趨勢體重')}: ${b.trendWeight} ${b.weightUnit}`
         );
       }
       if (b.bodyFat !== undefined) {
@@ -1009,7 +1059,7 @@ export function formatDailyExportAsText(
       }
       if (b.circumferences.length > 0) {
         const circStr = b.circumferences
-          .map((c) => `${c.label} ${c.value}${c.unit}`)
+          .map((c) => `${c.label} ${c.value} ${c.unit}`)
           .join(' · ');
         lines.push(`- ${t('aiExport.body.circumferences', '身體圍度')}: ${circStr}`);
       }

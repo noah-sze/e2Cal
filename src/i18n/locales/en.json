@@ -1527,12 +1527,12 @@
         "summary": "Workout Summary",
         "totalExercises": "{{count}} exercises",
         "totalSets": "{{count}} sets",
-        "totalVolume": "Total Volume {{volume}}{{unit}}",
+        "totalVolume": "Total Volume {{volume}} {{unit}}",
         "routinePrefix": "Routine",
         "equipmentPrefix": "Equipment",
         "primaryMuscles": "Primary Muscles",
         "secondaryMuscles": "Secondary Muscles",
-        "setLine": "Set {{index}}: {{weight}}{{unit}} × {{reps}} reps",
+        "setLine": "Set {{index}}: {{weight}} {{unit}} × {{reps}} reps",
         "noLogs": "No workout logs for this date"
       },
       "body": {

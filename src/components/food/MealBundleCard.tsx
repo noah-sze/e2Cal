@@ -201,7 +201,11 @@ export function MealBundleCard({
                   </div>
                   <div className="text-3xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                     {(() => {
-                      const s = formatFoodServing(item.quantity ?? 0, item.unit ?? 'g', foodWeightUnit, foodVolumeUnit);
+                      const displayQty =
+                        typeof item.grossQuantity === 'number' && item.grossQuantity > 0
+                          ? item.grossQuantity
+                          : item.quantity ?? 0;
+                      const s = formatFoodServing(displayQty, item.unit ?? 'g', foodWeightUnit, foodVolumeUnit);
                       return <MetricValue value={s.size} unit={s.unit} unitClassName="text-[9px]" />;
                     })()}
                     <span className="text-border">·</span>

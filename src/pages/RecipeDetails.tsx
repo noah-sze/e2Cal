@@ -20,14 +20,20 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
 import { useConfirm } from '@/components/ui/confirm-dialog';
-import { cn } from '@/lib/utils';
+import { cn, parseKeypadDisplayAmount } from '@/lib/utils';
 import { calculateIngredientMacros, calculateRecipeTotals } from '@/utils/recipeMath';
 import { useAppStore } from '@/store/useAppStore';
-import { calculateFoodLogNutrients, calculateScaledNutrition } from '@/utils/nutritionMath';
+import {
+  calculateFoodLogNutrients,
+  calculateScaledNutrition,
+  calculateEffectiveGrams,
+  type WeighingForm,
+} from '@/utils/nutritionMath';
 import { NutritionFactsCard } from '@/components/food/NutritionFactsCard';
 import { RecipeDialog, type RecipeFormData } from '@/components/food/RecipeDialog';
 import { FoodRecipeSelectDialog } from '@/components/food/FoodRecipeSelectDialog';
 import { NumericKeypadDialog } from '@/components/ui/NumericKeypadDialog';
+import { KeypadWeighingDisplayCard } from '@/components/diet/KeypadWeighingDisplayCard';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import {
   formatEnergy,
@@ -226,6 +232,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
   const [pendingFood, setPendingFood] = useState<FoodItem | null>(null);
   const [pendingQuantity, setPendingQuantity] = useState<number>(100);
   const [pendingUnit, setPendingUnit] = useState<string>('g');
+  const [pendingWeighingForm, setPendingWeighingForm] = useState<WeighingForm>('net');
 
   const existingFoodIds = useMemo(() => {
     return recipe?.ingredients.map((ing) => ing.foodId).filter(Boolean) || [];
@@ -256,6 +263,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
     setPendingFood(food);
     setPendingQuantity(displayQty);
     setPendingUnit(displayUnit);
+    setPendingWeighingForm('net');
   };
 
   const handleConfirmAddIngredient = async (quantity: number, unit: string) => {
@@ -276,9 +284,18 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
       finalUnit = 'ml';
     }
 
+    const safeInputQty = finalQty > 0 ? finalQty : 100;
+    const canUseGross =
+      pendingWeighingForm === 'gross' &&
+      Boolean(pendingFood.edibleRate && pendingFood.edibleRate < 1);
+    const effectiveQty = canUseGross
+      ? calculateEffectiveGrams(safeInputQty, 'gross', pendingFood.edibleRate)
+      : safeInputQty;
+
     const newIng: RecipeIngredient = {
       foodId: pendingFood.id,
-      quantity: finalQty > 0 ? finalQty : 100,
+      quantity: effectiveQty,
+      ...(canUseGross ? { grossQuantity: safeInputQty } : {}),
       unit: finalUnit,
     };
 
@@ -617,6 +634,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
             foodId: ing.foodId,
             foodName: food ? formatFoodDisplayName(food) : t('common.unknown'),
             quantity: ing.quantity,
+            grossQuantity: ing.grossQuantity,
             unit: ing.unit || 'g',
             isOptional: ing.isOptional,
             macros,
@@ -638,6 +656,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
       <FoodRecipeSelectDialog
         open={isAddPickerOpen}
         onOpenChange={(open) => {
+          if (!open && pendingFood) return;
           setIsAddPickerOpen(open);
           if (!open) setPendingFood(null);
         }}
@@ -659,8 +678,35 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
           unit={pendingUnit}
           allowDecimals={true}
           maxDecimals={2}
+          zIndex={80}
           onConfirm={handleConfirmAddIngredient}
           onCancel={() => setPendingFood(null)}
+          renderContextRow={(valStr, currentU) => {
+            const rawQty = parseKeypadDisplayAmount(valStr);
+            const effectiveQty = calculateEffectiveGrams(
+              rawQty,
+              pendingWeighingForm,
+              pendingFood.edibleRate
+            );
+            const hasRefuse = Boolean(pendingFood.refuseRate && pendingFood.refuseRate > 0);
+            const displayCalories = calculateIngredientMacros(pendingFood, effectiveQty).calories;
+
+            return (
+              <KeypadWeighingDisplayCard
+                weighingForm={pendingWeighingForm}
+                hasRefuse={hasRefuse}
+                edibleRate={pendingFood.edibleRate}
+                refuseRate={pendingFood.refuseRate}
+                onSelectNet={() => setPendingWeighingForm('net')}
+                onSelectGross={() => setPendingWeighingForm('gross')}
+                calories={displayCalories}
+                energyUnit={energyUnit}
+                valueText={valStr}
+                unit={currentU}
+                effectiveQty={effectiveQty}
+              />
+            );
+          }}
         />
       )}
     </div>
