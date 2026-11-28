@@ -77,6 +77,7 @@ export type ExportDietEntry =
   | {
       type: 'recipe';
       name: string;
+      amount?: string;
       calories: number;
       carbs: number;
       protein: number;
@@ -432,6 +433,7 @@ function buildDietSection(
       string,
       Extract<ExportDietEntry, { type: 'recipe' }>
     >();
+    const bundleQuantityMap = new Map<string, number>();
 
     for (const entry of entriesForMeal) {
       mealRawKcal += entry.rawKcal;
@@ -469,6 +471,20 @@ function buildDietSection(
           };
           bundleGroupMap.set(entry.bundleId, bundleItem);
           items.push(bundleItem);
+        }
+        const entryQty =
+          typeof entry.raw.grossQuantity === 'number' && entry.raw.grossQuantity > 0
+            ? entry.raw.grossQuantity
+            : entry.raw.quantity || 0;
+        const nextTotalQty = (bundleQuantityMap.get(entry.bundleId) ?? 0) + entryQty;
+        bundleQuantityMap.set(entry.bundleId, nextTotalQty);
+        if (nextTotalQty > 0) {
+          bundleItem.amount = formatFoodServing(
+            nextTotalQty,
+            'g',
+            foodWeightUnit,
+            foodVolumeUnit
+          ).formatted;
         }
         bundleItem.calories = Math.round(bundleItem.calories + entry.calories);
         bundleItem.carbs = roundTo(bundleItem.carbs + entry.carbs, 1);

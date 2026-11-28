@@ -226,7 +226,8 @@ function drawRoundedBox(
   radius: number,
   fill?: string,
   stroke?: string,
-  lineWidth = 1
+  lineWidth = 1,
+  dashed = false
 ) {
   drawRoundedRect(ctx, x, y, width, height, radius);
   if (fill) {
@@ -234,10 +235,63 @@ function drawRoundedBox(
     ctx.fill();
   }
   if (stroke) {
+    ctx.save();
+    if (dashed && typeof ctx.setLineDash === 'function') ctx.setLineDash([2.5, 2.5]);
     ctx.lineWidth = lineWidth;
     ctx.strokeStyle = stroke;
     ctx.stroke();
+    ctx.restore();
   }
+}
+
+function drawSystemEntryIcon(
+  ctx: CanvasRenderingContext2D,
+  kind: 'estimate' | 'as_planned',
+  x: number,
+  centerY: number,
+  color: string
+) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.15;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  if (kind === 'estimate') {
+    // 閃電圖標（估算）
+    const top = centerY - 5;
+    ctx.beginPath();
+    ctx.moveTo(x + 6, top);
+    ctx.lineTo(x + 1.5, top + 5.5);
+    ctx.lineTo(x + 5, top + 5.5);
+    ctx.lineTo(x + 4, top + 10);
+    ctx.lineTo(x + 8.5, top + 4.5);
+    ctx.lineTo(x + 5, top + 4.5);
+    ctx.closePath();
+    ctx.stroke();
+  } else {
+    // 歷史時鐘圖標（推算）
+    const cx = x + 5.2;
+    const cy = centerY;
+    const r = 4.2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, Math.PI * 0.75, Math.PI * 2.55, false);
+    ctx.stroke();
+    // 箭頭
+    ctx.beginPath();
+    ctx.moveTo(cx - 4.2, cy - 1);
+    ctx.lineTo(cx - 4.2, cy - 3.3);
+    ctx.lineTo(cx - 1.9, cy - 3.3);
+    ctx.stroke();
+    // 時鐘指針
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 2);
+    ctx.lineTo(cx, cy + 0.3);
+    ctx.lineTo(cx + 1.8, cy + 1.2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
 }
 
 function drawRoundedTopBox(
@@ -914,7 +968,9 @@ function renderMealCard(
           servingUnit: amountInfo.servingUnit,
         });
 
-        // --- (A) 右側 MacroSquares：3 個方塊矩陣 (碳 / 蛋 / 脂) ---
+        const isSystemEntry = item.type === 'estimate' || item.type === 'as_planned';
+
+        // --- (A) 右側 MacroSquares：3 個方塊矩陣 (碳 / 蛋 / 脂；系統估算/推算條目採虛線邊框) ---
         // 寬度 w-11 (44px), 高度 38px, 間距 gap-2 (8px), 圓角 4px
         const sqW = 44;
         const sqH = 38;
@@ -957,7 +1013,7 @@ function renderMealCard(
           const tagColor = sq.isHighlighted ? sq.color : palette.macroNeutralLabel;
           const tagWeight = sq.isHighlighted ? '600' : '500';
 
-          drawRoundedBox(ctx, sX, sqY, sqW, sqH, 4, boxFill, boxBorder, 1);
+          drawRoundedBox(ctx, sX, sqY, sqW, sqH, 4, boxFill, boxBorder, 1, isSystemEntry);
 
           // 頂部標籤 (SANS_FONT)
           ctx.font = `${tagWeight} 9.5px ${SANS_FONT}`;
@@ -985,97 +1041,101 @@ function renderMealCard(
           ctx.fillText('g', valStartX + numW + 1.5, sqY + 30);
         });
 
-        // --- (B) 左側品名與份量熱量副標 ---
+        // --- (B) 左側品名與份量熱量副標（復刻 App 真實樣式，無標題前綴膠囊） ---
         const leftX = paddingX + 16;
         const maxTitleW = squaresStartX - leftX - 12;
-
-        let badgeText = '';
-        if (item.type === 'estimate') badgeText = `⚡ ${rc.t('aiExport.diet.estimateTag', '估算')}`;
-        if (item.type === 'as_planned') badgeText = `⚡ ${rc.t('aiExport.diet.asPlannedTag', '歷史均值')}`;
-        if (item.type === 'recipe') badgeText = rc.t('aiExport.diet.recipeTag', '食譜');
-
-        let titleStartX = leftX;
-        if (badgeText) {
-          ctx.font = `500 10px ${SANS_FONT}`;
-          const bW = ctx.measureText(badgeText).width + 8;
-          drawRoundedBox(ctx, titleStartX, curY + 11, bW, 18, 4, palette.pillSubtleBg, palette.border, 1);
-          ctx.fillStyle = palette.textSecondary;
-          ctx.textBaseline = 'middle';
-          ctx.textAlign = 'left';
-          ctx.fillText(badgeText, titleStartX + 4, curY + 20);
-          titleStartX += bW + 6;
-        }
 
         ctx.font = `500 14px ${SANS_FONT}`;
         ctx.fillStyle = palette.textPrimary;
         ctx.textBaseline = 'top';
         ctx.textAlign = 'left';
-        const displayTitle = truncateText(ctx, item.name, maxTitleW - (titleStartX - leftX));
-        ctx.fillText(displayTitle, titleStartX, curY + 12);
+        const displayTitle = truncateText(ctx, item.name, maxTitleW);
+        ctx.fillText(displayTitle, leftX, curY + 12);
 
-        // 第二行：份量 + 熱量標籤（雙字體分離 + 2px 微距）
+        // 第二行：系統條目顯示「[圖標] 估算/推算 · xxx kcal」；實體食物/食譜顯示「份量 · 熱量標籤」
         const subBaselineY = curY + 40;
         let curSubX = leftX;
 
-        if ('amount' in item && item.amount) {
-          const amountParts = item.amount.trim().match(/^([\d.,]+)\s*(.+)$/);
-          const amountTokens: InlineToken[] = amountParts
-            ? [
-                { text: amountParts[1], font: `400 11px ${MONO_FONT}`, color: palette.textSecondary },
-                { text: amountParts[2], font: `400 10.5px ${SANS_FONT}`, color: palette.textTertiary, gap: 2 },
-                { text: '·', font: `400 11px ${SANS_FONT}`, color: palette.textTertiary, gap: 5 },
-              ]
-            : [
-                { text: item.amount, font: `400 11px ${SANS_FONT}`, color: palette.textSecondary },
-                { text: '·', font: `400 11px ${SANS_FONT}`, color: palette.textTertiary, gap: 5 },
-              ];
-
-          curSubX += drawInlineTokens(ctx, amountTokens, curSubX, subBaselineY) + 5;
-        }
-
-        const isHighCal = evalRes.labels.includes('high-calorie');
-        const isLowCal = evalRes.labels.includes('low-calorie');
-        const calColor = isHighCal
-          ? palette.caloriesText
-          : isLowCal
-            ? palette.calorieLowText
-            : palette.textSecondary;
-        const calUnitColor = isHighCal
-          ? palette.caloriesText
-          : isLowCal
-            ? palette.calorieLowText
-            : palette.textTertiary;
-
-        const calTokens: InlineToken[] = [
-          {
-            text: `${item.calories}`,
-            font: `${isHighCal || isLowCal ? '500' : '400'} 11px ${MONO_FONT}`,
-            color: calColor,
-          },
-          {
-            text: 'kcal',
-            font: `400 10.5px ${SANS_FONT}`,
-            color: calUnitColor,
-            gap: 2,
-          },
-        ];
-
-        if (isHighCal || isLowCal) {
-          const calTagW = measureInlineTokens(ctx, calTokens) + 8;
-          drawRoundedBox(
+        if (isSystemEntry) {
+          const systemKind = item.type === 'estimate' ? 'estimate' : 'as_planned';
+          const systemLabel =
+            systemKind === 'estimate'
+              ? rc.t('diet.placeholder.badge', '估算')
+              : rc.t('diet.placeholder.asPlannedBadge', '推算');
+          drawSystemEntryIcon(ctx, systemKind, curSubX, curY + 36, palette.textSecondary);
+          curSubX += 13;
+          drawInlineTokens(
             ctx,
+            [
+              { text: systemLabel, font: `400 11px ${SANS_FONT}`, color: palette.textSecondary },
+              { text: '·', font: `400 11px ${SANS_FONT}`, color: palette.textTertiary, gap: 5 },
+              { text: `${item.calories}`, font: `400 11px ${MONO_FONT}`, color: palette.textSecondary, gap: 5 },
+              { text: 'kcal', font: `400 10.5px ${SANS_FONT}`, color: palette.textTertiary, gap: 2 },
+            ],
             curSubX,
-            curY + 28,
-            calTagW,
-            17,
-            3,
-            isHighCal ? palette.caloriesBg : palette.calorieLowBg,
-            undefined,
-            0
+            subBaselineY
           );
-          drawInlineTokens(ctx, calTokens, curSubX + 4, subBaselineY);
         } else {
-          drawInlineTokens(ctx, calTokens, curSubX, subBaselineY);
+          if ('amount' in item && item.amount) {
+            const amountParts = item.amount.trim().match(/^([\d.,]+)\s*(.+)$/);
+            const amountTokens: InlineToken[] = amountParts
+              ? [
+                  { text: amountParts[1], font: `400 11px ${MONO_FONT}`, color: palette.textSecondary },
+                  { text: amountParts[2], font: `400 10.5px ${SANS_FONT}`, color: palette.textTertiary, gap: 2 },
+                  { text: '·', font: `400 11px ${SANS_FONT}`, color: palette.textTertiary, gap: 5 },
+                ]
+              : [
+                  { text: item.amount, font: `400 11px ${SANS_FONT}`, color: palette.textSecondary },
+                  { text: '·', font: `400 11px ${SANS_FONT}`, color: palette.textTertiary, gap: 5 },
+                ];
+
+            curSubX += drawInlineTokens(ctx, amountTokens, curSubX, subBaselineY) + 5;
+          }
+
+          const isHighCal = evalRes.labels.includes('high-calorie');
+          const isLowCal = evalRes.labels.includes('low-calorie');
+          const calColor = isHighCal
+            ? palette.caloriesText
+            : isLowCal
+              ? palette.calorieLowText
+              : palette.textSecondary;
+          const calUnitColor = isHighCal
+            ? palette.caloriesText
+            : isLowCal
+              ? palette.calorieLowText
+              : palette.textTertiary;
+
+          const calTokens: InlineToken[] = [
+            {
+              text: `${item.calories}`,
+              font: `${isHighCal || isLowCal ? '500' : '400'} 11px ${MONO_FONT}`,
+              color: calColor,
+            },
+            {
+              text: 'kcal',
+              font: `400 10.5px ${SANS_FONT}`,
+              color: calUnitColor,
+              gap: 2,
+            },
+          ];
+
+          if (isHighCal || isLowCal) {
+            const calTagW = measureInlineTokens(ctx, calTokens) + 8;
+            drawRoundedBox(
+              ctx,
+              curSubX,
+              curY + 28,
+              calTagW,
+              17,
+              3,
+              isHighCal ? palette.caloriesBg : palette.calorieLowBg,
+              undefined,
+              0
+            );
+            drawInlineTokens(ctx, calTokens, curSubX + 4, subBaselineY);
+          } else {
+            drawInlineTokens(ctx, calTokens, curSubX, subBaselineY);
+          }
         }
 
         ctx.restore();
