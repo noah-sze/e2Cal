@@ -197,7 +197,7 @@
       "ingredientsTab": "食物",
       "recipesTab": "食谱",
       "itemsUnit": "项单品",
-      "recipesUnit": "道配方",
+      "recipesUnit": "道食谱",
       "searchRecipePlaceholder": "搜索食谱名称...",
       "breakfast": "早餐",
       "lunch": "午餐",
@@ -346,7 +346,7 @@
       "noRecipes": "无食谱",
       "logRecipe": "记录整道菜",
       "logIngredientsDirectly": "拆解为食物记录",
-      "dishDetails": "配方详情",
+      "dishDetails": "食谱详情",
       "includeOil": "包含烹调用油",
       "excludeOil": "无油或已沥干",
       "totalEstimated": "计算预估",
@@ -354,7 +354,7 @@
       "ingredientsCount": "{{count}} 种食物",
       "relatedRecipes": "关联食谱",
       "noRelatedRecipes": "无关联食谱",
-      "recipeDetails": "配方详情",
+      "recipeDetails": "食谱详情",
       "viewFoodDetail": "查看详情",
       "noRecipeLogs": "无记录",
       "foodHasRecipes": "已被食谱引用",
@@ -1631,7 +1631,7 @@
           "copy": {
             "tag": "02 // 一键复制",
             "title": "日常重复 · 一键复用",
-            "desc": "规律饮食无摩擦。当进餐内容高度重复时，一键带入昨日或历史同餐所有食物配方，零重复手动录入。"
+            "desc": "规律饮食无摩擦。当进餐内容高度重复时，一键带入昨日或历史同餐所有食物与食谱，零重复手动录入。"
           },
           "estimate": {
             "tag": "03 // 快速估算",
@@ -1653,7 +1653,7 @@
             "desc": "6 大官方化验库，按需离线导入"
           },
           "recipes": {
-            "label": "复合菜肴",
+            "label": "复合食谱",
             "value": "∞",
             "unit": "自订",
             "desc": "自由组合食物，纯 ID 引用无漂移"

@@ -95,6 +95,7 @@ export interface FoodItem {
 export interface RecipeIngredient {
   foodId: string;
   quantity: number;
+  grossQuantity?: number;
   unit: string;
   isOptional?: boolean;
 }

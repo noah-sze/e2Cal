@@ -39,7 +39,7 @@ export function groupMealLogs(
         existing.logs.push(log);
       } else {
         const recipe = recipeMap.get(log.bundleId);
-        const bundleTitle = recipe?.name || '菜餚';
+        const bundleTitle = recipe?.name || '食譜';
         const bundleEntry = {
           type: 'bundle' as const,
           bundleId: log.bundleId,

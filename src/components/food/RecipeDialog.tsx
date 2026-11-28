@@ -26,11 +26,13 @@ import { getInMemoryRecipesCache, prewarmRecipesCache } from '@/hooks/useRecipes
 import { prewarmDailyDietLogsCache, useFoodLogs } from '@/hooks/useFoodLogs';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { calculateIngredientMacros } from '@/utils/recipeMath';
+import { calculateEffectiveGrams, type WeighingForm } from '@/utils/nutritionMath';
 import { evaluateNutritionalHighlight } from '@/utils/nutritionEvaluation';
 import { formatFoodDisplayName } from '@/utils/foodNaming';
 import { ozToG, gToOz, flOzToMl, mlToFlOz } from '@/utils/unitMath';
+import { KeypadWeighingDisplayCard } from '@/components/diet/KeypadWeighingDisplayCard';
 import { triggerHaptic } from '@/lib/haptics';
-import { cn } from '@/lib/utils';
+import { cn, parseKeypadDisplayAmount } from '@/lib/utils';
 
 export type RecipeFormData = Omit<
   FoodRecipe,
@@ -67,6 +69,7 @@ export interface RecipeDialogProps {
       id?: string;
       foodId?: string;
       quantity: number;
+      grossQuantity?: number;
       unit: string;
     }>
   ) => Promise<void>;
@@ -84,6 +87,7 @@ interface UnifiedIngredientRow {
   foodId?: string;
   foodName: string;
   quantity: number;
+  grossQuantity?: number;
   unit: string;
   baseFood?: FoodItem | null;
   baseRatio?: { calories: number; carbs: number; protein: number; fat: number };
@@ -95,6 +99,8 @@ interface KeypadConfig {
   value: number;
   unit: string;
   anchorEl?: HTMLElement | null;
+  pendingRow?: UnifiedIngredientRow;
+  replaceIndex?: number;
 }
 
 /**
@@ -142,7 +148,7 @@ export function RecipeDialog({
 
   const { allFoods } = useFoods();
   const { addFoodLogBundle } = useFoodLogs(date || '');
-  const { foodWeightUnit, foodVolumeUnit } = useUnitPreferences();
+  const { foodWeightUnit, foodVolumeUnit, energyUnit } = useUnitPreferences();
 
   // 模式解析
   const variant: 'recipe' | 'log' = explicitVariant ?? (onSubmit ? 'recipe' : 'log');
@@ -166,7 +172,9 @@ export function RecipeDialog({
 
   // 次級彈窗狀態（數字鍵盤、食物選擇器）
   const [keypadConfig, setKeypadConfig] = useState<KeypadConfig | null>(null);
+  const [weighingForm, setWeighingForm] = useState<WeighingForm>('net');
   const initialKeypadValueRef = useRef<number>(0);
+  const initialGrossQuantityRef = useRef<number | undefined>(undefined);
   const isKeypadConfirmedRef = useRef(false);
 
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -221,13 +229,20 @@ export function RecipeDialog({
             food?.category === 'beverage';
 
           let displayQty = ing.quantity;
+          let displayGrossQty = ing.grossQuantity;
           let displayUnit = isLiquid ? 'ml' : 'g';
 
           if (isLiquid && foodVolumeUnit === 'fl oz') {
             displayQty = mlToFlOz(ing.quantity, 2);
+            if (typeof ing.grossQuantity === 'number' && ing.grossQuantity > 0) {
+              displayGrossQty = mlToFlOz(ing.grossQuantity, 2);
+            }
             displayUnit = 'fl oz';
           } else if (!isLiquid && foodWeightUnit === 'oz') {
             displayQty = gToOz(ing.quantity, 2);
+            if (typeof ing.grossQuantity === 'number' && ing.grossQuantity > 0) {
+              displayGrossQty = gToOz(ing.grossQuantity, 2);
+            }
             displayUnit = 'oz';
           }
 
@@ -236,6 +251,9 @@ export function RecipeDialog({
             foodId: ing.foodId,
             foodName: food ? formatFoodDisplayName(food) : '',
             quantity: displayQty > 0 ? displayQty : 100,
+            ...(typeof displayGrossQty === 'number' && displayGrossQty > 0
+              ? { grossQuantity: displayGrossQty }
+              : {}),
             unit: displayUnit,
             baseFood: food,
           };
@@ -257,6 +275,9 @@ export function RecipeDialog({
           foodId: ing.foodId,
           foodName: baseFood ? formatFoodDisplayName(baseFood) : '',
           quantity: ing.quantity,
+          ...(typeof ing.grossQuantity === 'number' && ing.grossQuantity > 0
+            ? { grossQuantity: ing.grossQuantity }
+            : {}),
           unit: ing.unit || 'g',
           baseFood,
         };
@@ -273,6 +294,7 @@ export function RecipeDialog({
           foodId: log.foodId,
           foodName: log.foodName || '未知食物',
           quantity: qty,
+          grossQuantity: log.grossQuantity,
           unit: log.unit || 'g',
           baseFood: log.foodId && cachedFoodMap ? cachedFoodMap.get(log.foodId) || null : null,
           baseRatio:
@@ -409,7 +431,7 @@ export function RecipeDialog({
     setIsPickerOpen(true);
   };
 
-  // 食物選擇回調
+  // 食物選擇回調（僅暫存至懸浮鍵盤，待使用者確認重量後才寫入食材清單）
   const handleSelectFood = (item: FoodItem | FoodRecipe) => {
     const food = item as FoodItem;
     if (disabledFoodIds.includes(food.id)) return;
@@ -420,43 +442,49 @@ export function RecipeDialog({
 
     const prefUnit = isLiquid ? foodVolumeUnit : foodWeightUnit;
     const defaultQty = isLiquid ? (prefUnit === 'fl oz' ? 8 : 250) : (prefUnit === 'oz' ? 3.5 : 100);
+    const displayName = formatFoodDisplayName(food);
 
-    if (replacingIndex !== null && replacingIndex >= 0 && replacingIndex < ingredients.length) {
-      setIngredients((prev) =>
-        prev.map((row, idx) =>
-          idx === replacingIndex
-            ? {
-                ...row,
-                foodId: food.id,
-                foodName: formatFoodDisplayName(food),
-                unit: prefUnit,
-                quantity: row.quantity > 0 ? row.quantity : defaultQty,
-                baseFood: food,
-                baseRatio: undefined,
-              }
-            : row
-        )
-      );
-    } else {
-      setIngredients((prev) => {
-        if (prev.some((row) => row.foodId === food.id)) return prev;
-        const newRow: UnifiedIngredientRow = {
+    const isReplace =
+      replacingIndex !== null && replacingIndex >= 0 && replacingIndex < ingredients.length;
+    if (!isReplace && ingredients.some((row) => row.foodId === food.id)) return;
+
+    const prevRow = isReplace ? ingredients[replacingIndex] : undefined;
+    const targetQty = prevRow && prevRow.quantity > 0 ? prevRow.quantity : defaultQty;
+    const pendingRow: UnifiedIngredientRow = isReplace && prevRow
+      ? {
+          ...prevRow,
+          foodId: food.id,
+          foodName: displayName,
+          unit: prefUnit,
+          quantity: targetQty,
+          grossQuantity: undefined,
+          baseFood: food,
+          baseRatio: undefined,
+        }
+      : {
           id: `${food.id}-${uuidv4()}`,
           foodId: food.id,
-          foodName: formatFoodDisplayName(food),
-          quantity: defaultQty,
+          foodName: displayName,
+          quantity: targetQty,
           unit: prefUnit,
           baseFood: food,
         };
-        return [...prev, newRow];
-      });
-    }
 
     triggerHaptic('selection');
     setReplacingIndex(null);
-    if (!isRecipeVariant) {
-      setIsPickerOpen(false);
-    }
+    setWeighingForm('net');
+    initialKeypadValueRef.current = targetQty;
+    initialGrossQuantityRef.current = undefined;
+    isKeypadConfirmedRef.current = false;
+    setKeypadConfig({
+      index: -1,
+      title: displayName,
+      value: targetQty,
+      unit: prefUnit,
+      anchorEl: null,
+      pendingRow,
+      replaceIndex: isReplace ? replacingIndex : undefined,
+    });
   };
 
   // 移除食物（允許清空至 0 項，此時送出按鈕將自動禁用）
@@ -471,55 +499,105 @@ export function RecipeDialog({
     if (!row) return;
 
     if (!isRecipeVariant) triggerHaptic('selection');
+    const hasGross = Boolean(row.grossQuantity && row.grossQuantity > 0);
+    const nextForm: WeighingForm = hasGross ? 'gross' : 'net';
+    const initialVal = hasGross ? (row.grossQuantity as number) : row.quantity;
+    setWeighingForm(nextForm);
     initialKeypadValueRef.current = row.quantity;
+    initialGrossQuantityRef.current = row.grossQuantity;
     isKeypadConfirmedRef.current = false;
     setKeypadConfig({
       index,
       title: row.foodName,
-      value: row.quantity,
+      value: initialVal,
       unit: row.unit,
       anchorEl,
     });
   };
 
-  const handleKeypadLiveChange = useCallback(
-    (val: number) => {
-      if (!keypadConfig) return;
+  const computeUpdatedRow = useCallback(
+    (row: UnifiedIngredientRow, rawVal: number, form: WeighingForm, unit?: string): UnifiedIngredientRow => {
+      const targetFood = row.baseFood || (row.foodId ? foodMap.get(row.foodId) : null);
+      const canUseGross =
+        form === 'gross' && Boolean(targetFood?.edibleRate && targetFood.edibleRate < 1);
+      const effectiveQty = canUseGross
+        ? calculateEffectiveGrams(rawVal, 'gross', targetFood?.edibleRate)
+        : rawVal;
+      return {
+        ...row,
+        quantity: effectiveQty,
+        grossQuantity: canUseGross ? rawVal : undefined,
+        unit: unit || row.unit,
+      };
+    },
+    [foodMap]
+  );
+
+  const applyIngredientQuantity = useCallback(
+    (index: number, rawVal: number, form: WeighingForm, unit?: string) => {
       setIngredients((prev) =>
-        prev.map((row, idx) =>
-          idx === keypadConfig.index ? { ...row, quantity: val > 0 ? val : 0 } : row
-        )
+        prev.map((row, idx) => (idx === index ? computeUpdatedRow(row, rawVal, form, unit) : row))
       );
     },
-    [keypadConfig]
+    [computeUpdatedRow]
+  );
+
+  const handleKeypadLiveChange = useCallback(
+    (val: number) => {
+      if (!keypadConfig || keypadConfig.pendingRow) return;
+      applyIngredientQuantity(keypadConfig.index, val > 0 ? val : 0, weighingForm);
+    },
+    [keypadConfig, weighingForm, applyIngredientQuantity]
   );
 
   const handleKeypadConfirm = useCallback(
     (val: number, unit?: string) => {
       isKeypadConfirmedRef.current = true;
-      if (!keypadConfig) return;
-      setIngredients((prev) =>
-        prev.map((row, idx) =>
-          idx === keypadConfig.index
-            ? {
-                ...row,
-                quantity: val > 0 ? val : isRecipeVariant ? 0 : 1,
-                unit: unit || row.unit,
-              }
-            : row
-        )
-      );
+      if (keypadConfig) {
+        const fallbackMin = isRecipeVariant ? 0 : 1;
+        const rawVal = val > 0 ? val : fallbackMin;
+        if (keypadConfig.pendingRow) {
+          const committedRow = computeUpdatedRow(
+            keypadConfig.pendingRow,
+            rawVal,
+            weighingForm,
+            unit
+          );
+          if (typeof keypadConfig.replaceIndex === 'number') {
+            const replaceIdx = keypadConfig.replaceIndex;
+            setIngredients((prev) =>
+              prev.map((row, idx) => (idx === replaceIdx ? committedRow : row))
+            );
+          } else {
+            setIngredients((prev) =>
+              prev.some((row) => row.foodId && row.foodId === committedRow.foodId)
+                ? prev
+                : [...prev, committedRow]
+            );
+          }
+          setIsPickerOpen(false);
+        } else {
+          applyIngredientQuantity(keypadConfig.index, rawVal, weighingForm, unit);
+        }
+      }
       setKeypadConfig(null);
     },
-    [keypadConfig, isRecipeVariant]
+    [keypadConfig, isRecipeVariant, weighingForm, computeUpdatedRow, applyIngredientQuantity]
   );
 
   const handleKeypadCancel = useCallback(() => {
     if (isKeypadConfirmedRef.current || !keypadConfig) return;
-    const prevVal = initialKeypadValueRef.current;
+    if (keypadConfig.pendingRow) {
+      setKeypadConfig(null);
+      return;
+    }
+    const prevQty = initialKeypadValueRef.current;
+    const prevGross = initialGrossQuantityRef.current;
     setIngredients((prev) =>
       prev.map((row, idx) =>
-        idx === keypadConfig.index ? { ...row, quantity: prevVal } : row
+        idx === keypadConfig.index
+          ? { ...row, quantity: prevQty, grossQuantity: prevGross }
+          : row
       )
     );
     setKeypadConfig(null);
@@ -542,9 +620,14 @@ export function RecipeDialog({
     for (const item of ingredients) {
       if (item.quantity > 0 && item.foodId) {
         const normalized = normalizeToMetric(item.quantity, item.unit);
+        const normalizedGross =
+          typeof item.grossQuantity === 'number' && item.grossQuantity > 0
+            ? normalizeToMetric(item.grossQuantity, item.unit).quantity
+            : undefined;
         validIngredients.push({
           foodId: item.foodId,
           quantity: normalized.quantity,
+          ...(normalizedGross && normalizedGross > 0 ? { grossQuantity: normalizedGross } : {}),
           unit: normalized.unit,
         });
       }
@@ -574,6 +657,9 @@ export function RecipeDialog({
           id: item.originalLogId,
           foodId: item.foodId,
           quantity: item.quantity,
+          ...(typeof item.grossQuantity === 'number' && item.grossQuantity > 0
+            ? { grossQuantity: item.grossQuantity }
+            : {}),
           unit: item.unit,
         }));
         await onSave(effectiveBundleId, updatedItems);
@@ -583,6 +669,9 @@ export function RecipeDialog({
           mealType,
           foodId: item.foodId || '',
           quantity: item.quantity,
+          ...(typeof item.grossQuantity === 'number' && item.grossQuantity > 0
+            ? { grossQuantity: item.grossQuantity }
+            : {}),
           unit: item.unit,
         }));
         await addFoodLogBundle(effectiveBundleId, logItems);
@@ -760,15 +849,60 @@ export function RecipeDialog({
           allowDecimals={true}
           maxDecimals={2}
           anchorEl={keypadConfig.anchorEl}
-          zIndex={zIndex + 10}
-          onDelete={() => {
-            const idx = keypadConfig.index;
-            setKeypadConfig(null);
-            handleRemoveIngredient(idx);
-          }}
+          zIndex={keypadConfig.pendingRow ? zIndex + 20 : zIndex + 10}
+          onDelete={
+            keypadConfig.pendingRow
+              ? undefined
+              : () => {
+                  const idx = keypadConfig.index;
+                  setKeypadConfig(null);
+                  handleRemoveIngredient(idx);
+                }
+          }
           onLiveChange={handleKeypadLiveChange}
           onConfirm={handleKeypadConfirm}
           onCancel={handleKeypadCancel}
+          renderContextRow={(valStr, currentU) => {
+            const activeRow = keypadConfig.pendingRow ?? ingredients[keypadConfig.index];
+            const baseFood =
+              activeRow?.baseFood || (activeRow?.foodId ? foodMap.get(activeRow.foodId) : null);
+            const rawQty = parseKeypadDisplayAmount(valStr);
+            const effectiveQty = calculateEffectiveGrams(
+              rawQty,
+              weighingForm,
+              baseFood?.edibleRate
+            );
+            const hasRefuse = Boolean(baseFood?.refuseRate && baseFood.refuseRate > 0);
+            const displayCalories = activeRow
+              ? getIngredientMacros({ ...activeRow, quantity: effectiveQty, unit: currentU }).calories
+              : 0;
+
+            return (
+              <KeypadWeighingDisplayCard
+                weighingForm={weighingForm}
+                hasRefuse={hasRefuse}
+                edibleRate={baseFood?.edibleRate}
+                refuseRate={baseFood?.refuseRate}
+                onSelectNet={() => {
+                  setWeighingForm('net');
+                  if (!keypadConfig.pendingRow) {
+                    applyIngredientQuantity(keypadConfig.index, rawQty, 'net', currentU);
+                  }
+                }}
+                onSelectGross={() => {
+                  setWeighingForm('gross');
+                  if (!keypadConfig.pendingRow) {
+                    applyIngredientQuantity(keypadConfig.index, rawQty, 'gross', currentU);
+                  }
+                }}
+                calories={displayCalories}
+                energyUnit={energyUnit}
+                valueText={valStr}
+                unit={currentU}
+                effectiveQty={effectiveQty}
+              />
+            );
+          }}
         />
       )}
 
@@ -776,8 +910,12 @@ export function RecipeDialog({
       {isPickerOpen && (
         <FoodRecipeSelectDialog
           open={isPickerOpen}
-          onOpenChange={setIsPickerOpen}
+          onOpenChange={(pOpen) => {
+            if (!pOpen && keypadConfig) return;
+            setIsPickerOpen(pOpen);
+          }}
           mode="foods"
+          autoCloseOnSelect={false}
           zIndex={zIndex + 10}
           disabledIds={disabledFoodIds}
           onSelect={handleSelectFood}

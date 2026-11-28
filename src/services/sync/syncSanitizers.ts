@@ -218,11 +218,20 @@ export function sanitizeRecipe(recipeInput: unknown): FoodRecipe {
       ? recipe.ingredients.map((ingInput: unknown) => {
           const ing = asRecord(ingInput);
           const rawFoodId = String(ing.foodId || '');
-          const item: { foodId: string; quantity: number; unit: string; isOptional?: boolean } = {
+          const item: {
+            foodId: string;
+            quantity: number;
+            grossQuantity?: number;
+            unit: string;
+            isOptional?: boolean;
+          } = {
             foodId: rawFoodId,
             quantity: Number(ing.quantity) || 0,
             unit: String(ing.unit || 'g'),
           };
+          if (typeof ing.grossQuantity === 'number' && Number.isFinite(ing.grossQuantity) && ing.grossQuantity > 0) {
+            item.grossQuantity = ing.grossQuantity;
+          }
           if (typeof ing.isOptional === 'boolean') {
             item.isOptional = ing.isOptional;
           }

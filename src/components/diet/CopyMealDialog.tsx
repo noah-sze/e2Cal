@@ -13,12 +13,19 @@ import { db } from '@/services/db/db';
 import { ensureDailyDietMeta } from '@/hooks/useDietPlan';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { getInMemoryFoodsCache, setInMemoryFoodsCache } from '@/hooks/useFoods';
+import { getInMemoryRecipesCache, setInMemoryRecipesCache } from '@/hooks/useRecipes';
 import { formatEnergy, roundTo } from '@/utils/unitMath';
-import { calculateFoodLogNutrients } from '@/utils/nutritionMath';
-import { resolveFoodLogTitle } from '@/utils/foodNaming';
-import { cn, formatDisplayAmount } from '@/lib/utils';
+import {
+  calculateFoodLogNutrients,
+  calculateEffectiveGrams,
+  type WeighingForm,
+} from '@/utils/nutritionMath';
+import { resolveFoodLogTitle, formatFoodDisplayName } from '@/utils/foodNaming';
+import { cn, formatDisplayAmount, parseKeypadDisplayAmount } from '@/lib/utils';
+import { KeypadWeighingDisplayCard } from '@/components/diet/KeypadWeighingDisplayCard';
+import { RecipeDialog } from '@/components/food/RecipeDialog';
 import { CopyMealDatePickerDialog } from './CopyMealDatePickerDialog';
-import type { MealType, FoodLog, FoodItem } from '@/types';
+import type { MealType, FoodLog, FoodItem, HydratedFoodLog } from '@/types';
 
 export interface CopyMealDialogProps {
   open: boolean;
@@ -31,9 +38,27 @@ export interface CopyMealDialogProps {
 interface CopyableMealItem extends FoodLog {
   foodName: string;
   calories: number;
+  bundleTitle?: string;
+  isKnownRecipe?: boolean;
   baseFood?: FoodItem | null;
   baseRatio?: { calories: number; carbs: number; protein: number; fat: number };
 }
+
+type CopyableDisplayEntry =
+  | {
+      kind: 'bundle';
+      bundleId: string;
+      bundleTitle: string;
+      logs: CopyableMealItem[];
+      totalCalories: number;
+      totalDisplayWeight: number;
+      unit: string;
+    }
+  | {
+      kind: 'single';
+      item: CopyableMealItem;
+      index: number;
+    };
 
 /**
  * 複製餐點 Dialog (Precision Modal 標準版 · 方案 1A 一體化表頭橫欄)：
@@ -59,6 +84,7 @@ export function CopyMealDialog({
   const [sourceMealType, setSourceMealType] = useState<MealType>(targetMealType);
   const [selectedHistoryDate, setSelectedHistoryDate] = useState<string | null>(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [editingBundleId, setEditingBundleId] = useState<string | null>(null);
 
   // 查詢當前目標日期及之前，該來源餐別所有有記錄的歷史日期 (降序排列)
   // 若目標日期（今天）有除 targetMealType 以外的餐別數據，亦允許選擇今天
@@ -132,7 +158,9 @@ export function CopyMealDialog({
     unit: string;
     anchorEl?: HTMLElement | null;
   } | null>(null);
+  const [weighingForm, setWeighingForm] = useState<WeighingForm>('net');
   const initialKeypadValueRef = useRef<number>(0);
+  const initialGrossQuantityRef = useRef<number | undefined>(undefined);
   const isKeypadConfirmedRef = useRef(false);
 
   // 彈窗開啟或目標參數變更時，預設重置來源餐別、手動選擇與次級彈窗
@@ -141,6 +169,7 @@ export function CopyMealDialog({
       setSourceMealType(targetMealType);
       setSelectedHistoryDate(null);
       setIsDatePickerOpen(false);
+      setEditingBundleId(null);
       setKeypadConfig(null);
     }
   }, [open, targetDate, targetMealType]);
@@ -159,10 +188,17 @@ export function CopyMealDialog({
     }
     const foodMap = new Map(allFoods.map((f) => [f.id, f]));
 
+    const cachedRecipes = getInMemoryRecipesCache();
+    const allRecipes = cachedRecipes !== null ? cachedRecipes : await db.recipes.toArray();
+    if (cachedRecipes === null) {
+      setInMemoryRecipesCache(allRecipes);
+    }
+    const recipeMap = new Map(allRecipes.map((r) => [r.id, r]));
+
     return rawEntries.map((log) => {
       const isSystem = log.entryType === 'estimate' || log.entryType === 'as_planned' || log.isPlaceholder || log.isAsPlanned;
       const food = (!isSystem && log.foodId) ? foodMap.get(log.foodId) : undefined;
-      const raw = log as unknown as { foodName?: string; calories?: number; carbs?: number; protein?: number; fat?: number };
+      const raw = log as unknown as { foodName?: string; bundleTitle?: string; calories?: number; carbs?: number; protein?: number; fat?: number };
       const computed = food
         ? calculateFoodLogNutrients(food, log.quantity || 0, log.unit || 'g')
         : {
@@ -172,11 +208,17 @@ export function CopyMealDialog({
             fat: raw.fat || 0,
           };
       const displayName = resolveFoodLogTitle(log, t, food);
+      const matchedRecipe = log.bundleId ? recipeMap.get(log.bundleId) : undefined;
+      const resolvedBundleTitle = log.bundleId
+        ? matchedRecipe?.name || raw.bundleTitle || t('diet.recipe', '食譜')
+        : undefined;
 
       return {
         ...log,
         foodName: displayName,
         calories: computed.calories,
+        bundleTitle: resolvedBundleTitle,
+        isKnownRecipe: Boolean(matchedRecipe),
         baseFood: food || null,
         baseRatio: (log.quantity && log.quantity > 0) ? {
           calories: (computed.calories || 0) / log.quantity,
@@ -186,7 +228,7 @@ export function CopyMealDialog({
         } : undefined,
       };
     });
-  }, [open, activeHistoryDate, sourceMealType]);
+  }, [open, activeHistoryDate, sourceMealType, t]);
 
   // 本地可編輯食物清單
   const [items, setItems] = useState<CopyableMealItem[]>([]);
@@ -218,60 +260,76 @@ export function CopyMealDialog({
     const row = items[index];
     if (!row || row.quantity === undefined) return;
     triggerHaptic('selection');
+    const hasGross = Boolean(row.grossQuantity && row.grossQuantity > 0);
+    const nextForm: WeighingForm = hasGross ? 'gross' : 'net';
+    const initialVal = hasGross ? (row.grossQuantity as number) : row.quantity;
+    setWeighingForm(nextForm);
     initialKeypadValueRef.current = row.quantity;
+    initialGrossQuantityRef.current = row.grossQuantity;
     isKeypadConfirmedRef.current = false;
     setKeypadConfig({
       index,
       title: row.foodName,
-      value: row.quantity,
+      value: initialVal,
       unit: row.unit || 'g',
       anchorEl,
     });
   };
 
-  const handleKeypadLiveChange = useCallback((val: number) => {
-    setItems((prev) => {
-      if (!keypadConfig) return prev;
-      return prev.map((row, idx) => {
-        if (idx !== keypadConfig.index) return row;
-        const safeQty = val > 0 ? val : 0;
-        return {
-          ...row,
-          quantity: safeQty,
-          calories: recalculateCalories(row, safeQty),
-        };
-      });
-    });
-  }, [keypadConfig, recalculateCalories]);
+  const applyRowQuantity = useCallback(
+    (index: number, rawVal: number, form: WeighingForm) => {
+      setItems((prev) =>
+        prev.map((row, idx) => {
+          if (idx !== index) return row;
+          const canUseGross =
+            form === 'gross' && Boolean(row.baseFood?.edibleRate && row.baseFood.edibleRate < 1);
+          const effectiveQty = canUseGross
+            ? calculateEffectiveGrams(rawVal, 'gross', row.baseFood?.edibleRate)
+            : rawVal;
+          return {
+            ...row,
+            quantity: effectiveQty,
+            grossQuantity: canUseGross ? rawVal : undefined,
+            calories: recalculateCalories(row, effectiveQty),
+          };
+        })
+      );
+    },
+    [recalculateCalories]
+  );
 
-  const handleKeypadConfirm = useCallback((val: number) => {
-    isKeypadConfirmedRef.current = true;
-    setItems((prev) => {
-      if (!keypadConfig) return prev;
-      return prev.map((row, idx) => {
-        if (idx !== keypadConfig.index) return row;
-        const safeQty = val > 0 ? val : 1;
-        return {
-          ...row,
-          quantity: safeQty,
-          calories: recalculateCalories(row, safeQty),
-        };
-      });
-    });
-    setKeypadConfig(null);
-  }, [keypadConfig, recalculateCalories]);
+  const handleKeypadLiveChange = useCallback(
+    (val: number) => {
+      if (!keypadConfig) return;
+      applyRowQuantity(keypadConfig.index, val > 0 ? val : 0, weighingForm);
+    },
+    [keypadConfig, weighingForm, applyRowQuantity]
+  );
+
+  const handleKeypadConfirm = useCallback(
+    (val: number) => {
+      isKeypadConfirmedRef.current = true;
+      if (keypadConfig) {
+        applyRowQuantity(keypadConfig.index, val > 0 ? val : 1, weighingForm);
+      }
+      setKeypadConfig(null);
+    },
+    [keypadConfig, weighingForm, applyRowQuantity]
+  );
 
   const handleKeypadCancel = useCallback(() => {
     if (isKeypadConfirmedRef.current) return;
     if (!keypadConfig) return;
-    const prevVal = initialKeypadValueRef.current;
+    const prevQty = initialKeypadValueRef.current;
+    const prevGross = initialGrossQuantityRef.current;
     setItems((prev) =>
       prev.map((row, idx) => {
         if (idx !== keypadConfig.index) return row;
         return {
           ...row,
-          quantity: prevVal,
-          calories: recalculateCalories(row, prevVal),
+          quantity: prevQty,
+          grossQuantity: prevGross,
+          calories: recalculateCalories(row, prevQty),
         };
       })
     );
@@ -291,15 +349,199 @@ export function CopyMealDialog({
     });
   };
 
-  const selectedCount = selectedIds.size;
+  const toggleBundle = (logs: CopyableMealItem[]) => {
+    triggerHaptic('selection');
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      const allSelected = logs.every((l) => next.has(l.id));
+      for (const l of logs) {
+        if (allSelected) {
+          next.delete(l.id);
+        } else {
+          next.add(l.id);
+        }
+      }
+      return next;
+    });
+  };
+
+  // 將同一食譜組合 (bundleId) 合併為單一列供顯示與編輯
+  const displayEntries = useMemo<CopyableDisplayEntry[]>(() => {
+    const entries: CopyableDisplayEntry[] = [];
+    const bundleMap = new Map<
+      string,
+      Extract<CopyableDisplayEntry, { kind: 'bundle' }>
+    >();
+
+    items.forEach((item, index) => {
+      if (item.bundleId) {
+        let group = bundleMap.get(item.bundleId);
+        if (!group) {
+          group = {
+            kind: 'bundle',
+            bundleId: item.bundleId,
+            bundleTitle: item.bundleTitle || t('diet.recipe', '食譜'),
+            logs: [],
+            totalCalories: 0,
+            totalDisplayWeight: 0,
+            unit: item.unit || 'g',
+          };
+          bundleMap.set(item.bundleId, group);
+          entries.push(group);
+        }
+        group.logs.push(item);
+        group.totalCalories += item.calories || 0;
+        const displayQty =
+          typeof item.grossQuantity === 'number' && item.grossQuantity > 0
+            ? item.grossQuantity
+            : item.quantity || 0;
+        group.totalDisplayWeight = roundTo(group.totalDisplayWeight + displayQty, 2);
+      } else {
+        entries.push({ kind: 'single', item, index });
+      }
+    });
+
+    return entries;
+  }, [items, t]);
+
+  const selectedCount = useMemo(() => {
+    return displayEntries.filter((entry) =>
+      entry.kind === 'bundle'
+        ? entry.logs.some((l) => selectedIds.has(l.id))
+        : selectedIds.has(entry.item.id)
+    ).length;
+  }, [displayEntries, selectedIds]);
+
+  const editingBundleData = useMemo<{
+    bundleId: string;
+    bundleTitle: string;
+    logs: HydratedFoodLog[];
+  } | null>(() => {
+    if (!editingBundleId) return null;
+    const bundleLogs = items.filter((i) => i.bundleId === editingBundleId);
+    if (bundleLogs.length === 0) return null;
+    const bundleTitle = bundleLogs[0].bundleTitle || t('diet.recipe', '食譜');
+    const hydrated: HydratedFoodLog[] = bundleLogs.map((l) => {
+      const nutrients = l.baseFood
+        ? calculateFoodLogNutrients(l.baseFood, l.quantity || 0, l.unit || 'g')
+        : {
+            calories: l.calories || 0,
+            carbs: l.baseRatio ? roundTo(l.baseRatio.carbs * (l.quantity || 0), 1) : 0,
+            protein: l.baseRatio ? roundTo(l.baseRatio.protein * (l.quantity || 0), 1) : 0,
+            fat: l.baseRatio ? roundTo(l.baseRatio.fat * (l.quantity || 0), 1) : 0,
+          };
+      return {
+        ...l,
+        foodName: l.foodName,
+        calories: nutrients.calories,
+        carbs: nutrients.carbs,
+        protein: nutrients.protein,
+        fat: nutrients.fat,
+      };
+    });
+    return { bundleId: editingBundleId, bundleTitle, logs: hydrated };
+  }, [editingBundleId, items, t]);
+
+  const handleSaveBundleEdit = useCallback(
+    async (
+      bundleId: string,
+      updatedItems: Array<{
+        id?: string;
+        foodId?: string;
+        quantity: number;
+        grossQuantity?: number;
+        unit: string;
+      }>
+    ) => {
+      const cachedFoods = getInMemoryFoodsCache();
+      const allFoods = cachedFoods !== null ? cachedFoods : await db.foods.toArray();
+      const foodMap = new Map(allFoods.map((f) => [f.id, f]));
+
+      setItems((prev) => {
+        const firstIdx = prev.findIndex((i) => i.bundleId === bundleId);
+        if (firstIdx === -1) return prev;
+        const template = prev[firstIdx];
+        const prevById = new Map(prev.map((i) => [i.id, i]));
+
+        const rebuilt: CopyableMealItem[] = updatedItems.map((u) => {
+          const prevRow = u.id ? prevById.get(u.id) : undefined;
+          const food = (u.foodId ? foodMap.get(u.foodId) : undefined) ?? prevRow?.baseFood ?? null;
+          const computed = food
+            ? calculateFoodLogNutrients(food, u.quantity, u.unit || 'g')
+            : {
+                calories: prevRow?.baseRatio ? Math.round(prevRow.baseRatio.calories * u.quantity) : 0,
+                carbs: prevRow?.baseRatio ? roundTo(prevRow.baseRatio.carbs * u.quantity, 1) : 0,
+                protein: prevRow?.baseRatio ? roundTo(prevRow.baseRatio.protein * u.quantity, 1) : 0,
+                fat: prevRow?.baseRatio ? roundTo(prevRow.baseRatio.fat * u.quantity, 1) : 0,
+              };
+          const newId = prevRow?.id || u.id || uuidv4();
+          return {
+            id: newId,
+            date: template.date,
+            mealType: template.mealType,
+            entryType: 'item',
+            foodId: u.foodId,
+            quantity: u.quantity,
+            ...(typeof u.grossQuantity === 'number' && u.grossQuantity > 0
+              ? { grossQuantity: u.grossQuantity }
+              : {}),
+            unit: u.unit || 'g',
+            bundleId,
+            bundleTitle: template.bundleTitle,
+            isKnownRecipe: template.isKnownRecipe,
+            foodName: food ? formatFoodDisplayName(food) : prevRow?.foodName || '',
+            calories: computed.calories,
+            baseFood: food,
+            baseRatio:
+              u.quantity > 0
+                ? {
+                    calories: computed.calories / u.quantity,
+                    carbs: computed.carbs / u.quantity,
+                    protein: computed.protein / u.quantity,
+                    fat: computed.fat / u.quantity,
+                  }
+                : prevRow?.baseRatio,
+            createdAt: prevRow?.createdAt || Date.now(),
+            updatedAt: Date.now(),
+          };
+        });
+
+        setSelectedIds((selPrev) => {
+          const next = new Set(selPrev);
+          for (const oldRow of prev.filter((i) => i.bundleId === bundleId)) {
+            next.delete(oldRow.id);
+          }
+          for (const newRow of rebuilt) {
+            next.add(newRow.id);
+          }
+          return next;
+        });
+
+        const result: CopyableMealItem[] = [];
+        let inserted = false;
+        for (const row of prev) {
+          if (row.bundleId === bundleId) {
+            if (!inserted) {
+              result.push(...rebuilt);
+              inserted = true;
+            }
+          } else {
+            result.push(row);
+          }
+        }
+        return result;
+      });
+    },
+    []
+  );
 
   // 計算已選食物之總熱量
   const selectedCalories = useMemo(() => {
-    if (items.length === 0 || selectedCount === 0) return 0;
+    if (items.length === 0 || selectedIds.size === 0) return 0;
     return items
       .filter((item) => selectedIds.has(item.id))
       .reduce((sum, item) => sum + (item.calories || 0), 0);
-  }, [items, selectedIds, selectedCount]);
+  }, [items, selectedIds]);
 
   const totalCaloriesFormatted = formatEnergy(selectedCalories, energyUnit).formatted;
 
@@ -325,9 +567,9 @@ export function CopyMealDialog({
     return formattedDate;
   }, [activeHistoryDate, targetDate, t]);
 
-  // 主彈窗開關保護（防止懸浮鍵盤或日期選擇器開啟時誤關主彈窗）
+  // 主彈窗開關保護（防止懸浮鍵盤、日期選擇器或食譜編輯開啟時誤關主彈窗）
   const handleDialogOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen && (keypadConfig || isDatePickerOpen)) {
+    if (!nextOpen && (keypadConfig || isDatePickerOpen || editingBundleId)) {
       return;
     }
     onOpenChange(nextOpen);
@@ -366,10 +608,14 @@ export function CopyMealDialog({
       itemsToCopy.forEach((item) => {
         let newBundleId: string | undefined = undefined;
         if (item.bundleId) {
-          if (!bundleIdMap.has(item.bundleId)) {
-            bundleIdMap.set(item.bundleId, uuidv4());
+          if (item.isKnownRecipe) {
+            newBundleId = item.bundleId;
+          } else {
+            if (!bundleIdMap.has(item.bundleId)) {
+              bundleIdMap.set(item.bundleId, uuidv4());
+            }
+            newBundleId = bundleIdMap.get(item.bundleId);
           }
-          newBundleId = bundleIdMap.get(item.bundleId);
         }
 
         const isSystem = item.entryType === 'estimate' || item.entryType === 'as_planned' || item.isPlaceholder || item.isAsPlanned;
@@ -567,7 +813,68 @@ export function CopyMealDialog({
                 </div>
               ) : (
                 <div className="divide-y divide-border">
-                  {items.map((item, index) => {
+                  {displayEntries.map((entry) => {
+                    if (entry.kind === 'bundle') {
+                      const isSelected = entry.logs.some((l) => selectedIds.has(l.id));
+                      const energyDisplay = formatEnergy(entry.totalCalories, energyUnit);
+
+                      return (
+                        <div
+                          key={`bundle-${entry.bundleId}`}
+                          onClick={() => toggleBundle(entry.logs)}
+                          className={cn(
+                            'min-h-13 py-2 px-3 sm:px-4 flex items-center justify-between gap-2.5 bg-card transition-all cursor-pointer hover:bg-hover select-none',
+                            !isSelected && 'opacity-40'
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                            <div
+                              className={cn(
+                                'size-4 rounded-full flex items-center justify-center shrink-0 border transition-colors',
+                                isSelected
+                                  ? 'bg-foreground text-background border-foreground'
+                                  : 'border-border bg-transparent text-transparent'
+                              )}
+                            >
+                              {isSelected && <Check className="size-2.5" strokeWidth={2.5} />}
+                            </div>
+
+                            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                              <span className="truncate text-xs font-medium text-foreground">
+                                {entry.bundleTitle}
+                              </span>
+                              <MetricValue
+                                value={energyDisplay.value.toLocaleString()}
+                                unit={energyDisplay.unit}
+                                className="text-2xs text-muted-foreground"
+                              />
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={!isSelected}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!isSelected) return;
+                              triggerHaptic('selection');
+                              setEditingBundleId(entry.bundleId);
+                            }}
+                            className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none shrink-0 disabled:pointer-events-none"
+                          >
+                            <MetricValue
+                              value={formatDisplayAmount(String(entry.totalDisplayWeight)) || '0'}
+                              unit={entry.unit}
+                              valueClassName="font-normal text-foreground"
+                              unitClassName="text-2xs"
+                            />
+                            <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    const { item, index } = entry;
                     const isSelected = selectedIds.has(item.id);
                     const energyDisplay = formatEnergy(item.calories || 0, energyUnit);
 
@@ -621,14 +928,29 @@ export function CopyMealDialog({
                               if (!isSelected) return;
                               handleOpenKeypad(index, e.currentTarget);
                             }}
-                            className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1 transition-colors cursor-pointer active:scale-95 select-none shrink-0 disabled:pointer-events-none"
+                            className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none shrink-0 disabled:pointer-events-none"
                           >
-                            <span className="font-normal text-foreground">
-                              {formatDisplayAmount(String(item.quantity)) || '0'}
-                            </span>
-                            <span className="font-sans text-muted-foreground text-2xs">
-                              {item.unit}
-                            </span>
+                            {typeof item.grossQuantity === 'number' && item.grossQuantity > 0 ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                <span className="text-2xs font-sans text-muted-foreground">
+                                  {t('diet.grossWeightLabel', '毛重')}
+                                </span>
+                                <span className="h-3 w-px bg-border/80 shrink-0" aria-hidden="true" />
+                                <MetricValue
+                                  value={formatDisplayAmount(String(item.grossQuantity)) || '0'}
+                                  unit={item.unit || 'g'}
+                                  valueClassName="font-normal text-foreground"
+                                  unitClassName="text-2xs"
+                                />
+                              </span>
+                            ) : (
+                              <MetricValue
+                                value={formatDisplayAmount(String(item.quantity)) || '0'}
+                                unit={item.unit || 'g'}
+                                valueClassName="font-normal text-foreground"
+                                unitClassName="text-2xs"
+                              />
+                            )}
                             <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                           </button>
                         )}
@@ -675,6 +997,23 @@ export function CopyMealDialog({
         }}
       />
 
+      {/* 二級食譜食材重量調整 Dialog (Flat Sibling 宣告，層級 z-[70]) */}
+      {editingBundleData && (
+        <RecipeDialog
+          open={open && Boolean(editingBundleData)}
+          onOpenChange={(rOpen) => {
+            if (!rOpen) setEditingBundleId(null);
+          }}
+          variant="log"
+          mode="edit"
+          bundleId={editingBundleData.bundleId}
+          bundleTitle={editingBundleData.bundleTitle}
+          logs={editingBundleData.logs}
+          onSave={handleSaveBundleEdit}
+          zIndex={70}
+        />
+      )}
+
       {/* 次級懸浮鍵盤 (平級兄弟節點聲明，層級 zIndex={70} 高於主彈窗) */}
       {keypadConfig && (
         <NumericKeypadDialog
@@ -697,6 +1036,40 @@ export function CopyMealDialog({
           onLiveChange={handleKeypadLiveChange}
           onConfirm={handleKeypadConfirm}
           onCancel={handleKeypadCancel}
+          renderContextRow={(valStr, currentU) => {
+            const activeRow = items[keypadConfig.index];
+            const baseFood = activeRow?.baseFood;
+            const rawQty = parseKeypadDisplayAmount(valStr);
+            const effectiveQty = calculateEffectiveGrams(
+              rawQty,
+              weighingForm,
+              baseFood?.edibleRate
+            );
+            const hasRefuse = Boolean(baseFood?.refuseRate && baseFood.refuseRate > 0);
+            const displayCalories = activeRow ? recalculateCalories(activeRow, effectiveQty) : 0;
+
+            return (
+              <KeypadWeighingDisplayCard
+                weighingForm={weighingForm}
+                hasRefuse={hasRefuse}
+                edibleRate={baseFood?.edibleRate}
+                refuseRate={baseFood?.refuseRate}
+                onSelectNet={() => {
+                  setWeighingForm('net');
+                  applyRowQuantity(keypadConfig.index, rawQty, 'net');
+                }}
+                onSelectGross={() => {
+                  setWeighingForm('gross');
+                  applyRowQuantity(keypadConfig.index, rawQty, 'gross');
+                }}
+                calories={displayCalories}
+                energyUnit={energyUnit}
+                valueText={valStr}
+                unit={currentU}
+                effectiveQty={effectiveQty}
+              />
+            );
+          }}
         />
       )}
     </>

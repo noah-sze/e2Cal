@@ -27,19 +27,21 @@ export function MealBundleCard({
   const { foodWeightUnit, foodVolumeUnit, energyUnit } = useUnitPreferences();
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // 累計 Bundle 總營養素與總克數
+  // 累計 Bundle 總營養素、淨重（供評價）與顯示總重量（優先採用使用者輸入之毛重）
+  const toGrams = (qty: number, unit?: string) =>
+    unit === 'oz'
+      ? qty * 28.3495
+      : unit === 'fl oz'
+      ? qty * 29.5735
+      : qty;
+
   const bundleTotals = logs.reduce(
     (acc, curr) => {
-      const weightInG =
-        curr.unit === 'g' || !curr.unit
-          ? curr.quantity || 0
-          : curr.unit === 'ml'
-          ? curr.quantity || 0
-          : curr.unit === 'oz'
-          ? (curr.quantity || 0) * 28.3495
-          : curr.unit === 'fl oz'
-          ? (curr.quantity || 0) * 29.5735
-          : curr.quantity || 0;
+      const netQty = curr.quantity || 0;
+      const displayQty =
+        typeof curr.grossQuantity === 'number' && curr.grossQuantity > 0
+          ? curr.grossQuantity
+          : netQty;
 
       return {
         calories: acc.calories + (curr.calories || 0),
@@ -56,7 +58,8 @@ export function MealBundleCard({
           typeof curr.transFat === 'number'
             ? (acc.transFat ?? 0) + curr.transFat
             : acc.transFat,
-        totalWeightGrams: acc.totalWeightGrams + weightInG,
+        netWeightGrams: acc.netWeightGrams + toGrams(netQty, curr.unit),
+        totalWeightGrams: acc.totalWeightGrams + toGrams(displayQty, curr.unit),
       };
     },
     {
@@ -68,6 +71,7 @@ export function MealBundleCard({
       fiber: undefined as number | undefined,
       saturatedFat: undefined as number | undefined,
       transFat: undefined as number | undefined,
+      netWeightGrams: 0,
       totalWeightGrams: 0,
     }
   );
@@ -78,7 +82,7 @@ export function MealBundleCard({
     protein: bundleTotals.protein,
     carbs: bundleTotals.carbs,
     fat: bundleTotals.fat,
-    servingSize: bundleTotals.totalWeightGrams > 0 ? bundleTotals.totalWeightGrams : 100,
+    servingSize: bundleTotals.netWeightGrams > 0 ? bundleTotals.netWeightGrams : 100,
     servingUnit: 'g',
   });
   const isLowCalorie = evalRes.labels.includes('low-calorie');

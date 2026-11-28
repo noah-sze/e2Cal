@@ -473,6 +473,7 @@ export function useFoodLogs(date: string) {
       id?: string;
       foodId?: string;
       quantity: number;
+      grossQuantity?: number;
       unit: string;
     }>
   ) => {
@@ -490,6 +491,9 @@ export function useFoodLogs(date: string) {
       bundleId,
       foodId: item.foodId,
       quantity: item.quantity,
+      ...(typeof item.grossQuantity === 'number' && item.grossQuantity > 0
+        ? { grossQuantity: item.grossQuantity }
+        : {}),
       unit: item.unit,
       createdAt: existing.createdAt,
       updatedAt: now,

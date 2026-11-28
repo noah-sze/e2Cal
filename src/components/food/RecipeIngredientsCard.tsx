@@ -13,6 +13,7 @@ export interface RecipeIngredientItem {
   foodId?: string;
   foodName: string;
   quantity: number;
+  grossQuantity?: number;
   unit: string;
   isOptional?: boolean;
   /** 單項計算後營養素（用於詳情頁副標與 MacroSquares 展示） */
@@ -135,16 +136,31 @@ export function RecipeIngredientsCard({
                     onClick={(e) => onEditQuantity?.(item, idx, e.currentTarget)}
                     className="h-7 px-2.5 rounded-full border border-border/80 bg-background hover:bg-hover font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 select-none shrink-0"
                   >
-                    <MetricValue
-                      value={
-                        item.quantity > 0
-                          ? formatDisplayAmount(String(item.quantity)) || '0'
-                          : '-'
-                      }
-                      unit={item.unit}
-                      valueClassName="font-normal text-foreground"
-                      unitClassName="text-2xs"
-                    />
+                    {typeof item.grossQuantity === 'number' && item.grossQuantity > 0 ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="text-2xs font-sans text-muted-foreground">
+                          {t('diet.grossWeightLabel', '毛重')}
+                        </span>
+                        <span className="h-3 w-px bg-border/80 shrink-0" aria-hidden="true" />
+                        <MetricValue
+                          value={formatDisplayAmount(String(item.grossQuantity)) || '0'}
+                          unit={item.unit}
+                          valueClassName="font-normal text-foreground"
+                          unitClassName="text-2xs"
+                        />
+                      </span>
+                    ) : (
+                      <MetricValue
+                        value={
+                          item.quantity > 0
+                            ? formatDisplayAmount(String(item.quantity)) || '0'
+                            : '-'
+                        }
+                        unit={item.unit}
+                        valueClassName="font-normal text-foreground"
+                        unitClassName="text-2xs"
+                      />
+                    )}
                     <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
                   </button>
                   {onRemoveItem && (
@@ -182,7 +198,9 @@ export function RecipeIngredientsCard({
                   <span>
                     {
                       formatFoodServing(
-                        item.quantity,
+                        typeof item.grossQuantity === 'number' && item.grossQuantity > 0
+                          ? item.grossQuantity
+                          : item.quantity,
                         item.unit,
                         foodWeightUnit,
                         foodVolumeUnit

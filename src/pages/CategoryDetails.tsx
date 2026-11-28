@@ -223,7 +223,7 @@ export default function CategoryDetails({ id }: CategoryDetailsProps) {
         if (res.reason === 'has_logs') {
           toast.show(t('settings.foodHasLogsCannotDelete'));
         } else if (res.reason === 'has_recipes') {
-          toast.show(t('diet.foodHasRecipes', '已被菜餚引用'));
+          toast.show(t('diet.foodHasRecipes', '已被食譜引用'));
         } else {
           toast.show(t('common.error'));
         }

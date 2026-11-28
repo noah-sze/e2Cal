@@ -571,7 +571,7 @@ export default function RecipeDetails({ id }: RecipeDetailsProps) {
 
       {/* 配方營養素總計卡片 (三大營養素 C -> P -> F 順序，共用通用元件) */}
       <NutritionFactsCard
-        title={t('diet.recipeNutrients', '配方營養素總計')}
+        title={t('diet.recipeNutrients', '食譜營養素總計')}
         data={scaledRecipeTotals}
         fallbackData={standardTotals ? {
           servingSize: standardTotals.totalWeightGrams,

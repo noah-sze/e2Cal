@@ -197,7 +197,7 @@
       "ingredientsTab": "食物",
       "recipesTab": "食譜",
       "itemsUnit": "項單品",
-      "recipesUnit": "道配方",
+      "recipesUnit": "道食譜",
       "searchRecipePlaceholder": "搜尋食譜名稱...",
       "breakfast": "早餐",
       "lunch": "午餐",
@@ -346,7 +346,7 @@
       "noRecipes": "無食譜",
       "logRecipe": "記錄整道菜",
       "logIngredientsDirectly": "拆解為食物記錄",
-      "dishDetails": "配方詳情",
+      "dishDetails": "食譜詳情",
       "includeOil": "包含烹調用油",
       "excludeOil": "無油或已瀝乾",
       "totalEstimated": "計算預估",
@@ -354,7 +354,7 @@
       "ingredientsCount": "{{count}} 種食物",
       "relatedRecipes": "關聯食譜",
       "noRelatedRecipes": "無關聯食譜",
-      "recipeDetails": "配方詳情",
+      "recipeDetails": "食譜詳情",
       "viewFoodDetail": "查看詳情",
       "noRecipeLogs": "無記錄",
       "foodHasRecipes": "已被食譜引用",
@@ -1631,7 +1631,7 @@
           "copy": {
             "tag": "02 // 一鍵複製",
             "title": "日常重複 · 一鍵複用",
-            "desc": "規律飲食無摩擦。當進餐內容高度重複時，一鍵帶入昨日或歷史同餐所有食物配方，零重複手動錄入。"
+            "desc": "規律飲食無摩擦。當進餐內容高度重複時，一鍵帶入昨日或歷史同餐所有食物與食譜，零重複手動錄入。"
           },
           "estimate": {
             "tag": "03 // 快速估算",
@@ -1653,7 +1653,7 @@
             "desc": "6 大官方化驗庫，依需離線導入"
           },
           "recipes": {
-            "label": "複合菜餚",
+            "label": "複合食譜",
             "value": "∞",
             "unit": "自訂",
             "desc": "自由組合食物，純 ID 引用無漂移"

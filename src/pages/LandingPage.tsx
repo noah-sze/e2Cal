@@ -634,7 +634,7 @@ export default function LandingPage() {
                 {t('landing.diet.types.copy.title', '日常重複 · 一鍵複用')}
               </div>
               <div className="font-sans text-xs text-muted-foreground leading-[1.38]">
-                {t('landing.diet.types.copy.desc', '規律飲食無摩擦。當進餐內容高度重複時，一鍵帶入昨日或歷史同餐所有食物配方，零重複手動錄入。')}
+                {t('landing.diet.types.copy.desc', '規律飲食無摩擦。當進餐內容高度重複時，一鍵帶入昨日或歷史同餐所有食物與食譜，零重複手動錄入。')}
               </div>
             </div>
 
@@ -690,7 +690,7 @@ export default function LandingPage() {
             {/*  指標 2: 允許自定食譜  */}
             <div className="p-3 bg-background flex flex-col space-y-1 hover:bg-hover transition-colors">
               <div className="text-xs text-muted-foreground uppercase tracking-wider h-4 flex items-center">
-                {t('landing.diet.metrics.recipes.label', '複合菜餚')}
+                {t('landing.diet.metrics.recipes.label', '複合食譜')}
               </div>
               <div className="h-7 sm:h-8 flex items-baseline gap-1 text-xl sm:text-2xl font-semibold tabular-nums text-foreground font-mono">
                 {t('landing.diet.metrics.recipes.value', '∞')} <span className="text-xs font-normal text-muted-foreground font-sans">{t('landing.diet.metrics.recipes.unit', '自訂')}</span>
