@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, ChevronRight, ChevronDown, Zap, Plus, History, PieChart, Atom } from 'lucide-react';
+import { ChevronRight, ChevronDown, Zap, Plus, History, Atom } from 'lucide-react';
 import type { MealType, HydratedFoodLog, FoodRecipe, EnergyUnit, FoodWeightUnit, FoodVolumeUnit } from '@/types';
 import { MealBundleCard } from '@/components/food/MealBundleCard';
 import { MacroSquares } from '@/components/food/MacroSquares';
@@ -280,35 +280,23 @@ export function DietView({
                   }}
                   aria-label={activityLabel}
                   title={activityLabel}
-                  className={cn(
-                    'h-6 rounded-full border border-border/80 bg-muted/20 hover:bg-muted/50 text-xs text-muted-foreground hover:text-foreground flex items-center transition-colors cursor-pointer select-none active:scale-95',
-                    isCompact ? 'w-6 px-0 justify-center' : 'px-2.5 gap-1'
-                  )}
+                  className="h-6 px-2.5 gap-1 rounded-full border border-border/80 bg-muted/20 hover:bg-muted/50 text-xs text-muted-foreground hover:text-foreground flex items-center transition-colors cursor-pointer select-none active:scale-95"
                 >
-                  {isCompact ? (
-                    <Activity className="size-3.5 shrink-0" />
-                  ) : (
-                    <>
-                      <span>{activityLabel}</span>
-                      <ChevronRight className="size-3 opacity-60 shrink-0" />
-                    </>
-                  )}
+                  <span>{activityLabel}</span>
+                  <ChevronRight className="size-3 opacity-60 shrink-0" />
                 </button>
               ) : (
                 <div
                   title={activityLabel}
-                  className={cn(
-                    'h-6 rounded-full border border-border/80 bg-muted/20 text-xs text-muted-foreground flex items-center select-none font-mono',
-                    isCompact ? 'w-6 px-0 justify-center' : 'px-2.5'
-                  )}
+                  className="h-6 px-2.5 rounded-full border border-border/80 bg-muted/20 text-xs text-muted-foreground flex items-center select-none font-mono"
                 >
-                  {isCompact ? <Activity className="size-3.5 shrink-0" /> : activityLabel}
+                  {activityLabel}
                 </div>
               )}
             </div>
 
-            {/* 中間：熱量統計標籤 (幾何絕對居中，與下方熱量巨型數值 1:1 垂直對齊) */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            {/* 中間：熱量統計標籤 (空間足夠時幾何絕對居中；空間不足時隱藏) */}
+            <div className={cn('absolute inset-0 flex items-center justify-center pointer-events-none', isCompact && 'hidden')}>
               <span
                 ref={centerLabelRef}
                 className="text-xs sm:text-sm font-normal text-muted-foreground select-none whitespace-nowrap"
@@ -326,42 +314,26 @@ export function DietView({
                     onOpenPlanModal?.();
                     triggerHaptic('light');
                   }}
-                  className={cn(
-                    'h-6 rounded-full border border-border/80 bg-muted/20 hover:bg-muted/50 text-xs text-muted-foreground hover:text-foreground flex items-center transition-colors cursor-pointer select-none active:scale-95',
-                    isCompact ? 'w-6 px-0 justify-center' : 'px-2.5 gap-1'
-                  )}
+                  className="h-6 px-2.5 gap-1 rounded-full border border-border/80 bg-muted/20 hover:bg-muted/50 text-xs text-muted-foreground hover:text-foreground flex items-center transition-colors cursor-pointer select-none active:scale-95"
                   aria-label={macroSplitTemplateLabel}
                   title={`${t('dietPlan.title', '供能比')} · ${macroSplitTemplateLabel}`}
                 >
-                  {isCompact ? (
-                    <PieChart className="size-3.5 shrink-0" />
-                  ) : (
-                    <>
-                      <span>{macroSplitTemplateLabel}</span>
-                      <ChevronRight className="size-3 text-muted-foreground/60 shrink-0 -ml-0.5" />
-                    </>
-                  )}
+                  <span>{macroSplitTemplateLabel}</span>
+                  <ChevronRight className="size-3 text-muted-foreground/60 shrink-0 -ml-0.5" />
                 </button>
               ) : (
                 <div
                   title={macroSplitTemplateLabel}
-                  className={cn(
-                    'h-6 rounded-full border border-border/80 bg-muted/20 text-xs text-muted-foreground flex items-center select-none font-mono',
-                    isCompact ? 'w-6 px-0 justify-center' : 'px-2.5 gap-1'
-                  )}
+                  className="h-6 px-2.5 gap-1 rounded-full border border-border/80 bg-muted/20 text-xs text-muted-foreground flex items-center select-none font-mono"
                 >
-                  {isCompact ? (
-                    <PieChart className="size-3.5 shrink-0" />
-                  ) : (
-                    <span>{macroSplitTemplateLabel}</span>
-                  )}
+                  <span>{macroSplitTemplateLabel}</span>
                 </div>
               )}
             </div>
           </div>
 
           {/* 核心巨型熱量數值 (居中) */}
-          <div className="pt-2 pb-1 text-center">
+          <div className="pt-2 pb-1 text-center @container">
             <MetricValue
               value={consumedEnergy.toLocaleString()}
               unit={energyUnit}
@@ -369,85 +341,85 @@ export function DietView({
               unitClassName="text-sm sm:text-base font-normal text-muted-foreground ml-1"
             />
 
-            {/* 客觀差額事實 */}
-            <div className="flex items-center justify-center gap-1.5 mt-1 text-sm font-sans text-muted-foreground">
-              <span>
-                {energyDiff >= 0 ? t('dietPlan.underBudget') : t('dietPlan.overBudget')}
-              </span>
-              <MetricValue
-                value={
-                  energyDiff >= 0
-                    ? energyDiff.toLocaleString()
-                    : `+${Math.abs(energyDiff).toLocaleString()}`
-                }
-                unit={energyUnit}
-                unitClassName="text-xs sm:text-sm"
-              />
-            </div>
+            {/* 客觀差額事實 + 進度條（空間足夠時 Atom 在進度條左側，空間不足時上移至差額行左側） */}
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2 gap-y-3 mt-1">
+              <div className="col-start-1 row-start-1 @[360px]:row-start-2 justify-self-start flex items-center">
+                <Popover>
+                  <PopoverTrigger
+                    type="button"
+                    onClick={() => triggerHaptic('light')}
+                    aria-label={t('diet.nutrientDetails')}
+                    title={t('diet.nutrientDetails')}
+                    className="size-6 rounded-full border border-border/80 bg-muted/20 hover:bg-muted/50 text-muted-foreground hover:text-foreground inline-flex items-center justify-center transition-colors cursor-pointer select-none active:scale-95 shrink-0"
+                  >
+                    <Atom className="size-3.5 shrink-0" />
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    side="bottom"
+                    sideOffset={6}
+                    className="w-64 p-0 gap-0 overflow-hidden bg-card text-card-foreground border-border shadow-none"
+                  >
+                    <div className="px-3 py-2 border-b border-border text-xs font-semibold text-foreground leading-[1.38]">
+                      {t('diet.secondaryNutrients')}
+                    </div>
+                    <div className="p-3 space-y-1 select-none">
+                      <div className="text-xs font-medium text-sodium whitespace-nowrap">
+                        {t('diet.sodium')}
+                      </div>
+                      <div className="text-sm sm:text-base tracking-tight flex items-baseline whitespace-nowrap">
+                        <MetricValue
+                          value={Math.round(totals.sodium ?? 0).toLocaleString()}
+                          unit="mg"
+                          valueClassName="font-normal text-foreground"
+                          unitClassName="text-2xs"
+                        />
+                        <span className="text-2xs sm:text-xs font-sans text-muted-foreground mx-0.5">/</span>
+                        <MetricValue
+                          value={(2300).toLocaleString()}
+                          unit="mg"
+                          className="text-2xs sm:text-xs text-muted-foreground"
+                          valueClassName="font-normal"
+                          unitClassName="text-3xs"
+                        />
+                      </div>
+                      <div className="h-2 w-full rounded-full overflow-hidden mt-2 bg-sodium-subtle">
+                        <div
+                          className="h-full bg-sodium transition-[width] duration-200"
+                          style={{
+                            width: `${Math.min(100, Math.max(0, ((totals.sodium ?? 0) / 2300) * 100))}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-            {/* 客觀進度標尺 */}
-            <div className="h-2 w-full max-w-56 mx-auto bg-track rounded-full overflow-hidden mt-3">
-              <div
-                className="h-full bg-foreground"
-                style={{
-                  width: `${Math.min(100, targetEnergy > 0 ? (consumedEnergy / targetEnergy) * 100 : 0)}%`,
-                }}
-              />
-            </div>
-          </div>
+              <div className="col-start-2 row-start-1 flex items-center justify-center gap-1.5 whitespace-nowrap text-sm font-sans text-muted-foreground">
+                <span>
+                  {energyDiff >= 0 ? t('dietPlan.underBudget') : t('dietPlan.overBudget')}
+                </span>
+                <MetricValue
+                  value={
+                    energyDiff >= 0
+                      ? energyDiff.toLocaleString()
+                      : `+${Math.abs(energyDiff).toLocaleString()}`
+                  }
+                  unit={energyUnit}
+                  unitClassName="text-xs sm:text-sm"
+                />
+              </div>
 
-          {/* 左下角：次要與微量營養素入口按鈕 + Popover (Option B) */}
-          <div className="flex items-center justify-start pt-0.5">
-            <Popover>
-              <PopoverTrigger
-                type="button"
-                onClick={() => triggerHaptic('light')}
-                aria-label={t('diet.nutrientDetails')}
-                title={t('diet.nutrientDetails')}
-                className="size-6 rounded-full border border-border/80 bg-muted/20 hover:bg-muted/50 text-muted-foreground hover:text-foreground inline-flex items-center justify-center transition-colors cursor-pointer select-none active:scale-95"
-              >
-                <Atom className="size-3.5 shrink-0" />
-              </PopoverTrigger>
-              <PopoverContent
-                align="start"
-                side="bottom"
-                sideOffset={6}
-                className="w-64 p-0 gap-0 overflow-hidden bg-card text-card-foreground border-border shadow-none"
-              >
-                <div className="px-3 py-2 border-b border-border text-xs font-semibold text-foreground leading-[1.38]">
-                  {t('diet.secondaryNutrients')}
-                </div>
-                <div className="p-3 space-y-1 select-none">
-                  <div className="text-xs font-medium text-sodium whitespace-nowrap">
-                    {t('diet.sodium')}
-                  </div>
-                  <div className="text-sm sm:text-base tracking-tight flex items-baseline whitespace-nowrap">
-                    <MetricValue
-                      value={Math.round(totals.sodium ?? 0).toLocaleString()}
-                      unit="mg"
-                      valueClassName="font-normal text-foreground"
-                      unitClassName="text-2xs"
-                    />
-                    <span className="text-2xs sm:text-xs font-sans text-muted-foreground mx-0.5">/</span>
-                    <MetricValue
-                      value={(2300).toLocaleString()}
-                      unit="mg"
-                      className="text-2xs sm:text-xs text-muted-foreground"
-                      valueClassName="font-normal"
-                      unitClassName="text-3xs"
-                    />
-                  </div>
-                  <div className="h-2 w-full rounded-full overflow-hidden mt-2 bg-sodium-subtle">
-                    <div
-                      className="h-full bg-sodium transition-[width] duration-200"
-                      style={{
-                        width: `${Math.min(100, Math.max(0, ((totals.sodium ?? 0) / 2300) * 100))}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+              <div className="col-span-3 @[360px]:col-span-1 @[360px]:col-start-2 row-start-2 w-full max-w-56 @[360px]:w-56 justify-self-center h-2 bg-track rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-foreground"
+                  style={{
+                    width: `${Math.min(100, targetEnergy > 0 ? (consumedEnergy / targetEnergy) * 100 : 0)}%`,
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
 

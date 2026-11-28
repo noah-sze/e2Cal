@@ -9,7 +9,6 @@ import {
   PrecisionDialogContent,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useTheme } from '@/components/ThemeProvider';
 import { toast } from '@/components/ui/toast';
 import { triggerHaptic } from '@/lib/haptics';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
@@ -23,7 +22,6 @@ import type { UnitSystemPreset } from '@/types';
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
-  const { theme } = useTheme();
   const navigate = useNavigate();
   const { preferences } = useUnitPreferences();
   const { profile } = useUserProfile();
@@ -70,12 +68,6 @@ export default function Settings() {
 
   const currentLang = i18n.resolvedLanguage || i18n.language || 'en';
 
-  const getThemeLabel = (tVal: string) => {
-    if (tVal === 'light') return t('settings.themeLight');
-    if (tVal === 'dark') return t('settings.themeDark');
-    return t('settings.themeSystem');
-  };
-
   const getLanguageShortLabel = (lang: string) => {
     if (lang === 'zh-TW' || lang.startsWith('zh-TW') || lang.startsWith('zh-Hant')) {
       return '繁體中文';
@@ -92,7 +84,7 @@ export default function Settings() {
     return t('settings.unitPresetCustom');
   };
 
-  const appearanceSummary = `${getThemeLabel(theme)} · ${getLanguageShortLabel(currentLang)}`;
+  const appearanceSummary = getLanguageShortLabel(currentLang);
   const unitsAndBodySummary = getPresetLabel(preferences.preset);
   const aiSummary = activeAIProfile
     ? activeAIProfile.name
@@ -102,27 +94,19 @@ export default function Settings() {
 
   const dropboxSummary = !isDropboxAuth
     ? t('settings.disconnected', '未連線')
-    : isDropboxSyncing
-      ? t('settings.syncing', '同步中…')
-      : t(`syncStatus.providers.${activeProviderId}`);
+    : t(`syncStatus.providers.${activeProviderId}`);
 
   const dropboxSummaryClassName = !isDropboxAuth
     ? undefined
-    : isDropboxSyncing
-      ? 'text-primary'
-      : 'text-emerald-500 font-medium';
+    : 'text-emerald-500 font-medium';
 
   const rollingBackupSummary = !isBackupConnected
     ? t('syncStatus.rollingBackup.disabledSummary')
-    : isBackingUpZip
-      ? t('syncStatus.rollingBackup.backingUp')
-      : t(`syncStatus.providers.${backupProviderId ?? 'dropbox'}`);
+    : t(`syncStatus.providers.${backupProviderId ?? 'dropbox'}`);
 
   const rollingBackupSummaryClassName = !isBackupConnected
     ? undefined
-    : isBackingUpZip
-      ? 'text-primary'
-      : 'text-emerald-500 font-medium';
+    : 'text-emerald-500 font-medium';
 
   return (
     <div className="w-full max-w-xl mx-auto space-y-7 pb-20 select-none">
