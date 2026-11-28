@@ -18,7 +18,7 @@ import {
   Settings as SettingsIcon,
 } from 'lucide-react';
 import { Toaster } from '@/components/ui/toast';
-import { InitialSyncModal } from '@/components/sync/InitialSyncModal';
+import { CloudSyncFlowModal } from '@/components/sync/CloudSyncFlowModal';
 import { SyncStatusPill } from '@/components/sync/SyncStatusPill';
 import type { AiExportScope } from '@/services/aiDataExport';
 import { format, addDays, subDays, parseISO, isToday } from 'date-fns';
@@ -440,7 +440,7 @@ export function AppLayout() {
       )}
 
       {/* 全域彈窗與提示 */}
-      <InitialSyncModal />
+      <CloudSyncFlowModal />
       {isCopyDataOpen && (
         <Suspense fallback={null}>
           <CopyDailyDataDialog

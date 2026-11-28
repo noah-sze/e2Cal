@@ -11,8 +11,8 @@ import { SetupProfileDialog } from '@/components/welcome/SetupProfileDialog';
 import { WelcomeTransitionOverlay } from '@/components/welcome/WelcomeTransitionOverlay';
 import { LaunchAppMenu } from '@/components/welcome/LaunchAppMenu';
 import { LocalImportDialog } from '@/components/welcome/LocalImportDialog';
-import { DropboxSyncDialog } from '@/components/settings/dialogs/DropboxSyncDialog';
-import { InitialSyncModal } from '@/components/sync/InitialSyncModal';
+import { CloudChannelDialog } from '@/components/settings/dialogs/CloudChannelDialog';
+import { CloudSyncFlowModal } from '@/components/sync/CloudSyncFlowModal';
 import { Toaster, toast } from '@/components/ui/toast';
 import { Logo, BrandWordmark, BrandText } from '@/components/ui/Logo';
 import { getDemoDashboardData, DEMO_DASHBOARD_DATA } from '@/components/dashboard/DashboardView';
@@ -47,10 +47,41 @@ import { PRIMARY_USER_ID } from '@/services/db/defaultData';
 import {
   getDropboxAppKey,
   initiateDropboxAuth,
+  exchangeCodeForTokensOnly,
+  setStagingTokens,
+  clearStagingTokens,
+  setStoredTokens,
   consumePendingDropboxOAuthCallback,
+  type DropboxTokens,
 } from '@/services/sync/dropboxAuth';
-import { startInitialSync } from '@/services/sync/initialSyncManager';
+import {
+  startInitialSync,
+  openCloudFlowConnecting,
+  openCloudFlowSourcePicker,
+  openCloudFlowBlocked,
+  closeCloudFlow,
+} from '@/services/sync/initialSyncManager';
 import { formatSyncErrorMessage } from '@/services/sync/syncEngine';
+import { setBackupProviderId, getRawSyncAdapter } from '@/services/sync/syncRouter';
+import { inspectCloudImportSources } from '@/services/sync/rollingBackupService';
+import { parseBackupFile, executeImport } from '@/services/backup/importBackup';
+import type { SyncProviderId } from '@/services/sync/syncAdapter';
+import {
+  getStagingWebDavConfig,
+  setStagingWebDavConfig,
+  clearStagingWebDavConfig,
+  setWebDavConfig,
+  webdavAdapter,
+  type WebDavConfig,
+} from '@/services/sync/adapters/webdavAdapter';
+import {
+  getStagingS3Config,
+  setStagingS3Config,
+  clearStagingS3Config,
+  setS3Config,
+  s3Adapter,
+  type S3Config,
+} from '@/services/sync/adapters/s3Adapter';
 
 const SHOWCASE_DOT_GRID_STYLE = {
   backgroundImage: 'radial-gradient(var(--canvas-dot) 1px, transparent 1px)',
@@ -127,6 +158,146 @@ export default function LandingPage() {
     }
   };
 
+  const cleanupStagedImportProvider = (providerId: SyncProviderId) => {
+    if (providerId === 'dropbox') {
+      clearStagingTokens();
+    } else if (providerId === 'webdav') {
+      clearStagingWebDavConfig('primary');
+    } else if (providerId === 's3') {
+      clearStagingS3Config('primary');
+    }
+  };
+
+  const commitImportProviderToBackup = (
+    providerId: SyncProviderId,
+    preloadedTokens?: DropboxTokens
+  ) => {
+    if (providerId === 'dropbox') {
+      if (preloadedTokens) {
+        setStoredTokens(preloadedTokens, 'backup');
+      }
+      clearStagingTokens();
+      setBackupProviderId('dropbox');
+    } else if (providerId === 'webdav') {
+      const cfg = getStagingWebDavConfig('primary');
+      if (cfg) {
+        setWebDavConfig(cfg, 'backup');
+      }
+      clearStagingWebDavConfig('primary');
+      setBackupProviderId('webdav');
+    } else if (providerId === 's3') {
+      const cfg = getStagingS3Config('primary');
+      if (cfg) {
+        setS3Config(cfg, 'backup');
+      }
+      clearStagingS3Config('primary');
+      setBackupProviderId('s3');
+    }
+  };
+
+  const getImportAdapter = (providerId: SyncProviderId) => {
+    return getRawSyncAdapter(providerId);
+  };
+
+  const detectAndRouteCloudImport = async (
+    providerId: SyncProviderId,
+    preloadedTokens?: DropboxTokens
+  ): Promise<boolean> => {
+    if (providerId === 'dropbox' && preloadedTokens) {
+      setStagingTokens(preloadedTokens);
+    }
+    const adapter = getImportAdapter(providerId);
+    const sources = await inspectCloudImportSources(adapter);
+
+    if (!sources.hasPrimarySync && !sources.hasRollingBackup) {
+      const accountLabel =
+        providerId === 'dropbox'
+          ? preloadedTokens?.email ||
+            preloadedTokens?.display_name ||
+            preloadedTokens?.account_id ||
+            '-'
+          : providerId === 'webdav'
+            ? getStagingWebDavConfig('primary')?.username ||
+              getStagingWebDavConfig('primary')?.baseUrl ||
+              '-'
+            : getStagingS3Config('primary')?.bucket ||
+              getStagingS3Config('primary')?.accessKeyId ||
+              '-';
+      cleanupStagedImportProvider(providerId);
+      openCloudFlowBlocked({
+        providerId,
+        reason: 'no_restorable_data',
+        accountLabel,
+      });
+      return false;
+    }
+
+    if (sources.hasPrimarySync && !sources.hasRollingBackup) {
+      await startInitialSync('', {
+        mode: 'restore',
+        providerId,
+        preloadedTokens,
+      });
+      return true;
+    }
+
+    openCloudFlowSourcePicker({
+      providerId,
+      hasPrimarySync: sources.hasPrimarySync,
+      backupItems: sources.backupItems,
+      preloadedTokens,
+      onCancel: () => cleanupStagedImportProvider(providerId),
+      onSelectRollingBackup: async (item) => {
+        try {
+          const importAdapter = getImportAdapter(providerId);
+          if (!importAdapter.downloadBinaryFile) {
+            throw new Error('BACKUP_DOWNLOAD_NOT_SUPPORTED');
+          }
+          const blob = await importAdapter.downloadBinaryFile(item.path);
+          if (!blob) {
+            throw new Error('ROLLING_BACKUP_NOT_FOUND');
+          }
+          const parsed = await parseBackupFile(blob);
+          await executeImport(parsed, 'overwrite');
+          commitImportProviderToBackup(providerId, preloadedTokens);
+          closeCloudFlow();
+          toast.show(t('syncStatus.rollingBackup.restoreSuccess'));
+          await handleDataRestored();
+        } catch (err: unknown) {
+          const reason = formatSyncErrorMessage(err, t);
+          toast.show(t('syncStatus.rollingBackup.restoreFailed', { reason }));
+        }
+      },
+    });
+    return true;
+  };
+
+  const handleConfirmWebDavImport = async (config: WebDavConfig): Promise<boolean> => {
+    setStagingWebDavConfig(config, 'primary');
+    try {
+      await webdavAdapter.testConnection?.();
+      return await detectAndRouteCloudImport('webdav');
+    } catch (err: unknown) {
+      clearStagingWebDavConfig('primary');
+      const reason = formatSyncErrorMessage(err, t);
+      toast.show(t('syncStatus.authFailedToast', { reason }));
+      return false;
+    }
+  };
+
+  const handleConfirmS3Import = async (config: S3Config): Promise<boolean> => {
+    setStagingS3Config(config, 'primary');
+    try {
+      await s3Adapter.testConnection?.();
+      return await detectAndRouteCloudImport('s3');
+    } catch (err: unknown) {
+      clearStagingS3Config('primary');
+      const reason = formatSyncErrorMessage(err, t);
+      toast.show(t('syncStatus.authFailedToast', { reason }));
+      return false;
+    }
+  };
+
   const handleDataRestored = async () => {
     const restoredBaseInfo = (await db.user_base_info.get(PRIMARY_USER_ID)) ?? null;
     syncUserProfileCache(restoredBaseInfo);
@@ -153,9 +324,16 @@ export default function LandingPage() {
       return;
     }
 
-    startInitialSync(callback.code, { mode: callback.mode }).catch((err) => {
-      console.error('Failed to start cloud import sync:', err);
-    });
+    openCloudFlowConnecting('dropbox');
+    exchangeCodeForTokensOnly(callback.code)
+      .then((tokens) => detectAndRouteCloudImport('dropbox', tokens))
+      .catch((err) => {
+        console.error('Failed to process cloud import OAuth callback:', err);
+        clearStagingTokens();
+        closeCloudFlow();
+        const reason = formatSyncErrorMessage(err, t);
+        toast.show(t('syncStatus.authFailedToast', { reason }));
+      });
   }, [t]);
 
   const currentLang = i18n.language?.startsWith('zh-CN')
@@ -1178,19 +1356,20 @@ export default function LandingPage() {
     }}
   />
 
-  <DropboxSyncDialog
+  <CloudChannelDialog
     open={isCloudImportDialogOpen}
     onOpenChange={setIsCloudImportDialogOpen}
     isAuthenticated={false}
     title={t('landing.launchMenu.cloudDialogTitle', '雲端導入')}
     description={t(
       'landing.launchMenu.cloudDialogDesc',
-      '連線至個人 Dropbox，將既有飲食、訓練與體態資料還原至此裝置。'
+      '連線至雲端儲存服務，將既有飲食、訓練與體態資料還原至此裝置。'
     )}
-    actionLabel={t('landing.launchMenu.cloudConnectAction', '連線 Dropbox')}
     onConnectDropbox={() => {
       void handleConfirmCloudImport();
     }}
+    onConnectWebDav={handleConfirmWebDavImport}
+    onConnectS3={handleConfirmS3Import}
   />
 
   <LocalImportDialog
@@ -1199,7 +1378,7 @@ export default function LandingPage() {
     onComplete={handleDataRestored}
   />
 
-  <InitialSyncModal onCompleted={handleDataRestored} />
+  <CloudSyncFlowModal onCompleted={handleDataRestored} />
 
   <WelcomeTransitionOverlay
     open={isTransitionOpen}

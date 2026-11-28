@@ -22,25 +22,45 @@ import i18n from '@/i18n/config';
 import { toast } from '@/components/ui/toast';
 import { confirmRawWeightIfHasDietActivity } from '@/utils/rawWeightGuide';
 import {
-  listRemoteFolder,
-  downloadJsonFile,
-  uploadJsonFile,
-  deleteRemotePath,
   getSyncErrorReasonKey,
   formatSyncErrorMessage,
   type SyncErrorReasonKey,
   type DropboxFileMetadata,
 } from './dropboxClient';
 import {
+  getWorkingSyncAdapter,
+  getProviderScopedStorageKey,
+  isCloudSyncConnected,
+} from './syncRouter';
+
+const listRemoteFolder = (folderPath = '') =>
+  getWorkingSyncAdapter().listRemoteFolder(folderPath);
+const downloadJsonFile = <T>(filePath: string) =>
+  getWorkingSyncAdapter().downloadJsonFile<T>(filePath);
+const uploadJsonFile = <T>(filePath: string, data: T, expectedRev?: string) =>
+  getWorkingSyncAdapter().uploadJsonFile<T>(filePath, data, expectedRev);
+const deleteRemotePath = (path: string) =>
+  getWorkingSyncAdapter().deleteRemotePath(path);
+import {
   sanitizeFoodItem,
   sanitizeRecipe,
-  sanitizeDailyDietLog,
   sanitizeWorkoutLog,
   sanitizeWorkoutRoutine,
   sanitizeUserBaseInfo,
 } from './syncSanitizers';
-import { isDropboxConnected } from './dropboxAuth';
 import { clearFoodsCache } from '@/hooks/useFoods';
+import {
+  SYNC_PATHS,
+  CURRENT_SYNC_SCHEMA_VERSION,
+  getMonthLogPath,
+  isMonthlyLogFilePath,
+  groupRecordsByMonth,
+  parseMonthlyLogBucketStrict,
+  assertCompatibleSchemaVersion,
+  assertValidArrayPayload,
+  redactSyncSecrets,
+  type MonthlySyncLogBucket,
+} from './syncSchema';
 import { isDeviceOffline, reportNetworkError } from '@/hooks/useNetworkStatus';
 
 export { getSyncErrorReasonKey, formatSyncErrorMessage, type SyncErrorReasonKey };
@@ -145,17 +165,17 @@ export function _getConflictRetryCount(): number {
 }
 
 export function getLastSyncTime(): string | null {
-  return localStorage.getItem(LAST_SYNC_KEY);
+  return localStorage.getItem(getProviderScopedStorageKey(LAST_SYNC_KEY));
 }
 
 export function setLastSyncTime(isoTime: string): void {
-  localStorage.setItem(LAST_SYNC_KEY, isoTime);
+  localStorage.setItem(getProviderScopedStorageKey(LAST_SYNC_KEY), isoTime);
   updateSyncEngineStatus({ lastSyncTime: isoTime });
 }
 
 export function getCachedRevs(): Record<string, string> {
   try {
-    const raw = localStorage.getItem(CACHED_REVS_KEY);
+    const raw = localStorage.getItem(getProviderScopedStorageKey(CACHED_REVS_KEY));
     return raw ? (JSON.parse(raw) as Record<string, string>) : {};
   } catch {
     return {};
@@ -163,12 +183,12 @@ export function getCachedRevs(): Record<string, string> {
 }
 
 export function setCachedRevs(revs: Record<string, string>): void {
-  localStorage.setItem(CACHED_REVS_KEY, JSON.stringify(revs));
+  localStorage.setItem(getProviderScopedStorageKey(CACHED_REVS_KEY), JSON.stringify(revs));
 }
 
 export function getPushedTimes(): Record<string, string> {
   try {
-    const raw = localStorage.getItem(TABLE_PUSH_TIME_KEY);
+    const raw = localStorage.getItem(getProviderScopedStorageKey(TABLE_PUSH_TIME_KEY));
     return raw ? (JSON.parse(raw) as Record<string, string>) : {};
   } catch {
     return {};
@@ -176,7 +196,7 @@ export function getPushedTimes(): Record<string, string> {
 }
 
 export function setPushedTimes(times: Record<string, string>): void {
-  localStorage.setItem(TABLE_PUSH_TIME_KEY, JSON.stringify(times));
+  localStorage.setItem(getProviderScopedStorageKey(TABLE_PUSH_TIME_KEY), JSON.stringify(times));
 }
 
 /**
@@ -912,107 +932,46 @@ export async function uploadAllLocalData(
     db.body_metrics.toArray(),
   ]);
 
-  // 1. 使用者個人資料（唯一真理源：base_info）
-  cachedRevs['/user/base_info.json'] = await uploadJsonFile(
-    '/user/base_info.json',
+  // 1. 資料庫主檔 (/database/*.json)
+  cachedRevs[SYNC_PATHS.BASE_INFO] = await uploadJsonFile(
+    SYNC_PATHS.BASE_INFO,
     baseInfos.map(sanitizeUserBaseInfo)
   );
   pushedTimes['user_base_info'] = now;
 
-  // 2. 飲食模組基礎清單
-  cachedRevs['/nutrition/foods.json'] = await uploadJsonFile(
-    '/nutrition/foods.json',
+  cachedRevs[SYNC_PATHS.FOODS] = await uploadJsonFile(
+    SYNC_PATHS.FOODS,
     foods.map(sanitizeFoodItem)
   );
-  cachedRevs['/nutrition/recipes.json'] = await uploadJsonFile(
-    '/nutrition/recipes.json',
+  cachedRevs[SYNC_PATHS.RECIPES] = await uploadJsonFile(
+    SYNC_PATHS.RECIPES,
     recipes.map(sanitizeRecipe)
   );
   pushedTimes['foods'] = now;
   pushedTimes['recipes'] = now;
 
-  // 3. 飲食日誌按日自包含膠囊 (YYYY-MM-DD，整合日誌頭部 meta 與進食組件 entries)
-  const foodBucketManifest: Record<string, BucketInfo> = {};
-  for (const dLog of dailyDietLogs) {
-    const bucket = dLog.date;
-    const bucketPath = `/nutrition/logs/${bucket}.json`;
-    cachedRevs[bucketPath] = await uploadJsonFile(bucketPath, sanitizeDailyDietLog(dLog));
-    const maxUpdated = getNormalizedTimestamp(dLog.updatedAt);
-    foodBucketManifest[bucket] = {
-      count: dLog.entries.length,
-      updatedAt: maxUpdated,
-    };
-    pushedTimes[`diet_log_${bucket}`] = now;
-    pushedTimes[`diet_log_${bucket}_count`] = String(dLog.entries.length);
-  }
-  const foodManifestData: BucketManifest = {
-    version: 1,
-    updatedAt: now,
-    buckets: foodBucketManifest,
-  };
-  cachedRevs['/nutrition/logs/manifest.json'] = await uploadJsonFile(
-    '/nutrition/logs/manifest.json',
-    foodManifestData
-  );
-
-  // 4. 訓練模組基礎清單
-  cachedRevs['/workout/exercises.json'] = await uploadJsonFile('/workout/exercises.json', exercises);
-  cachedRevs['/workout/equipments.json'] = await uploadJsonFile('/workout/equipments.json', equipments);
-  cachedRevs['/workout/routines.json'] = await uploadJsonFile(
-    '/workout/routines.json',
+  cachedRevs[SYNC_PATHS.EXERCISES] = await uploadJsonFile(SYNC_PATHS.EXERCISES, exercises);
+  cachedRevs[SYNC_PATHS.EQUIPMENTS] = await uploadJsonFile(SYNC_PATHS.EQUIPMENTS, equipments);
+  cachedRevs[SYNC_PATHS.ROUTINES] = await uploadJsonFile(
+    SYNC_PATHS.ROUTINES,
     routines.map(sanitizeWorkoutRoutine)
   );
   pushedTimes['exercises'] = now;
   pushedTimes['equipments'] = now;
   pushedTimes['routines'] = now;
 
-  // 5. 訓練日誌按日分卷 (YYYY-MM-DD)
-  const groupedWorkoutLogs = groupWorkoutLogsByDate(workoutLogs);
-  const workoutBucketManifest: Record<string, BucketInfo> = {};
-  for (const [bucket, bLogs] of Object.entries(groupedWorkoutLogs)) {
-    const bucketPath = `/workout/logs/${bucket}.json`;
-    cachedRevs[bucketPath] = await uploadJsonFile(bucketPath, bLogs.map(sanitizeWorkoutLog));
-    const maxUpdated = bLogs.reduce((max, l) => Math.max(max, getNormalizedTimestamp(l.updatedAt)), 0);
-    workoutBucketManifest[bucket] = {
-      count: bLogs.length,
-      updatedAt: maxUpdated,
-    };
-    pushedTimes[`workout_log_${bucket}`] = now;
-    pushedTimes[`workout_log_${bucket}_count`] = String(bLogs.length);
-  }
-  const workoutManifestData: BucketManifest = {
-    version: 1,
-    updatedAt: now,
-    buckets: workoutBucketManifest,
-  };
-  cachedRevs['/workout/logs/manifest.json'] = await uploadJsonFile(
-    '/workout/logs/manifest.json',
-    workoutManifestData
+  // 2. 月度合併日誌 (/logs/YYYY-MM.json：整合飲食、訓練與體態)
+  const monthlyBuckets = groupRecordsByMonth(
+    { dailyDietLogs, workoutLogs, bodyMetrics },
+    now
   );
-
-  // 6. 體態指標按日分卷 (YYYY-MM-DD)
-  const groupedMetrics = groupBodyMetricsByDate(bodyMetrics);
-  const bodyBucketManifest: Record<string, BucketInfo> = {};
-  for (const [bucket, bMetrics] of Object.entries(groupedMetrics)) {
-    const bucketPath = `/body/metrics/${bucket}.json`;
-    cachedRevs[bucketPath] = await uploadJsonFile(bucketPath, bMetrics);
-    const maxUpdated = bMetrics.reduce((max, m) => Math.max(max, getNormalizedTimestamp(m.updatedAt)), 0);
-    bodyBucketManifest[bucket] = {
-      count: bMetrics.length,
-      updatedAt: maxUpdated,
-    };
-    pushedTimes[`body_metric_${bucket}`] = now;
-    pushedTimes[`body_metric_${bucket}_count`] = String(bMetrics.length);
+  for (const [month, bucket] of monthlyBuckets) {
+    const bucketPath = getMonthLogPath(month);
+    cachedRevs[bucketPath] = await uploadJsonFile(bucketPath, bucket);
+    pushedTimes[`month_log_${month}`] = now;
+    pushedTimes[`month_log_${month}_counts`] =
+      `${bucket.dailyDietLogs.length}:${bucket.workoutLogs.length}:${bucket.bodyMetrics.length}`;
   }
-  const bodyManifestData: BucketManifest = {
-    version: 1,
-    updatedAt: now,
-    buckets: bodyBucketManifest,
-  };
-  cachedRevs['/body/metrics/manifest.json'] = await uploadJsonFile(
-    '/body/metrics/manifest.json',
-    bodyManifestData
-  );
 
   // 7. 跨端實體刪除墓碑 (/deleted_entities.json)
   const localTombstones = getLocalEntityTombstones(Date.now());
@@ -1059,7 +1018,7 @@ export async function uploadManifestFile(cachedRevs: Record<string, string>): Pr
   const now = new Date().toISOString();
   const manifest: SyncManifest = {
     appName: 'e2Cal',
-    schemaVersion: 2,
+    schemaVersion: CURRENT_SYNC_SCHEMA_VERSION,
     exportedAt: now,
     stats: {
       foodsCount,
@@ -1096,11 +1055,11 @@ export async function executeSync(
     };
   }
 
-  if (!isDropboxConnected()) {
+  if (!isCloudSyncConnected()) {
     return {
       success: false,
       timestamp: new Date().toISOString(),
-      error: 'Dropbox not connected',
+      error: 'Cloud sync not connected',
       actionTaken: 'up_to_date',
     };
   }
@@ -1188,8 +1147,10 @@ export async function executeSync(
     cachedRevs = getCachedRevs();
     pushedTimes = getPushedTimes();
 
-    // 呼叫一次 listRemoteFolder，單次請求掌握所有遠端檔案及其 rev
-    const remoteFiles = await listRemoteFolder();
+    // 呼叫一次 listRemoteFolder，單次請求掌握所有遠端檔案及其 rev（隔離 /Backup/ 滾動備份目錄）
+    const remoteFiles = (await listRemoteFolder()).filter(
+      (f) => !f.path_lower.startsWith('/backup/')
+    );
 
     // 2. 遠端完全沒有資料夾記錄（初次上傳）
     if (remoteFiles.length === 0) {
@@ -1217,6 +1178,16 @@ export async function executeSync(
       remoteFiles.map((f) => [f.path_lower, f])
     );
 
+    // 版本門檻檢查：若雲端 schemaVersion 高於本機支援版本，立即中止保護資料
+    const manifestMeta = remoteFileMap.get(SYNC_PATHS.MANIFEST);
+    if (
+      manifestMeta &&
+      (mode === 'overwrite_local' || cachedRevs[SYNC_PATHS.MANIFEST] !== manifestMeta.rev)
+    ) {
+      const remoteManifest = await downloadJsonFile<SyncManifest>(SYNC_PATHS.MANIFEST);
+      assertCompatibleSchemaVersion(remoteManifest);
+    }
+
     // 3. 純覆蓋本機模式 (Overwrite Local)
     if (mode === 'overwrite_local') {
       const [
@@ -1227,62 +1198,30 @@ export async function executeSync(
         equipments,
         routines,
       ] = await Promise.all([
-        downloadJsonFile<UserBaseInfo[]>('/user/base_info.json'),
-        downloadJsonFile<FoodItem[]>('/nutrition/foods.json'),
-        downloadJsonFile<FoodRecipe[]>('/nutrition/recipes.json'),
-        downloadJsonFile<Exercise[]>('/workout/exercises.json'),
-        downloadJsonFile<Equipment[]>('/workout/equipments.json'),
-        downloadJsonFile<WorkoutRoutine[]>('/workout/routines.json'),
+        downloadJsonFile<UserBaseInfo[]>(SYNC_PATHS.BASE_INFO),
+        downloadJsonFile<FoodItem[]>(SYNC_PATHS.FOODS),
+        downloadJsonFile<FoodRecipe[]>(SYNC_PATHS.RECIPES),
+        downloadJsonFile<Exercise[]>(SYNC_PATHS.EXERCISES),
+        downloadJsonFile<Equipment[]>(SYNC_PATHS.EQUIPMENTS),
+        downloadJsonFile<WorkoutRoutine[]>(SYNC_PATHS.ROUTINES),
       ]);
 
-      // 下載所有飲食分卷
-      const foodFiles = remoteFiles.filter(
-        (f) =>
-          f.path_lower.startsWith('/nutrition/logs/') &&
-          f.name.endsWith('.json') &&
-          !f.name.endsWith('manifest.json')
+      // 下載所有月度合併日誌 (/logs/YYYY-MM.json)
+      const monthlyFiles = remoteFiles.filter((f) =>
+        isMonthlyLogFilePath(f.path_lower, f.name)
       );
-      const foodChunks = await Promise.all(
-        foodFiles.map((f) => downloadJsonFile<DailyDietLog | DailyDietLog[]>(f.path_lower))
+      const monthlyChunks = await Promise.all(
+        monthlyFiles.map((f) => downloadJsonFile<MonthlySyncLogBucket>(f.path_lower))
       );
       const allDailyDietLogs: DailyDietLog[] = [];
-      for (const chunk of foodChunks) {
-        if (!chunk) continue;
-        if (Array.isArray(chunk)) {
-          allDailyDietLogs.push(...chunk.filter((item) => 'entries' in item).map(sanitizeDailyDietLog));
-        } else if ('entries' in chunk) {
-          allDailyDietLogs.push(sanitizeDailyDietLog(chunk));
-        }
-      }
-
-      // 下載所有訓練分卷
-      const workoutFiles = remoteFiles.filter(
-        (f) =>
-          f.path_lower.startsWith('/workout/logs/') &&
-          f.name.endsWith('.json') &&
-          !f.name.endsWith('manifest.json')
-      );
-      const workoutChunks = await Promise.all(
-        workoutFiles.map((f) => downloadJsonFile<WorkoutLog[]>(f.path_lower))
-      );
       const allWorkoutLogs: WorkoutLog[] = [];
-      for (const chunk of workoutChunks) {
-        if (chunk?.length) allWorkoutLogs.push(...chunk);
-      }
-
-      // 下載所有體態分卷
-      const bodyFiles = remoteFiles.filter(
-        (f) =>
-          f.path_lower.startsWith('/body/metrics/') &&
-          f.name.endsWith('.json') &&
-          !f.name.endsWith('manifest.json')
-      );
-      const bodyChunks = await Promise.all(
-        bodyFiles.map((f) => downloadJsonFile<BodyMetric[]>(f.path_lower))
-      );
       const allBodyMetrics: BodyMetric[] = [];
-      for (const chunk of bodyChunks) {
-        if (chunk?.length) allBodyMetrics.push(...chunk);
+      for (const rawChunk of monthlyChunks) {
+        if (!rawChunk) continue;
+        const parsed = parseMonthlyLogBucketStrict(rawChunk);
+        allDailyDietLogs.push(...parsed.dailyDietLogs);
+        allWorkoutLogs.push(...parsed.workoutLogs);
+        allBodyMetrics.push(...parsed.bodyMetrics);
       }
 
       // 飲食分卷去重（保留最新者），避免 bulkPut 觸發 &date 唯一約束衝突
@@ -1402,9 +1341,12 @@ export async function executeSync(
 
     // A. 遠端修訂號比對拉取 (Selective Pull via rev)
     // 1. 檢查 user_base_info
-    const baseInfoMeta = remoteFileMap.get('/user/base_info.json');
-    if (baseInfoMeta && cachedRevs['/user/base_info.json'] !== baseInfoMeta.rev) {
-      const rawRemote = (await downloadJsonFile<UserBaseInfo[]>('/user/base_info.json')) || [];
+    const baseInfoMeta = remoteFileMap.get(SYNC_PATHS.BASE_INFO);
+    if (baseInfoMeta && cachedRevs[SYNC_PATHS.BASE_INFO] !== baseInfoMeta.rev) {
+      const rawRemote = assertValidArrayPayload<UserBaseInfo>(
+        await downloadJsonFile<unknown>(SYNC_PATHS.BASE_INFO),
+        'base_info'
+      );
       const remoteList = rawRemote.map(sanitizeUserBaseInfo);
       const localList = await db.user_base_info.toArray();
       const m = mergeEntities(localList, remoteList);
@@ -1413,7 +1355,7 @@ export async function executeSync(
         hasLocalModified = true;
       }
       if (m.hasRemoteChanges) hasRemoteModified = true;
-      cachedRevs['/user/base_info.json'] = baseInfoMeta.rev;
+      cachedRevs[SYNC_PATHS.BASE_INFO] = baseInfoMeta.rev;
       if (!m.hasRemoteChanges) {
         pushedTimes['user_base_info'] = now;
       }
@@ -1421,9 +1363,12 @@ export async function executeSync(
 
     // 2. 檢查 foods
     let forcePushFoodsFromSchema = false;
-    const foodsMeta = remoteFileMap.get('/nutrition/foods.json');
-    if (foodsMeta && cachedRevs['/nutrition/foods.json'] !== foodsMeta.rev) {
-      const rawRemoteList = (await downloadJsonFile<unknown[]>('/nutrition/foods.json')) || [];
+    const foodsMeta = remoteFileMap.get(SYNC_PATHS.FOODS);
+    if (foodsMeta && cachedRevs[SYNC_PATHS.FOODS] !== foodsMeta.rev) {
+      const rawRemoteList = assertValidArrayPayload<unknown>(
+        await downloadJsonFile<unknown>(SYNC_PATHS.FOODS),
+        'foods'
+      );
       const hasLegacyRemoteFood = rawRemoteList.some((item) => {
         if (typeof item !== 'object' || item === null) return true;
         const rec = item as Record<string, unknown>;
@@ -1458,16 +1403,19 @@ export async function executeSync(
         hasLocalModified = true;
       }
       if (m.hasRemoteChanges) hasRemoteModified = true;
-      cachedRevs['/nutrition/foods.json'] = foodsMeta.rev;
+      cachedRevs[SYNC_PATHS.FOODS] = foodsMeta.rev;
       if (!m.hasRemoteChanges && !forcePushFoodsFromSchema) {
         pushedTimes['foods'] = now;
       }
     }
 
     // 4. 檢查 recipes
-    const recipesMeta = remoteFileMap.get('/nutrition/recipes.json');
-    if (recipesMeta && cachedRevs['/nutrition/recipes.json'] !== recipesMeta.rev) {
-      const rawRemote = (await downloadJsonFile<FoodRecipe[]>('/nutrition/recipes.json')) || [];
+    const recipesMeta = remoteFileMap.get(SYNC_PATHS.RECIPES);
+    if (recipesMeta && cachedRevs[SYNC_PATHS.RECIPES] !== recipesMeta.rev) {
+      const rawRemote = assertValidArrayPayload<FoodRecipe>(
+        await downloadJsonFile<unknown>(SYNC_PATHS.RECIPES),
+        'recipes'
+      );
       const remoteList = rawRemote.map(sanitizeRecipe);
       const localList = await db.recipes.toArray();
       const m = mergeEntities(localList, remoteList, mergedTombstones.recipes, nowTs);
@@ -1480,16 +1428,19 @@ export async function executeSync(
         hasLocalModified = true;
       }
       if (m.hasRemoteChanges) hasRemoteModified = true;
-      cachedRevs['/nutrition/recipes.json'] = recipesMeta.rev;
+      cachedRevs[SYNC_PATHS.RECIPES] = recipesMeta.rev;
       if (!m.hasRemoteChanges) {
         pushedTimes['recipes'] = now;
       }
     }
 
     // 5. 檢查 exercises
-    const exMeta = remoteFileMap.get('/workout/exercises.json');
-    if (exMeta && cachedRevs['/workout/exercises.json'] !== exMeta.rev) {
-      const remoteList = (await downloadJsonFile<Exercise[]>('/workout/exercises.json')) || [];
+    const exMeta = remoteFileMap.get(SYNC_PATHS.EXERCISES);
+    if (exMeta && cachedRevs[SYNC_PATHS.EXERCISES] !== exMeta.rev) {
+      const remoteList = assertValidArrayPayload<Exercise>(
+        await downloadJsonFile<unknown>(SYNC_PATHS.EXERCISES),
+        'exercises'
+      );
       const localList = await db.exercises.toArray();
       const m = mergeEntities(localList, remoteList, mergedTombstones.exercises, nowTs);
       if (m.hasLocalChanges) {
@@ -1500,16 +1451,19 @@ export async function executeSync(
         hasLocalModified = true;
       }
       if (m.hasRemoteChanges) hasRemoteModified = true;
-      cachedRevs['/workout/exercises.json'] = exMeta.rev;
+      cachedRevs[SYNC_PATHS.EXERCISES] = exMeta.rev;
       if (!m.hasRemoteChanges) {
         pushedTimes['exercises'] = now;
       }
     }
 
     // 6. 檢查 equipments
-    const eqMeta = remoteFileMap.get('/workout/equipments.json');
-    if (eqMeta && cachedRevs['/workout/equipments.json'] !== eqMeta.rev) {
-      const remoteList = (await downloadJsonFile<Equipment[]>('/workout/equipments.json')) || [];
+    const eqMeta = remoteFileMap.get(SYNC_PATHS.EQUIPMENTS);
+    if (eqMeta && cachedRevs[SYNC_PATHS.EQUIPMENTS] !== eqMeta.rev) {
+      const remoteList = assertValidArrayPayload<Equipment>(
+        await downloadJsonFile<unknown>(SYNC_PATHS.EQUIPMENTS),
+        'equipments'
+      );
       const localList = await db.equipments.toArray();
       const m = mergeEntities(localList, remoteList, mergedTombstones.equipments, nowTs);
       if (m.hasLocalChanges) {
@@ -1520,16 +1474,19 @@ export async function executeSync(
         hasLocalModified = true;
       }
       if (m.hasRemoteChanges) hasRemoteModified = true;
-      cachedRevs['/workout/equipments.json'] = eqMeta.rev;
+      cachedRevs[SYNC_PATHS.EQUIPMENTS] = eqMeta.rev;
       if (!m.hasRemoteChanges) {
         pushedTimes['equipments'] = now;
       }
     }
 
     // 7. 檢查 routines
-    const routinesMeta = remoteFileMap.get('/workout/routines.json');
-    if (routinesMeta && cachedRevs['/workout/routines.json'] !== routinesMeta.rev) {
-      const rawRemote = (await downloadJsonFile<WorkoutRoutine[]>('/workout/routines.json')) || [];
+    const routinesMeta = remoteFileMap.get(SYNC_PATHS.ROUTINES);
+    if (routinesMeta && cachedRevs[SYNC_PATHS.ROUTINES] !== routinesMeta.rev) {
+      const rawRemote = assertValidArrayPayload<WorkoutRoutine>(
+        await downloadJsonFile<unknown>(SYNC_PATHS.ROUTINES),
+        'routines'
+      );
       const remoteList = rawRemote.map(sanitizeWorkoutRoutine);
       const localList = await db.routines.toArray();
       const m = mergeEntities(localList, remoteList, mergedTombstones.routines, nowTs);
@@ -1541,131 +1498,82 @@ export async function executeSync(
         hasLocalModified = true;
       }
       if (m.hasRemoteChanges) hasRemoteModified = true;
-      cachedRevs['/workout/routines.json'] = routinesMeta.rev;
+      cachedRevs[SYNC_PATHS.ROUTINES] = routinesMeta.rev;
       if (!m.hasRemoteChanges) {
         pushedTimes['routines'] = now;
       }
     }
 
-    // 8. 檢查 daily_diet_logs 各日分卷 (/nutrition/logs/YYYY-MM-DD.json)
-    const dirtyDietBuckets = new Set<string>();
-    const remoteFoodBuckets = remoteFiles.filter(
-      (f) =>
-        f.path_lower.startsWith('/nutrition/logs/') &&
-        f.name.endsWith('.json') &&
-        !f.name.endsWith('manifest.json')
+    // 8. 檢查月度合併日誌 (/logs/YYYY-MM.json)
+    const dirtyMonths = new Set<string>();
+    const remoteMonthFiles = remoteFiles.filter((f) =>
+      isMonthlyLogFilePath(f.path_lower, f.name)
     );
-    for (const bMeta of remoteFoodBuckets) {
+    for (const bMeta of remoteMonthFiles) {
       const path = bMeta.path_lower;
       if (cachedRevs[path] !== bMeta.rev) {
-        const bucket = bMeta.name.replace('.json', '');
-        const rawRemote = await downloadJsonFile<DailyDietLog | DailyDietLog[]>(path);
-        if (rawRemote) {
-          let remoteLog: DailyDietLog | null = null;
-          if (Array.isArray(rawRemote)) {
-            if (rawRemote.length > 0 && 'entries' in rawRemote[0]) {
-              remoteLog = sanitizeDailyDietLog(rawRemote[0]);
-            }
-          } else if ('entries' in rawRemote) {
-            remoteLog = sanitizeDailyDietLog(rawRemote);
-          }
+        const month = bMeta.name.replace(/\.json$/i, '');
+        const rawRemote = await downloadJsonFile<MonthlySyncLogBucket>(path);
+        const remoteBucket = parseMonthlyLogBucketStrict(rawRemote, month);
+        const [localDietLogs, localWorkoutLogs, localBodyMetrics] = await Promise.all([
+          db.daily_diet_logs.filter((l) => l.date.startsWith(month)).toArray(),
+          db.workout_logs.filter((l) => l.date.startsWith(month)).toArray(),
+          db.body_metrics.filter((m) => m.date.startsWith(month)).toArray(),
+        ]);
 
-          if (!remoteLog) {
-            cachedRevs[path] = bMeta.rev;
-            continue;
-          }
-
-          const localLog = await db.daily_diet_logs.where('date').equals(bucket).first();
-          if (!localLog) {
-            await withAutoSyncSuppressed(() => db.daily_diet_logs.put(remoteLog));
-            confirmRawWeightIfHasDietActivity({ dailyDietLogs: [remoteLog] });
-            hasLocalModified = true;
-            pushedTimes[`diet_log_${bucket}`] = now;
-            pushedTimes[`diet_log_${bucket}_count`] = String(remoteLog.entries.length);
-          } else {
-            const m = mergeDietLogsByDate([localLog], [remoteLog]);
-            if (m.hasLocalChanges && m.merged[0]) {
-              const mergedLog = { ...m.merged[0], id: localLog.id };
-              await withAutoSyncSuppressed(() => db.daily_diet_logs.put(mergedLog));
-              confirmRawWeightIfHasDietActivity({ dailyDietLogs: [mergedLog] });
-              hasLocalModified = true;
-              if (!m.hasRemoteChanges) {
-                pushedTimes[`diet_log_${bucket}`] = now;
-                pushedTimes[`diet_log_${bucket}_count`] = String(mergedLog.entries.length);
-              }
-            }
-            if (m.hasRemoteChanges) {
-              hasRemoteModified = true;
-              dirtyDietBuckets.add(bucket);
-            }
-            if (!m.hasLocalChanges && !m.hasRemoteChanges) {
-              pushedTimes[`diet_log_${bucket}`] = now;
-              pushedTimes[`diet_log_${bucket}_count`] = String(localLog.entries.length);
-            }
-          }
+        const mDiet = mergeDietLogsByDate(localDietLogs, remoteBucket.dailyDietLogs);
+        if (mDiet.hasLocalChanges) {
+          const localByDate = new Map(localDietLogs.map((l) => [l.date, l]));
+          const toPut = mDiet.merged.map((mergedLog) => {
+            const existing = localByDate.get(mergedLog.date);
+            return existing ? { ...mergedLog, id: existing.id } : mergedLog;
+          });
+          await withAutoSyncSuppressed(() => db.daily_diet_logs.bulkPut(toPut));
+          confirmRawWeightIfHasDietActivity({ dailyDietLogs: toPut });
+          hasLocalModified = true;
         }
-        cachedRevs[path] = bMeta.rev;
-      }
-    }
 
-    // 10. 檢查 workout_logs 各月份分卷
-    const remoteWorkoutBuckets = remoteFiles.filter(
-      (f) =>
-        f.path_lower.startsWith('/workout/logs/') &&
-        f.name.endsWith('.json') &&
-        !f.name.endsWith('manifest.json')
-    );
-    for (const bMeta of remoteWorkoutBuckets) {
-      const path = bMeta.path_lower;
-      if (cachedRevs[path] !== bMeta.rev) {
-        const bucket = bMeta.name.replace('.json', '');
-        const rawRemote = (await downloadJsonFile<WorkoutLog[]>(path)) || [];
-        const remoteList = rawRemote.map(sanitizeWorkoutLog);
-        const localList = await db.workout_logs.filter((l) => l.date.startsWith(bucket)).toArray();
-        const m = mergeWorkoutLogs(localList, remoteList, mergedTombstones.workout_logs, nowTs);
-        if (m.hasLocalChanges) {
+        const mWorkout = mergeWorkoutLogs(
+          localWorkoutLogs,
+          remoteBucket.workoutLogs,
+          mergedTombstones.workout_logs,
+          nowTs
+        );
+        if (mWorkout.hasLocalChanges) {
           await withAutoSyncSuppressed(async () => {
-            if (m.deletedIds.length) await db.workout_logs.bulkDelete(m.deletedIds);
-            if (m.merged.length) await db.workout_logs.bulkPut(m.merged.map(sanitizeWorkoutLog));
+            if (mWorkout.deletedIds.length) await db.workout_logs.bulkDelete(mWorkout.deletedIds);
+            if (mWorkout.merged.length) {
+              await db.workout_logs.bulkPut(mWorkout.merged.map(sanitizeWorkoutLog));
+            }
           });
           hasLocalModified = true;
         }
-        if (m.hasRemoteChanges) hasRemoteModified = true;
-        cachedRevs[path] = bMeta.rev;
-        if (!m.hasRemoteChanges) {
-          pushedTimes[`workout_log_${bucket}`] = now;
-          pushedTimes[`workout_log_${bucket}_count`] = String(m.merged.length);
-        }
-      }
-    }
 
-    // 11. 檢查 body_metrics 各年份分卷
-    const remoteBodyBuckets = remoteFiles.filter(
-      (f) =>
-        f.path_lower.startsWith('/body/metrics/') &&
-        f.name.endsWith('.json') &&
-        !f.name.endsWith('manifest.json')
-    );
-    for (const bMeta of remoteBodyBuckets) {
-      const path = bMeta.path_lower;
-      if (cachedRevs[path] !== bMeta.rev) {
-        const bucket = bMeta.name.replace('.json', '');
-        const remoteList = (await downloadJsonFile<BodyMetric[]>(path)) || [];
-        const localList = await db.body_metrics.filter((m) => m.date.startsWith(bucket)).toArray();
-        const m = mergeEntities(localList, remoteList, mergedTombstones.body_metrics, nowTs);
-        if (m.hasLocalChanges) {
+        const mBody = mergeEntities(
+          localBodyMetrics,
+          remoteBucket.bodyMetrics,
+          mergedTombstones.body_metrics,
+          nowTs
+        );
+        if (mBody.hasLocalChanges) {
           await withAutoSyncSuppressed(async () => {
-            if (m.deletedIds.length) await db.body_metrics.bulkDelete(m.deletedIds);
-            if (m.merged.length) await db.body_metrics.bulkPut(m.merged);
+            if (mBody.deletedIds.length) await db.body_metrics.bulkDelete(mBody.deletedIds);
+            if (mBody.merged.length) await db.body_metrics.bulkPut(mBody.merged);
           });
           hasLocalModified = true;
         }
-        if (m.hasRemoteChanges) hasRemoteModified = true;
-        cachedRevs[path] = bMeta.rev;
-        if (!m.hasRemoteChanges) {
-          pushedTimes[`body_metric_${bucket}`] = now;
-          pushedTimes[`body_metric_${bucket}_count`] = String(m.merged.length);
+
+        const anyRemoteChanges =
+          mDiet.hasRemoteChanges || mWorkout.hasRemoteChanges || mBody.hasRemoteChanges;
+        if (anyRemoteChanges) {
+          hasRemoteModified = true;
+          dirtyMonths.add(month);
+        } else {
+          pushedTimes[`month_log_${month}`] = now;
+          pushedTimes[`month_log_${month}_counts`] =
+            `${mDiet.merged.length}:${mWorkout.merged.length}:${mBody.merged.length}`;
         }
+        cachedRevs[path] = bMeta.rev;
       }
     }
 
@@ -1678,10 +1586,10 @@ export async function executeSync(
       0
     );
     if (!lastBaseInfoPushed || maxBaseInfoUpdated > getNormalizedTimestamp(lastBaseInfoPushed)) {
-      cachedRevs['/user/base_info.json'] = await uploadJsonFile(
-        '/user/base_info.json',
+      cachedRevs[SYNC_PATHS.BASE_INFO] = await uploadJsonFile(
+        SYNC_PATHS.BASE_INFO,
         localBaseInfo.map(sanitizeUserBaseInfo),
-        cachedRevs['/user/base_info.json']
+        cachedRevs[SYNC_PATHS.BASE_INFO]
       );
       pushedTimes['user_base_info'] = now;
       hasRemoteModified = true;
@@ -1703,10 +1611,10 @@ export async function executeSync(
       !lastFoodsPushed ||
       maxFoodsUpdated > getNormalizedTimestamp(lastFoodsPushed)
     ) {
-      cachedRevs['/nutrition/foods.json'] = await uploadJsonFile(
-        '/nutrition/foods.json',
+      cachedRevs[SYNC_PATHS.FOODS] = await uploadJsonFile(
+        SYNC_PATHS.FOODS,
         localFoods.map(sanitizeFoodItem),
-        cachedRevs['/nutrition/foods.json']
+        cachedRevs[SYNC_PATHS.FOODS]
       );
       pushedTimes['foods'] = now;
       hasRemoteModified = true;
@@ -1727,10 +1635,10 @@ export async function executeSync(
       getMaxTombstoneTime(mergedTombstones.recipes)
     );
     if (!lastRecipesPushed || maxRecipesUpdated > getNormalizedTimestamp(lastRecipesPushed)) {
-      cachedRevs['/nutrition/recipes.json'] = await uploadJsonFile(
-        '/nutrition/recipes.json',
+      cachedRevs[SYNC_PATHS.RECIPES] = await uploadJsonFile(
+        SYNC_PATHS.RECIPES,
         localRecipes.map(sanitizeRecipe),
-        cachedRevs['/nutrition/recipes.json']
+        cachedRevs[SYNC_PATHS.RECIPES]
       );
       pushedTimes['recipes'] = now;
       hasRemoteModified = true;
@@ -1744,10 +1652,10 @@ export async function executeSync(
       getMaxTombstoneTime(mergedTombstones.exercises)
     );
     if (!lastExPushed || maxExUpdated > getNormalizedTimestamp(lastExPushed)) {
-      cachedRevs['/workout/exercises.json'] = await uploadJsonFile(
-        '/workout/exercises.json',
+      cachedRevs[SYNC_PATHS.EXERCISES] = await uploadJsonFile(
+        SYNC_PATHS.EXERCISES,
         localExercises,
-        cachedRevs['/workout/exercises.json']
+        cachedRevs[SYNC_PATHS.EXERCISES]
       );
       pushedTimes['exercises'] = now;
       hasRemoteModified = true;
@@ -1761,10 +1669,10 @@ export async function executeSync(
       getMaxTombstoneTime(mergedTombstones.equipments)
     );
     if (!lastEqPushed || maxEqUpdated > getNormalizedTimestamp(lastEqPushed)) {
-      cachedRevs['/workout/equipments.json'] = await uploadJsonFile(
-        '/workout/equipments.json',
+      cachedRevs[SYNC_PATHS.EQUIPMENTS] = await uploadJsonFile(
+        SYNC_PATHS.EQUIPMENTS,
         localEquipments,
-        cachedRevs['/workout/equipments.json']
+        cachedRevs[SYNC_PATHS.EQUIPMENTS]
       );
       pushedTimes['equipments'] = now;
       hasRemoteModified = true;
@@ -1778,175 +1686,76 @@ export async function executeSync(
       getMaxTombstoneTime(mergedTombstones.routines)
     );
     if (!lastRoutinesPushed || maxRoutinesUpdated > getNormalizedTimestamp(lastRoutinesPushed)) {
-      cachedRevs['/workout/routines.json'] = await uploadJsonFile(
-        '/workout/routines.json',
+      cachedRevs[SYNC_PATHS.ROUTINES] = await uploadJsonFile(
+        SYNC_PATHS.ROUTINES,
         localRoutines.map(sanitizeWorkoutRoutine),
-        cachedRevs['/workout/routines.json']
+        cachedRevs[SYNC_PATHS.ROUTINES]
       );
       pushedTimes['routines'] = now;
       hasRemoteModified = true;
     }
 
-    // 9. daily_diet_logs 增量推送 (按日自包含膠囊 /nutrition/logs/YYYY-MM-DD.json)
-    const allLocalDietLogs = await db.daily_diet_logs.toArray();
-    let dietLogsChanged = false;
-    const foodBucketManifestData: Record<string, BucketInfo> = {};
+    // 9. 月度合併日誌增量推送 (/logs/YYYY-MM.json)
+    const [allLocalDietLogs, allLocalWorkoutLogs, allLocalMetrics] = await Promise.all([
+      db.daily_diet_logs.toArray(),
+      db.workout_logs.toArray(),
+      db.body_metrics.toArray(),
+    ]);
+    const groupedLocalMonths = groupRecordsByMonth(
+      {
+        dailyDietLogs: allLocalDietLogs,
+        workoutLogs: allLocalWorkoutLogs,
+        bodyMetrics: allLocalMetrics,
+      },
+      now
+    );
 
-    for (const dLog of allLocalDietLogs) {
-      const bucket = dLog.date;
-      const bucketPath = `/nutrition/logs/${bucket}.json`;
-      const lastPushed = pushedTimes[`diet_log_${bucket}`] || '';
-      const lastCount = pushedTimes[`diet_log_${bucket}_count`];
-      const maxUpdated = getNormalizedTimestamp(dLog.updatedAt);
+    for (const [month, bucket] of groupedLocalMonths) {
+      const bucketPath = getMonthLogPath(month);
+      const countSig = `${bucket.dailyDietLogs.length}:${bucket.workoutLogs.length}:${bucket.bodyMetrics.length}`;
+      const lastPushed = pushedTimes[`month_log_${month}`] || '';
+      const lastCounts = pushedTimes[`month_log_${month}_counts`];
+      const maxUpdated = Math.max(
+        bucket.dailyDietLogs.reduce((m, l) => Math.max(m, getNormalizedTimestamp(l.updatedAt)), 0),
+        bucket.workoutLogs.reduce((m, l) => Math.max(m, getNormalizedTimestamp(l.updatedAt)), 0),
+        bucket.bodyMetrics.reduce((m, l) => Math.max(m, getNormalizedTimestamp(l.updatedAt)), 0)
+      );
 
-      const isCountChanged = lastCount !== undefined && lastCount !== String(dLog.entries.length);
+      const isCountChanged = lastCounts !== undefined && lastCounts !== countSig;
       const isTimeUpdated = !lastPushed || maxUpdated > getNormalizedTimestamp(lastPushed);
       const isMissingOnRemote = !cachedRevs[bucketPath];
 
-      if (isTimeUpdated || isCountChanged || isMissingOnRemote || dirtyDietBuckets.has(bucket)) {
+      if (isTimeUpdated || isCountChanged || isMissingOnRemote || dirtyMonths.has(month)) {
         cachedRevs[bucketPath] = await uploadJsonFile(
           bucketPath,
-          sanitizeDailyDietLog(dLog),
+          bucket,
           cachedRevs[bucketPath]
         );
-        pushedTimes[`diet_log_${bucket}`] = now;
-        pushedTimes[`diet_log_${bucket}_count`] = String(dLog.entries.length);
-        dietLogsChanged = true;
+        pushedTimes[`month_log_${month}`] = now;
+        pushedTimes[`month_log_${month}_counts`] = countSig;
         hasRemoteModified = true;
       }
-
-      foodBucketManifestData[bucket] = {
-        count: dLog.entries.length,
-        updatedAt: maxUpdated,
-      };
     }
 
-    if (dietLogsChanged || !cachedRevs['/nutrition/logs/manifest.json']) {
-      const foodManifest: BucketManifest = {
-        version: 1,
-        updatedAt: now,
-        buckets: foodBucketManifestData,
-      };
-      cachedRevs['/nutrition/logs/manifest.json'] = await uploadJsonFile(
-        '/nutrition/logs/manifest.json',
-        foodManifest
-      );
-    }
-
-    // 10. workout_logs 增量推送 (按日分卷 YYYY-MM-DD)
-    const allLocalWorkoutLogs = await db.workout_logs.toArray();
-    const groupedLocalWorkoutLogs = groupWorkoutLogsByDate(allLocalWorkoutLogs);
-    let workoutLogsChanged = false;
-    const workoutBucketManifestData: Record<string, BucketInfo> = {};
-
-    for (const [bucket, bLogs] of Object.entries(groupedLocalWorkoutLogs)) {
-      const bucketPath = `/workout/logs/${bucket}.json`;
-      const lastPushed = pushedTimes[`workout_log_${bucket}`] || '';
-      const lastCount = pushedTimes[`workout_log_${bucket}_count`];
-      const maxUpdated = bLogs.reduce((max, l) => Math.max(max, getNormalizedTimestamp(l.updatedAt)), 0);
-
-      const isCountChanged = lastCount !== undefined && lastCount !== String(bLogs.length);
-      const isTimeUpdated = !lastPushed || maxUpdated > getNormalizedTimestamp(lastPushed);
-      const isMissingOnRemote = !cachedRevs[bucketPath];
-
-      if (isTimeUpdated || isCountChanged || isMissingOnRemote) {
-        cachedRevs[bucketPath] = await uploadJsonFile(
-          bucketPath,
-          bLogs.map(sanitizeWorkoutLog),
-          cachedRevs[bucketPath]
+    for (const bMeta of remoteMonthFiles) {
+      const month = bMeta.name.replace(/\.json$/i, '');
+      if (!groupedLocalMonths.has(month) && pushedTimes[`month_log_${month}_counts`] !== '0:0:0') {
+        const emptyBucket: MonthlySyncLogBucket = {
+          month,
+          updatedAt: now,
+          dailyDietLogs: [],
+          workoutLogs: [],
+          bodyMetrics: [],
+        };
+        cachedRevs[bMeta.path_lower] = await uploadJsonFile(
+          bMeta.path_lower,
+          emptyBucket,
+          cachedRevs[bMeta.path_lower]
         );
-        pushedTimes[`workout_log_${bucket}`] = now;
-        pushedTimes[`workout_log_${bucket}_count`] = String(bLogs.length);
-        workoutLogsChanged = true;
+        pushedTimes[`month_log_${month}`] = now;
+        pushedTimes[`month_log_${month}_counts`] = '0:0:0';
         hasRemoteModified = true;
       }
-
-      workoutBucketManifestData[bucket] = {
-        count: bLogs.length,
-        updatedAt: maxUpdated,
-      };
-    }
-
-    for (const bMeta of remoteWorkoutBuckets) {
-      const bucket = bMeta.name.replace('.json', '');
-      if (!groupedLocalWorkoutLogs[bucket] && pushedTimes[`workout_log_${bucket}_count`] !== '0') {
-        const bucketPath = bMeta.path_lower;
-        cachedRevs[bucketPath] = await uploadJsonFile(bucketPath, [], cachedRevs[bucketPath]);
-        delete pushedTimes[`workout_log_${bucket}`];
-        pushedTimes[`workout_log_${bucket}_count`] = '0';
-        workoutLogsChanged = true;
-        hasRemoteModified = true;
-      }
-    }
-
-    if (workoutLogsChanged || !cachedRevs['/workout/logs/manifest.json']) {
-      const workoutManifest: BucketManifest = {
-        version: 1,
-        updatedAt: now,
-        buckets: workoutBucketManifestData,
-      };
-      cachedRevs['/workout/logs/manifest.json'] = await uploadJsonFile(
-        '/workout/logs/manifest.json',
-        workoutManifest
-      );
-    }
-
-    // 11. body_metrics 增量推送 (按日分卷 YYYY-MM-DD)
-    const allLocalMetrics = await db.body_metrics.toArray();
-    const groupedLocalMetrics = groupBodyMetricsByDate(allLocalMetrics);
-    let bodyMetricsChanged = false;
-    const bodyBucketManifestData: Record<string, BucketInfo> = {};
-
-    for (const [bucket, bMetrics] of Object.entries(groupedLocalMetrics)) {
-      const bucketPath = `/body/metrics/${bucket}.json`;
-      const lastPushed = pushedTimes[`body_metric_${bucket}`] || '';
-      const lastCount = pushedTimes[`body_metric_${bucket}_count`];
-      const maxUpdated = bMetrics.reduce((max, m) => Math.max(max, getNormalizedTimestamp(m.updatedAt)), 0);
-
-      const isCountChanged = lastCount !== undefined && lastCount !== String(bMetrics.length);
-      const isTimeUpdated = !lastPushed || maxUpdated > getNormalizedTimestamp(lastPushed);
-      const isMissingOnRemote = !cachedRevs[bucketPath];
-
-      if (isTimeUpdated || isCountChanged || isMissingOnRemote) {
-        cachedRevs[bucketPath] = await uploadJsonFile(
-          bucketPath,
-          bMetrics,
-          cachedRevs[bucketPath]
-        );
-        pushedTimes[`body_metric_${bucket}`] = now;
-        pushedTimes[`body_metric_${bucket}_count`] = String(bMetrics.length);
-        bodyMetricsChanged = true;
-        hasRemoteModified = true;
-      }
-
-      bodyBucketManifestData[bucket] = {
-        count: bMetrics.length,
-        updatedAt: maxUpdated,
-      };
-    }
-
-    for (const bMeta of remoteBodyBuckets) {
-      const bucket = bMeta.name.replace('.json', '');
-      if (!groupedLocalMetrics[bucket] && pushedTimes[`body_metric_${bucket}_count`] !== '0') {
-        const bucketPath = bMeta.path_lower;
-        cachedRevs[bucketPath] = await uploadJsonFile(bucketPath, [], cachedRevs[bucketPath]);
-        delete pushedTimes[`body_metric_${bucket}`];
-        pushedTimes[`body_metric_${bucket}_count`] = '0';
-        bodyMetricsChanged = true;
-        hasRemoteModified = true;
-      }
-    }
-
-    if (bodyMetricsChanged || !cachedRevs['/body/metrics/manifest.json']) {
-      const bodyManifest: BucketManifest = {
-        version: 1,
-        updatedAt: now,
-        buckets: bodyBucketManifestData,
-      };
-      cachedRevs['/body/metrics/manifest.json'] = await uploadJsonFile(
-        '/body/metrics/manifest.json',
-        bodyManifest
-      );
     }
 
     // 若有任何遠端變動，更新全域 manifest.json
@@ -1994,8 +1803,10 @@ export async function executeSync(
       actionTaken: hasLocalModified || hasRemoteModified ? 'merged' : 'up_to_date',
     };
   } catch (error: unknown) {
-    console.error('Folder sync execution error:', error);
-    const errMsg = error instanceof Error ? error.message : 'Unknown sync error';
+    const errMsg = redactSyncSecrets(
+      error instanceof Error ? error.message : 'Unknown sync error'
+    );
+    console.error('Folder sync execution error:', errMsg);
     if (errMsg.includes('DROPBOX_CONFLICT')) {
       if (remoteFileMap) {
         for (const [pathLower, fileMeta] of remoteFileMap) {
@@ -2071,12 +1882,12 @@ export async function executeSync(
 function drainPendingQueue(): void {
   if (hasPendingSyncRequest) {
     hasPendingSyncRequest = false;
-    if (!isDropboxConnected() || isDeviceOffline()) return;
+    if (!isCloudSyncConnected() || isDeviceOffline()) return;
     const nextMode = pendingSyncMode;
     pendingSyncMode = 'auto';
     const jitterDelay = Math.floor(800 + Math.random() * 700);
     setTimeout(() => {
-      if (!isDropboxConnected() || isDeviceOffline()) return;
+      if (!isCloudSyncConnected() || isDeviceOffline()) return;
       executeSync(nextMode).catch((err) => {
         console.warn('Pending sync execution error:', err);
       });
@@ -2086,7 +1897,7 @@ function drainPendingQueue(): void {
 
 export function markPendingAutoSync(): void {
   try {
-    localStorage.setItem(PENDING_AUTO_SYNC_KEY, '1');
+    localStorage.setItem(getProviderScopedStorageKey(PENDING_AUTO_SYNC_KEY), '1');
   } catch {
     // ignore storage errors
   }
@@ -2094,7 +1905,7 @@ export function markPendingAutoSync(): void {
 
 export function hasPendingAutoSync(): boolean {
   try {
-    return localStorage.getItem(PENDING_AUTO_SYNC_KEY) === '1';
+    return localStorage.getItem(getProviderScopedStorageKey(PENDING_AUTO_SYNC_KEY)) === '1';
   } catch {
     return false;
   }
@@ -2102,7 +1913,7 @@ export function hasPendingAutoSync(): boolean {
 
 export function clearPendingAutoSync(): void {
   try {
-    localStorage.removeItem(PENDING_AUTO_SYNC_KEY);
+    localStorage.removeItem(getProviderScopedStorageKey(PENDING_AUTO_SYNC_KEY));
   } catch {
     // ignore storage errors
   }
@@ -2122,7 +1933,7 @@ export function cancelScheduledAutoSync(): void {
  * 安排防抖自動同步 (本地有數據變更後自動執行局部增量推送)
  */
 export function scheduleAutoSync(delayMs = 2000): void {
-  if (!isDropboxConnected()) return;
+  if (!isCloudSyncConnected()) return;
   if (isDeviceOffline()) {
     markPendingAutoSync();
     return;
@@ -2134,8 +1945,8 @@ export function scheduleAutoSync(delayMs = 2000): void {
 
   autoSyncTimeout = setTimeout(() => {
     autoSyncTimeout = null;
-    if (!isDropboxConnected() || isDeviceOffline()) {
-      if (isDropboxConnected()) markPendingAutoSync();
+    if (!isCloudSyncConnected() || isDeviceOffline()) {
+      if (isCloudSyncConnected()) markPendingAutoSync();
       return;
     }
     executeSync('auto').catch((err) => {
@@ -2151,8 +1962,8 @@ export function flushAutoSync(): void {
   if (!autoSyncTimeout) return;
   clearTimeout(autoSyncTimeout);
   autoSyncTimeout = null;
-  if (!isDropboxConnected() || isDeviceOffline()) {
-    if (isDropboxConnected()) markPendingAutoSync();
+  if (!isCloudSyncConnected() || isDeviceOffline()) {
+    if (isCloudSyncConnected()) markPendingAutoSync();
     return;
   }
   executeSync('auto').catch((err) => {

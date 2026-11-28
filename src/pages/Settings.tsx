@@ -17,7 +17,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useDropboxSync } from '@/hooks/useDropboxSync';
 import { useAISettings } from '@/hooks/useAISettings';
 import { SettingsRow } from '@/components/settings/SettingsRow';
-import { DropboxSyncDialog } from '@/components/settings/dialogs/DropboxSyncDialog';
+import { CloudChannelDialog } from '@/components/settings/dialogs/CloudChannelDialog';
 import { BrandWordmark } from '@/components/ui/Logo';
 import type { UnitSystemPreset } from '@/types';
 
@@ -30,18 +30,31 @@ export default function Settings() {
   const { profiles: aiProfiles, activeProfile: activeAIProfile } = useAISettings();
 
   const [isDropboxDialogOpen, setIsDropboxDialogOpen] = useState(false);
+  const [isBackupConnectDialogOpen, setIsBackupConnectDialogOpen] = useState(false);
+  const [isRollingBackupDialogOpen, setIsRollingBackupDialogOpen] = useState(false);
   const [forceRefreshDialogOpen, setForceRefreshDialogOpen] = useState(false);
   const [isRefreshingApp, setIsRefreshingApp] = useState(false);
 
   const {
+    activeProviderId,
     isAuthenticated: isDropboxAuth,
     isSyncing: isDropboxSyncing,
     lastSyncTime: dropboxLastSyncTime,
     isOnline,
+    backupProviderId,
+    isBackupConnected,
+    isBackingUpZip,
+    lastBackupZipTime,
+    backupNow,
     connectDropbox,
+    connectWebDav,
+    connectS3,
     disconnectDropbox,
+    connectBackupDropbox,
+    connectBackupWebDav,
+    connectBackupS3,
+    disconnectBackup,
     syncNow: dropboxSyncNow,
-    overwriteRemote: dropboxOverwriteRemote,
   } = useDropboxSync();
 
   const handleForceRefresh = async () => {
@@ -91,11 +104,23 @@ export default function Settings() {
     ? t('settings.disconnected', '未連線')
     : isDropboxSyncing
       ? t('settings.syncing', '同步中…')
-      : t('settings.connected', '已連線');
+      : t(`syncStatus.providers.${activeProviderId}`);
 
   const dropboxSummaryClassName = !isDropboxAuth
     ? undefined
     : isDropboxSyncing
+      ? 'text-primary'
+      : 'text-emerald-500 font-medium';
+
+  const rollingBackupSummary = !isBackupConnected
+    ? t('syncStatus.rollingBackup.disabledSummary')
+    : isBackingUpZip
+      ? t('syncStatus.rollingBackup.backingUp')
+      : t(`syncStatus.providers.${backupProviderId ?? 'dropbox'}`);
+
+  const rollingBackupSummaryClassName = !isBackupConnected
+    ? undefined
+    : isBackingUpZip
       ? 'text-primary'
       : 'text-emerald-500 font-medium';
 
@@ -192,12 +217,25 @@ export default function Settings() {
         </div>
         <div className="sm:col-span-8 border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
           <SettingsRow
-            label={t('settings.dropboxSync', 'Dropbox 同步')}
+            label={t('syncStatus.cloudSyncTitle')}
             summary={dropboxSummary}
             summaryClassName={dropboxSummaryClassName}
             onClick={() => {
               triggerHaptic('selection');
               setIsDropboxDialogOpen(true);
+            }}
+          />
+          <SettingsRow
+            label={t('syncStatus.rollingBackup.settingsRowTitle')}
+            summary={rollingBackupSummary}
+            summaryClassName={rollingBackupSummaryClassName}
+            onClick={() => {
+              triggerHaptic('selection');
+              if (isBackupConnected) {
+                setIsRollingBackupDialogOpen(true);
+              } else {
+                setIsBackupConnectDialogOpen(true);
+              }
             }}
           />
           <SettingsRow
@@ -311,18 +349,44 @@ export default function Settings() {
         </PrecisionDialogContent>
       </Dialog>
 
-      {/* Dropbox 同步設定彈窗 */}
-      <DropboxSyncDialog
+      {/* 雲端同步設定與管理彈窗 */}
+      <CloudChannelDialog
         open={isDropboxDialogOpen}
         onOpenChange={setIsDropboxDialogOpen}
+        activeProviderId={activeProviderId}
         isAuthenticated={isDropboxAuth}
         isSyncing={isDropboxSyncing}
         lastSyncTime={dropboxLastSyncTime}
         isOnline={isOnline}
         onConnectDropbox={connectDropbox}
-        onDisconnectDropbox={disconnectDropbox}
+        onConnectWebDav={connectWebDav}
+        onConnectS3={connectS3}
+        onDisconnect={disconnectDropbox}
         onSyncNow={dropboxSyncNow}
-        onOverwriteRemote={dropboxOverwriteRemote}
+      />
+
+      {/* 每日滾動備份設定與管理彈窗 */}
+      <CloudChannelDialog
+        open={isBackupConnectDialogOpen || isRollingBackupDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsBackupConnectDialogOpen(false);
+            setIsRollingBackupDialogOpen(false);
+          }
+        }}
+        channelScope="backup"
+        activeProviderId={backupProviderId ?? 'dropbox'}
+        isAuthenticated={isRollingBackupDialogOpen}
+        isOnline={isOnline}
+        isBackingUpZip={isBackingUpZip}
+        lastBackupZipTime={lastBackupZipTime}
+        isCloudSyncConnected={isDropboxAuth}
+        onConnectDropbox={connectBackupDropbox}
+        onConnectWebDav={connectBackupWebDav}
+        onConnectS3={connectBackupS3}
+        onBackupNow={backupNow}
+        onDisconnect={disconnectBackup}
+        onSyncAfterRestore={(mode) => dropboxSyncNow(mode)}
       />
     </div>
   );

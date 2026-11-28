@@ -33,11 +33,14 @@ import { SetupProfileDialog } from '@/components/welcome/SetupProfileDialog';
 import { LocalImportDialog } from '@/components/welcome/LocalImportDialog';
 import { ImportStrategyModal } from '@/components/settings/dialogs/ImportStrategyModal';
 import { ClearDataModal } from '@/components/settings/ClearDataModal';
-import { DropboxSyncDialog } from '@/components/settings/dialogs/DropboxSyncDialog';
-import { InitialSyncModal } from '@/components/sync/InitialSyncModal';
+import { CloudChannelDialog } from '@/components/settings/dialogs/CloudChannelDialog';
+import { CloudSyncFlowModal } from '@/components/sync/CloudSyncFlowModal';
 import { CopyDailyDataDialog } from '@/components/common/CopyDailyDataDialog';
 import { RecordedDatePickerDialog } from '@/components/common/RecordedDatePickerDialog';
-import type { InitialSyncStep } from '@/services/sync/initialSyncManager';
+import type {
+  InitialSyncStep,
+  CloudSyncFlowBlockedReason,
+} from '@/services/sync/initialSyncManager';
 import { PwaInstallGuideDialog } from '@/components/pwa/PwaInstallGuideDialog';
 import { AIProviderManagerDialog } from '@/components/settings/AIProviderManagerDialog';
 import { AIProviderDialog } from '@/components/settings/AIProviderDialog';
@@ -322,15 +325,19 @@ export const DialogsTab: React.FC = () => {
   const [copyWorkoutOpen, setCopyWorkoutOpen] = useState(false);
   const [copyWorkoutDatePickerOpen, setCopyWorkoutDatePickerOpen] = useState(false);
 
-  // 系統與設定模組 State (10 項獨立組件)
+  // 雲端同步與備份 / 系統通用模組 State
   const [setupProfileOpen, setSetupProfileOpen] = useState(false);
   const [localImportOpen, setLocalImportOpen] = useState(false);
   const [importStrategyOpen, setImportStrategyOpen] = useState(false);
   const [clearDataOpen, setClearDataOpen] = useState(false);
   const [dropboxSyncOpen, setDropboxSyncOpen] = useState(false);
   const [dropboxConnectOpen, setDropboxConnectOpen] = useState(false);
+  const [backupConnectOpen, setBackupConnectOpen] = useState(false);
+  const [rollingBackupOpen, setRollingBackupOpen] = useState(false);
   const [initialSyncPreviewOpen, setInitialSyncPreviewOpen] = useState(false);
   const [initialSyncPreviewStep, setInitialSyncPreviewStep] = useState<InitialSyncStep>('STRATEGY');
+  const [flowBlockedReason, setFlowBlockedReason] =
+    useState<CloudSyncFlowBlockedReason>('account_conflict');
   const [copyDailyDataOpen, setCopyDailyDataOpen] = useState(false);
   const [recordedDatePickerOpen, setRecordedDatePickerOpen] = useState(false);
   const [recordedSelectedDate, setRecordedSelectedDate] = useState<string | null>(null);
@@ -376,11 +383,11 @@ export const DialogsTab: React.FC = () => {
             彈窗型錄
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5 font-sans">
-            全應用程式 31 個業務 Dialog 統一驗收矩陣，支援同組件多形態（新增/編輯、權威/自訂、已連線/未連線）整合檢視。
+            全應用程式 35 個業務 Dialog 統一驗收矩陣，支援同組件多形態（新增/編輯、權威/自訂、已連線/未連線）整合檢視。
           </p>
         </div>
         <div className="text-2xs font-mono text-muted-foreground tabular-nums">
-          31 項元件
+          35 項元件
         </div>
       </div>
 
@@ -643,68 +650,55 @@ export const DialogsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. 設定、同步與通用 */}
+      {/* 3. 雲端同步與備份 */}
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-mono text-muted-foreground">
-            設定、同步與通用 (12)
+            雲端同步與備份 (6)
           </h3>
         </div>
         <div className="divide-y divide-border rounded-lg border border-border bg-card overflow-hidden shadow-none">
           <DialogRowItem
-            name="基本資料"
-            component="SetupProfileDialog"
-            desc="姓名、性別、出生年月、身高體重初始配置"
-            badge="Profile"
-            onOpen={() => setSetupProfileOpen(true)}
-          />
-          <DialogRowItem
-            name="本地還原"
-            component="LocalImportDialog"
-            desc="ZIP 檔案離線解析與摘要確認"
-            badge="Import"
-            onOpen={() => setLocalImportOpen(true)}
-          />
-          <DialogRowItem
-            name="衝突策略"
-            component="ImportStrategyModal"
-            desc="備份身分不一致時的覆寫或增量合併決策"
-            badge="Strategy"
-            onOpen={() => setImportStrategyOpen(true)}
-          />
-          <DialogRowItem
-            name="出廠重置"
-            component="ClearDataModal"
-            desc="輸入確認詞並長按 0.5 秒確認的高危出廠清庫"
-            badge="Destructive"
-            onOpen={() => setClearDataOpen(true)}
-          />
-          <DialogRowItem
-            name="Dropbox 同步"
-            component="DropboxSyncDialog"
-            desc="統一連線授權說明、同步狀態檢視與長按中斷連線"
+            name="雲端通道設定與管理"
+            component="CloudChannelDialog"
+            desc="整合主同步與每日滾動備份：三渠道精靈、主同步控制台與 /backup 清單還原"
             badge="Sync"
             actions={[
               {
-                label: '已連線',
+                label: '主同步(已連線)',
                 onOpen: () => setDropboxSyncOpen(true),
               },
               {
-                label: '未連線',
+                label: '主同步精靈',
                 onOpen: () => setDropboxConnectOpen(true),
+              },
+              {
+                label: '備份(已連線)',
+                onOpen: () => setRollingBackupOpen(true),
+              },
+              {
+                label: '備份精靈',
+                onOpen: () => setBackupConnectOpen(true),
               },
             ]}
           />
           <DialogRowItem
-            name="同步過程"
-            component="InitialSyncModal"
-            desc="首次連線同步流程：連線中、衝突策略、下載、寫入與完成"
+            name="雲端同步流程狀態機"
+            component="CloudSyncFlowModal"
+            desc="整合連接中、來源選擇、首次同步步驟與阻斷說明（同帳戶衝突／無可還原資料）"
             badge="Flow"
             actions={[
               {
-                label: '連線中',
+                label: '連接中',
                 onOpen: () => {
-                  setInitialSyncPreviewStep('AUTH');
+                  setInitialSyncPreviewStep('CONNECTING');
+                  setInitialSyncPreviewOpen(true);
+                },
+              },
+              {
+                label: '選來源',
+                onOpen: () => {
+                  setInitialSyncPreviewStep('SOURCE_PICKER');
                   setInitialSyncPreviewOpen(true);
                 },
               },
@@ -723,20 +717,68 @@ export const DialogsTab: React.FC = () => {
                 },
               },
               {
-                label: '寫入',
-                onOpen: () => {
-                  setInitialSyncPreviewStep('APPLYING');
-                  setInitialSyncPreviewOpen(true);
-                },
-              },
-              {
                 label: '完成',
                 onOpen: () => {
                   setInitialSyncPreviewStep('COMPLETED');
                   setInitialSyncPreviewOpen(true);
                 },
               },
+              {
+                label: '帳戶衝突',
+                onOpen: () => {
+                  setFlowBlockedReason('account_conflict');
+                  setInitialSyncPreviewStep('BLOCKED');
+                  setInitialSyncPreviewOpen(true);
+                },
+              },
+              {
+                label: '無資料',
+                onOpen: () => {
+                  setFlowBlockedReason('no_restorable_data');
+                  setInitialSyncPreviewStep('BLOCKED');
+                  setInitialSyncPreviewOpen(true);
+                },
+              },
             ]}
+          />
+          <DialogRowItem
+            name="本地還原"
+            component="LocalImportDialog"
+            desc="ZIP 檔案離線解析與摘要確認"
+            badge="Import"
+            onOpen={() => setLocalImportOpen(true)}
+          />
+          <DialogRowItem
+            name="衝突策略"
+            component="ImportStrategyModal"
+            desc="備份身分不一致時的覆寫或增量合併決策（含雲端同步聯動提示）"
+            badge="Strategy"
+            onOpen={() => setImportStrategyOpen(true)}
+          />
+        </div>
+      </div>
+
+      {/* 4. 系統、AI 與通用元件 */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <h3 className="text-xs font-mono text-muted-foreground">
+            系統、AI 與通用元件 (11)
+          </h3>
+        </div>
+        <div className="divide-y divide-border rounded-lg border border-border bg-card overflow-hidden shadow-none">
+          <DialogRowItem
+            name="基本資料"
+            component="SetupProfileDialog"
+            desc="姓名、性別、出生年月、身高體重初始配置"
+            badge="Profile"
+            onOpen={() => setSetupProfileOpen(true)}
+          />
+          <DialogRowItem
+            name="出廠重置"
+            component="ClearDataModal"
+            desc="輸入確認詞並長按 0.5 秒確認的高危出廠清庫"
+            badge="Destructive"
+            onOpen={() => setClearDataOpen(true)}
           />
           <DialogRowItem
             name="數據匯出"
@@ -833,7 +875,7 @@ export const DialogsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* ==================== 實際掛載 31 個 Dialog 實體 ==================== */}
+      {/* ==================== 實際掛載 35 個 Dialog 實體 ==================== */}
 
       {/* 飲食 0a: 權威科研庫搜尋添加 */}
       <AuthorityFoodSearchDialog
@@ -1085,6 +1127,8 @@ export const DialogsTab: React.FC = () => {
         onClose={() => setImportStrategyOpen(false)}
         localBaseInfo={MOCK_BASE_INFO}
         backupBaseInfo={{ ...MOCK_BASE_INFO, name: '雲端同步使用者' }}
+        localCount={14}
+        backupCount={28}
         onConfirm={async () => {
           toast.show('已設定');
           setImportStrategyOpen(false);
@@ -1097,34 +1141,92 @@ export const DialogsTab: React.FC = () => {
         onClose={() => setClearDataOpen(false)}
       />
 
-      {/* 系統 5: Dropbox 同步控制台 */}
-      <DropboxSyncDialog
+      {/* 系統 5: 雲端通道控制台（已連線 · 主同步） */}
+      <CloudChannelDialog
         open={dropboxSyncOpen}
         onOpenChange={setDropboxSyncOpen}
+        activeProviderId="s3"
         isAuthenticated={true}
         isSyncing={false}
         lastSyncTime={new Date().toISOString()}
         isOnline={true}
+        targetDetailsOverride={[
+          { field: 'bucket', value: 'e2cal-sync' },
+          { field: 'endpoint', value: 'https://r2.example.com' },
+        ]}
         onConnectDropbox={() => toast.show('已連線')}
-        onDisconnectDropbox={() => toast.show('已斷開')}
+        onDisconnect={() => toast.show('已斷開')}
         onSyncNow={async () => {
           toast.show('已同步');
         }}
       />
 
-      {/* 系統 6: Dropbox 連線授權確認（未連線狀態） */}
-      <DropboxSyncDialog
+      {/* 系統 6a: 雲端同步三渠道精靈（未連線 · 主同步） */}
+      <CloudChannelDialog
         open={dropboxConnectOpen}
         onOpenChange={setDropboxConnectOpen}
+        channelScope="primary"
         isAuthenticated={false}
         onConnectDropbox={() => toast.show('已授權')}
+        onConnectWebDav={async () => {
+          toast.show('WebDAV 已測試');
+          return true;
+        }}
+        onConnectS3={async () => {
+          toast.show('S3 已測試');
+          return true;
+        }}
       />
 
-      {/* 系統 6b: Dropbox 首次同步過程預覽 */}
-      <InitialSyncModal
+      {/* 系統 6b: 每日滾動備份三渠道精靈（未連線 · 備份通道） */}
+      <CloudChannelDialog
+        open={backupConnectOpen}
+        onOpenChange={setBackupConnectOpen}
+        channelScope="backup"
+        title="每日滾動備份"
+        description="每天自動把全部資料打包成一個 ZIP 備份檔，存到另一個雲端硬碟的 /backup 資料夾，最多保留最近 3 天，防止誤刪或主同步出錯時救回資料。"
+        isAuthenticated={false}
+        onConnectDropbox={() => toast.show('已授權')}
+        onConnectWebDav={async () => {
+          toast.show('備份 WebDAV 已測試');
+          return true;
+        }}
+        onConnectS3={async () => {
+          toast.show('備份 S3 已測試');
+          return true;
+        }}
+      />
+
+      {/* 系統 6c: 每日滾動備份已連線管理彈窗 */}
+      <CloudChannelDialog
+        open={rollingBackupOpen}
+        onOpenChange={setRollingBackupOpen}
+        channelScope="backup"
+        activeProviderId="webdav"
+        isAuthenticated={true}
+        isOnline={true}
+        isBackingUpZip={false}
+        lastBackupZipTime={new Date().toISOString()}
+        isCloudSyncConnected={true}
+        targetDetailsOverride={[
+          { field: 'serverUrl', value: 'https://nas.example.com/dav' },
+        ]}
+        onConnectDropbox={() => toast.show('已授權')}
+        onBackupNow={async () => {
+          toast.show('已備份');
+        }}
+        onDisconnect={() => toast.show('已斷開')}
+        onSyncAfterRestore={async (mode) => {
+          toast.show(`聯動同步: ${mode}`);
+        }}
+      />
+
+      {/* 系統 6d: 統一雲端同步流程狀態機預覽 */}
+      <CloudSyncFlowModal
         preview={{
           open: initialSyncPreviewOpen,
           step: initialSyncPreviewStep,
+          blockedReason: flowBlockedReason,
           onClose: () => setInitialSyncPreviewOpen(false),
         }}
       />

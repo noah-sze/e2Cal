@@ -7,18 +7,21 @@ import { useNetworkStatus, checkConnectivity, isDeviceOffline } from '@/hooks/us
 import { useDropboxSync } from '@/hooks/useDropboxSync';
 import { formatSyncErrorMessage } from '@/services/sync/syncEngine';
 import { toast } from '@/components/ui/toast';
-import { DropboxSyncDialog } from '@/components/settings/dialogs/DropboxSyncDialog';
+import { CloudChannelDialog } from '@/components/settings/dialogs/CloudChannelDialog';
 
 export function SyncStatusPill() {
   const { t } = useTranslation();
   const isOnline = useNetworkStatus();
   const {
+    activeProviderId,
     isAuthenticated,
     isSyncing,
     lastSyncTime,
     lastSyncError,
     justSynced,
     connectDropbox,
+    connectWebDav,
+    connectS3,
     syncNow,
   } = useDropboxSync();
 
@@ -158,14 +161,17 @@ export function SyncStatusPill() {
         <span className="truncate">{getLabel()}</span>
       </button>
 
-      {/* 連接 Dropbox 彈窗（全域共用元件） */}
-      <DropboxSyncDialog
+      {/* 連接雲端同步彈窗（全域共用元件） */}
+      <CloudChannelDialog
         open={isConnectOpen}
         onOpenChange={setIsConnectOpen}
+        activeProviderId={activeProviderId}
         isAuthenticated={false}
         onConnectDropbox={() => {
           void connectDropbox();
         }}
+        onConnectWebDav={connectWebDav}
+        onConnectS3={connectS3}
       />
     </>
   );

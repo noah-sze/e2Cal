@@ -16,17 +16,42 @@ import type {
   BodyMetric,
   UserBaseInfo,
 } from '@/types';
+import { type DropboxFileMetadata } from './dropboxClient';
 import {
-  listRemoteFolder,
-  downloadJsonFile,
-  uploadJsonFile,
-  type DropboxFileMetadata,
-} from './dropboxClient';
+  getWorkingSyncAdapter,
+  getActiveSyncProviderId,
+  setActiveSyncProviderId,
+  setStagingSyncProviderId,
+  notifySyncConnectionChanged,
+} from './syncRouter';
+import {
+  commitStagingWebDavConfig,
+  clearStagingWebDavConfig,
+} from './adapters/webdavAdapter';
+import {
+  commitStagingS3Config,
+  clearStagingS3Config,
+} from './adapters/s3Adapter';
+import type { SyncProviderId, SyncChannelScope } from './syncAdapter';
+import type { RollingBackupItem } from './rollingBackupService';
+import {
+  SYNC_PATHS,
+  isMonthlyLogFilePath,
+  parseMonthlyLogBucketStrict,
+  assertCompatibleSchemaVersion,
+  assertValidArrayPayload,
+  type MonthlySyncLogBucket,
+} from './syncSchema';
+
+const listRemoteFolder = (folderPath = '') =>
+  getWorkingSyncAdapter().listRemoteFolder(folderPath);
+const downloadJsonFile = <T>(filePath: string) =>
+  getWorkingSyncAdapter().downloadJsonFile<T>(filePath);
+const uploadJsonFile = <T>(filePath: string, data: T, expectedRev?: string) =>
+  getWorkingSyncAdapter().uploadJsonFile<T>(filePath, data, expectedRev);
 import {
   sanitizeFoodItem,
   sanitizeRecipe,
-  sanitizeDailyDietLog,
-  sanitizeWorkoutLog,
   sanitizeWorkoutRoutine,
   sanitizeUserBaseInfo,
 } from './syncSanitizers';
@@ -63,13 +88,35 @@ import {
 } from './syncEngine';
 
 export type InitialSyncStep =
-  | 'AUTH'        // 步驟 1: 換取 Token (暫存)
-  | 'STRATEGY'    // 步驟 2: 衝突策略選擇 (雙方均有資料時)
-  | 'DOWNLOADING' // 步驟 3: 下載暫存至記憶體
-  | 'APPLYING'    // 步驟 4: 本地原子事務寫入
-  | 'COMPLETED';  // 步驟 5: 完成展示
+  | 'CONNECTING'       // 前置: OAuth 回調換取憑證與檢查遠端來源
+  | 'SOURCE_PICKER'    // 前置: 落地頁雲端導入來源選擇 (/app vs /backup)
+  | 'AUTH'             // 步驟 1: 換取 Token (暫存)
+  | 'STRATEGY'         // 步驟 2: 衝突策略選擇 (雙方均有資料時)
+  | 'DOWNLOADING'      // 步驟 3: 下載暫存至記憶體
+  | 'APPLYING'         // 步驟 4: 本地原子事務寫入
+  | 'COMPLETED'        // 步驟 5: 完成展示
+  | 'BACKUP_CONNECTED' // 獨立完成態: 每日滾動備份連線完成
+  | 'BLOCKED';         // 阻斷態: 同帳戶衝突或無可還原資料
 
 export type SyncConflictStrategy = 'merge' | 'overwrite_local' | 'overwrite_remote';
+
+export type CloudSyncFlowBlockedReason = 'account_conflict' | 'no_restorable_data';
+
+export interface CloudFlowSourcePickerPayload {
+  providerId: SyncProviderId;
+  hasPrimarySync: boolean;
+  backupItems: RollingBackupItem[];
+  preloadedTokens?: DropboxTokens;
+  onSelectRollingBackup: (item: RollingBackupItem) => Promise<void>;
+  onCancel?: () => void;
+}
+
+export interface CloudFlowBlockedPayload {
+  providerId: SyncProviderId;
+  reason: CloudSyncFlowBlockedReason;
+  targetScope?: SyncChannelScope;
+  accountLabel?: string;
+}
 
 export interface InitialSyncState {
   isOpen: boolean;
@@ -90,6 +137,10 @@ export interface InitialSyncState {
     workoutLogsCount: number;
     bodyMetricsCount: number;
   };
+  connectingProvider?: SyncProviderId | null;
+  sourcePicker?: CloudFlowSourcePickerPayload | null;
+  blocked?: CloudFlowBlockedPayload | null;
+  backupConnectedProvider?: SyncProviderId | null;
 }
 
 interface StagedData {
@@ -108,6 +159,8 @@ interface StagedData {
 }
 
 interface InitialSyncStaging {
+  providerId: SyncProviderId;
+  previousProviderId: SyncProviderId;
   mode: DropboxOAuthMode;
   tokens: DropboxTokens | null;
   remoteManifest: SyncManifest | null;
@@ -117,6 +170,8 @@ interface InitialSyncStaging {
 }
 
 let staging: InitialSyncStaging = {
+  providerId: 'dropbox',
+  previousProviderId: 'dropbox',
   mode: 'sync',
   tokens: null,
   remoteManifest: null,
@@ -171,14 +226,48 @@ export function getInitialSyncState(): InitialSyncState {
   return currentState;
 }
 
+function commitProviderStaging(): void {
+  if (staging.providerId === 'dropbox') {
+    commitStagingTokens();
+  } else if (staging.providerId === 'webdav') {
+    commitStagingWebDavConfig('primary');
+  } else if (staging.providerId === 's3') {
+    commitStagingS3Config('primary');
+  }
+  setActiveSyncProviderId(staging.providerId);
+  setStagingSyncProviderId(null);
+  notifySyncConnectionChanged();
+}
+
+function rollbackProviderStaging(): void {
+  if (staging.providerId === 'dropbox') {
+    clearStagingTokens();
+  } else if (staging.providerId === 'webdav') {
+    clearStagingWebDavConfig('primary');
+  } else if (staging.providerId === 's3') {
+    clearStagingS3Config('primary');
+  }
+  setStagingSyncProviderId(null);
+}
+
 /**
- * 啟動首次同步流程
+ * 啟動首次同步流程（支援 Dropbox OAuth 或 WebDAV / S3 直接連線）
  */
 export async function startInitialSync(
   code: string,
-  options?: { mode?: DropboxOAuthMode }
+  options?: {
+    mode?: DropboxOAuthMode;
+    providerId?: SyncProviderId;
+    preloadedTokens?: DropboxTokens;
+  }
 ): Promise<void> {
+  const previousProviderId = getActiveSyncProviderId();
+  const providerId: SyncProviderId = options?.providerId ?? 'dropbox';
+  setStagingSyncProviderId(providerId);
+
   staging = {
+    providerId,
+    previousProviderId,
     mode: options?.mode || 'sync',
     tokens: null,
     remoteManifest: null,
@@ -213,13 +302,19 @@ export async function startInitialSync(
     error: undefined,
     isApplying: false,
     summary: undefined,
+    connectingProvider: null,
+    sourcePicker: null,
+    blocked: null,
+    backupConnectedProvider: null,
   });
 
   try {
-    // 步驟 1: 僅換取 Token 憑證，絕不持久化至 localStorage
-    const tokens = await exchangeCodeForTokensOnly(code);
-    staging.tokens = tokens;
-    setStagingTokens(tokens);
+    // 步驟 1: OAuth 渠道僅暫存 Token（若已由前置帳戶檢測換取則直接複用）；WebDAV / S3 直接測試連線
+    if (providerId === 'dropbox') {
+      const tokens = options?.preloadedTokens ?? (await exchangeCodeForTokensOnly(code));
+      staging.tokens = tokens;
+      setStagingTokens(tokens);
+    }
 
     emitState({ progressPercent: 30 });
 
@@ -227,6 +322,7 @@ export async function startInitialSync(
     await inspectRemote();
   } catch (err: unknown) {
     console.error('Initial sync auth failed:', err);
+    rollbackProviderStaging();
     const reason = formatSyncErrorMessage(err);
     toast.show(i18n.t('syncStatus.authFailedToast', { reason }));
     emitState({
@@ -250,20 +346,22 @@ async function inspectRemote(): Promise<void> {
     const localCount = localDietLogs + localWorkoutLogs + localMetrics;
     const localBaseInfo = localBaseInfoRaw ?? null;
 
-    const remoteFiles = await listRemoteFolder();
+    const remoteFiles = (await listRemoteFolder()).filter(
+      (f) => !f.path_lower.startsWith('/backup/')
+    );
     staging.remoteFiles = remoteFiles;
 
-    const manifestMeta = remoteFiles.find((f) => f.path_lower === '/manifest.json');
-    const baseInfoMeta = remoteFiles.find((f) => f.path_lower === '/user/base_info.json');
+    const manifestMeta = remoteFiles.find((f) => f.path_lower === SYNC_PATHS.MANIFEST);
+    const baseInfoMeta = remoteFiles.find((f) => f.path_lower === SYNC_PATHS.BASE_INFO);
 
     let remoteManifest: SyncManifest | null = null;
     let remoteCount = 0;
     let remoteBaseInfo: UserBaseInfo | null = null;
 
     const [downloadedManifest, downloadedBaseInfos] = await Promise.all([
-      manifestMeta ? downloadJsonFile<SyncManifest>('/manifest.json') : Promise.resolve(null),
+      manifestMeta ? downloadJsonFile<SyncManifest>(SYNC_PATHS.MANIFEST) : Promise.resolve(null),
       baseInfoMeta
-        ? downloadJsonFile<UserBaseInfo[]>('/user/base_info.json').catch(() => null)
+        ? downloadJsonFile<UserBaseInfo[]>(SYNC_PATHS.BASE_INFO).catch(() => null)
         : Promise.resolve(null),
     ]);
 
@@ -272,6 +370,7 @@ async function inspectRemote(): Promise<void> {
     }
 
     if (downloadedManifest) {
+      assertCompatibleSchemaVersion(downloadedManifest);
       remoteManifest = downloadedManifest;
       staging.remoteManifest = remoteManifest;
       if (remoteManifest?.stats) {
@@ -301,8 +400,8 @@ async function inspectRemote(): Promise<void> {
         (f) => f.name.endsWith('.json') && !f.name.endsWith('manifest.json')
       );
       if (!hasRemoteDataFiles) {
-        clearStagingTokens();
-        const emptyReason = i18n.t('initialSync.emptyRemoteError', 'Dropbox 雲端無備份資料');
+        rollbackProviderStaging();
+        const emptyReason = i18n.t('initialSync.emptyRemoteError', '雲端無備份資料');
         toast.show(emptyReason);
         emitState({
           error: emptyReason,
@@ -323,6 +422,7 @@ async function inspectRemote(): Promise<void> {
     await determineStrategy(localCount, remoteCount, isNameMismatch);
   } catch (err: unknown) {
     console.error('Inspect remote failed:', err);
+    rollbackProviderStaging();
     const reason = formatSyncErrorMessage(err);
     toast.show(i18n.t('syncStatus.syncFailedToast', { reason }));
     emitState({
@@ -414,42 +514,49 @@ async function executeDownloadQueue(): Promise<void> {
     for (const file of jsonFiles) {
       const path = file.path_lower;
 
-      if (path === '/user/base_info.json') {
-        const data = await downloadJsonFile<UserBaseInfo[]>(path);
-        if (data) staged.baseInfos.push(...data.map(sanitizeUserBaseInfo));
-      } else if (path === '/nutrition/foods.json') {
-        const data = await downloadJsonFile<FoodItem[]>(path);
-        if (data) staged.foods.push(...data.map(sanitizeFoodItem));
-      } else if (path === '/nutrition/recipes.json') {
-        const data = await downloadJsonFile<FoodRecipe[]>(path);
-        if (data) staged.recipes.push(...data.map(sanitizeRecipe));
-      } else if (path.startsWith('/nutrition/logs/')) {
-        const raw = await downloadJsonFile<DailyDietLog | DailyDietLog[]>(path);
-        if (raw) {
-          if (Array.isArray(raw)) {
-            staged.dailyDietLogs.push(
-              ...raw.filter((item) => 'entries' in item).map(sanitizeDailyDietLog)
-            );
-          } else if ('entries' in raw) {
-            staged.dailyDietLogs.push(sanitizeDailyDietLog(raw));
-          }
-        }
-      } else if (path === '/workout/exercises.json') {
-        const data = await downloadJsonFile<Exercise[]>(path);
-        if (data) staged.exercises.push(...data);
-      } else if (path === '/workout/equipments.json') {
-        const data = await downloadJsonFile<Equipment[]>(path);
-        if (data) staged.equipments.push(...data);
-      } else if (path === '/workout/routines.json') {
-        const data = await downloadJsonFile<WorkoutRoutine[]>(path);
-        if (data) staged.routines.push(...data.map(sanitizeWorkoutRoutine));
-      } else if (path.startsWith('/workout/logs/')) {
-        const data = await downloadJsonFile<WorkoutLog[]>(path);
-        if (data) staged.workoutLogs.push(...data.map(sanitizeWorkoutLog));
-      } else if (path.startsWith('/body/metrics/')) {
-        const data = await downloadJsonFile<BodyMetric[]>(path);
-        if (data) staged.bodyMetrics.push(...data);
-      } else if (path === '/deleted_entities.json') {
+      if (path === SYNC_PATHS.BASE_INFO) {
+        const data = assertValidArrayPayload<UserBaseInfo>(
+          await downloadJsonFile<unknown>(path),
+          'base_info'
+        );
+        staged.baseInfos.push(...data.map(sanitizeUserBaseInfo));
+      } else if (path === SYNC_PATHS.FOODS) {
+        const data = assertValidArrayPayload<FoodItem>(
+          await downloadJsonFile<unknown>(path),
+          'foods'
+        );
+        staged.foods.push(...data.map(sanitizeFoodItem));
+      } else if (path === SYNC_PATHS.RECIPES) {
+        const data = assertValidArrayPayload<FoodRecipe>(
+          await downloadJsonFile<unknown>(path),
+          'recipes'
+        );
+        staged.recipes.push(...data.map(sanitizeRecipe));
+      } else if (path === SYNC_PATHS.EXERCISES) {
+        const data = assertValidArrayPayload<Exercise>(
+          await downloadJsonFile<unknown>(path),
+          'exercises'
+        );
+        staged.exercises.push(...data);
+      } else if (path === SYNC_PATHS.EQUIPMENTS) {
+        const data = assertValidArrayPayload<Equipment>(
+          await downloadJsonFile<unknown>(path),
+          'equipments'
+        );
+        staged.equipments.push(...data);
+      } else if (path === SYNC_PATHS.ROUTINES) {
+        const data = assertValidArrayPayload<WorkoutRoutine>(
+          await downloadJsonFile<unknown>(path),
+          'routines'
+        );
+        staged.routines.push(...data.map(sanitizeWorkoutRoutine));
+      } else if (isMonthlyLogFilePath(path, file.name)) {
+        const raw = await downloadJsonFile<MonthlySyncLogBucket>(path);
+        const parsed = parseMonthlyLogBucketStrict(raw);
+        staged.dailyDietLogs.push(...parsed.dailyDietLogs);
+        staged.workoutLogs.push(...parsed.workoutLogs);
+        staged.bodyMetrics.push(...parsed.bodyMetrics);
+      } else if (path === SYNC_PATHS.DELETED_ENTITIES) {
         const data = await downloadJsonFile<EntityTombstoneMap>(path);
         if (data) remoteTombstones = data;
       }
@@ -473,6 +580,7 @@ async function executeDownloadQueue(): Promise<void> {
     await executeAtomicCommit();
   } catch (err: unknown) {
     console.error('Download queue error:', err);
+    rollbackProviderStaging();
     const reason = formatSyncErrorMessage(err);
     toast.show(i18n.t('syncStatus.syncFailedToast', { reason }));
     emitState({
@@ -666,8 +774,8 @@ async function executeAtomicCommit(): Promise<void> {
       setPushedTimes(pushedTimes);
     }
 
-    // 成功後將 Token 正式提交持久化！
-    commitStagingTokens();
+    // 成功後將憑證正式提交持久化！
+    commitProviderStaging();
     setLastSyncTime(now);
 
     // 清空預熱快取並同步最新個人基礎資料快取，確保直接導向 /app 時零競態
@@ -706,7 +814,7 @@ async function executeAtomicCommit(): Promise<void> {
     });
   } catch (err: unknown) {
     console.error('Commit failed:', err);
-    clearStagingTokens();
+    rollbackProviderStaging();
     const reason = formatSyncErrorMessage(err);
     toast.show(i18n.t('syncStatus.syncFailedToast', { reason }));
     emitState({
@@ -720,8 +828,10 @@ async function executeAtomicCommit(): Promise<void> {
  * 取消首次同步：抹除所有暫存 Token 與下載資料，完全回滾乾淨
  */
 export function cancelInitialSync(): void {
-  clearStagingTokens();
+  rollbackProviderStaging();
   staging = {
+    providerId: getActiveSyncProviderId(),
+    previousProviderId: getActiveSyncProviderId(),
     mode: 'sync',
     tokens: null,
     remoteManifest: null,
@@ -754,6 +864,10 @@ export function cancelInitialSync(): void {
     error: undefined,
     isApplying: false,
     summary: undefined,
+    connectingProvider: null,
+    sourcePicker: null,
+    blocked: null,
+    backupConnectedProvider: null,
   });
 }
 
@@ -770,5 +884,88 @@ export function closeInitialSyncModal(): void {
     error: undefined,
     isApplying: false,
     summary: undefined,
+    connectingProvider: null,
+    sourcePicker: null,
+    blocked: null,
+    backupConnectedProvider: null,
+  });
+}
+
+/**
+ * 開啟雲端 OAuth 返回過渡視圖（正在連接 xxx…）
+ */
+export function openCloudFlowConnecting(providerId: SyncProviderId): void {
+  emitState({
+    isOpen: true,
+    step: 'CONNECTING',
+    error: undefined,
+    isApplying: false,
+    connectingProvider: providerId,
+    sourcePicker: null,
+    blocked: null,
+  });
+}
+
+/**
+ * 開啟落地頁雲端導入來源選擇視圖
+ */
+export function openCloudFlowSourcePicker(payload: CloudFlowSourcePickerPayload): void {
+  emitState({
+    isOpen: true,
+    step: 'SOURCE_PICKER',
+    error: undefined,
+    isApplying: false,
+    connectingProvider: null,
+    sourcePicker: payload,
+    blocked: null,
+    backupConnectedProvider: null,
+  });
+}
+
+/**
+ * 開啟雲端阻斷說明視圖（同帳戶衝突或無可還原資料）
+ */
+export function openCloudFlowBlocked(payload: CloudFlowBlockedPayload): void {
+  emitState({
+    isOpen: true,
+    step: 'BLOCKED',
+    error: undefined,
+    isApplying: false,
+    connectingProvider: null,
+    sourcePicker: null,
+    blocked: payload,
+    backupConnectedProvider: null,
+  });
+}
+
+/**
+ * 開啟每日滾動備份連線完成視圖
+ */
+export function openCloudFlowBackupConnected(providerId: SyncProviderId): void {
+  emitState({
+    isOpen: true,
+    step: 'BACKUP_CONNECTED',
+    error: undefined,
+    isApplying: false,
+    connectingProvider: null,
+    sourcePicker: null,
+    blocked: null,
+    backupConnectedProvider: providerId,
+  });
+}
+
+/**
+ * 關閉前置／阻斷雲端流程彈窗（不影響已完成同步或還原）
+ */
+export function closeCloudFlow(): void {
+  emitState({
+    isOpen: false,
+    step: 'AUTH',
+    error: undefined,
+    isApplying: false,
+    connectingProvider: null,
+    sourcePicker: null,
+    blocked: null,
+    backupConnectedProvider: null,
   });
 }

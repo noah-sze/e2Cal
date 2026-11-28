@@ -377,9 +377,11 @@ describe('Multi-Device Dropbox Sync Simulation', () => {
 
     const aIds = devA.tables.daily_diet_logs[0].entries.map((e) => e.id).sort();
     const bIds = devB.tables.daily_diet_logs[0].entries.map((e) => e.id).sort();
-    const remoteRaw = dropboxFiles.get('/nutrition/logs/2026-11-26.json');
-    const remoteLog = JSON.parse(remoteRaw!.content) as DailyDietLog;
-    const rIds = remoteLog.entries.map((e) => e.id).sort();
+    const remoteRaw = dropboxFiles.get('/app/logs/2026-11.json');
+    const remoteBucket = JSON.parse(remoteRaw!.content) as {
+      dailyDietLogs: DailyDietLog[];
+    };
+    const rIds = remoteBucket.dailyDietLogs[0].entries.map((e) => e.id).sort();
 
     expect(aIds).toEqual(['entry-a1', 'entry-b1']);
     expect(bIds).toEqual(['entry-a1', 'entry-b1']);
@@ -631,9 +633,13 @@ describe('Multi-Device Dropbox Sync Simulation', () => {
 
     await syncDevice(devA);
 
-    // Remote bucket files should be emptied to []
-    expect(JSON.parse(dropboxFiles.get('/workout/logs/2026-11-25.json')!.content)).toEqual([]);
-    expect(JSON.parse(dropboxFiles.get('/body/metrics/2026-11-25.json')!.content)).toEqual([]);
+    // Remote monthly bucket should have empty workoutLogs and bodyMetrics
+    const monthBucket = JSON.parse(dropboxFiles.get('/app/logs/2026-11.json')!.content) as {
+      workoutLogs: unknown[];
+      bodyMetrics: unknown[];
+    };
+    expect(monthBucket.workoutLogs).toEqual([]);
+    expect(monthBucket.bodyMetrics).toEqual([]);
 
     await syncDevice(devB);
     expect(devB.tables.workout_logs).toHaveLength(0);

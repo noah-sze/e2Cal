@@ -20,6 +20,8 @@ export interface HoldToDeleteIconButtonProps {
   /** 懸停提示與無障礙標籤 */
   title?: string;
   'aria-label'?: string;
+  /** 連續短按 3 次時的提示文案 */
+  hintText?: string;
 }
 
 /**
@@ -39,11 +41,13 @@ export function HoldToDeleteIconButton({
   children,
   title = '刪除',
   'aria-label': ariaLabel = '刪除',
+  hintText,
 }: HoldToDeleteIconButtonProps) {
   const { progress, isCompleted, handlers } = useHoldToDelete({
     onConfirm,
     disabled,
     durationMs,
+    hintText,
   });
 
   // 左右卡鉗半周長為 75.4 (π * 24 ≈ 75.398)

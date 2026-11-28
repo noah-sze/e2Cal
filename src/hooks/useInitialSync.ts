@@ -5,6 +5,7 @@ import {
   selectStrategy,
   cancelInitialSync,
   closeInitialSyncModal,
+  closeCloudFlow,
   type InitialSyncState,
 } from '@/services/sync/initialSyncManager';
 
@@ -21,5 +22,6 @@ export function useInitialSync() {
     selectStrategy,
     cancelInitialSync,
     closeInitialSyncModal,
+    closeCloudFlow,
   };
 }

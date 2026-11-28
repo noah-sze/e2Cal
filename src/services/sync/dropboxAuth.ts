@@ -3,17 +3,23 @@
  * Client-side authentication without exposing client secret.
  */
 import { APP_ROUTES } from '@/utils/navigation';
+import type { SyncChannelScope } from './syncAdapter';
 
 const SESSION_VERIFIER_KEY = 'e2cal_dropbox_code_verifier';
 const SESSION_STATE_KEY = 'e2cal_dropbox_oauth_state';
 const SESSION_OAUTH_MODE_KEY = 'e2cal_dropbox_oauth_mode';
+const SESSION_OAUTH_SCOPE_KEY = 'e2cal_dropbox_oauth_scope';
 const OAUTH_STATE_PREFIX = 'dropbox_';
 const STORAGE_TOKENS_KEY = 'e2cal_dropbox_tokens';
+
+function getTokensStorageKey(scope: SyncChannelScope = 'primary'): string {
+  return scope === 'backup' ? `${STORAGE_TOKENS_KEY}_backup` : STORAGE_TOKENS_KEY;
+}
 
 export type DropboxOAuthMode = 'sync' | 'restore';
 
 export type DropboxOAuthCallbackResult =
-  | { kind: 'code'; code: string; mode: DropboxOAuthMode }
+  | { kind: 'code'; code: string; mode: DropboxOAuthMode; scope: SyncChannelScope }
   | { kind: 'error'; error: string; errorDescription?: string };
 
 let pendingOAuthCallback: DropboxOAuthCallbackResult | null = null;
@@ -72,7 +78,62 @@ export interface DropboxTokens {
   expires_in: number;
   expires_at: number; // Unix timestamp in ms
   account_id?: string;
+  email?: string;
+  display_name?: string;
   scope?: string;
+}
+
+async function fetchDropboxAccountProfile(
+  accessToken: string
+): Promise<{ email?: string; display_name?: string }> {
+  try {
+    const res = await fetch('https://api.dropboxapi.com/2/users/get_current_account', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return {};
+    const info = (await res.json()) as {
+      email?: string;
+      name?: { display_name?: string };
+    };
+    return {
+      email: info.email?.trim() || undefined,
+      display_name: info.name?.display_name?.trim() || undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * 若既有已儲存的 Dropbox Token 尚未記錄 email，於背景自動補抓並回寫至本地儲存
+ */
+export async function ensureDropboxAccountProfile(
+  scope: SyncChannelScope = 'primary'
+): Promise<boolean> {
+  const existing = getStoredTokens(scope);
+  if (!existing || existing.email) return false;
+
+  const token = await getValidAccessToken(false, scope);
+  if (!token) return false;
+
+  const profile = await fetchDropboxAccountProfile(token);
+  if (!profile.email && !profile.display_name) return false;
+
+  const latest = getStoredTokens(scope);
+  if (!latest) return false;
+  setStoredTokens(
+    {
+      ...latest,
+      email: profile.email ?? latest.email,
+      display_name: profile.display_name ?? latest.display_name,
+    },
+    scope
+  );
+  return true;
 }
 
 /**
@@ -153,9 +214,9 @@ export function base64UrlEncode(buffer: Uint8Array): string {
 /**
  * 取得儲存在本地的 Dropbox 憑證 Token
  */
-export function getStoredTokens(): DropboxTokens | null {
+export function getStoredTokens(scope: SyncChannelScope = 'primary'): DropboxTokens | null {
   try {
-    const raw = safeLocalStorage.getItem(STORAGE_TOKENS_KEY);
+    const raw = safeLocalStorage.getItem(getTokensStorageKey(scope));
     if (!raw) return null;
     return JSON.parse(raw) as DropboxTokens;
   } catch {
@@ -166,8 +227,11 @@ export function getStoredTokens(): DropboxTokens | null {
 /**
  * 儲存 Token 憑證至本地
  */
-export function setStoredTokens(tokens: DropboxTokens): void {
-  safeLocalStorage.setItem(STORAGE_TOKENS_KEY, JSON.stringify(tokens));
+export function setStoredTokens(
+  tokens: DropboxTokens,
+  scope: SyncChannelScope = 'primary'
+): void {
+  safeLocalStorage.setItem(getTokensStorageKey(scope), JSON.stringify(tokens));
 }
 
 let stagingTokens: DropboxTokens | null = null;
@@ -198,20 +262,23 @@ export function clearStagingTokens(): void {
 /**
  * 清除已儲存的 Dropbox 登入憑證 (登出)
  */
-export function clearDropboxTokens(): void {
-  safeLocalStorage.removeItem(STORAGE_TOKENS_KEY);
+export function clearDropboxTokens(scope: SyncChannelScope = 'primary'): void {
+  safeLocalStorage.removeItem(getTokensStorageKey(scope));
   safeSessionStorage.removeItem(SESSION_VERIFIER_KEY);
   safeSessionStorage.removeItem(SESSION_STATE_KEY);
   safeSessionStorage.removeItem(SESSION_OAUTH_MODE_KEY);
-  stagingTokens = null;
+  safeSessionStorage.removeItem(SESSION_OAUTH_SCOPE_KEY);
+  if (scope === 'primary') {
+    stagingTokens = null;
+  }
   pendingOAuthCallback = null;
 }
 
 /**
  * 檢查當前設備是否已登入 Dropbox
  */
-export function isDropboxConnected(): boolean {
-  const tokens = getStoredTokens();
+export function isDropboxConnected(scope: SyncChannelScope = 'primary'): boolean {
+  const tokens = getStoredTokens(scope);
   return Boolean(tokens?.access_token || tokens?.refresh_token);
 }
 
@@ -258,13 +325,16 @@ export function captureDropboxOAuthCallback(
   const expectedState = safeSessionStorage.getItem(SESSION_STATE_KEY);
   const verifier = safeSessionStorage.getItem(SESSION_VERIFIER_KEY);
   const storedMode = safeSessionStorage.getItem(SESSION_OAUTH_MODE_KEY);
+  const storedScope = safeSessionStorage.getItem(SESSION_OAUTH_SCOPE_KEY);
   const mode: DropboxOAuthMode = storedMode === 'restore' ? 'restore' : 'sync';
+  const scope: SyncChannelScope = storedScope === 'backup' ? 'backup' : 'primary';
 
   if (expectedState) {
     if (!returnedState || returnedState !== expectedState) {
       safeSessionStorage.removeItem(SESSION_VERIFIER_KEY);
       safeSessionStorage.removeItem(SESSION_STATE_KEY);
       safeSessionStorage.removeItem(SESSION_OAUTH_MODE_KEY);
+      safeSessionStorage.removeItem(SESSION_OAUTH_SCOPE_KEY);
       pendingOAuthCallback = {
         kind: 'error',
         error: 'oauth_state_mismatch',
@@ -275,7 +345,8 @@ export function captureDropboxOAuthCallback(
 
     safeSessionStorage.removeItem(SESSION_STATE_KEY);
     safeSessionStorage.removeItem(SESSION_OAUTH_MODE_KEY);
-    pendingOAuthCallback = { kind: 'code', code, mode };
+    safeSessionStorage.removeItem(SESSION_OAUTH_SCOPE_KEY);
+    pendingOAuthCallback = { kind: 'code', code, mode, scope };
     return pendingOAuthCallback;
   }
 
@@ -288,6 +359,7 @@ export function captureDropboxOAuthCallback(
   if (!verifier) {
     safeSessionStorage.removeItem(SESSION_STATE_KEY);
     safeSessionStorage.removeItem(SESSION_OAUTH_MODE_KEY);
+    safeSessionStorage.removeItem(SESSION_OAUTH_SCOPE_KEY);
     pendingOAuthCallback = {
       kind: 'error',
       error: 'pkce_verifier_missing',
@@ -297,7 +369,8 @@ export function captureDropboxOAuthCallback(
   }
 
   safeSessionStorage.removeItem(SESSION_OAUTH_MODE_KEY);
-  pendingOAuthCallback = { kind: 'code', code, mode };
+  safeSessionStorage.removeItem(SESSION_OAUTH_SCOPE_KEY);
+  pendingOAuthCallback = { kind: 'code', code, mode, scope };
   return pendingOAuthCallback;
 }
 
@@ -313,7 +386,10 @@ export function consumePendingDropboxOAuthCallback(): DropboxOAuthCallbackResult
 /**
  * 發起 Dropbox OAuth 2.0 PKCE 授權跳轉
  */
-export async function initiateDropboxAuth(mode: DropboxOAuthMode = 'sync'): Promise<void> {
+export async function initiateDropboxAuth(
+  mode: DropboxOAuthMode = 'sync',
+  scope: SyncChannelScope = 'primary'
+): Promise<void> {
   const appKey = getDropboxAppKey();
   if (!appKey) {
     throw new Error('Dropbox App Key is not configured. Please set VITE_DROPBOX_APP_KEY.');
@@ -324,6 +400,7 @@ export async function initiateDropboxAuth(mode: DropboxOAuthMode = 'sync'): Prom
   safeSessionStorage.setItem(SESSION_VERIFIER_KEY, verifier);
   safeSessionStorage.setItem(SESSION_STATE_KEY, state);
   safeSessionStorage.setItem(SESSION_OAUTH_MODE_KEY, mode);
+  safeSessionStorage.setItem(SESSION_OAUTH_SCOPE_KEY, scope);
 
   const challenge = await generateCodeChallenge(verifier);
   const redirectUri = getDropboxRedirectUri();
@@ -345,7 +422,10 @@ export async function initiateDropboxAuth(mode: DropboxOAuthMode = 'sync'): Prom
 /**
  * 授權回跳後，透過 Auth Code 與本地 Code Verifier 換取 Token
  */
-export async function exchangeCodeForTokens(code: string): Promise<DropboxTokens> {
+export async function exchangeCodeForTokens(
+  code: string,
+  scope: SyncChannelScope = 'primary'
+): Promise<DropboxTokens> {
   const appKey = getDropboxAppKey();
   if (!appKey) throw new Error('Missing Dropbox App Key');
 
@@ -385,6 +465,7 @@ export async function exchangeCodeForTokens(code: string): Promise<DropboxTokens
   };
 
   const expiresAt = Date.now() + (data.expires_in || 14400) * 1000;
+  const profile = await fetchDropboxAccountProfile(data.access_token);
 
   const tokens: DropboxTokens = {
     access_token: data.access_token,
@@ -392,10 +473,12 @@ export async function exchangeCodeForTokens(code: string): Promise<DropboxTokens
     expires_in: data.expires_in || 14400,
     expires_at: expiresAt,
     account_id: data.account_id,
+    email: profile.email,
+    display_name: profile.display_name,
     scope: data.scope,
   };
 
-  setStoredTokens(tokens);
+  setStoredTokens(tokens, scope);
   safeSessionStorage.removeItem(SESSION_VERIFIER_KEY);
   safeSessionStorage.removeItem(SESSION_STATE_KEY);
 
@@ -445,6 +528,7 @@ export async function exchangeCodeForTokensOnly(code: string): Promise<DropboxTo
   };
 
   const expiresAt = Date.now() + (data.expires_in || 14400) * 1000;
+  const profile = await fetchDropboxAccountProfile(data.access_token);
 
   const tokens: DropboxTokens = {
     access_token: data.access_token,
@@ -452,6 +536,8 @@ export async function exchangeCodeForTokensOnly(code: string): Promise<DropboxTo
     expires_in: data.expires_in || 14400,
     expires_at: expiresAt,
     account_id: data.account_id,
+    email: profile.email,
+    display_name: profile.display_name,
     scope: data.scope,
   };
 
@@ -463,8 +549,11 @@ export async function exchangeCodeForTokensOnly(code: string): Promise<DropboxTo
 /**
  * 自動檢查並刷新過期 Access Token (無感續約)
  */
-export async function getValidAccessToken(forceRefresh = false): Promise<string | null> {
-  const tokens = stagingTokens || getStoredTokens();
+export async function getValidAccessToken(
+  forceRefresh = false,
+  scope: SyncChannelScope = 'primary'
+): Promise<string | null> {
+  const tokens = (scope === 'primary' ? stagingTokens : null) || getStoredTokens(scope);
   if (!tokens) return null;
 
   // 距離過期大於 5 分鐘，直接使用現存 access_token
@@ -505,10 +594,10 @@ export async function getValidAccessToken(forceRefresh = false): Promise<string 
           expires_in: data.expires_in || 14400,
           expires_at: Date.now() + (data.expires_in || 14400) * 1000,
         };
-        if (stagingTokens) {
+        if (scope === 'primary' && stagingTokens) {
           stagingTokens = updatedTokens;
         } else {
-          setStoredTokens(updatedTokens);
+          setStoredTokens(updatedTokens, scope);
         }
         return updatedTokens.access_token;
       }
@@ -518,7 +607,7 @@ export async function getValidAccessToken(forceRefresh = false): Promise<string 
         const errorData = (await response.json().catch(() => null)) as { error?: string } | null;
         if (errorData?.error === 'invalid_grant' || response.status === 401) {
           console.warn('Dropbox refresh token revoked or invalid. Clearing stored credentials.');
-          clearDropboxTokens();
+          clearDropboxTokens(scope);
           return null;
         }
       }

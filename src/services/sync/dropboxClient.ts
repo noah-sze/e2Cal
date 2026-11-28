@@ -1,6 +1,8 @@
 import type { TFunction } from 'i18next';
 import i18n from '@/i18n/config';
 import { getValidAccessToken } from './dropboxAuth';
+import type { SyncChannelScope } from './syncAdapter';
+import { redactSyncSecrets } from './syncSchema';
 
 export type SyncErrorReasonKey =
   | 'timeout'
@@ -9,6 +11,10 @@ export type SyncErrorReasonKey =
   | 'quota'
   | 'rate_limit'
   | 'conflict'
+  | 'same_account'
+  | 'insecure_transport'
+  | 'schema_version'
+  | 'invalid_payload'
   | 'server'
   | 'permission'
   | 'unknown';
@@ -28,7 +34,7 @@ const SYNC_ERROR_I18N_MAP: Record<SyncErrorReasonKey, { key: string; defaultText
   },
   quota: {
     key: 'syncStatus.errors.quota',
-    defaultText: 'Dropbox 儲存空間不足',
+    defaultText: '雲端儲存空間不足',
   },
   rate_limit: {
     key: 'syncStatus.errors.rateLimit',
@@ -38,9 +44,25 @@ const SYNC_ERROR_I18N_MAP: Record<SyncErrorReasonKey, { key: string; defaultText
     key: 'syncStatus.errors.conflict',
     defaultText: '資料版本衝突，正在重新合併',
   },
+  same_account: {
+    key: 'syncStatus.errors.sameAccount',
+    defaultText: '不可與另一通道使用同一帳戶',
+  },
+  insecure_transport: {
+    key: 'syncStatus.errors.insecureTransport',
+    defaultText: '為保障憑證與資料安全，公網伺服器僅支援 HTTPS 連線',
+  },
+  schema_version: {
+    key: 'syncStatus.errors.schemaVersion',
+    defaultText: '雲端資料格式版本較新，請更新應用程式後再同步',
+  },
+  invalid_payload: {
+    key: 'syncStatus.errors.invalidPayload',
+    defaultText: '遠端檔案格式異常，已中止同步以保護本機資料',
+  },
   server: {
     key: 'syncStatus.errors.server',
-    defaultText: 'Dropbox 服務暫時異常，請稍後再試',
+    defaultText: '雲端服務暫時異常，請稍後再試',
   },
   permission: {
     key: 'syncStatus.errors.permission',
@@ -56,13 +78,26 @@ const SYNC_ERROR_I18N_MAP: Record<SyncErrorReasonKey, { key: string; defaultText
  * 將常見的 Dropbox / 網路 / 本地錯誤歸類為清晰的失敗原因鍵值
  */
 export function getSyncErrorReasonKey(error: unknown): SyncErrorReasonKey {
-  const raw =
+  const raw = redactSyncSecrets(
     error instanceof Error
       ? `${error.name} ${error.message}`
       : typeof error === 'string'
         ? error
-        : String(error ?? '');
+        : String(error ?? '')
+  );
   const lower = raw.toLowerCase();
+
+  if (lower.includes('insecure_transport_url')) {
+    return 'insecure_transport';
+  }
+
+  if (lower.includes('sync_schema_version_unsupported')) {
+    return 'schema_version';
+  }
+
+  if (lower.includes('sync_invalid_payload')) {
+    return 'invalid_payload';
+  }
 
   if (
     lower.includes('network_timeout') ||
@@ -74,8 +109,17 @@ export function getSyncErrorReasonKey(error: unknown): SyncErrorReasonKey {
   }
 
   if (
+    lower.includes('sync_same_account_conflict')
+  ) {
+    return 'same_account';
+  }
+
+  if (
     lower.includes('dropbox_conflict') ||
+    lower.includes('webdav_conflict') ||
+    lower.includes('s3_conflict') ||
     /\b409\b/.test(lower) ||
+    /\b412\b/.test(lower) ||
     lower.includes('conflict')
   ) {
     return 'conflict';
@@ -87,7 +131,9 @@ export function getSyncErrorReasonKey(error: unknown): SyncErrorReasonKey {
     lower.includes('expired_access_token') ||
     lower.includes('invalid_grant') ||
     lower.includes('not authenticated') ||
-    lower.includes('dropbox not connected') ||
+    lower.includes('not connected') ||
+    lower.includes('signaturedoesnotmatch') ||
+    lower.includes('invalidaccesskeyid') ||
     lower.includes('token exchange failed') ||
     lower.includes('pkce verification failed') ||
     lower.includes('pkce_verifier_missing') ||
@@ -216,15 +262,16 @@ export async function fetchWithTimeout(
 async function fetchDropboxWithAuth(
   url: string,
   optionsFactory: (token: string) => RequestInit,
-  timeoutMs = DEFAULT_TIMEOUT_MS
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  scope: SyncChannelScope = 'primary'
 ): Promise<Response> {
-  let token = await getValidAccessToken();
+  let token = await getValidAccessToken(false, scope);
   if (!token) throw new Error('Dropbox not authenticated');
 
   let response = await fetchWithTimeout(url, optionsFactory(token), timeoutMs);
 
   if (response.status === 401) {
-    const refreshedToken = await getValidAccessToken(true);
+    const refreshedToken = await getValidAccessToken(true, scope);
     if (refreshedToken) {
       token = refreshedToken;
       response = await fetchWithTimeout(url, optionsFactory(token), timeoutMs);
@@ -256,8 +303,11 @@ interface DropboxListFolderResponse {
  * 遞歸列出 Dropbox App 目錄下的所有檔案與修訂版本號 (rev)
  * 單次呼叫即可感知所有檔案的遠端版本變動
  */
-export async function listRemoteFolder(folderPath = ''): Promise<DropboxFileMetadata[]> {
-  const initialToken = await getValidAccessToken();
+export async function listRemoteFolder(
+  folderPath = '',
+  scope: SyncChannelScope = 'primary'
+): Promise<DropboxFileMetadata[]> {
+  const initialToken = await getValidAccessToken(false, scope);
   if (!initialToken) throw new Error('Dropbox not authenticated');
 
   const files: DropboxFileMetadata[] = [];
@@ -274,14 +324,19 @@ export async function listRemoteFolder(folderPath = ''): Promise<DropboxFileMeta
         ? JSON.stringify({ cursor })
         : JSON.stringify({ path: folderPath, recursive: true, include_deleted: false });
 
-      const res: Response = await fetchDropboxWithAuth(requestUrl, (token) => ({
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: requestBody,
-      }));
+      const res: Response = await fetchDropboxWithAuth(
+        requestUrl,
+        (token) => ({
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: requestBody,
+        }),
+        DEFAULT_TIMEOUT_MS,
+        scope
+      );
 
       if (res.status === 409) {
         // 目錄尚不存在（初次使用）
@@ -327,8 +382,11 @@ export async function listRemoteFolder(folderPath = ''): Promise<DropboxFileMeta
 /**
  * 從指定遠端路徑下載單一 JSON 檔案並解析
  */
-export async function downloadJsonFile<T>(filePath: string): Promise<T | null> {
-  const initialToken = await getValidAccessToken();
+export async function downloadJsonFile<T>(
+  filePath: string,
+  scope: SyncChannelScope = 'primary'
+): Promise<T | null> {
+  const initialToken = await getValidAccessToken(false, scope);
   if (!initialToken) throw new Error('Dropbox not authenticated');
 
   const normalizedPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
@@ -341,7 +399,9 @@ export async function downloadJsonFile<T>(filePath: string): Promise<T | null> {
         Authorization: `Bearer ${token}`,
         'Dropbox-API-Arg': JSON.stringify({ path: normalizedPath }),
       },
-    })
+    }),
+    DEFAULT_TIMEOUT_MS,
+    scope
   );
 
   if (response.status === 409) {
@@ -372,9 +432,10 @@ export async function downloadJsonFile<T>(filePath: string): Promise<T | null> {
 export async function uploadJsonFile<T>(
   filePath: string,
   data: T,
-  expectedRev?: string
+  expectedRev?: string,
+  scope: SyncChannelScope = 'primary'
 ): Promise<string> {
-  const initialToken = await getValidAccessToken();
+  const initialToken = await getValidAccessToken(false, scope);
   if (!initialToken) throw new Error('Dropbox not authenticated');
 
   const normalizedPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
@@ -407,7 +468,9 @@ export async function uploadJsonFile<T>(
         }),
       },
       body: bodyBuffer,
-    })
+    }),
+    DEFAULT_TIMEOUT_MS,
+    scope
   );
 
   if (!response.ok) {
@@ -425,23 +488,108 @@ export async function uploadJsonFile<T>(
 }
 
 /**
+ * 上傳二進位檔案（如 /Backup/*.zip）至指定 Dropbox 路徑
+ */
+export async function uploadBinaryFile(
+  filePath: string,
+  data: Blob | Uint8Array,
+  scope: SyncChannelScope = 'primary'
+): Promise<string> {
+  const initialToken = await getValidAccessToken(false, scope);
+  if (!initialToken) throw new Error('Dropbox not authenticated');
+
+  const normalizedPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
+  const bodyBuffer = data instanceof Blob ? new Uint8Array(await data.arrayBuffer()) : data;
+
+  const response = await fetchDropboxWithAuth(
+    'https://content.dropboxapi.com/2/files/upload',
+    (token) => ({
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/octet-stream',
+        'Dropbox-API-Arg': JSON.stringify({
+          path: normalizedPath,
+          mode: 'overwrite',
+          autorename: false,
+          mute: true,
+        }),
+      },
+      body: new Uint8Array(bodyBuffer).buffer,
+    }),
+    DEFAULT_TIMEOUT_MS,
+    scope
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to upload binary file ${filePath} (${response.status}): ${errorText}`);
+  }
+
+  const result = (await response.json()) as { rev: string };
+  return result.rev;
+}
+
+/**
+ * 從指定 Dropbox 路徑下載二進位檔案（Blob）
+ */
+export async function downloadBinaryFile(
+  filePath: string,
+  scope: SyncChannelScope = 'primary'
+): Promise<Blob | null> {
+  const initialToken = await getValidAccessToken(false, scope);
+  if (!initialToken) throw new Error('Dropbox not authenticated');
+
+  const normalizedPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
+
+  const response = await fetchDropboxWithAuth(
+    'https://content.dropboxapi.com/2/files/download',
+    (token) => ({
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Dropbox-API-Arg': JSON.stringify({ path: normalizedPath }),
+      },
+    }),
+    DEFAULT_TIMEOUT_MS,
+    scope
+  );
+
+  if (response.status === 409) return null;
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to download binary file ${filePath} (${response.status}): ${errorText}`);
+  }
+
+  return await response.blob();
+}
+
+/**
  * 刪除遠端指定檔案或資料夾
  */
-export async function deleteRemotePath(path: string): Promise<void> {
-  const token = await getValidAccessToken();
+export async function deleteRemotePath(
+  path: string,
+  scope: SyncChannelScope = 'primary'
+): Promise<void> {
+  const token = await getValidAccessToken(false, scope);
   if (!token) return;
 
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
 
   try {
-    await fetchDropboxWithAuth('https://api.dropboxapi.com/2/files/delete_v2', (t) => ({
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${t}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ path: normalizedPath }),
-    }));
+    await fetchDropboxWithAuth(
+      'https://api.dropboxapi.com/2/files/delete_v2',
+      (t) => ({
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${t}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ path: normalizedPath }),
+      }),
+      DEFAULT_TIMEOUT_MS,
+      scope
+    );
   } catch {
     // Ignore deletion errors for missing files
   }

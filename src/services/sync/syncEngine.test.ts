@@ -635,7 +635,12 @@ describe('dropboxAuth', () => {
     sessionStorage.setItem('e2cal_dropbox_oauth_state', state);
 
     const captured = captureDropboxOAuthCallback(`?code=auth_code_123&state=${state}`, '/app');
-    expect(captured).toEqual({ kind: 'code', code: 'auth_code_123', mode: 'sync' });
+    expect(captured).toEqual({
+      kind: 'code',
+      code: 'auth_code_123',
+      mode: 'sync',
+      scope: 'primary',
+    });
     // state 驗證通過後立即移除，防止重放
     expect(sessionStorage.getItem('e2cal_dropbox_oauth_state')).toBeNull();
     // verifier 留待 exchangeCodeForTokensOnly 消費
@@ -646,6 +651,7 @@ describe('dropboxAuth', () => {
       kind: 'code',
       code: 'auth_code_123',
       mode: 'sync',
+      scope: 'primary',
     });
     // 第二次消費（模擬 StrictMode 或雙 Hook 實例）必須回傳 null
     expect(consumePendingDropboxOAuthCallback()).toBeNull();
@@ -658,12 +664,18 @@ describe('dropboxAuth', () => {
     sessionStorage.setItem('e2cal_dropbox_oauth_mode', 'restore');
 
     const captured = captureDropboxOAuthCallback(`?code=restore_code_99&state=${state}`, '/app');
-    expect(captured).toEqual({ kind: 'code', code: 'restore_code_99', mode: 'restore' });
+    expect(captured).toEqual({
+      kind: 'code',
+      code: 'restore_code_99',
+      mode: 'restore',
+      scope: 'primary',
+    });
     expect(sessionStorage.getItem('e2cal_dropbox_oauth_mode')).toBeNull();
     expect(consumePendingDropboxOAuthCallback()).toEqual({
       kind: 'code',
       code: 'restore_code_99',
       mode: 'restore',
+      scope: 'primary',
     });
   });
 
@@ -877,7 +889,7 @@ describe('syncErrorReason & Toast handling', () => {
 
     const res = await executeSync('auto');
     expect(res.success).toBe(false);
-    expect(toastSpy).toHaveBeenCalledWith('Dropbox 同步失敗：網路連線不穩定，無法連接伺服器');
+    expect(toastSpy).toHaveBeenCalledWith('同步失敗：網路連線不穩定，無法連接伺服器');
   });
 
   it('does not attempt sync, toast, or set error when device is offline', async () => {
@@ -950,7 +962,7 @@ describe('syncErrorReason & Toast handling', () => {
               {
                 '.tag': 'file',
                 name: 'foods.json',
-                path_lower: '/nutrition/foods.json',
+                path_lower: '/app/nutrition/foods.json',
                 rev: 'rev_remote_999',
               },
             ],
@@ -1175,10 +1187,10 @@ describe('syncErrorReason & Toast handling', () => {
     vi.spyOn(db.equipments, 'toArray').mockResolvedValue([] as never);
     vi.spyOn(db.routines, 'toArray').mockResolvedValue([] as never);
     const routinesBulkPut = vi.spyOn(db.routines, 'bulkPut').mockResolvedValue([] as never);
-    vi.spyOn(db.daily_diet_logs, 'where').mockReturnValue({
-      equals: () => ({ first: async () => localDietLog }),
+    vi.spyOn(db.daily_diet_logs, 'filter').mockReturnValue({
+      toArray: async () => [localDietLog],
     } as never);
-    vi.spyOn(db.daily_diet_logs, 'put').mockResolvedValue('diet-local' as never);
+    vi.spyOn(db.daily_diet_logs, 'bulkPut').mockResolvedValue('diet-local' as never);
     vi.spyOn(db.daily_diet_logs, 'toArray').mockResolvedValue([
       {
         ...localDietLog,
@@ -1199,10 +1211,8 @@ describe('syncErrorReason & Toast handling', () => {
         return new Response(
           JSON.stringify({
             entries: [
-              { '.tag': 'file', name: 'routines.json', path_lower: '/workout/routines.json', rev: 'rev_r1' },
-              { '.tag': 'file', name: '2026-11-26.json', path_lower: '/nutrition/logs/2026-11-26.json', rev: 'rev_d1' },
-              { '.tag': 'file', name: '2026-11-25.json', path_lower: '/workout/logs/2026-11-25.json', rev: 'rev_w1' },
-              { '.tag': 'file', name: '2026-11-25.json', path_lower: '/body/metrics/2026-11-25.json', rev: 'rev_b1' },
+              { '.tag': 'file', name: 'routines.json', path_lower: '/app/database/routines.json', rev: 'rev_r1' },
+              { '.tag': 'file', name: '2026-11.json', path_lower: '/app/logs/2026-11.json', rev: 'rev_m1' },
             ],
             has_more: false,
           }),
@@ -1212,7 +1222,7 @@ describe('syncErrorReason & Toast handling', () => {
       const headers = (init?.headers ?? {}) as Record<string, string>;
       if (u.includes('files/download')) {
         const arg = String(headers['Dropbox-API-Arg'] || '');
-        if (arg.includes('/workout/routines.json')) {
+        if (arg.includes('/database/routines.json')) {
           return new Response(
             JSON.stringify([
               { id: 'rt-1', name: 'Push', exercises: [{ exerciseId: 'ex-1', defaultSets: 4 }], createdAt: 1000, updatedAt: 1000 },
@@ -1220,11 +1230,20 @@ describe('syncErrorReason & Toast handling', () => {
             { status: 200, headers: { 'Dropbox-API-Result': JSON.stringify({ rev: 'rev_r1' }) } }
           );
         }
-        if (arg.includes('/nutrition/logs/2026-11-26.json')) {
-          return new Response(JSON.stringify(remoteDietLog), {
-            status: 200,
-            headers: { 'Dropbox-API-Result': JSON.stringify({ rev: 'rev_d1' }) },
-          });
+        if (arg.includes('/logs/2026-11.json')) {
+          return new Response(
+            JSON.stringify({
+              month: '2026-11',
+              updatedAt: '2026-11-26T00:00:00Z',
+              dailyDietLogs: [remoteDietLog],
+              workoutLogs: [],
+              bodyMetrics: [],
+            }),
+            {
+              status: 200,
+              headers: { 'Dropbox-API-Result': JSON.stringify({ rev: 'rev_m1' }) },
+            }
+          );
         }
         return new Response(JSON.stringify([]), {
           status: 200,
@@ -1247,17 +1266,21 @@ describe('syncErrorReason & Toast handling', () => {
 
     const res = await executeSync('auto');
     expect(res.success).toBe(true);
-    // 1. Concurrent DailyDietLog merge uploaded
-    const uploadedDiet = uploadedPayloads['/nutrition/logs/2026-11-26.json'] as DailyDietLog;
-    expect(uploadedDiet).toBeDefined();
-    expect(uploadedDiet.entries.map((e) => e.id)).toEqual(['local-e1', 'remote-e2']);
+    // 1. Concurrent DailyDietLog merge uploaded inside monthly bucket
+    const uploadedMonth = uploadedPayloads['/app/logs/2026-11.json'] as {
+      dailyDietLogs: DailyDietLog[];
+      workoutLogs: unknown[];
+      bodyMetrics: unknown[];
+    };
+    expect(uploadedMonth).toBeDefined();
+    expect(uploadedMonth.dailyDietLogs[0].entries.map((e) => e.id)).toEqual(['local-e1', 'remote-e2']);
     // 2. Routine sanitized on Auto Pull (no defaultSets)
     expect(routinesBulkPut).toHaveBeenCalled();
     const savedRoutines = routinesBulkPut.mock.calls[0][0];
     expect('defaultSets' in savedRoutines[0].exercises[0]).toBe(false);
-    // 3. Empty workout & body buckets uploaded as []
-    expect(uploadedPayloads['/workout/logs/2026-11-25.json']).toEqual([]);
-    expect(uploadedPayloads['/body/metrics/2026-11-25.json']).toEqual([]);
+    // 3. Empty workout & body buckets inside monthly log
+    expect(uploadedMonth.workoutLogs).toEqual([]);
+    expect(uploadedMonth.bodyMetrics).toEqual([]);
   });
 
   it('auto-upgrades legacy remote /nutrition/foods.json to nested FoodMacros format', async () => {
@@ -1326,7 +1349,7 @@ describe('syncErrorReason & Toast handling', () => {
               {
                 '.tag': 'file',
                 name: 'foods.json',
-                path_lower: '/nutrition/foods.json',
+                path_lower: '/app/database/foods.json',
                 rev: 'rev_legacy_foods',
               },
             ],
@@ -1337,7 +1360,7 @@ describe('syncErrorReason & Toast handling', () => {
       }
       if (u.includes('files/download')) {
         const arg = headers['Dropbox-API-Arg'] || '';
-        if (arg.includes('/nutrition/foods.json')) {
+        if (arg.includes('/database/foods.json')) {
           return new Response(JSON.stringify(legacyRemoteFoods), {
             status: 200,
             headers: { 'Dropbox-API-Result': JSON.stringify({ rev: 'rev_legacy_foods' }) },
@@ -1361,7 +1384,7 @@ describe('syncErrorReason & Toast handling', () => {
 
     const res = await executeSync('auto');
     expect(res.success).toBe(true);
-    const rewrittenFoods = uploadedPayloads['/nutrition/foods.json'] as Array<{
+    const rewrittenFoods = uploadedPayloads['/app/database/foods.json'] as Array<{
       id: string;
       macros: { calories: number; carbs: { total: number }; protein: number; fat: { total: number } };
     }>;
@@ -1432,11 +1455,11 @@ describe('syncErrorReason & Toast handling', () => {
     const res = await executeSync('overwrite_remote');
     expect(res.success).toBe(true);
     expect(res.actionTaken).toBe('uploaded_local');
-    expect(uploadedPaths).toContain('/nutrition/foods.json');
-    expect(uploadedPaths).toContain('/deleted_entities.json');
-    expect(uploadedPaths).toContain('/manifest.json');
+    expect(uploadedPaths).toContain('/app/database/foods.json');
+    expect(uploadedPaths).toContain('/app/deleted_entities.json');
+    expect(uploadedPaths).toContain('/app/manifest.json');
     expect(getCachedRevs()['/stale/old.json']).toBeUndefined();
-    expect(getCachedRevs()['/nutrition/foods.json']).toBeDefined();
+    expect(getCachedRevs()['/database/foods.json']).toBeDefined();
   });
 
   it('executeSync("overwrite_remote") deletes stale remote /deleted_entities.json when local tombstones are empty', async () => {
@@ -1485,8 +1508,8 @@ describe('syncErrorReason & Toast handling', () => {
 
     const res = await executeSync('overwrite_remote');
     expect(res.success).toBe(true);
-    expect(uploadedPaths).not.toContain('/deleted_entities.json');
-    expect(deletedPaths).toContain('/deleted_entities.json');
+    expect(uploadedPaths).not.toContain('/app/deleted_entities.json');
+    expect(deletedPaths).toContain('/app/deleted_entities.json');
   });
 });
 

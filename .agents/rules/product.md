@@ -76,11 +76,11 @@ trigger: always_on
 - 主應用透過自研單一 URL 適配器（`AppRouter.tsx`）將網址列鎖定於 `/app`，內部視圖與層級歷史 100% 以瀏覽器原生 `window.history.state` 為唯一真理源，完整支援前進 / 後退、手機側滑返回與深層直達回退，且嚴禁以 Query 參數污染網址列。
 
 ### 4.3 雲端同步與本地備份統一目錄規範
-- **開放可讀目錄樹（Dropbox 同步與 ZIP 備份 100% 同構）**：
-  - `manifest.json`、`user/base_info.json`
-  - `nutrition/{foods.json, recipes.json, logs/YYYY-MM-DD.json}`
-  - `workout/{exercises.json, equipments.json, routines.json, logs/YYYY-MM-DD.json}`
-  - `body/metrics/YYYY-MM-DD.json`
+- **開放可讀目錄樹（雲端 `/app` 同步目錄與本地 ZIP 備份 100% 同構，`/backup` 專供每日滾動 ZIP 備份）**：
+  - `app/manifest.json`、`app/deleted_entities.json`
+  - `app/database/{base_info.json, foods.json, recipes.json, exercises.json, equipments.json, routines.json}`
+  - `app/logs/YYYY-MM.json`（按月合併儲存該月飲食、訓練與體態紀錄）
+  - `backup/e2cal-backup-YYYY-MM-DD.zip`（獨立滾動備份通道，最多保留 3 份）
 - **Dropbox OAuth PKCE 同步**：瀏覽器直連使用者自有 Dropbox，採按日分桶增量同步與「單調遞增邏輯版本號 `rev` + 時間戳」雙重 LWW（Last-Write-Wins）合併演算法。
 - **本地全量 ZIP 備份與還原**：以 JSZip 離線匯出 / 匯入完整資料包；本機已有資料時提供衝突策略選擇（覆寫或合併）。
 

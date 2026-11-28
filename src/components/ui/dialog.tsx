@@ -5,7 +5,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { XIcon, CheckIcon } from "lucide-react"
+import { XIcon, CheckIcon, ChevronLeft } from "lucide-react"
 import { AutoMarquee } from "@/components/ui/AutoMarquee"
 
 export const DialogLayerContext = React.createContext<number>(0)
@@ -255,6 +255,7 @@ export interface DialogPrecisionHeaderProps {
   submitDisabled?: boolean
   submitAriaLabel?: string
   cancelAriaLabel?: string
+  leftIcon?: 'close' | 'back'
   rightAction?: React.ReactNode
   className?: string
   form?: string
@@ -275,6 +276,7 @@ function DialogPrecisionHeader({
   submitDisabled = false,
   submitAriaLabel = 'Save',
   cancelAriaLabel = 'Cancel',
+  leftIcon = 'close',
   rightAction,
   className,
   form,
@@ -282,7 +284,7 @@ function DialogPrecisionHeader({
   return (
     <DialogHeader className={cn("p-0 pb-0 shrink-0", className)}>
       <div className="flex items-center justify-between w-full h-7">
-        {/* 左側純圖標：取消 (✕) */}
+        {/* 左側純圖標：取消 (✕) 或 返回 (‹) */}
         {onClose ? (
           <button
             type="button"
@@ -292,7 +294,11 @@ function DialogPrecisionHeader({
             title={cancelAriaLabel}
             aria-label={cancelAriaLabel}
           >
-            <XIcon className="size-3.5 stroke-[2.2]" />
+            {leftIcon === 'back' ? (
+              <ChevronLeft className="size-4 stroke-[2.2]" />
+            ) : (
+              <XIcon className="size-3.5 stroke-[2.2]" />
+            )}
           </button>
         ) : (
           <DialogClose
@@ -361,6 +367,7 @@ export interface PrecisionDialogContentProps extends Omit<DialogContentProps, 's
   submitDisabled?: boolean
   submitAriaLabel?: string
   cancelAriaLabel?: string
+  leftIcon?: 'close' | 'back'
   rightAction?: React.ReactNode
   form?: string
 }
@@ -379,6 +386,7 @@ function PrecisionDialogContent({
   submitDisabled,
   submitAriaLabel,
   cancelAriaLabel,
+  leftIcon,
   rightAction,
   form,
   children,
@@ -401,6 +409,7 @@ function PrecisionDialogContent({
           submitDisabled={submitDisabled}
           submitAriaLabel={submitAriaLabel}
           cancelAriaLabel={cancelAriaLabel}
+          leftIcon={leftIcon}
           rightAction={rightAction}
           form={form}
         />

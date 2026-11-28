@@ -10,6 +10,7 @@ import {
   sanitizeWorkoutLog,
   sanitizeWorkoutRoutine,
 } from '@/services/sync/syncSanitizers';
+import { parseMonthlyLogBucket } from '@/services/sync/syncSchema';
 
 export { sanitizeFoodItem };
 import type {
@@ -181,21 +182,28 @@ export async function parseBackupFile(file: File | Blob): Promise<ParsedBackupDa
       if (zipEntry.dir) continue;
       const path = rawPath.replace(/\\/g, '/').replace(/^\/+/, '');
 
-      if (/(?:^|\/)user\/base_info\.json$/i.test(path)) {
+      if (/(?:^|\/)(?:database|user)\/base_info\.json$/i.test(path)) {
         const text = await zipEntry.async('string');
         const parsed = JSON.parse(text);
         const arr = Array.isArray(parsed) ? parsed : [parsed];
         baseInfos.push(...arr.map(sanitizeUserBaseInfo));
-      } else if (/(?:^|\/)nutrition\/foods\.json$/i.test(path)) {
+      } else if (/(?:^|\/)(?:database|nutrition)\/foods\.json$/i.test(path)) {
         const text = await zipEntry.async('string');
         const parsed = JSON.parse(text);
         const arr = Array.isArray(parsed) ? parsed : [parsed];
         foods.push(...arr.map(sanitizeFoodItem));
-      } else if (/(?:^|\/)nutrition\/recipes\.json$/i.test(path)) {
+      } else if (/(?:^|\/)(?:database|nutrition)\/recipes\.json$/i.test(path)) {
         const text = await zipEntry.async('string');
         const parsed = JSON.parse(text);
         const arr = Array.isArray(parsed) ? parsed : [parsed];
         recipes.push(...arr.map(sanitizeRecipe));
+      } else if (/(?:^|\/)logs\/(\d{4}-\d{2})\.json$/i.test(path)) {
+        const text = await zipEntry.async('string');
+        const parsed = JSON.parse(text);
+        const bucket = parseMonthlyLogBucket(parsed);
+        dailyDietLogs.push(...bucket.dailyDietLogs);
+        workoutLogs.push(...bucket.workoutLogs);
+        bodyMetrics.push(...bucket.bodyMetrics.map(sanitizeBodyMetric));
       } else if (/(?:^|\/)nutrition\/logs\/([^/]+)\.json$/i.test(path)) {
         const match = path.match(/(?:^|\/)nutrition\/logs\/([^/]+)\.json$/i);
         if (match && match[1] !== 'manifest') {
@@ -207,17 +215,17 @@ export async function parseBackupFile(file: File | Blob): Promise<ParsedBackupDa
             dailyDietLogs.push(sanitizeDailyDietLog(parsed));
           }
         }
-      } else if (/(?:^|\/)workout\/exercises\.json$/i.test(path)) {
+      } else if (/(?:^|\/)(?:database|workout)\/exercises\.json$/i.test(path)) {
         const text = await zipEntry.async('string');
         const parsed = JSON.parse(text);
         const arr = Array.isArray(parsed) ? parsed : [parsed];
         exercises.push(...arr.map(sanitizeExercise));
-      } else if (/(?:^|\/)workout\/equipments\.json$/i.test(path)) {
+      } else if (/(?:^|\/)(?:database|workout)\/equipments\.json$/i.test(path)) {
         const text = await zipEntry.async('string');
         const parsed = JSON.parse(text);
         const arr = Array.isArray(parsed) ? parsed : [parsed];
         equipments.push(...arr.map(sanitizeEquipment));
-      } else if (/(?:^|\/)workout\/routines\.json$/i.test(path)) {
+      } else if (/(?:^|\/)(?:database|workout)\/routines\.json$/i.test(path)) {
         const text = await zipEntry.async('string');
         const parsed = JSON.parse(text);
         const arr = Array.isArray(parsed) ? parsed : [parsed];

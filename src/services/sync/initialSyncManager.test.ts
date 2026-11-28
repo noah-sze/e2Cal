@@ -67,11 +67,15 @@ vi.mock('./dropboxAuth', () => ({
   }),
 }));
 
-vi.mock('./dropboxClient', () => ({
-  listRemoteFolder: mockListRemoteFolder,
-  downloadJsonFile: mockDownloadJsonFile,
-  uploadJsonFile: mockUploadJsonFile,
-}));
+vi.mock('./dropboxClient', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./dropboxClient')>();
+  return {
+    ...actual,
+    listRemoteFolder: mockListRemoteFolder,
+    downloadJsonFile: mockDownloadJsonFile,
+    uploadJsonFile: mockUploadJsonFile,
+  };
+});
 
 vi.mock('./syncEngine', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./syncEngine')>();
@@ -152,23 +156,23 @@ describe('initialSyncManager tombstone handling', () => {
     };
 
     mockListRemoteFolder.mockResolvedValue([
-      { name: 'manifest.json', path_lower: '/manifest.json', rev: 'r_manifest' },
-      { name: 'foods.json', path_lower: '/nutrition/foods.json', rev: 'r_foods' },
-      { name: 'deleted_entities.json', path_lower: '/deleted_entities.json', rev: 'r_tomb' },
+      { name: 'manifest.json', path_lower: '/app/manifest.json', rev: 'r_manifest' },
+      { name: 'foods.json', path_lower: '/app/nutrition/foods.json', rev: 'r_foods' },
+      { name: 'deleted_entities.json', path_lower: '/app/deleted_entities.json', rev: 'r_tomb' },
     ]);
 
     mockDownloadJsonFile.mockImplementation(async (path: string) => {
-      if (path === '/manifest.json') {
+      if (path === '/app/manifest.json') {
         return {
           version: 1,
           updatedAt: new Date(nowTs).toISOString(),
           stats: { dailyDietLogsCount: 1, workoutLogsCount: 0, bodyMetricsCount: 0 },
         };
       }
-      if (path === '/nutrition/foods.json') {
+      if (path === '/app/nutrition/foods.json') {
         return [];
       }
-      if (path === '/deleted_entities.json') {
+      if (path === '/app/deleted_entities.json') {
         return remoteTombstones;
       }
       return null;
@@ -192,5 +196,150 @@ describe('initialSyncManager tombstone handling', () => {
       })
     );
     expect(getInitialSyncState().step).toBe('COMPLETED');
+  });
+
+  it('應支援統一雲端流程前置與阻斷狀態轉換 (CONNECTING / SOURCE_PICKER / BLOCKED / closeCloudFlow)', async () => {
+    const {
+      openCloudFlowConnecting,
+      openCloudFlowSourcePicker,
+      openCloudFlowBlocked,
+      closeCloudFlow,
+    } = await import('./initialSyncManager');
+
+    openCloudFlowConnecting('dropbox');
+    expect(getInitialSyncState()).toMatchObject({
+      isOpen: true,
+      step: 'CONNECTING',
+      connectingProvider: 'dropbox',
+      sourcePicker: null,
+      blocked: null,
+    });
+
+    openCloudFlowSourcePicker({
+      providerId: 'dropbox',
+      hasPrimarySync: true,
+      backupItems: [
+        {
+          name: 'e2cal-backup-2026-11-28.zip',
+          path: '/backup/e2cal-backup-2026-11-28.zip',
+          date: '2026-11-28',
+          size: 1024,
+          serverModified: '2026-11-28T00:00:00Z',
+        },
+      ],
+      onSelectRollingBackup: async () => {},
+    });
+    expect(getInitialSyncState()).toMatchObject({
+      isOpen: true,
+      step: 'SOURCE_PICKER',
+      connectingProvider: null,
+      blocked: null,
+    });
+    expect(getInitialSyncState().sourcePicker?.backupItems).toHaveLength(1);
+
+    openCloudFlowBlocked({
+      providerId: 's3',
+      reason: 'no_restorable_data',
+      accountLabel: 'my-bucket',
+    });
+    expect(getInitialSyncState()).toMatchObject({
+      isOpen: true,
+      step: 'BLOCKED',
+      sourcePicker: null,
+      blocked: {
+        providerId: 's3',
+        reason: 'no_restorable_data',
+        accountLabel: 'my-bucket',
+      },
+    });
+
+    closeCloudFlow();
+    expect(getInitialSyncState()).toMatchObject({
+      isOpen: false,
+      step: 'AUTH',
+      connectingProvider: null,
+      sourcePicker: null,
+      blocked: null,
+    });
+  });
+
+  it('在達到 COMPLETED 前，不應覆寫 e2cal_sync_provider 亦不應提交憑證；下載失敗應自動回滾', async () => {
+    const { commitStagingTokens, clearStagingTokens } = await import('./dropboxAuth');
+    const { setActiveSyncProviderId, getActiveSyncProviderId } = await import('./syncRouter');
+    const { setStagingWebDavConfig, getWebDavConfig } = await import('./adapters/webdavAdapter');
+
+    // 先模擬使用者原本已使用 dropbox
+    setActiveSyncProviderId('dropbox');
+    setStagingWebDavConfig(
+      { baseUrl: 'https://nas.example.com/dav', username: 'u1', password: 'p1' },
+      'primary'
+    );
+
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/app/') || url.endsWith('/app/database/') || url.endsWith('/app/logs/')) {
+        return new Response(
+          `<?xml version="1.0" encoding="utf-8"?>
+          <D:multistatus xmlns:D="DAV:">
+            <D:response>
+              <D:href>/dav/app/manifest.json</D:href>
+              <D:propstat><D:prop><D:getetag>"m1"</D:getetag></D:prop></D:propstat>
+            </D:response>
+            <D:response>
+              <D:href>/dav/app/database/foods.json</D:href>
+              <D:propstat><D:prop><D:getetag>"f1"</D:getetag></D:prop></D:propstat>
+            </D:response>
+          </D:multistatus>`,
+          { status: 207 }
+        );
+      }
+      if (url.endsWith('/app/manifest.json')) {
+        return new Response(
+          JSON.stringify({
+            version: 1,
+            updatedAt: new Date().toISOString(),
+            stats: { dailyDietLogsCount: 2, workoutLogsCount: 0, bodyMetricsCount: 0 },
+          }),
+          { status: 200 }
+        );
+      }
+      // 模擬下載 foods.json 時網路失敗
+      return new Response(null, { status: 500 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await startInitialSync('', { mode: 'sync', providerId: 'webdav' });
+
+    // STRATEGY 階段：不應改動 localStorage 中的 active provider，也不應持久化 WebDAV 設定
+    expect(getInitialSyncState().step).toBe('STRATEGY');
+    expect(getActiveSyncProviderId()).toBe('dropbox');
+    expect(getWebDavConfig('primary')).toBeNull();
+    expect(commitStagingTokens).not.toHaveBeenCalled();
+
+    // 選擇策略進入下載並失敗：應回滾 Staging，保留原有 dropbox provider
+    await selectStrategy('merge');
+    expect(getInitialSyncState().error).toBeTruthy();
+    expect(getActiveSyncProviderId()).toBe('dropbox');
+    expect(getWebDavConfig('primary')).toBeNull();
+    expect(clearStagingTokens).not.toHaveBeenCalled();
+  });
+
+  it('應支援每日滾動備份連線完成狀態 (BACKUP_CONNECTED)', async () => {
+    const { openCloudFlowBackupConnected, closeCloudFlow } = await import('./initialSyncManager');
+
+    openCloudFlowBackupConnected('webdav');
+    expect(getInitialSyncState()).toMatchObject({
+      isOpen: true,
+      step: 'BACKUP_CONNECTED',
+      backupConnectedProvider: 'webdav',
+      blocked: null,
+      sourcePicker: null,
+    });
+
+    closeCloudFlow();
+    expect(getInitialSyncState()).toMatchObject({
+      isOpen: false,
+      step: 'AUTH',
+      backupConnectedProvider: null,
+    });
   });
 });

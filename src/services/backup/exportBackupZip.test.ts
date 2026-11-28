@@ -164,9 +164,9 @@ describe('exportBackupZip', () => {
     // 使用 JSZip 解壓驗證目錄結構與文件內容
     const zip = await JSZip.loadAsync(blob);
 
-    // 1. 驗證根目錄 manifest.json
-    expect(zip.file('manifest.json')).not.toBeNull();
-    const manifestJson = JSON.parse(await zip.file('manifest.json')!.async('string'));
+    // 1. 驗證 app/manifest.json
+    expect(zip.file('app/manifest.json')).not.toBeNull();
+    const manifestJson = JSON.parse(await zip.file('app/manifest.json')!.async('string'));
     expect(manifestJson.appName).toBe('e2Cal');
     expect(manifestJson.schemaVersion).toBe(2);
     expect(manifestJson.stats.foodsCount).toBe(1);
@@ -178,37 +178,25 @@ describe('exportBackupZip', () => {
     expect(manifestJson.stats.workoutLogsCount).toBe(1);
     expect(manifestJson.stats.bodyMetricsCount).toBe(1);
 
-    // 2. 驗證 user 模組
-    expect(zip.file('user/base_info.json')).not.toBeNull();
-    const baseInfo = JSON.parse(await zip.file('user/base_info.json')!.async('string'));
+    // 2. 驗證 app/database 模組
+    expect(zip.file('app/database/base_info.json')).not.toBeNull();
+    const baseInfo = JSON.parse(await zip.file('app/database/base_info.json')!.async('string'));
     expect(baseInfo[0].name).toBe('Jason');
 
-    // 3. 驗證 nutrition 模組
-    expect(zip.file('nutrition/foods.json')).not.toBeNull();
-    expect(zip.file('nutrition/recipes.json')).not.toBeNull();
-    expect(zip.file('nutrition/logs/manifest.json')).not.toBeNull();
-    expect(zip.file('nutrition/logs/2026-11-08.json')).not.toBeNull();
+    expect(zip.file('app/database/foods.json')).not.toBeNull();
+    expect(zip.file('app/database/recipes.json')).not.toBeNull();
+    expect(zip.file('app/database/exercises.json')).not.toBeNull();
+    expect(zip.file('app/database/equipments.json')).not.toBeNull();
+    expect(zip.file('app/database/routines.json')).not.toBeNull();
 
-    const dietLog = JSON.parse(await zip.file('nutrition/logs/2026-11-08.json')!.async('string'));
-    expect(dietLog.date).toBe('2026-11-08');
-    expect(dietLog.entries[0].foodId).toBe('food-1');
-
-    // 4. 驗證 workout 模組
-    expect(zip.file('workout/exercises.json')).not.toBeNull();
-    expect(zip.file('workout/equipments.json')).not.toBeNull();
-    expect(zip.file('workout/routines.json')).not.toBeNull();
-    expect(zip.file('workout/logs/manifest.json')).not.toBeNull();
-    expect(zip.file('workout/logs/2026-11-08.json')).not.toBeNull();
-
-    const wLog = JSON.parse(await zip.file('workout/logs/2026-11-08.json')!.async('string'));
-    expect(wLog[0].exercises[0].exerciseId).toBe('exercise-1');
-
-    // 5. 驗證 body 模組
-    expect(zip.file('body/metrics/manifest.json')).not.toBeNull();
-    expect(zip.file('body/metrics/2026-11-08.json')).not.toBeNull();
-
-    const bMetrics = JSON.parse(await zip.file('body/metrics/2026-11-08.json')!.async('string'));
-    expect(bMetrics[0].weight).toBe(65);
+    // 3. 驗證 app/logs/YYYY-MM.json 月度合併日誌
+    expect(zip.file('app/logs/2026-11.json')).not.toBeNull();
+    const monthLog = JSON.parse(await zip.file('app/logs/2026-11.json')!.async('string'));
+    expect(monthLog.month).toBe('2026-11');
+    expect(monthLog.dailyDietLogs[0].date).toBe('2026-11-08');
+    expect(monthLog.dailyDietLogs[0].entries[0].foodId).toBe('food-1');
+    expect(monthLog.workoutLogs[0].exercises[0].exerciseId).toBe('exercise-1');
+    expect(monthLog.bodyMetrics[0].weight).toBe(65);
   });
 
   it('downloadBackupZip 應產生 Blob、觸發下載並返回檔案名稱', async () => {

@@ -24,6 +24,7 @@ export default function DataAndSystemSettingsPage() {
   const [isImportStrategyModalOpen, setIsImportStrategyModalOpen] = useState(false);
   const [stagedBackupData, setStagedBackupData] = useState<ParsedBackupData | null>(null);
   const [stagedLocalBase, setStagedLocalBase] = useState<UserBaseInfo | null>(null);
+  const [stagedLocalCount, setStagedLocalCount] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 匯出資料備份為 ZIP 檔案
@@ -92,6 +93,7 @@ export default function DataAndSystemSettingsPage() {
 
       setStagedBackupData(parsed);
       setStagedLocalBase(localBase || null);
+      setStagedLocalCount(dietLogsCount + workoutLogsCount + metricsCount);
       setIsImportStrategyModalOpen(true);
     } catch (err: unknown) {
       triggerHaptic('error');
@@ -244,6 +246,14 @@ export default function DataAndSystemSettingsPage() {
         }}
         localBaseInfo={stagedLocalBase}
         backupBaseInfo={stagedBackupData?.baseInfos[0] || null}
+        localCount={stagedLocalCount}
+        backupCount={
+          stagedBackupData
+            ? stagedBackupData.dailyDietLogs.length +
+              stagedBackupData.workoutLogs.length +
+              stagedBackupData.bodyMetrics.length
+            : undefined
+        }
         onConfirm={handleExecuteImport}
       />
     </div>

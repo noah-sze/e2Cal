@@ -16,7 +16,14 @@ import {
   getSyncEngineStatus,
   type SyncEngineStatus,
 } from '@/services/sync/syncEngine';
-import { isDropboxConnected } from '@/services/sync/dropboxAuth';
+import {
+  isCloudSyncConnected,
+  getActiveSyncProviderId,
+  isRollingBackupConnected,
+  getBackupProviderId,
+  getSyncEndpointSummary,
+} from '@/services/sync/syncRouter';
+import { getLastBackupZipTime } from '@/services/sync/rollingBackupService';
 import { toast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -113,7 +120,13 @@ function computeRemainingDays(deletedAt: number, now: number): string {
  * browser storage quotas, service workers, and localStorage state.
  */
 export function SyncDiagnosticsTab() {
-  const [connected, setConnected] = useState<boolean>(() => isDropboxConnected());
+  const [connected, setConnected] = useState<boolean>(() => isCloudSyncConnected());
+  const [activeProvider, setActiveProvider] = useState(() => getActiveSyncProviderId());
+  const [backupConnected, setBackupConnected] = useState<boolean>(() => isRollingBackupConnected());
+  const [backupProvider, setBackupProvider] = useState(() => getBackupProviderId());
+  const [lastBackupZipTime, setLastBackupZipTime] = useState<string | null>(() =>
+    getLastBackupZipTime()
+  );
   const [engineStatus, setEngineStatus] = useState<SyncEngineStatus>(() => getSyncEngineStatus());
   const [lastSyncTime, setLastSync] = useState<string | null>(() => getLastSyncTime());
   const [cachedRevs, setCachedRevsState] = useState<Record<string, string>>(() => getCachedRevs());
@@ -194,7 +207,11 @@ export function SyncDiagnosticsTab() {
   const refreshDiagnostics = useCallback(async () => {
     const now = Date.now();
     setSnapshotNow(now);
-    setConnected(isDropboxConnected());
+    setConnected(isCloudSyncConnected());
+    setActiveProvider(getActiveSyncProviderId());
+    setBackupConnected(isRollingBackupConnected());
+    setBackupProvider(getBackupProviderId());
+    setLastBackupZipTime(getLastBackupZipTime());
     setEngineStatus(getSyncEngineStatus());
     setLastSync(getLastSyncTime());
     setCachedRevsState(getCachedRevs());
@@ -322,6 +339,12 @@ export function SyncDiagnosticsTab() {
       JSON.stringify(
         {
           connected,
+          activeProvider,
+          primaryTarget: connected ? getSyncEndpointSummary(activeProvider, 'primary') : null,
+          backupConnected,
+          backupProvider,
+          backupTarget: backupConnected ? getSyncEndpointSummary(backupProvider, 'backup') : null,
+          lastBackupZipTime,
           engineStatus,
           lastSyncTime,
           pendingSyncFlag,
@@ -334,7 +357,19 @@ export function SyncDiagnosticsTab() {
         null,
         2
       ),
-    [connected, engineStatus, lastSyncTime, pendingSyncFlag, forcePushFoodsFlag, cachedRevs, pushedTimes]
+    [
+      connected,
+      activeProvider,
+      backupConnected,
+      backupProvider,
+      lastBackupZipTime,
+      engineStatus,
+      lastSyncTime,
+      pendingSyncFlag,
+      forcePushFoodsFlag,
+      cachedRevs,
+      pushedTimes,
+    ]
   );
 
   const tombstoneRows = useMemo(() => {
@@ -389,15 +424,20 @@ export function SyncDiagnosticsTab() {
       {/* Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border border-border rounded-lg bg-card p-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-sm font-semibold text-foreground">Sync & Storage Diagnostics</h2>
             <Badge variant={connected ? 'default' : 'outline'}>
-              {connected ? 'Dropbox Connected' : 'Dropbox Disconnected'}
+              {connected ? `Sync: ${activeProvider.toUpperCase()}` : 'Sync Disconnected'}
+            </Badge>
+            <Badge variant={backupConnected ? 'default' : 'outline'}>
+              {backupConnected
+                ? `Backup: ${(backupProvider ?? 'dropbox').toUpperCase()}`
+                : 'Backup Off'}
             </Badge>
             {engineStatus.isSyncing && <Badge variant="secondary">Syncing</Badge>}
           </div>
           <p className="text-xs text-muted-foreground font-mono">
-            lastSync: {lastSyncTime ?? '-'}
+            lastSync: {lastSyncTime ?? '-'} · lastZip: {lastBackupZipTime ?? '-'}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => void refreshDiagnostics()}>
@@ -412,7 +452,7 @@ export function SyncDiagnosticsTab() {
           <div className="flex items-center gap-2">
             <Database className="w-4 h-4 text-muted-foreground" />
             <h3 className="text-xs font-semibold uppercase tracking-widest text-foreground">
-              Dropbox Sync State
+              Cloud Sync &amp; Backup State
             </h3>
           </div>
           <div className="flex flex-wrap items-center gap-2">
